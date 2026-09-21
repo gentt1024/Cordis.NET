@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>false</IsAotCompatible><IsTrimmable>false</IsTrimmable><Description>Managed assembly module loading and replacement for Cordis.NET.</Description></PropertyGroup>
+  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>false</IsAotCompatible><IsTrimmable>false</IsTrimmable><PackageId>Cordis.NET.Clr</PackageId><Description>Managed assembly module loading and replacement for Cordis.NET.</Description></PropertyGroup>
   <ItemGroup><ProjectReference Include="../Cordis.Composition/Cordis.Composition.csproj" /></ItemGroup>
 </Project>

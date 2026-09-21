@@ -98,14 +98,14 @@
         "resolved": "16.3.0",
         "contentHash": "SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA=="
       },
-      "cordis.composition": {
+      "Cordis.NET.Composition": {
         "type": "Project",
         "dependencies": {
-          "Cordis.Core": "[0.1.0-alpha.1, )",
+          "Cordis.NET.Core": "[0.1.0-alpha.2, )",
           "YamlDotNet": "[16.3.0, )"
         }
       },
-      "cordis.core": {
+      "Cordis.NET.Core": {
         "type": "Project"
       }
     }

@@ -52,7 +52,7 @@ Use HMR's serialized mutation queue to coordinate code and configuration changes
 `hmr.TrackLoader(loader, resolver.LocateAsync)` connects entry-resolution diagnostics without
 loading extra assemblies; register replacement callbacks and dependency edges explicitly.
 
-Without `Cordis.JavaScript`, evaluating a raw `!!js` fails explicitly. Pass
+Without the `Cordis.NET.JavaScript` package, evaluating a raw `!!js` fails explicitly. Pass
 `new JintExpressionEvaluator()` to Loader, ApplicationBoot or ProfileSession for real JS.
 Service/function access is through the live context. ApplicationBoot supplies the DSH home
 path service; a ProfileSession uses its own launch home. This adapter requires ordinary JIT.

@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>false</IsAotCompatible><IsTrimmable>false</IsTrimmable><Description>Jint expression evaluation for trusted Cordis.NET configuration.</Description></PropertyGroup>
+  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>false</IsAotCompatible><IsTrimmable>false</IsTrimmable><PackageId>Cordis.NET.JavaScript</PackageId><Description>Jint expression evaluation for trusted Cordis.NET configuration.</Description></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Cordis.Composition/Cordis.Composition.csproj" />
     <PackageReference Include="Jint" Version="4.7.0" />

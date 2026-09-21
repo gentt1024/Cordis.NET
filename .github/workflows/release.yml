@@ -184,6 +184,6 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           version="${RELEASE_TAG#v}"
-          for package in Cordis.Core Cordis.Composition Cordis.Extensions Cordis.Clr Cordis.Hosting Cordis.JavaScript Cordis.Tool; do
+          for package in Cordis.NET.Core Cordis.NET.Composition Cordis.NET.Extensions Cordis.NET.Clr Cordis.NET.Hosting Cordis.NET.JavaScript Cordis.NET.Tool; do
             dotnet nuget push "artifacts/publish/${package}.${version}.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
           done

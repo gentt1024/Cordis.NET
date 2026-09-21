@@ -10,13 +10,13 @@ import shutil
 
 
 PUBLISH_PACKAGES = (
-    "Cordis.Core",
-    "Cordis.Composition",
-    "Cordis.Extensions",
-    "Cordis.Clr",
-    "Cordis.Hosting",
-    "Cordis.JavaScript",
-    "Cordis.Tool",
+    "Cordis.NET.Core",
+    "Cordis.NET.Composition",
+    "Cordis.NET.Extensions",
+    "Cordis.NET.Clr",
+    "Cordis.NET.Hosting",
+    "Cordis.NET.JavaScript",
+    "Cordis.NET.Tool",
 )
 
 

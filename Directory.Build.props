@@ -7,7 +7,7 @@
     <Deterministic>true</Deterministic>
     <AnalysisLevel>latest</AnalysisLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.1.0-alpha.1</Version>
+    <Version>0.1.0-alpha.2</Version>
     <Authors>gentt1024 and Cordis.NET contributors</Authors>
     <Description>A native .NET implementation of the pinned DeepSeek Harness Cordis model.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

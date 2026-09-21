@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>true</IsAotCompatible><Description>Microsoft Generic Host integration for Cordis.NET.</Description></PropertyGroup>
+  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>true</IsAotCompatible><PackageId>Cordis.NET.Hosting</PackageId><Description>Microsoft Generic Host integration for Cordis.NET.</Description></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Cordis.Core/Cordis.Core.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />

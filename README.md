@@ -16,15 +16,24 @@ Install the .NET SDK selected by `global.json`, then run the working composition
 dotnet run --project examples/Composition/Composition.csproj
 ```
 
-The example registers a static plugin, applies configuration, observes its service, and updates it. Packages have not been published, so this repository does not present a `dotnet add package` command yet.
+The example registers a static plugin, applies configuration, observes its service, and updates it.
+
+## Install the prerelease
+
+```console
+dotnet add package Cordis.NET.Composition --version 0.1.0-alpha.2
+dotnet tool install --global Cordis.NET.Tool --version 0.1.0-alpha.2
+```
+
+The package IDs use the `Cordis.NET.*` prefix. CLR namespaces and assembly names remain `Cordis.*`.
 
 ## Choose a deployment path
 
-- **Static and Native AOT:** use `Cordis.Core`, `Cordis.Composition`, and optionally `Cordis.Extensions` with statically registered modules.
-- **CLR modules:** add `Cordis.Clr` to load managed plugin assemblies in an ordinary .NET runtime. This path is not Native AOT compatible.
-- **JavaScript expressions:** add `Cordis.JavaScript` for `!!js` evaluation through Jint. Trusted configuration only; this is not a sandbox and no Native AOT support is claimed.
+- **Static and Native AOT:** use `Cordis.NET.Core`, `Cordis.NET.Composition`, and optionally `Cordis.NET.Extensions` with statically registered modules.
+- **CLR modules:** add `Cordis.NET.Clr` to load managed plugin assemblies in an ordinary .NET runtime. This path is not Native AOT compatible.
+- **JavaScript expressions:** add `Cordis.NET.JavaScript` for `!!js` evaluation through Jint. Trusted configuration only; this is not a sandbox and no Native AOT support is claimed.
 
-`Cordis.Hosting` integrates the runtime with Generic Host. `Cordis.Tool` provides configuration validation and preview commands.
+`Cordis.NET.Hosting` integrates the runtime with Generic Host. `Cordis.NET.Tool` provides configuration validation and preview commands.
 
 ## Documentation
 

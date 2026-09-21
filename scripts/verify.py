@@ -135,7 +135,7 @@ Console.WriteLine("independent package consumer passed");
     adapters.mkdir()
     (adapters / "Adapters.csproj").write_text(f'''<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup>
-  <ItemGroup>{''.join(f'<PackageReference Include="{name}" Version="{version}"/>' for name in ['Cordis.Extensions', 'Cordis.Clr', 'Cordis.Hosting', 'Cordis.JavaScript'])}</ItemGroup>
+  <ItemGroup>{''.join(f'<PackageReference Include="{name}" Version="{version}"/>' for name in ['Cordis.NET.Extensions', 'Cordis.NET.Clr', 'Cordis.NET.Hosting', 'Cordis.NET.JavaScript'])}</ItemGroup>
 </Project>''', encoding="utf-8")
     (adapters / "Program.cs").write_text('''using Cordis;
 using Cordis.Clr;
@@ -160,7 +160,7 @@ Console.WriteLine("independent optional adapter packages passed");
 ''', encoding="utf-8")
     run("adapters-restore", ["dotnet", "restore", "Adapters.csproj", "--packages", directory / "cache"], adapters, env)
     run("adapters-run", ["dotnet", "run", "--project", "Adapters.csproj", "-c", "Release", "--no-restore"], adapters, env)
-    run("tool-install", ["dotnet", "tool", "install", "Cordis.Tool", "--version", version,
+    run("tool-install", ["dotnet", "tool", "install", "Cordis.NET.Tool", "--version", version,
                          "--tool-path", directory / "tools", "--configfile", directory / "NuGet.Config"], directory, env)
     run("tool-package-preview", [directory / "tools" / ("cordis.exe" if os.name == "nt" else "cordis"),
                                 "preview", OUT / "cli-input.yml", "--json"], directory, env)
