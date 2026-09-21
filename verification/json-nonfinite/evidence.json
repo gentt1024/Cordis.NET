@@ -1,0 +1,71 @@
+{
+  "format": "cordis-focused-verification/v1",
+  "implementationCommit": "1b15d16a039a53de69d53d0e2bd7aeaeda42e1b5",
+  "baselineCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+  "red": {
+    "checkpoint": "c5e2224fcca4e9dd054febba73085aba1f14ce10",
+    "test": "Cordis.Composition.Tests.ConfigurationTests.JsonWriterMatchesJsonStringifyForNonFiniteNumbers",
+    "observed": "ArgumentException from Utf8JsonWriter.WriteNumberValue(Double)",
+    "privateLogSha256": "0C99E70550495F5EE722FB260C731E2C45DEDE50E1A002E9125955D38D96AC28"
+  },
+  "green": {
+    "fullGateStatus": "requested-checks-passed",
+    "sourceUnchanged": true,
+    "testCount": 456,
+    "countsByAssembly": {
+      "Cordis.Composition.Tests": 269,
+      "Cordis.Core.Tests": 89,
+      "Cordis.Extensions.Tests": 82,
+      "Cordis.Platform.Tests": 16
+    },
+    "differentialCaseCount": 35,
+    "case": {
+      "id": "C30-json-nonfinite-matches-stringify",
+      "trace": [
+        "{\n  \"positive\": null,\n  \"negative\": null,\n  \"nan\": null,\n  \"array\": [\n    null,\n    \"finite\",\n    null,\n    {\n      \"nested\": null\n    }\n  ],\n  \"finite\": 1.25,\n  \"text\": \"unchanged\",\n  \"nil\": null\n}"
+      ]
+    },
+    "jitTraceMatched": true,
+    "nativeAotTraceMatched": true,
+    "cliYamlPreview": [
+      {
+        "id": "greeting",
+        "name": "greeting",
+        "config": {
+          "positive": null,
+          "negative": null,
+          "nan": null,
+          "values": [
+            null,
+            1.25,
+            "unchanged",
+            null
+          ]
+        }
+      }
+    ],
+    "yamlNonFiniteRoundTripCase": {
+      "id": "C29-yaml-nonfinite-round-trip",
+      "trace": [
+        "positive:infinity;negative:-infinity;nan:number"
+      ]
+    },
+    "linuxFocused": {
+      "environment": "Ubuntu 24.04 x64 on ext4",
+      "actualJsonStringifyMatchedJit": true,
+      "actualJsonStringifyMatchedNativeAot": true
+    }
+  },
+  "commands": [
+    "dotnet test Cordis.slnx -c Release --logger trx --results-directory <results>",
+    "node --experimental-transform-types reference/run-reference.mjs --dsh=<pinned-checkout>",
+    "dotnet Cordis.Conformance.dll --case C30-json-nonfinite-matches-stringify",
+    "Cordis.Conformance.exe --case C30-json-nonfinite-matches-stringify",
+    "cordis preview <yaml-with-inf-and-nan> --json",
+    "python scripts/verify.py --dsh <pinned-checkout> --origin <pinned-origin> --aot --package"
+  ],
+  "platforms": [
+    "windows-x64",
+    "ubuntu-24.04-x64"
+  ]
+}

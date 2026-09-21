@@ -1,0 +1,189 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag selected in the Run workflow ref picker
+        required: true
+        type: string
+      publish:
+        description: Publish after the nuget-production environment approval
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: validate tag (${{ matrix.os }})
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 10.0.111
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+          cache: npm
+          cache-dependency-path: reference/package-lock.json
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Install Native AOT prerequisites
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang zlib1g-dev
+      - name: Confirm Windows Native AOT toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installation = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $installation) { throw 'MSVC x64 build tools are unavailable.' }
+      - name: Verify selected tag, commit, and version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          test "$GITHUB_REF_TYPE" = "tag"
+          test "$GITHUB_REF_NAME" = "$RELEASE_TAG"
+          version="${RELEASE_TAG#v}"
+          test "$RELEASE_TAG" = "v$version"
+          project_version="$(python -c 'import xml.etree.ElementTree as ET; print(ET.parse("Directory.Build.props").findtext(".//Version"))')"
+          test "$version" = "$project_version"
+          test "$(git rev-list -n 1 "refs/tags/$RELEASE_TAG")" = "$GITHUB_SHA"
+      - name: Fetch read-only pinned reference
+        shell: bash
+        run: |
+          git init ../dsh-reference
+          git -C ../dsh-reference remote add origin https://github.com/deepseek-ai/deepseek-harness.git
+          git -C ../dsh-reference fetch --depth=1 origin ddefc45fbc7f8e46dd73185e68295696d1297887
+          git -C ../dsh-reference checkout --detach FETCH_HEAD
+          git init ../upstream-cordis
+          git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
+          git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
+          git -C ../upstream-cordis checkout --detach FETCH_HEAD
+          npm ci --prefix reference --ignore-scripts
+      - run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
+      - name: Full verification and exact package batch
+        shell: bash
+        run: |
+          python scripts/check-docs.py
+          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/release-packages
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-evidence-${{ matrix.os }}-${{ inputs.tag }}
+          path: artifacts/verification
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Preserve the validated package batch
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-package-batch-${{ inputs.tag }}-${{ github.sha }}
+          path: artifacts/release-packages
+          if-no-files-found: error
+          retention-days: 30
+
+  package:
+    name: seal publish artifact
+    needs: validate
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: release-package-batch-${{ inputs.tag }}-${{ github.sha }}
+          path: artifacts/release-packages
+      - name: Select whitelist and record SHA-256 hashes
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python scripts/release_artifact.py prepare \
+            --source artifacts/release-packages \
+            --output artifacts/publish \
+            --version "${RELEASE_TAG#v}" \
+            --tag "$RELEASE_TAG" \
+            --commit "$GITHUB_SHA"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nuget-${{ inputs.tag }}-${{ github.sha }}
+          path: artifacts/publish
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: publish verified packages to NuGet
+    if: ${{ inputs.publish }}
+    needs: package
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    environment: nuget-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 10.0.111
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: nuget-${{ inputs.tag }}-${{ github.sha }}
+          path: artifacts/publish
+      - name: Verify downloaded artifact hashes
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: python scripts/release_artifact.py verify --directory artifacts/publish --tag "$RELEASE_TAG" --commit "$GITHUB_SHA"
+      - name: Exchange GitHub OIDC token for a short-lived NuGet key
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - name: Publish explicit package whitelist
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          for package in Cordis.Core Cordis.Composition Cordis.Extensions Cordis.Clr Cordis.Hosting Cordis.JavaScript Cordis.Tool; do
+            dotnet nuget push "artifacts/publish/${package}.${version}.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+          done

@@ -1,0 +1,74 @@
+// Executable helpers excerpted from vendor/cordis/src/utils.ts and vendor/cosmokit/src/misc.ts.
+export class DisposableList<T extends WeakKey> {
+  private sn = 0
+  private map = new Map<number, T>()
+  private weak = new WeakMap<T, number>()
+  get length() { return this.map.size }
+  push(value: T) {
+    const sn = ++this.sn
+    this.map.set(sn, value)
+    this.weak.set(value, sn)
+    return () => this.map.delete(sn)
+  }
+  delete(value: T) {
+    const sn = this.weak.get(value)
+    if (!sn) return false
+    return this.map.delete(sn)
+  }
+  clear() {
+    const values = [...this.map.values()]
+    this.map.clear()
+    return values.reverse()
+  }
+  [Symbol.iterator]() { return this.map.values() }
+}
+function isNullable(value: any) { return value === null || value === undefined }
+function isObject(value: any) { return value && (typeof value === 'object' || typeof value === 'function') }
+function defineProperty(object: any, key: any, value: any) {
+  return Object.defineProperty(object, key, { writable: true, value, enumerable: false })
+}
+function buildOuterStack(offset = 0) {
+  const outerError = new Error()
+  return () => outerError.stack!.split('\n').slice(3 + offset)
+}
+function handleError(info: any, reason: any, getOuterStack: () => string[]): never {
+  const innerLines = info.error.stack!.split('\n')
+  if (typeof reason?.stack !== 'string') {
+    const outerError = new Error(reason)
+    const lines = outerError.stack!.split('\n')
+    lines.splice(1, Infinity, ...getOuterStack())
+    outerError.stack = lines.join('\n')
+    throw outerError
+  }
+  const lines: string[] = reason.stack.split('\n')
+  let index = lines.indexOf(innerLines[2])
+  if (index === -1) throw reason
+  index -= info.offset
+  while (index > 0) {
+    if (!lines[index - 1].endsWith(' (<anonymous>)')) break
+    index -= 1
+  }
+  lines.splice(index, Infinity, ...getOuterStack())
+  reason.stack = lines.join('\n')
+  throw reason
+}
+function composeError<T>(callback: (info: any) => T, getOuterStack = buildOuterStack()): T {
+  const info = { offset: 1, error: new Error() }
+  try {
+    const result: any = callback(info)
+    if (isObject(result) && 'then' in result) {
+      return result.then(undefined, (reason) => handleError(info, reason, getOuterStack))
+    } else { return result }
+  } catch (reason: any) { handleError(info, reason, getOuterStack) }
+}
+// Exact effect-inertia primitive from fiber.ts.
+const effectInertia = new WeakMap<Function, () => void | Promise<void>>()
+function runDisposable(dispose: any) {
+  const result = dispose()
+  return effectInertia.get(dispose)?.() ?? result
+}
+const FiberState = { ACTIVE: 2, DISPOSED: 4, UNLOADING: 5 }
+const symbols = { effect: Symbol.for('cordis.effect') }
+class CordisError extends Error {
+  constructor(public code: string) { super('cannot create effect on inactive context') }
+}

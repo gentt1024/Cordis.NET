@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>VersionedPlugin</AssemblyName><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Cordis.Clr/Cordis.Clr.csproj" />
+    <ProjectReference Include="../Shared/Shared.csproj" />
+    <ProjectReference Include="../Dependency/Dependency.csproj" />
+    <Compile Include="../PluginEntry.cs" Link="PluginEntry.cs" />
+    <None Include="../resource.txt" Link="assets/resource.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

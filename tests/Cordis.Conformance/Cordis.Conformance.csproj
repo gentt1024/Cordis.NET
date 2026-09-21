@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><IsAotCompatible>true</IsAotCompatible></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/Cordis.Core/Cordis.Core.csproj"/><ProjectReference Include="../../src/Cordis.Composition/Cordis.Composition.csproj"/></ItemGroup>
+  <ItemGroup><ProjectReference Include="../../src/Cordis.Extensions/Cordis.Extensions.csproj"/></ItemGroup>
+</Project>

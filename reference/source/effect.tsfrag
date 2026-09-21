@@ -1,0 +1,147 @@
+  effect(execute: () => SyncEffect, label?: string): Disposable<Promise<void>>
+  /** Same as above for async effects; the disposer is also awaitable. */
+  effect(execute: () => Effect, label?: string): AsyncDisposable<Promise<void>>
+  effect(execute: () => Effect, label = 'anonymous'): any {
+    this.assertActive()
+    if (this.state === FiberState.UNLOADING) {
+      throw new CordisError('INACTIVE_EFFECT')
+    }
+
+    const disposables: Disposable[] = []
+    let disposing = false
+    let disposalTask: void | Promise<void>
+    const dispose = () => {
+      if (disposing) return disposalTask
+      disposing = true
+      let task!: void | Promise<void>
+      for (const disposable of disposables.splice(0).reverse()) {
+        if (task) {
+          task = task.then(() => runDisposable(disposable))
+        } else {
+          const result = runDisposable(disposable)
+          if (isObject(result) && 'then' in result) {
+            task = result as any
+          }
+        }
+      }
+      return disposalTask = task
+    }
+
+    const meta: EffectMeta = { label, children: [] }
+    const runner: EffectRunner<boolean> = {
+      execute,
+      epoch: true,
+      collect: (dispose) => {
+        disposables.push(dispose)
+        this._disposables.delete(dispose)
+        if (dispose[symbols.effect]) {
+          meta.children.push(dispose[symbols.effect])
+        }
+      },
+      getOuterStack: buildOuterStack(),
+    }
+
+    let task: void | Promise<void>
+    let executing = true
+    let resolveSetup: (() => void) | undefined
+    let rejectSetup: ((reason: unknown) => void) | undefined
+    let setupBarrier: Promise<void> | undefined
+    let setupFailed = false
+    let inFlight: void | Promise<void>
+    let removeWrapper = () => false
+
+    const waitForSetup = () => {
+      setupBarrier ??= new Promise<void>((resolve, reject) => {
+        resolveSetup = resolve
+        rejectSetup = reject
+      })
+      return setupBarrier
+    }
+
+    const disposeAfter = (setup: PromiseLike<void>) => {
+      return Promise.resolve(setup).then(
+        () => dispose(),
+        async (reason) => {
+          await dispose()
+          throw reason
+        },
+      )
+    }
+
+    const finalizeDisposal = (callback: () => void | Promise<void>) => {
+      let result: void | Promise<void>
+      try {
+        result = callback()
+      } catch (error) {
+        removeWrapper()
+        throw error
+      }
+      if (isObject(result) && 'then' in result) {
+        const pending = Promise.resolve(result).finally(() => {
+          removeWrapper()
+          if (inFlight === pending) inFlight = undefined
+        })
+        return inFlight = pending
+      }
+      removeWrapper()
+      return result
+    }
+
+    const wrapper = defineProperty(() => {
+      // A synchronous setup failure can race an owner unload that already
+      // captured this wrapper but has not invoked it yet. The failed effect is
+      // never returned publicly, so let that internal caller await rollback.
+      if (!runner.epoch) return setupFailed ? inFlight : undefined
+      runner.epoch = false
+      return finalizeDisposal(() => {
+        if (executing) return disposeAfter(waitForSetup())
+        return task ? disposeAfter(task) : dispose()
+      })
+    }, symbols.effect, meta) as AsyncDisposable
+    effectInertia.set(wrapper, () => inFlight)
+
+    // Make the effect visible to a reentrant owner unload before execute()
+    // runs any plugin code. Async teardown stays owner-visible until it
+    // settles, allowing an outer effect to join cleanup another caller began.
+    removeWrapper = this._disposables.push(wrapper)
+    try {
+      task = this._execute(runner)
+    } catch (reason) {
+      executing = false
+      setupFailed = true
+      runner.epoch = false
+      let cleanup: void | Promise<void>
+      try {
+        cleanup = finalizeDisposal(dispose)
+      } finally {
+        rejectSetup?.(reason)
+      }
+      if (isObject(cleanup) && 'then' in cleanup) {
+        cleanup.catch(error => this.ctx.logger.error(error))
+      }
+      throw reason
+    }
+    executing = false
+    if (setupBarrier) {
+      Promise.resolve(task).then(resolveSetup, rejectSetup)
+    }
+
+    // prevent unhandled rejection — both from `task` itself and from the
+    // disposer chain if it fails to settle cleanly.
+    task?.catch(() => {
+      if (!runner.epoch) return dispose()
+      return finalizeDisposal(dispose)
+    }).catch((error) => this.ctx.logger.error(error))
+
+    const disposeAsync = () => {
+      if (!runner.epoch) return
+      runner.epoch = false
+      return finalizeDisposal(dispose)
+    }
+    wrapper.then = async (onFulfilled, onRejected) => {
+      return Promise.resolve(task)
+        .then(() => disposeAsync)
+        .then(onFulfilled, onRejected)
+    }
+    return wrapper
+  }

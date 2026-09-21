@@ -1,0 +1,41 @@
+<Solution>
+  <Folder Name="/Examples/">
+    <Project Path="examples/Composition/Composition.csproj" />
+    <Project Path="examples/Greeting.Plugin/Greeting.Plugin.csproj" />
+  </Folder>
+  <Folder Name="/Libraries/">
+    <Project Path="src/Cordis.Clr/Cordis.Clr.csproj" />
+    <Project Path="src/Cordis.Composition/Cordis.Composition.csproj" />
+    <Project Path="src/Cordis.Core/Cordis.Core.csproj" />
+    <Project Path="src/Cordis.Extensions/Cordis.Extensions.csproj" />
+    <Project Path="src/Cordis.Hosting/Cordis.Hosting.csproj" />
+    <Project Path="src/Cordis.JavaScript/Cordis.JavaScript.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj" />
+    <Project Path="tests/Cordis.Conformance/Cordis.Conformance.csproj" />
+    <Project Path="tests/Cordis.Core.Tests/Cordis.Core.Tests.csproj" />
+    <Project Path="tests/Cordis.Extensions.Tests/Cordis.Extensions.Tests.csproj" />
+    <Project Path="tests/Cordis.Platform.Tests/Cordis.Platform.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Fixtures/">
+    <Project Path="tests/fixtures/Dependency/Dependency.csproj" />
+    <Project Path="tests/fixtures/PluginBad/PluginBad.csproj" />
+    <Project Path="tests/fixtures/PluginV1/PluginV1.csproj" />
+    <Project Path="tests/fixtures/PluginV2/PluginV2.csproj" />
+    <Project Path="tests/fixtures/Shared/Shared.csproj" />
+  </Folder>
+  <Folder Name="/Tools/">
+    <Project Path="tools/Cordis.ApiCheck/Cordis.ApiCheck.csproj" />
+    <Project Path="tools/Cordis.Cli/Cordis.Cli.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="upstream.lock.json" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="build.ps1" />
+    <File Path="build.sh" />
+  </Folder>
+</Solution>

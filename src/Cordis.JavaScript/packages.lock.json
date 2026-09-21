@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Jint": {
+        "type": "Direct",
+        "requested": "[4.7.0, )",
+        "resolved": "4.7.0",
+        "contentHash": "deVOSJei6mxE6MPElkj1rYatcGM4ENPJoeuFxXvvDTrpbqz/uHdNVYing2DR/maCnA6+HDYuVvqhzFJLHQUF4g==",
+        "dependencies": {
+          "Acornima": "1.3.1"
+        }
+      },
+      "Acornima": {
+        "type": "Transitive",
+        "resolved": "1.3.1",
+        "contentHash": "fgn6icZH5yfdor3JAGBYKkmU8fN1jUqaQtresrE1Kaw2803kMwtQe1/yndxIZV9Dy8oMETUFPuB/Geq+4pssyA=="
+      },
+      "YamlDotNet": {
+        "type": "Transitive",
+        "resolved": "16.3.0",
+        "contentHash": "SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA=="
+      },
+      "cordis.composition": {
+        "type": "Project",
+        "dependencies": {
+          "Cordis.Core": "[0.1.0-alpha.1, )",
+          "YamlDotNet": "[16.3.0, )"
+        }
+      },
+      "cordis.core": {
+        "type": "Project"
+      }
+    }
+  }
+}

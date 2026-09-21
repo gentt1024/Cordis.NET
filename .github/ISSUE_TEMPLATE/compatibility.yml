@@ -1,0 +1,34 @@
+name: Compatibility gap
+description: Report a difference from the pinned Cordis behavior
+title: "[Compatibility] "
+labels: ["compatibility"]
+body:
+  - type: input
+    id: upstream
+    attributes:
+      label: Upstream file and test or symbol
+    validations:
+      required: true
+  - type: textarea
+    id: counterexample
+    attributes:
+      label: Minimal counterexample
+      description: Show the pinned behavior and Cordis.NET result.
+    validations:
+      required: true
+  - type: dropdown
+    id: evidence
+    attributes:
+      label: Evidence type
+      options:
+        - Source inspection
+        - Upstream test execution
+        - Differential trace
+        - Assertion review
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested disposition
+      description: Implement, adapt, or document as unsupported, with reasoning.

@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><PackageId>Cordis.Core</PackageId><Description>Cordis plugin lifecycle, dependency and effect runtime.</Description><IsAotCompatible>true</IsAotCompatible></PropertyGroup></Project>

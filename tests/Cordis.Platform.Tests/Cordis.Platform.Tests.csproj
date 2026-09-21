@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"><PrivateAssets>all</PrivateAssets></PackageReference>
+    <ProjectReference Include="../../src/Cordis.Clr/Cordis.Clr.csproj" />
+    <ProjectReference Include="../../src/Cordis.Extensions/Cordis.Extensions.csproj" />
+    <ProjectReference Include="../../src/Cordis.Hosting/Cordis.Hosting.csproj" />
+    <ProjectReference Include="../../src/Cordis.JavaScript/Cordis.JavaScript.csproj" />
+    <ProjectReference Include="../fixtures/Shared/Shared.csproj" />
+    <ProjectReference Include="../fixtures/PluginV1/PluginV1.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../fixtures/PluginV2/PluginV2.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../fixtures/PluginBad/PluginBad.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <Target Name="CopyPluginFixtures" AfterTargets="Build">
+    <ItemGroup>
+      <V1Fixture Include="../fixtures/PluginV1/bin/$(Configuration)/net10.0/**/*" />
+      <V2Fixture Include="../fixtures/PluginV2/bin/$(Configuration)/net10.0/**/*" />
+      <BadFixture Include="../fixtures/PluginBad/bin/$(Configuration)/net10.0/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(V1Fixture)" DestinationFiles="@(V1Fixture->'$(OutDir)fixtures/v1/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(V2Fixture)" DestinationFiles="@(V2Fixture->'$(OutDir)fixtures/v2/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(BadFixture)" DestinationFiles="@(BadFixture->'$(OutDir)fixtures/bad/%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+</Project>

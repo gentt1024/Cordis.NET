@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Pinned behavior baseline; not by itself evidence of conformance",
+  "harness": {
+    "repository": "deepseek-ai/deepseek-harness",
+    "commit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+    "releaseCommitLabel": "0.1.6-alpha.2"
+  },
+  "cordis": {
+    "path": "vendor/cordis",
+    "packageName": "@deepseek-ai/cordis",
+    "packageVersion": "4.0.2"
+  },
+  "sourceOrigins": [
+    {
+      "repository": "cordiverse/cordis",
+      "commit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "paths": [
+        "packages/core",
+        "packages/loader"
+      ],
+      "authority": "origin and original-test lookup; DSH vendored modifications still take precedence"
+    },
+    {
+      "repository": "deepseek-harness/cordis",
+      "commit": "abb0a307cb1d3b0947f455d590cf5ba922d4caa4",
+      "paths": [
+        "packages/include",
+        "packages/group",
+        "packages/timer",
+        "packages/hmr",
+        "packages/logger-console"
+      ],
+      "authority": "origins recorded by pinned DSH vendor/README.md; verify on inventory"
+    }
+  ],
+  "noFloatingBaseline": true
+}

@@ -1,0 +1,4 @@
+- insert:
+    - id: greeting
+      name: greeting
+      config: Hello from a deployed NuGet resource

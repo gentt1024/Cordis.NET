@@ -1,0 +1,1593 @@
+{
+  "format": "cordis-profile-fallback-map/v1",
+  "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+  "originalInstances": 31,
+  "scope": "31 remaining Node fallback/sealed package tests from profile.spec.ts. Current-file/telemetry composition is owned by the main Composition map.",
+  "command": "dotnet test tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj -c Release --filter FullyQualifiedName~DeploymentResolutionTests --logger trx",
+  "tests": [
+    {
+      "id": "U-61dbe558786a63a8",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healIsolatedProfileModuleFallback / resolves peers from each installation without sharing profile state (Web fallback: %s)",
+      "parameter": "false",
+      "line": 96,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(realpathSync.native(createRequire(consumerA).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorA, '..', 'node_modules', 'commander', 'index.js')))",
+        "expect(realpathSync.native(createRequire(consumerB).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorB, '..', 'node_modules', 'commander', 'index.js')))",
+        "expect(realpathSync.native(createRequire(consumerA).resolve('pnpm-owned'))).toBe(realpathSync.native(join(installed, 'index.js')))",
+        "expect(readFileSync(join(installed, 'index.js'), 'utf8')).toContain('profile-installed')",
+        "expect(realpathSync.native(createRequire(consumerA).resolve('bundle-only')))\n      .toBe(realpathSync.native(join(bundleAnchor, '..', 'node_modules', 'bundle-only', 'index.js')))",
+        "expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(webFallback)",
+        "expect(readlinkSync(sharedCommander)).toBe(sharedTarget)",
+        "expect(existsSync(join(profileA.dir, 'node_modules', 'bundle-only'))).toBe(false)",
+        "expect(existsSync(join(profileB.dir, 'node_modules', 'bundle-only'))).toBe(true)",
+        "expect(realpathSync.native(createRequire(consumerA).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorA, '..', 'node_modules', 'commander', 'index.js')))"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerA).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorA, '..', 'node_modules', 'commander', 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerB).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorB, '..', 'node_modules', 'commander', 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerA).resolve('pnpm-owned'))).toBe(realpathSync.native(join(installed, 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readFileSync(join(installed, 'index.js'), 'utf8')).toContain('profile-installed')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerA).resolve('bundle-only')))\n      .toBe(realpathSync.native(join(bundleAnchor, '..', 'node_modules', 'bundle-only', 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(webFallback)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readlinkSync(sharedCommander)).toBe(sharedTarget)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(profileA.dir, 'node_modules', 'bundle-only'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(profileB.dir, 'node_modules', 'bundle-only'))).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerA).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorA, '..', 'node_modules', 'commander', 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-1699f99ba7d4fb09",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healIsolatedProfileModuleFallback / resolves peers from each installation without sharing profile state (Web fallback: %s)",
+      "parameter": "true",
+      "line": 96,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(realpathSync.native(createRequire(consumerA).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorA, '..', 'node_modules', 'commander', 'index.js')))",
+        "expect(realpathSync.native(createRequire(consumerB).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorB, '..', 'node_modules', 'commander', 'index.js')))",
+        "expect(realpathSync.native(createRequire(consumerA).resolve('pnpm-owned'))).toBe(realpathSync.native(join(installed, 'index.js')))",
+        "expect(readFileSync(join(installed, 'index.js'), 'utf8')).toContain('profile-installed')",
+        "expect(realpathSync.native(createRequire(consumerA).resolve('bundle-only')))\n      .toBe(realpathSync.native(join(bundleAnchor, '..', 'node_modules', 'bundle-only', 'index.js')))",
+        "expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(webFallback)",
+        "expect(readlinkSync(sharedCommander)).toBe(sharedTarget)",
+        "expect(existsSync(join(profileA.dir, 'node_modules', 'bundle-only'))).toBe(false)",
+        "expect(existsSync(join(profileB.dir, 'node_modules', 'bundle-only'))).toBe(true)",
+        "expect(realpathSync.native(createRequire(consumerA).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorA, '..', 'node_modules', 'commander', 'index.js')))"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerA).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorA, '..', 'node_modules', 'commander', 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerB).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorB, '..', 'node_modules', 'commander', 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerA).resolve('pnpm-owned'))).toBe(realpathSync.native(join(installed, 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readFileSync(join(installed, 'index.js'), 'utf8')).toContain('profile-installed')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerA).resolve('bundle-only')))\n      .toBe(realpathSync.native(join(bundleAnchor, '..', 'node_modules', 'bundle-only', 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(webFallback)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readlinkSync(sharedCommander)).toBe(sharedTarget)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(profileA.dir, 'node_modules', 'bundle-only'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(profileB.dir, 'node_modules', 'bundle-only'))).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync.native(createRequire(consumerA).resolve('commander')))\n      .toBe(realpathSync.native(join(anchorA, '..', 'node_modules', 'commander', 'index.js')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-db39abc2e815c3b7",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "unlinkProfileModuleFallback / detaches only this profile projections and restores missing packages from a relocated installation",
+      "parameter": null,
+      "line": 145,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(existsSync(join(modules, 'fallback'))).toBe(false)",
+        "expect(existsSync(join(modules, '@scope/peer'))).toBe(false)",
+        "expect(readFileSync(join(modules, 'replaced', 'sentinel'), 'utf8')).toBe('pnpm')",
+        "expect(existsSync(join(other.dir, 'node_modules', 'fallback'))).toBe(true)",
+        "expect(realpathSync(join(modules, 'fallback'))).toBe(realpathSync(join(nextAnchor, '..', 'node_modules', 'fallback')))",
+        "expect(readFileSync(join(modules, 'replaced', 'sentinel'), 'utf8')).toBe('pnpm')"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ChangedMappingRequiresRestartWithoutPublishing"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(existsSync(join(modules, 'fallback'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(modules, '@scope/peer'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readFileSync(join(modules, 'replaced', 'sentinel'), 'utf8')).toBe('pnpm')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(other.dir, 'node_modules', 'fallback'))).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(realpathSync(join(modules, 'fallback'))).toBe(realpathSync(join(nextAnchor, '..', 'node_modules', 'fallback')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readFileSync(join(modules, 'replaced', 'sentinel'), 'utf8')).toBe('pnpm')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ChangedMappingRequiresRestartWithoutPublishing"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-37c4605148d7f3a0",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "resolveBundleDir / resolves a package whose exports map omits ./package.json",
+      "parameter": null,
+      "line": 248,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(resolveBundleDir('t', 'sealed-bundle', anchor, profileDir)).toBe(dir)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.BundleMetadataResolutionDoesNotRequireJavaScriptManifestExport"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "adapted-assertions-verified",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(resolveBundleDir('t', 'sealed-bundle', anchor, profileDir)).toBe(dir)",
+          "status": "explicit-deployment-adaptation-tested",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.BundleMetadataResolutionDoesNotRequireJavaScriptManifestExport"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.BundleMetadataResolutionDoesNotRequireJavaScriptManifestExport"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-49aefe306824981f",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / links the app and bundle dependency surface flat under profiles/node_modules",
+      "parameter": null,
+      "line": 387,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(lstatSync(join(fallback, name)).isSymbolicLink(), name).toBe(true)",
+        "expect(before).toContain('dep-of-a')"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(lstatSync(join(fallback, name)).isSymbolicLink(), name).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(before).toContain('dep-of-a')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-f12b748e45a5e7f4",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / throws when a fallback entry is a foreign file or directory",
+      "parameter": null,
+      "line": 414,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await expect(healProfilesModuleFallback({ installAnchor: anchor, home })).rejects.toThrow('is not a symlink')"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "await expect(healProfilesModuleFallback({ installAnchor: anchor, home })).rejects.toThrow('is not a symlink')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-9ebf83b95dfcc3e0",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / keeps selected bundle closures profile-local without overriding installation packages",
+      "parameter": null,
+      "line": 426,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(realpathSync.native(readlinkSync(join(sharedFallback, 'shared'))))\n      .toBe(realpathSync.native(join(installationAnchor, '..', 'node_modules', 'shared')))",
+        "expect(existsSync(join(sharedFallback, '@scope', 'bundle-only'))).toBe(false)",
+        "expect(existsSync(join(profileA.dir, 'node_modules', 'shared'))).toBe(false)",
+        "expect(existsSync(join(profileB.dir, 'node_modules', 'shared'))).toBe(false)",
+        "expect(readlinkSync(join(profileA.dir, 'node_modules', '@scope', 'bundle-only'))).toBe(ownedA)",
+        "expect(readlinkSync(ownedA))\n      .toBe(realpathSync.native(join(bundleA, '..', 'node_modules', '@scope', 'bundle-only')))",
+        "expect(readlinkSync(join(profileB.dir, 'node_modules', '@scope', 'bundle-only'))).toBe(ownedB)",
+        "expect(readlinkSync(ownedB))\n      .toBe(realpathSync.native(join(bundleB, '..', 'node_modules', '@scope', 'bundle-only')))",
+        "expect(existsSync(join(profileA.dir, 'node_modules', '@scope', 'bundle-only'))).toBe(false)",
+        "expect(existsSync(ownedA)).toBe(false)",
+        "expect(existsSync(join(profileB.dir, 'node_modules', '@scope', 'bundle-only'))).toBe(true)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(realpathSync.native(readlinkSync(join(sharedFallback, 'shared'))))\n      .toBe(realpathSync.native(join(installationAnchor, '..', 'node_modules', 'shared')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(sharedFallback, '@scope', 'bundle-only'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(profileA.dir, 'node_modules', 'shared'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(profileB.dir, 'node_modules', 'shared'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readlinkSync(join(profileA.dir, 'node_modules', '@scope', 'bundle-only'))).toBe(ownedA)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readlinkSync(ownedA))\n      .toBe(realpathSync.native(join(bundleA, '..', 'node_modules', '@scope', 'bundle-only')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readlinkSync(join(profileB.dir, 'node_modules', '@scope', 'bundle-only'))).toBe(ownedB)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readlinkSync(ownedB))\n      .toBe(realpathSync.native(join(bundleB, '..', 'node_modules', '@scope', 'bundle-only')))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(profileA.dir, 'node_modules', '@scope', 'bundle-only'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(ownedA)).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(profileB.dir, 'node_modules', '@scope', 'bundle-only'))).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ProfileFallbackIsRestrictedToActiveProfileAndLocalPackagesWin"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-ca62f8814ea81107",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / combines packaged installation proxies with profile-local bundle links",
+      "parameter": null,
+      "line": 462,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(lstatSync(join(home, 'profiles', 'node_modules', 'shared')).isDirectory()).toBe(true)",
+        "expect(lstatSync(join(profile.dir, 'node_modules', 'bundle-only')).isSymbolicLink()).toBe(true)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ModuleAndMetadataResolutionSharePackageSelection",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(lstatSync(join(home, 'profiles', 'node_modules', 'shared')).isDirectory()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(lstatSync(join(profile.dir, 'node_modules', 'bundle-only')).isSymbolicLink()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ModuleAndMetadataResolutionSharePackageSelection",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-058d395021d511bb",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / discovers dependencies beside a symlinked bundle real path",
+      "parameter": null,
+      "line": 477,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(readlinkSync(join(dir, '.dsh-module-fallback', 'node_modules', 'bundle-only')))\n      .toBe(realpathSync.native(realDependency))"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(readlinkSync(join(dir, '.dsh-module-fallback', 'node_modules', 'bundle-only')))\n      .toBe(realpathSync.native(realDependency))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-bac11df966d12122",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / traverses every explicit bundle root even when a nested package has the same name",
+      "parameter": null,
+      "line": 514,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(readlinkSync(join(ownedModules, 'nested-only'))).toBe(realpathSync.native(nestedOnly))",
+        "expect(readlinkSync(join(ownedModules, 'explicit-only'))).toBe(realpathSync.native(explicitOnly))"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ExplicitBundleRootsStillTraverseWhenEarlierNestedPackageHasSameName"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(readlinkSync(join(ownedModules, 'nested-only'))).toBe(realpathSync.native(nestedOnly))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ExplicitBundleRootsStillTraverseWhenEarlierNestedPackageHasSameName"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readlinkSync(join(ownedModules, 'explicit-only'))).toBe(realpathSync.native(explicitOnly))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": {
+            "status": "tested",
+            "dotnet": [
+              "Cordis.Composition.Tests.DeploymentResolutionTests.ExplicitBundleRootsStillTraverseWhenEarlierNestedPackageHasSameName"
+            ],
+            "meaning": "Explicit .NET deployment maps preserve the selected directory, installation-before-bundle precedence, full ordered dependency/peer closure, per-profile isolation and retention of host-owned files. This does not assert Node symlink/require mechanics."
+          },
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ExplicitBundleRootsStillTraverseWhenEarlierNestedPackageHasSameName"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-9edb5c1c03dcb74f",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / ignores owned projections while recomputing an ordered bundle closure",
+      "parameter": null,
+      "line": 559,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(readlinkSync(owned)).toBe(realpathSync.native(nested))",
+        "expect(JSON.parse(readFileSync(join(profileModules, 'bundle-only', 'package.json'), 'utf8')))\n      .toMatchObject({ name: 'bundle-only' })"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.OutsideAndAncestorLookupsDelegateWithoutRevivingStaleFallback"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(readlinkSync(owned)).toBe(realpathSync.native(nested))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(JSON.parse(readFileSync(join(profileModules, 'bundle-only', 'package.json'), 'utf8')))\n      .toMatchObject({ name: 'bundle-only' })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.EarlierRootCompletesBeforeLaterRootsAndIncludesPeers",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.OutsideAndAncestorLookupsDelegateWithoutRevivingStaleFallback"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-6cf97f81af298cc0",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / cleans owned projections without removing profile-managed entries",
+      "parameter": null,
+      "line": 600,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(existsSync(join(profileModules, 'fallback'))).toBe(false)",
+        "expect(lstatSync(join(profileModules, 'managed-dir')).isDirectory()).toBe(true)",
+        "expect(readlinkSync(join(profileModules, 'managed-link'))).toBe(foreignTarget)",
+        "expect(existsSync(join(ownedModules, 'fallback'))).toBe(false)",
+        "expect(existsSync(join(ownedModules, 'managed-dir'))).toBe(false)",
+        "expect(existsSync(join(ownedModules, 'managed-link'))).toBe(false)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(existsSync(join(profileModules, 'fallback'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(lstatSync(join(profileModules, 'managed-dir')).isDirectory()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(readlinkSync(join(profileModules, 'managed-link'))).toBe(foreignTarget)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(ownedModules, 'fallback'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(ownedModules, 'managed-dir'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(ownedModules, 'managed-link'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.SeparateInstallationsAndProfilesDoNotShareRoutingOrWriteFiles"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-54c0c936dd8db018",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / cleans owned projections whose junction target uses a canonical parent path",
+      "parameter": null,
+      "line": 630,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(existsSync(profileLink)).toBe(false)",
+        "expect(existsSync(join(ownedModules, 'fallback'))).toBe(false)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.CanonicalizedProfileUsesAncestorFromMatchingParentTree",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(existsSync(profileLink)).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(ownedModules, 'fallback'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.CanonicalizedProfileUsesAncestorFromMatchingParentTree",
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ComputesImmutableGraphWithoutMaterialization"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-9c97675c99bc5375",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / replaces a wrong symlink",
+      "parameter": null,
+      "line": 654,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(readlinkSync(join(fallback, 'dsh-app'))).toContain('app')"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.ChangedMappingRequiresRestartWithoutPublishing"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(readlinkSync(join(fallback, 'dsh-app'))).toContain('app')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.ChangedMappingRequiresRestartWithoutPublishing"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-2c8b2a055b53d076",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / retains current links while repairing a missing sibling",
+      "parameter": null,
+      "line": 664,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(readlinkSync(join(fallback, 'dsh-app'))).toBe(appTarget)",
+        "expect(lstatSync(join(fallback, 'bundle-a')).isSymbolicLink()).toBe(true)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.DeploymentResolutionTests.AdditiveReplacementInvalidatesMissAndMetadataCacheAtomically"
+      ],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(readlinkSync(join(fallback, 'dsh-app'))).toBe(appTarget)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(lstatSync(join(fallback, 'bundle-a')).isSymbolicLink()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": {
+        "dotnet": [
+          "Cordis.Composition.Tests.DeploymentResolutionTests.AdditiveReplacementInvalidatesMissAndMetadataCacheAtomically"
+        ],
+        "status": "tested-related-mechanism",
+        "caution": "Only portable invariants explicitly marked tested above are claimed corresponding to source assertions. Related safety tests are evidence of the alternate CLR deployment boundary, not original Node assertion passes."
+      },
+      "evidence": [
+        "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
+      ],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-8fd9ba43bce8a7f7",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / serializes concurrent healers and retains the identical link",
+      "parameter": null,
+      "line": 678,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(lstatSync(join(fallback, 'dsh-app')).isSymbolicLink()).toBe(true)"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(lstatSync(join(fallback, 'dsh-app')).isSymbolicLink()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-66da1c85951f6cc9",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / does not acquire the writer lock for a complete generation",
+      "parameter": null,
+      "line": 689,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(outcome).toBe('complete')"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(outcome).toBe('complete')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-5ccc5ba3eec6a6fc",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / waits for the module-fallback writer lock before publishing entries",
+      "parameter": null,
+      "line": 714,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(existsSync(join(modules, 'dsh-app'))).toBe(false)",
+        "expect(lstatSync(join(modules, 'dsh-app')).isSymbolicLink()).toBe(true)"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(existsSync(join(modules, 'dsh-app'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(lstatSync(join(modules, 'dsh-app')).isSymbolicLink()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-98c658413219062f",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / writes real ESM proxies for a packaged executable",
+      "parameter": null,
+      "line": 737,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(lstatSync(proxy).isDirectory()).toBe(true)",
+        "expect(proxyManifest).toMatchObject({\n        version: '0.0.0',\n        exports: { '.': './entry-0.js', './feature': './entry-1.js' },\n      })",
+        "expect(proxyManifest.dsh.moduleFallback.targets['.']).toEqual(expect.stringContaining('/bundle-a/index.js'))",
+        "await expect(import(join(proxy, 'entry-0.js'))).resolves.toMatchObject({ packageName: 'bundle-a' })",
+        "await expect(import(join(proxy, 'entry-1.js'))).resolves.toMatchObject({ feature: 'proxied' })"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(lstatSync(proxy).isDirectory()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(proxyManifest).toMatchObject({\n        version: '0.0.0',\n        exports: { '.': './entry-0.js', './feature': './entry-1.js' },\n      })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(proxyManifest.dsh.moduleFallback.targets['.']).toEqual(expect.stringContaining('/bundle-a/index.js'))",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "await expect(import(join(proxy, 'entry-0.js'))).resolves.toMatchObject({ packageName: 'bundle-a' })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "await expect(import(join(proxy, 'entry-1.js'))).resolves.toMatchObject({ feature: 'proxied' })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-b83f73fbb66073fa",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / resolves import-only exports from each package installation",
+      "parameter": null,
+      "line": 774,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await expect(import(join(fallback, 'bundle-a', 'entry-0.js'))).resolves.toMatchObject({ packageName: 'bundle-a' })",
+        "await expect(import(join(fallback, 'nested-esm', 'entry-0.js'))).resolves.toMatchObject({ nested: 'proxied' })"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "await expect(import(join(fallback, 'bundle-a', 'entry-0.js'))).resolves.toMatchObject({ packageName: 'bundle-a' })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "await expect(import(join(fallback, 'nested-esm', 'entry-0.js'))).resolves.toMatchObject({ nested: 'proxied' })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-c6de11b2442e9b00",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / resolves explicit condition targets without filesystem package lookup",
+      "parameter": null,
+      "line": 803,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await expect(import(join(proxy, 'entry-1.js'))).resolves.toMatchObject({ mini: true })",
+        "await expect(import(join(proxy, 'entry-2.js'))).resolves.toMatchObject({ web: true })"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "await expect(import(join(proxy, 'entry-1.js'))).resolves.toMatchObject({ mini: true })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "await expect(import(join(proxy, 'entry-2.js'))).resolves.toMatchObject({ web: true })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-2a4db5ba20fefdfb",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / preserves the installation path while resolving packaged exports",
+      "parameter": null,
+      "line": 829,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(proxyManifest.dsh.moduleFallback.targets['.']).toContain('/app/node_modules/linked-esm/index.js')"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(proxyManifest.dsh.moduleFallback.targets['.']).toContain('/app/node_modules/linked-esm/index.js')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-93c1a388edbaa051",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / uses the legacy index fallback when a package has no exports or main",
+      "parameter": null,
+      "line": 858,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await expect(import(join(home, 'profiles', 'node_modules', 'bundle-a', 'entry-0.js')))\n        .resolves.toMatchObject({ packageName: 'bundle-a' })"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "await expect(import(join(home, 'profiles', 'node_modules', 'bundle-a', 'entry-0.js')))\n        .resolves.toMatchObject({ packageName: 'bundle-a' })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-ec56c89ec1d8daba",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / uses Node legacy resolution for an extensionless main entry",
+      "parameter": null,
+      "line": 875,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await expect(import(join(home, 'profiles', 'node_modules', 'bundle-a', 'entry-0.js')))\n        .resolves.toMatchObject({ packageName: 'bundle-a' })"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "await expect(import(join(home, 'profiles', 'node_modules', 'bundle-a', 'entry-0.js')))\n        .resolves.toMatchObject({ packageName: 'bundle-a' })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-4b565bed3e6bea74",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / skips executable-only and declaration-only packages without import entries",
+      "parameter": null,
+      "line": 892,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(existsSync(join(fallback, 'dsh-app'))).toBe(false)",
+        "expect(existsSync(join(fallback, 'bundle-a', 'entry-0.js'))).toBe(true)"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(existsSync(join(fallback, 'dsh-app'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(existsSync(join(fallback, 'bundle-a', 'entry-0.js'))).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-edd4df171523bff7",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / fails loud on a missing legacy main entry",
+      "parameter": null,
+      "line": 914,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await expect(healProfilesModuleFallback({ installAnchor: anchor, home: tmp() })).rejects.toThrow('main entry is missing')"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "await expect(healProfilesModuleFallback({ installAnchor: anchor, home: tmp() })).rejects.toThrow('main entry is missing')",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-c294726be3eb8406",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / omits unavailable ESM exports and rejects malformed export targets",
+      "parameter": null,
+      "line": 929,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(existsSync(join(home, 'profiles', 'node_modules', 'bundle-a'))).toBe(false)",
+        "await expect(healProfilesModuleFallback({ installAnchor: anchor, home })).rejects.toThrow(\n            mode === 'null' || mode === 'null-subpath'\n              ? 'cannot resolve ESM export bundle-a'\n              : 'resolves outside its package',\n          )"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(existsSync(join(home, 'profiles', 'node_modules', 'bundle-a'))).toBe(false)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "await expect(healProfilesModuleFallback({ installAnchor: anchor, home })).rejects.toThrow(\n            mode === 'null' || mode === 'null-subpath'\n              ? 'cannot resolve ESM export bundle-a'\n              : 'resolves outside its package',\n          )",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-82bb196d8fda7b3b",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / requires a package version before writing a packaged proxy",
+      "parameter": null,
+      "line": 962,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await expect(healProfilesModuleFallback({ installAnchor: anchor, home: tmp() })).rejects.toThrow(\n        'installed package bundle-a must declare a non-empty version',\n      )"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "await expect(healProfilesModuleFallback({ installAnchor: anchor, home: tmp() })).rejects.toThrow(\n        'installed package bundle-a must declare a non-empty version',\n      )",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-b9a62001d580b073",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / replaces plain-node links and stale managed proxies in packaged mode",
+      "parameter": null,
+      "line": 978,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(lstatSync(proxy).isSymbolicLink()).toBe(true)",
+        "expect(lstatSync(proxy).isDirectory()).toBe(true)",
+        "expect(JSON.parse(readFileSync(join(proxy, 'package.json'), 'utf8'))).toMatchObject({\n        version: '0.0.0',\n      })"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(lstatSync(proxy).isSymbolicLink()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(lstatSync(proxy).isDirectory()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(JSON.parse(readFileSync(join(proxy, 'package.json'), 'utf8'))).toMatchObject({\n        version: '0.0.0',\n      })",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-f0048912c636d1ed",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / replaces a managed packaged proxy with a plain-node symlink",
+      "parameter": null,
+      "line": 1003,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(lstatSync(fallback).isDirectory()).toBe(true)",
+        "expect(lstatSync(fallback).isSymbolicLink()).toBe(true)"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "expect(lstatSync(fallback).isDirectory()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        },
+        {
+          "assertion": "expect(lstatSync(fallback).isSymbolicLink()).toBe(true)",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    },
+    {
+      "id": "U-c47c60d116147311",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/profile.spec.ts",
+      "title": "healProfilesModuleFallback / rejects foreign packaged fallback directories with valid or invalid metadata",
+      "parameter": null,
+      "line": 1019,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await expect(healProfilesModuleFallback({ installAnchor: anchor, home })).rejects.toThrow(\n          'exists and is not a dsh-managed module proxy',\n        )"
+      ],
+      "dotnet": [],
+      "platform": "Node module fallback filesystem projection and ESM proxy generation; replaced by explicit .NET deployment routing.",
+      "status": "platform-specific",
+      "originalTestPassClaim": false,
+      "assertionCoverage": [
+        {
+          "assertion": "await expect(healProfilesModuleFallback({ installAnchor: anchor, home })).rejects.toThrow(\n          'exists and is not a dsh-managed module proxy',\n        )",
+          "status": "node-projection-assertion-not-executed",
+          "portableInvariant": null,
+          "boundary": "Original symlink/junction/proxy/require/import/Node package-export behavior is not a CLR contract. DeploymentGeneration computes immutable data without writing a node_modules fallback tree. Replacing existing mappings requires a host restart; additive mappings publish atomically."
+        }
+      ],
+      "portableAdaptationCoverage": null,
+      "evidence": [],
+      "remainingGap": "No Node fallback directory materializer, ESM proxy emitter, package exports/main resolver, writer-lock protocol or pnpm projection cleanup is exposed. The host supplies deployed package paths and explicit CLR module registration; source Node behavior is classified rather than silently emulated."
+    }
+  ]
+}

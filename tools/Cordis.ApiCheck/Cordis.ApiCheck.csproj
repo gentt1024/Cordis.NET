@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Cordis.Core/Cordis.Core.csproj"/>
+    <ProjectReference Include="../../src/Cordis.Composition/Cordis.Composition.csproj"/>
+    <ProjectReference Include="../../src/Cordis.Extensions/Cordis.Extensions.csproj"/>
+    <ProjectReference Include="../../src/Cordis.Clr/Cordis.Clr.csproj"/>
+    <ProjectReference Include="../../src/Cordis.Hosting/Cordis.Hosting.csproj"/>
+    <ProjectReference Include="../../src/Cordis.JavaScript/Cordis.JavaScript.csproj"/>
+  </ItemGroup>
+</Project>

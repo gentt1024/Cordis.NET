@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>true</IsAotCompatible><PackageId>Cordis.Example.Greeting</PackageId><Description>Example statically registered Cordis.NET greeting plugin.</Description></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/Cordis.Composition/Cordis.Composition.csproj"/><EmbeddedResource Include="cordis.patch.yml" LogicalName="Cordis.Example.Greeting.cordis.patch.yml"/></ItemGroup>
+</Project>

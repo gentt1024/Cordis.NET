@@ -1,0 +1,841 @@
+{
+  "format": "cordis-test-map/v1",
+  "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+  "tests": [
+    {
+      "id": "U-51123f2c9d60cc67",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "resolveConfigPath / resolves relative to the given cwd outside replay mode",
+      "parameter": null,
+      "line": 29,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(resolveConfigPath('./cordis.yml', undefined, `${sep}base`)).toBe(resolve(`${sep}base`, 'cordis.yml'))",
+        "expect(resolveConfigPath('conf/app.yaml', 'record', `${sep}base`)).toBe(resolve(`${sep}base`, 'conf/app.yaml'))"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.OriginalResolveConfigPath"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-f1cdb5539b4d4be0",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "resolveConfigPath / swaps a cordis.yml/.yaml basename for cordis.snapshot.yml in replay mode",
+      "parameter": null,
+      "line": 34,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(resolveConfigPath('./cordis.yml', 'replay', `${sep}base`)).toBe(resolve(`${sep}base`, 'cordis.snapshot.yml'))",
+        "expect(resolveConfigPath('deep/cordis.yaml', 'replay', `${sep}base`)).toBe(resolve(`${sep}base`, 'deep/cordis.snapshot.yml'))"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.OriginalResolveConfigPath"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-a14eed928a0bb4f0",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "resolveConfigPath / leaves a non-cordis basename alone in replay mode and defaults cwd to the process cwd",
+      "parameter": null,
+      "line": 39,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(resolveConfigPath('custom.yml', 'replay', `${sep}base`)).toBe(resolve(`${sep}base`, 'custom.yml'))",
+        "expect(resolveConfigPath('./x.yml', undefined)).toBe(resolve(process.cwd(), 'x.yml'))"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.OriginalResolveConfigPath"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-252266e0b5517cc4",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadEnv / loads variables from .env in the given dir",
+      "parameter": null,
+      "line": 46,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(process.env['DSH_APP_BOOT_SPEC_VAR']).toBe('loaded')",
+        "expect(warn).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.MissingEnvironmentIsSilentAndReadFailureWarnsOnce"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-b2edfeedc2b829c4",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadEnv / stays silent when no .env exists (ambient environment wins)",
+      "parameter": null,
+      "line": 56,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(warn).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.MissingEnvironmentIsSilentAndReadFailureWarnsOnce"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-62704638cbe0b2fe",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadEnv / warns (labelled, single line) when .env exists but cannot be loaded",
+      "parameter": null,
+      "line": 62,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledTimes(1)",
+        "expect(warn.mock.calls[0]?.[0]).toMatch(new RegExp(`^${NAME}: failed to load \\\\.env: `))"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.MissingEnvironmentIsSilentAndReadFailureWarnsOnce"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-b5491c8ef10b9621",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadEnv / defaults dir to the process cwd and warn to a stderr write",
+      "parameter": null,
+      "line": 71,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(process.env['DSH_APP_BOOT_SPEC_DEFAULTS']).toBe('yes')",
+        "expect(written).toHaveLength(1)",
+        "expect(written[0]).toContain(`${NAME}: failed to load .env: `)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.SimpleLoadDefaultsAndReporter"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-1a741d1ef7abec97",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / layers user under project under the inherited environment",
+      "parameter": null,
+      "line": 107,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(process.env[NAMES[0]]).toBe('project')",
+        "expect(process.env[NAMES[1]]).toBe('user-only')",
+        "expect(process.env[NAMES[2]]).toBe('project-only')",
+        "expect(process.env['APP_BOOT_LAYERED_INHERITED']).toBe('inherited')",
+        "expect(warn).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.EnvironmentLayersRetainProvenanceAndInheritedPrecedence"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-79f5cf72be220880",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / refuses to launch when a .env sets %s, before applying anything",
+      "parameter": "['a harness switch', 'DSH_PERMISSION_MODE=danger-full-access\\n']",
+      "line": 139,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn())).toThrow(/only the launching environment may set/)",
+        "expect(process.env[NAMES[1]]).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.RefusesBootstrapNamesBeforeApplyingAnything"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-1b511a771b56cfdc",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / refuses to launch when a .env sets %s, before applying anything",
+      "parameter": "['the executable search path', 'PATH=/tmp/evil\\n']",
+      "line": 139,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn())).toThrow(/only the launching environment may set/)",
+        "expect(process.env[NAMES[1]]).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.RefusesBootstrapNamesBeforeApplyingAnything"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-da398f54fcd66fae",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / refuses to launch when a .env sets %s, before applying anything",
+      "parameter": "['a module preload', 'NODE_OPTIONS=--require /tmp/evil.js\\n']",
+      "line": 139,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn())).toThrow(/only the launching environment may set/)",
+        "expect(process.env[NAMES[1]]).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.RefusesBootstrapNamesBeforeApplyingAnything"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-af92ebab687f8579",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / refuses to launch when a .env sets %s, before applying anything",
+      "parameter": "['a skill root', 'DSH_AGENTS_HOME=/tmp/injected\\n']",
+      "line": 139,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn())).toThrow(/only the launching environment may set/)",
+        "expect(process.env[NAMES[1]]).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.RefusesBootstrapNamesBeforeApplyingAnything"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-4f001722c154ace0",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / refuses to launch when a .env sets %s, before applying anything",
+      "parameter": "['a network proxy', 'HTTPS_PROXY=http://attacker.example\\n']",
+      "line": 139,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn())).toThrow(/only the launching environment may set/)",
+        "expect(process.env[NAMES[1]]).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.RefusesBootstrapNamesBeforeApplyingAnything"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-9bf98b2c9c64b24f",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / refuses to launch when a .env sets %s, before applying anything",
+      "parameter": "['a lowercase network proxy', 'https_proxy=http://attacker.example\\n']",
+      "line": 139,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn())).toThrow(/only the launching environment may set/)",
+        "expect(process.env[NAMES[1]]).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.RefusesBootstrapNamesBeforeApplyingAnything"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-48ec6dbb0a5b5a2c",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / refuses to launch when a .env sets %s, before applying anything",
+      "parameter": "['a browser command', 'BROWSER=./script\\n']",
+      "line": 139,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn())).toThrow(/only the launching environment may set/)",
+        "expect(process.env[NAMES[1]]).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.RefusesBootstrapNamesBeforeApplyingAnything"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-ab4f106cd562c226",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / accepts the proxy names from the Harness-home .env, below an exported one",
+      "parameter": null,
+      "line": 167,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(snapshot.get('HTTP_PROXY')).toEqual({ value: 'http://from-home:8080', source: 'user-env', path: join(home, '.env') })",
+        "expect(snapshot.get('no_proxy')).toEqual({ value: 'example.com', source: 'user-env', path: join(home, '.env') })",
+        "expect(snapshot.get('HTTPS_PROXY')).toEqual({ value: 'http://exported:8080', source: 'process' })",
+        "expect(process.env.HTTP_PROXY).toBe('http://from-home:8080')",
+        "expect(process.env.HTTPS_PROXY).toBe('http://exported:8080')"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.HomeProxyValuesKeepCaseProvenanceAndInheritedPrecedence"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-768699a722378ad0",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / still refuses every other bootstrap name in the Harness-home .env",
+      "parameter": null,
+      "line": 192,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn())).toThrow(/only the launching environment may set/)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.HomeProxyExceptionDoesNotPermitTrustAndValidatesBothBeforeMaterialization"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-85898e041783e489",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / names the Harness-home file as the way out when a project .env sets a proxy",
+      "parameter": null,
+      "line": 208,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(() => loadLayeredEnv(NAME, project, vi.fn()))\n        .toThrow(`export HTTP_PROXY, or put it in ${join(home, '.env')}, which does not travel with a repository`)",
+        "expect(process.env.HTTP_PROXY).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.ProjectProxyDiagnosticNamesHomeRemedy"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-503a51d5b86d7847",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / treats the invoking directory as the Harness home when they are the same directory",
+      "parameter": null,
+      "line": 224,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(loadLayeredEnv(NAME, home, vi.fn()).get('HTTP_PROXY')?.value).toBe('http://from-home:8080')"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.HomeProxyExceptionDoesNotPermitTrustAndValidatesBothBeforeMaterialization"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-b7195fd77895ac2c",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / reports each file value with its absolute path",
+      "parameter": null,
+      "line": 239,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(snapshot.get(NAMES[1])).toEqual({ value: 'u', source: 'user-env', path: join(home, '.env') })",
+        "expect(snapshot.get(NAMES[2])).toEqual({ value: 'p', source: 'project-env', path: join(project, '.env') })",
+        "expect(snapshot.getFrom(NAMES[2], ['process', 'user-env'])).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.SnapshotReportsBothAbsolutePathsAndFiltersSources"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-b948655305739fdb",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / resolves the harness home from the inherited environment, never from a file",
+      "parameter": null,
+      "line": 257,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(process.env[NAMES[1]]).toBe('real-home')",
+        "expect(process.env[NAMES[2]]).toBe('set-by-project')"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.SnapshotReportsBothAbsolutePathsAndFiltersSources"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-be75a2d45267b20e",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / warns and continues when a layer exists but cannot be read",
+      "parameter": null,
+      "line": 274,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(expect.stringContaining(`${NAME}: failed to load .env`))",
+        "expect(snapshot.get(NAMES[1])).toBeUndefined()",
+        "expect(snapshot.get(NAMES[2])).toEqual({ value: 'project-only', source: 'project-env', path: join(project, '.env') })",
+        "expect(process.env[NAMES[2]]).toBe('project-only')"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.MissingAndUnreadableLayersContinueWithOneWarningAndDefaultSink"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-5352f1644fbe38f5",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / reports to stderr when the caller supplies no reporter",
+      "parameter": null,
+      "line": 295,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(write).toHaveBeenCalledWith(expect.stringContaining(`${NAME}: failed to load .env`))",
+        "expect(snapshot.get(NAMES[2])).toEqual({ value: 'project-only', source: 'project-env', path: join(project, '.env') })",
+        "expect(process.env[NAMES[2]]).toBe('project-only')"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.MissingAndUnreadableLayersContinueWithOneWarningAndDefaultSink"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-59b8eeed4f4d37c8",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / passes over an absent layer without reporting it",
+      "parameter": null,
+      "line": 315,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(warn).not.toHaveBeenCalled()",
+        "expect(snapshot.get(NAMES[2])).toEqual({ value: 'project-only', source: 'project-env', path: join(project, '.env') })"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.MissingAndUnreadableLayersContinueWithOneWarningAndDefaultSink"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-03a945129c3d319a",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / carries only the inherited environment when neither file exists",
+      "parameter": null,
+      "line": 332,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(snapshot.get('APP_BOOT_LAYERED_INHERITED')).toEqual({ value: 'inherited', source: 'process' })"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.AbsentLayersCarryInheritedOnlyAndSameDirectoryIsOneProjectLayer"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-4920305131e16805",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "loadLayeredEnv / reads a harness home that is also the invocation directory exactly once",
+      "parameter": null,
+      "line": 347,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(snapshot.get(NAMES[2])).toEqual({ value: 'one-file', source: 'project-env', path: join(both, '.env') })"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.AbsentLayersCarryInheritedOnlyAndSameDirectoryIsOneProjectLayer"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "Caller-owned environment dictionary replaces process.env. Home is a launch input resolved before file layers; file layers cannot change it. Values, precedence, provenance and failure ordering are preserved."
+    },
+    {
+      "id": "U-e195b62c894f4ce7",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "installFailLoud / writes one labelled line with the stack and exits 1 on an Error rejection",
+      "parameter": null,
+      "line": 376,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(proc.written[0]).toContain(`${NAME}: fatal load failure: `)",
+        "expect(proc.written[0]).toContain(error.stack)",
+        "expect(proc.exits).toEqual([1])"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.FatalDiagnosticFormatsErrorsAndNonErrorsAndDisposalUnregistersBoundary"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "FatalLoadGuard is an explicitly routed host error boundary. Node unhandledRejection timing/listener APIs do not map to GC-triggered Task.UnobservedTaskException. Tests verify diagnostics, first-failure latch, observed-error suppression and bounded release with a controlled TimeProvider; no process event or real exit is invoked."
+    },
+    {
+      "id": "U-5fa6d1dd6db9fb3b",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "installFailLoud / stringifies a non-Error rejection and an Error without a stack falls back to its message",
+      "parameter": null,
+      "line": 388,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(plain.written[0]).toContain('plain failure')",
+        "expect(plain.exits).toEqual([1])",
+        "expect(bare.written[0]).toContain('no stack')",
+        "expect(bare.exits).toEqual([1])"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.FatalDiagnosticFormatsErrorsAndNonErrorsAndDisposalUnregistersBoundary"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "FatalLoadGuard is an explicitly routed host error boundary. Node unhandledRejection timing/listener APIs do not map to GC-triggered Task.UnobservedTaskException. Tests verify diagnostics, first-failure latch, observed-error suppression and bounded release with a controlled TimeProvider; no process event or real exit is invoked."
+    },
+    {
+      "id": "U-a10a494e82e9d615",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "installFailLoud / returns an uninstaller that removes the handler (and defaults to the real process)",
+      "parameter": null,
+      "line": 404,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(proc.handlers).toHaveLength(1)",
+        "expect(proc.handlers).toHaveLength(0)",
+        "expect(process.listenerCount('unhandledRejection')).toBe(before + 1)",
+        "expect(process.listenerCount('unhandledRejection')).toBe(before)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.FatalDiagnosticFormatsErrorsAndNonErrorsAndDisposalUnregistersBoundary"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "platform-adaptation-verified",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "FatalLoadGuard is an explicitly routed host error boundary. Node unhandledRejection timing/listener APIs do not map to GC-triggered Task.UnobservedTaskException. Tests verify diagnostics, first-failure latch, observed-error suppression and bounded release with a controlled TimeProvider; no process event or real exit is invoked.",
+      "note": "Node process listener count and rejection checkpoint assertions are not reported passed. Explicit disposal and RetainAssembled ownership are independently verified."
+    },
+    {
+      "id": "U-9b25c04351c00be8",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "installFailLoud / does not report an activation rejection shared by entries in the boot audit",
+      "parameter": null,
+      "line": 419,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(proc.written).toEqual([])",
+        "expect(proc.exits).toEqual([])",
+        "expect(warn).toHaveBeenCalledWith(expect.stringContaining('assembled activation failure'))",
+        "expect(proc.exits).toEqual([1])"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.FatalBoundaryReportsBeforeReleaseCoalescesAndRetainsAssembledReasons"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "platform-adaptation-verified",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "FatalLoadGuard is an explicitly routed host error boundary. Node unhandledRejection timing/listener APIs do not map to GC-triggered Task.UnobservedTaskException. Tests verify diagnostics, first-failure latch, observed-error suppression and bounded release with a controlled TimeProvider; no process event or real exit is invoked.",
+      "note": "Node process listener count and rejection checkpoint assertions are not reported passed. Explicit disposal and RetainAssembled ownership are independently verified."
+    },
+    {
+      "id": "U-aa621c9f926cd4b8",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "installFailLoud / awaits the release hook before exiting so the terminal owner can restore it",
+      "parameter": null,
+      "line": 451,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(proc.written[0]).toContain(`${NAME}: fatal load failure: `)",
+        "expect(proc.exits).toEqual([])",
+        "await vi.waitFor(() => { expect(proc.exits).toEqual([1]) })",
+        "expect(order).toEqual(['released'])"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.FatalBoundaryReportsBeforeReleaseCoalescesAndRetainsAssembledReasons"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "FatalLoadGuard is an explicitly routed host error boundary. Node unhandledRejection timing/listener APIs do not map to GC-triggered Task.UnobservedTaskException. Tests verify diagnostics, first-failure latch, observed-error suppression and bounded release with a controlled TimeProvider; no process event or real exit is invoked."
+    },
+    {
+      "id": "U-8d9fa0287a4e0721",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "installFailLoud / still exits when the release hook rejects",
+      "parameter": null,
+      "line": 466,
+      "kind": "original-test",
+      "keyAssertions": [
+        "await vi.waitFor(() => { expect(proc.exits).toEqual([1]) })"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.FatalBoundaryReportsBeforeReleaseCoalescesAndRetainsAssembledReasons"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "FatalLoadGuard is an explicitly routed host error boundary. Node unhandledRejection timing/listener APIs do not map to GC-triggered Task.UnobservedTaskException. Tests verify diagnostics, first-failure latch, observed-error suppression and bounded release with a controlled TimeProvider; no process event or real exit is invoked."
+    },
+    {
+      "id": "U-fc2a2379bd6858c7",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "installFailLoud / exits without waiting when a release hook never settles",
+      "parameter": null,
+      "line": 473,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(proc.exits).toEqual([])",
+        "expect(proc.exits).toEqual([1])"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchOriginalTests.FatalReleaseWaitsAndTimeoutIsBoundedWithoutSleeping"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "FatalLoadGuard is an explicitly routed host error boundary. Node unhandledRejection timing/listener APIs do not map to GC-triggered Task.UnobservedTaskException. Tests verify diagnostics, first-failure latch, observed-error suppression and bounded release with a controlled TimeProvider; no process event or real exit is invoked."
+    },
+    {
+      "id": "U-6ce0b5e95dcddbc6",
+      "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceRepository": "deepseek-ai/deepseek-harness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "file": "packages/boot/app-boot/tests/app-boot.spec.ts",
+      "title": "installFailLoud / reports only the first rejection and keeps handling later ones during the release",
+      "parameter": null,
+      "line": 490,
+      "kind": "original-test",
+      "keyAssertions": [
+        "expect(proc.handlers).toHaveLength(1)",
+        "expect(proc.written).toHaveLength(1)",
+        "expect(proc.written[0]).toContain('first rejection')",
+        "await vi.waitFor(() => { expect(proc.exits).toEqual([1]) })",
+        "expect(released).toBe(true)"
+      ],
+      "dotnet": [
+        "Cordis.Composition.Tests.LaunchEnvironmentTests.FatalBoundaryReportsBeforeReleaseCoalescesAndRetainsAssembledReasons"
+      ],
+      "platform": "JIT; portable managed data/Task policy",
+      "status": "adapted-test-passed",
+      "evidence": [
+        "artifacts/verification/tests/Cordis.Composition.Tests.trx"
+      ],
+      "adaptation": "FatalLoadGuard is an explicitly routed host error boundary. Node unhandledRejection timing/listener APIs do not map to GC-triggered Task.UnobservedTaskException. Tests verify diagnostics, first-failure latch, observed-error suppression and bounded release with a controlled TimeProvider; no process event or real exit is invoked."
+    }
+  ]
+}

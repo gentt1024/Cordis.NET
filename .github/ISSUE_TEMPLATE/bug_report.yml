@@ -1,0 +1,39 @@
+name: Bug report
+description: Report reproducible incorrect Cordis.NET behavior
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed and expected behavior
+      description: Explain what happened and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include code, configuration, and exact commands.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Cordis.NET version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, architecture, .NET SDK/runtime, JIT or AOT, and adapters in use.
+    validations:
+      required: true
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Security
+      options:
+        - label: This report does not disclose an unpatched vulnerability.
+          required: true

@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+artifacts/
+verification/acceptance-2026-09-21/windows/tests-4nsxktmh/
+verification/acceptance-2026-09-21/windows/tests-8djl3qqd/
+verification/acceptance-2026-09-21/windows/tests-mw_5gs13/
+verification/acceptance-2026-09-21/windows/tests/
+verification/acceptance-2026-09-21/windows/pack-preflight.*.log
+verification/acceptance-2026-09-21/linux/tests-8pnq7tt8/
+verification/acceptance-2026-09-21/linux/tests-abcndqvb/
+verification/acceptance-2026-09-21/linux/tests-rypm55yh/
+.tools/
+*.user
+node_modules/
+**/TestResults/
+__pycache__/
+/.idea/

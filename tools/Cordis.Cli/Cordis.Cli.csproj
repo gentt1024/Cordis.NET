@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><OutputType>Exe</OutputType><IsPackable>true</IsPackable><PackAsTool>true</PackAsTool><ToolCommandName>cordis</ToolCommandName><PackageId>Cordis.Tool</PackageId><Description>Command-line validation and preview for Cordis.NET configuration.</Description></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/Cordis.Composition/Cordis.Composition.csproj"/></ItemGroup>
+</Project>

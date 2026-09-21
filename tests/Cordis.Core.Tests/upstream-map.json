@@ -1,0 +1,1277 @@
+{
+  "format": "cordis-upstream-map/v1",
+  "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+  "tests": [
+    {
+      "id": "U-2593255b29e20bfa",
+      "sourceFile": "packages/core/tests/associate.spec.ts",
+      "sourceTitle": "Association / service injection",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.AssociatedServiceInjection"
+      ],
+      "keyAssertions": [
+        "expect(root.foo).to.be.instanceof(Foo)",
+        "expect(root.foo.bar).to.be.instanceof(FooBar)",
+        "expect(root.foo.qux).to.equal(1)",
+        "expect(root.foo.bar).to.be.undefined"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-5abcc8d0ad0368d7",
+      "sourceFile": "packages/core/tests/associate.spec.ts",
+      "sourceTitle": "Association / property injection",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.AssociatedPropertyInjectionAndSharedMutableState"
+      ],
+      "keyAssertions": [
+        "expect(root.foo).to.be.instanceof(Foo)",
+        "await root.inject(['foo'], (ctx) => {\n      expect(ctx.foo.qux).to.equal(2)\n      expect(ctx.foo.bar).to.equal(3)\n      expect(() => ctx[`foo.qux`]).to.throw('cannot get property \"foo.qux\" without inject')\n      expect(ctx[`foo.bar`]).to.equal(3)\n      expect(ctx.foo.baz()).to.be.instanceof(Foo)\n    })"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-0ffc41405d366a77",
+      "sourceFile": "packages/core/tests/associate.spec.ts",
+      "sourceTitle": "Association / associated type - service injection",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.AssociatedTypeServiceMixin"
+      ],
+      "keyAssertions": [
+        "await root.inject(['foo'], async (ctx) => {\n      const session = ctx.foo.createSession()\n      expect(session).to.be.instanceof(Session)\n      expect(session.bar).to.be.undefined\n\n      await ctx.plugin(Bar)\n      await ctx.inject(['bar'], (ctx) => {\n        const session = ctx.foo.createSession()\n        expect(session).to.be.instanceof(Session)\n        expect(session.answer()).to.equal(42)\n      })\n    })"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-42cb0345f5965216",
+      "sourceFile": "packages/core/tests/associate.spec.ts",
+      "sourceTitle": "Association / associated type - accessor injection",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.AssociatedAccessorReceiverAndInjection"
+      ],
+      "keyAssertions": [
+        "await root.inject(['foo'], async (ctx) => {\n      const session = ctx.foo.session()\n      expect(session).to.be.instanceof(Session)\n      expect(() => session.bar).to.throw()\n\n      await ctx.inject(['bar'], (ctx) => {\n        const session = ctx.foo.session()\n        expect(session.bar).to.be.undefined\n        session.bar = 100\n        expect(session.bar).to.equal(101)\n      })\n    })"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-b20d1884f69f629c",
+      "sourceFile": "packages/core/tests/associate.spec.ts",
+      "sourceTitle": "Association / inspect",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.TypeArgumentsPreserveIdentity"
+      ],
+      "keyAssertions": [
+        "expect(arg.toString()).to.include('class X')",
+        "expect(arg.toString()).to.include('class X')"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-b00d96bc12443cde",
+      "sourceFile": "packages/core/tests/decorator.spec.ts",
+      "sourceTitle": "Decorator / @Inject on class method",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.InjectMethodAdaptationRunsAndCleansWithDependencies"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(0)",
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(dispose.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Context.Inject binds the explicit method delegate instead of a JavaScript decorator; activation and cleanup follow the same dependency transitions.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-a4aaab9ecf9ce2a1",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / dispose by plugin",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.OriginalEffectsTests.DisposeByPlugin"
+      ],
+      "keyAssertions": [
+        "expect(fiber.getEffects()).to.deep.equal([\n      { label: 'test', children: [] },\n    ])",
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "expect(dispose.mock.calls).to.have.length(1)",
+        "expect(dispose.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-d842fa762097afc6",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / dispose manually",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.OriginalEffectsTests.DisposeManually"
+      ],
+      "keyAssertions": [
+        "expect(root.fiber.getEffects()).to.deep.equal([\n      { label: 'anonymous', children: [] },\n    ])",
+        "expect(dispose1.mock.calls).to.have.length(0)",
+        "expect(dispose1.mock.calls).to.have.length(1)",
+        "expect(dispose1.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-9eae3cc1c0fb6c5d",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / yield dispose",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.OriginalEffectsTests.YieldDisposeExactTreeAndOrder"
+      ],
+      "keyAssertions": [
+        "expect(root.fiber.getEffects()).to.deep.equal([\n      {\n        label: 'anonymous',\n        children: [\n          // only root level anonymous effects are included\n          { label: 'ctx.on(\"custom-event\")', children: [] },\n          {\n            label: 'anonymous',\n            children: [\n              { label: 'ctx.on(\"custom-event\")', children: [] },\n            ],\n          },\n        ],\n      },\n      { label: 'ctx.on(\"custom-event\")', children: [] },\n    ])",
+        "expect(seq).to.deep.equal([])",
+        "expect(seq).to.deep.equal([3, 2, 1])",
+        "expect(seq).to.deep.equal([3, 2, 1])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-ce96ec2393dfe576",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / async return 1",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.AsyncSetupCanDisposeBeforeOrAfterSettlement"
+      ],
+      "keyAssertions": [
+        "expect(seq).to.deep.equal([])",
+        "expect(seq).to.deep.equal([1])",
+        "expect(seq).to.deep.equal([1, 2])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-8abe937798d5ee8f",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / async return 2",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.AsyncSetupCanDisposeBeforeOrAfterSettlement"
+      ],
+      "keyAssertions": [
+        "expect(seq).to.deep.equal([])",
+        "expect(seq).to.deep.equal([1, 2])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-3b862f1abb6ae625",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / async yield 1",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+      ],
+      "keyAssertions": [
+        "expect(seq).to.deep.equal([])",
+        "expect(seq).to.deep.equal([1, 3, 5])",
+        "expect(seq).to.deep.equal([1, 3, 5, 6, 4, 2])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-d0225b8f896f906f",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / async yield 2 (aborted)",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+      ],
+      "keyAssertions": [
+        "expect(seq).to.deep.equal([])",
+        "expect(seq).to.deep.equal([1, 2])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-3f2ac2d729362f30",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / async yield 3 (aborted)",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+      ],
+      "keyAssertions": [
+        "expect(seq).to.deep.equal([])",
+        "expect(seq).to.deep.equal([1])",
+        "expect(seq).to.deep.equal([1])",
+        "expect(seq).to.deep.equal([1, 3, 4, 2])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-692233a74eec2d8a",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / async yield 4 (await dispose)",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+      ],
+      "keyAssertions": [
+        "expect(seq).to.deep.equal([])",
+        "expect(seq).to.deep.equal([1, 3, 5])",
+        "expect(seq).to.deep.equal([1, 3, 5, 6, 4, 2])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-0d15bff15a08b977",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / return with error",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.OriginalEffectsTests.ReturnWithError"
+      ],
+      "keyAssertions": [
+        "expect(() => {\n      root.effect(() => {\n        throw new Error('test')\n        return () => seq.push(1)\n      })\n    }).to.throw('test')",
+        "expect(seq).to.deep.equal([])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-3e3aa46ea8311c66",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / yield with error",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.EffectGroupsAdoptReverseOrderAndRollback"
+      ],
+      "keyAssertions": [
+        "expect(() => {\n      root.effect(function* () {\n        yield () => seq.push(1)\n        throw new Error('test')\n        yield () => seq.push(2)\n      })\n    }).to.throw('test')",
+        "expect(seq).to.deep.equal([1])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-3f4db43bc7967b85",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / async return with error",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.AsyncSetupErrorsRollback"
+      ],
+      "keyAssertions": [
+        "expect(seq).to.deep.equal([])",
+        "await expect(dispose).rejects.toThrow()",
+        "expect(seq).to.deep.equal([])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-6c7b62bde7385f09",
+      "sourceFile": "packages/core/tests/dispose.spec.ts",
+      "sourceTitle": "Effects / async yield with error",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.AsyncSetupErrorsRollback"
+      ],
+      "keyAssertions": [
+        "expect(seq).to.deep.equal([])",
+        "expect(caught).to.be.instanceOf(Error)",
+        "expect(seq).to.deep.equal([1])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-27baadc973959ed4",
+      "sourceFile": "packages/core/tests/events.spec.ts",
+      "sourceTitle": "Events / ctx.on()",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.ListenerOwnership"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(2)",
+        "expect(callback.mock.calls).to.have.length(2)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-bf634e7a90118edc",
+      "sourceFile": "packages/core/tests/events.spec.ts",
+      "sourceTitle": "Events / ctx.once()",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.ListenerOwnership"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-c5de076760e3bf0d",
+      "sourceFile": "packages/core/tests/events.spec.ts",
+      "sourceTitle": "Events / ctx.parallel()",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.OriginalEventDispatchFilteringAndFailure",
+        "Cordis.Core.Tests.CoreTests.ParallelWaitsForAllFailures"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(2)",
+        "expect(error).to.be.instanceof(AggregateError)",
+        "expect(error.errors.map((e: Error) => e.message)).to.have.members(['test', 'async'])",
+        "expect(settled).to.be.true"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-9132489173a96ff9",
+      "sourceFile": "packages/core/tests/events.spec.ts",
+      "sourceTitle": "Events / ctx.emit()",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.OriginalEventDispatchFilteringAndFailure"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(2)",
+        "expect(() => root.emit(event)).to.throw('test')"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-63e749f8f559c272",
+      "sourceFile": "packages/core/tests/events.spec.ts",
+      "sourceTitle": "Events / ctx.serial()",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.OriginalEventDispatchFilteringAndFailure"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(2)",
+        "await expect(root.serial(event)).rejects.toThrow('message')"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-632ca27b20a11000",
+      "sourceFile": "packages/core/tests/events.spec.ts",
+      "sourceTitle": "Events / ctx.bail()",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.OriginalEventDispatchFilteringAndFailure"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(2)",
+        "expect(() => root.bail(event)).to.throw('message')"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-bbe5d1e8cbfde375",
+      "sourceFile": "packages/core/tests/events.spec.ts",
+      "sourceTitle": "Events / ctx.waterfall()",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.WaterfallComposesAndVetoes"
+      ],
+      "keyAssertions": [
+        "expect(root.waterfall('test/waterfall', 1, () => 2)).to.equal(4)",
+        "expect(cb1.mock.calls).to.have.length(1)",
+        "expect(cb2.mock.calls).to.have.length(1)",
+        "expect(root.waterfall('test/waterfall', 1, () => 2)).to.equal(3)",
+        "expect(cb1.mock.calls).to.have.length(1)",
+        "expect(cb2.mock.calls).to.have.length(1)",
+        "expect(cb3.mock.calls).to.have.length(1)",
+        "expect(cb4.mock.calls).to.have.length(0)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-1c6f3b79c0f972f1",
+      "sourceFile": "packages/core/tests/fiber.spec.ts",
+      "sourceTitle": "Fiber / inertia lock 1",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+      ],
+      "keyAssertions": [
+        "expect(fiber.state).to.equal(FiberState.LOADING)",
+        "expect(fiber.state).to.equal(FiberState.LOADING)",
+        "expect(fiber.state).to.equal(FiberState.UNLOADING)",
+        "expect(fiber.state).to.equal(FiberState.LOADING)",
+        "expect(fiber.state).to.equal(FiberState.ACTIVE)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-8a5f7cab0cdc551b",
+      "sourceFile": "packages/core/tests/fiber.spec.ts",
+      "sourceTitle": "Fiber / inertia lock 2",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+      ],
+      "keyAssertions": [
+        "expect(fiber.state).to.equal(FiberState.LOADING)",
+        "expect(fiber.state).to.equal(FiberState.LOADING)",
+        "expect(fiber.state).to.equal(FiberState.ACTIVE)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-c318bd003f44b1fa",
+      "sourceFile": "packages/core/tests/fiber.spec.ts",
+      "sourceTitle": "Fiber / inertia lock 3",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+      ],
+      "keyAssertions": [
+        "expect(fiber.state).to.equal(FiberState.LOADING)",
+        "expect(fiber.state).to.equal(FiberState.ACTIVE)",
+        "expect(fiber.state).to.equal(FiberState.PENDING)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-0502f30c7610f2b1",
+      "sourceFile": "packages/core/tests/fiber.spec.ts",
+      "sourceTitle": "Fiber / plugin error",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.FailedPluginReleasesEffectsWhileSiblingRemains"
+      ],
+      "keyAssertions": [
+        "expect(fiber1.state).to.equal(FiberState.FAILED)",
+        "expect(fiber2.state).to.equal(FiberState.ACTIVE)",
+        "expect(error.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-74fb9be2c02de1ab",
+      "sourceFile": "packages/core/tests/fiber.spec.ts",
+      "sourceTitle": "Fiber / dispose error",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.SiblingCleanupFailuresDoNotStarveOthers"
+      ],
+      "keyAssertions": [
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "await expect(fiber.dispose()).resolves.toBeUndefined()",
+        "expect(dispose.mock.calls).to.have.length(1)",
+        "expect(error.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-f0129d5a4a6320ca",
+      "sourceFile": "packages/core/tests/fiber.spec.ts",
+      "sourceTitle": "Fiber / update config on wrapped fiber",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.UpdateKeepsFiberAndContextIdentity"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls[0].arguments[1]).to.deep.equal({ msg: 'hello' })",
+        "expect(callback.mock.calls).to.have.length(2)",
+        "expect(callback.mock.calls[1].arguments[1]).to.deep.equal({ msg: 'world' })",
+        "expect(callback.mock.calls).to.have.length(3)",
+        "expect(callback.mock.calls[2].arguments[1]).to.deep.equal({ msg: '!!!' })"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-9fcd04c5bd2dbefd",
+      "sourceFile": "packages/core/tests/invoke.spec.ts",
+      "sourceTitle": "Functional Service / functional service",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.CallableServiceExtensionsAndInterception"
+      ],
+      "keyAssertions": [
+        "expect(this.ctx).to.be.instanceof(Context)",
+        "expect(root.foo()).to.deep.equal({ a: 1 })",
+        "expect(ctx1.foo()).to.deep.equal({ a: 1, b: 2 })",
+        "expect(foo1).to.be.instanceof(Foo)",
+        "expect(foo2).to.be.instanceof(Foo)",
+        "expect(foo2()).to.deep.equal({ a: 1, c: 3 })",
+        "expect(foo3).to.be.instanceof(Foo)",
+        "expect(foo3.invoke()).to.deep.equal({ a: 1, b: 2, d: 4 })",
+        "expect(foo1.invoke()).to.deep.equal({ a: 1, b: 2 })"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-3ff3788737ae1f14",
+      "sourceFile": "packages/core/tests/isolate.spec.ts",
+      "sourceTitle": "Isolation / isolated context",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.IsolationSeparatesRealmsAndSharedLabelsJoin"
+      ],
+      "keyAssertions": [
+        "expect(root.foo).to.have.property('bar', 100)",
+        "expect(ctx1.foo).to.be.undefined",
+        "expect(ctx2.foo).to.be.undefined",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "expect(root.foo).to.have.property('bar', 100)",
+        "expect(ctx1.foo).to.have.property('bar', 200)",
+        "expect(ctx2.foo).to.be.undefined",
+        "expect(callback.mock.calls).to.have.length(2)",
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "expect(root.foo).to.be.undefined",
+        "expect(ctx1.foo).to.have.property('bar', 200)",
+        "expect(ctx2.foo).to.be.undefined",
+        "expect(callback.mock.calls).to.have.length(2)",
+        "expect(dispose.mock.calls).to.have.length(1)",
+        "expect(root.foo).to.be.undefined",
+        "expect(ctx1.foo).to.have.property('bar', 200)",
+        "expect(ctx2.foo).to.have.property('bar', 300)",
+        "expect(callback.mock.calls).to.have.length(3)",
+        "expect(dispose.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-dc49b810ecade86c",
+      "sourceFile": "packages/core/tests/isolate.spec.ts",
+      "sourceTitle": "Isolation / shared label",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.IsolationSeparatesRealmsAndSharedLabelsJoin"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(0)",
+        "expect(root.foo).to.have.property('bar', 100)",
+        "expect(ctx1.foo).to.be.undefined",
+        "expect(ctx2.foo).to.be.undefined",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "expect(root.foo).to.have.property('bar', 100)",
+        "expect(ctx1.foo).to.have.property('bar', 200)",
+        "expect(ctx2.foo).to.have.property('bar', 200)",
+        "expect(callback.mock.calls).to.have.length(3)",
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "expect(root.foo).to.have.property('bar', 100)",
+        "expect(ctx1.foo).to.be.undefined",
+        "expect(ctx2.foo).to.be.undefined",
+        "expect(callback.mock.calls).to.have.length(3)",
+        "expect(dispose.mock.calls).to.have.length(2)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-ff196238e5061bf3",
+      "sourceFile": "packages/core/tests/isolate.spec.ts",
+      "sourceTitle": "Isolation / isolated event",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.IsolatedServiceEventsFilterListeners"
+      ],
+      "keyAssertions": [
+        "expect(outer.mock.calls).to.have.length(0)",
+        "expect(inner.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-68be701f6c05479c",
+      "sourceFile": "packages/core/tests/logger.spec.ts",
+      "sourceTitle": "Logger / uses fiber name when called from outside any service",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.LoggerNames"
+      ],
+      "keyAssertions": [
+        "expect(captured.map(m => m.name)).toEqual(['root'])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-0dd04f08e3b24d6b",
+      "sourceFile": "packages/core/tests/logger.spec.ts",
+      "sourceTitle": "Logger / honours explicit name argument",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.LoggerNames"
+      ],
+      "keyAssertions": [
+        "expect(captured.map(m => m.name)).toEqual(['custom'])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-66ebd4917b58b0f9",
+      "sourceFile": "packages/core/tests/logger.spec.ts",
+      "sourceTitle": "Logger / honours intercept name",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.LoggerNames"
+      ],
+      "keyAssertions": [
+        "expect(captured.map(m => m.name)).toEqual(['intercepted'])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-1c2012597d4466b2",
+      "sourceFile": "packages/core/tests/logger.spec.ts",
+      "sourceTitle": "Logger / uses service name when called from inside a Service method (regression)",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.LoggerNames"
+      ],
+      "keyAssertions": [
+        "expect(captured.map(m => m.name)).toContain('foo:driver')",
+        "expect(captured.map(m => m.name)).not.toContain('root')"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-c77773c07eff26a2",
+      "sourceFile": "packages/core/tests/logger.spec.ts",
+      "sourceTitle": "Logger / still lets outer caller intercept override the service-derived name",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.LoggerNames"
+      ],
+      "keyAssertions": [
+        "expect(captured.map(m => m.name)).toContain('caller-override')",
+        "expect(captured.map(m => m.name)).not.toContain('foo:driver')"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-67d215ad8aa14cda",
+      "sourceFile": "packages/core/tests/logger.spec.ts",
+      "sourceTitle": "Logger / uses service name when called from inside [Service.init] (unchanged behaviour)",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.LoggerNames"
+      ],
+      "keyAssertions": [
+        "expect(captured.map(m => m.name)).toContain('foo:driver')"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-1b284b395778f0a6",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / apply functional plugin",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.PluginConfigIdentity"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls[0].arguments[1]).to.deep.equal(options)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-8292ca55675bbf75",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / apply object plugin",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.PluginConfigIdentity"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(callback.mock.calls[0].arguments[1]).to.deep.equal(options)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-ba9cc26c81b75b32",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / apply invalid plugin",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.PluginValidationContextIdentityAndRegistrySnapshot"
+      ],
+      "keyAssertions": [
+        "expect(() => root.plugin(undefined as any)).to.throw()",
+        "expect(() => root.plugin({} as any)).to.throw()",
+        "expect(() => root.plugin({ apply: {} } as any)).to.throw()"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-2294898663069d76",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / inactive context",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.ReentrantSetupDisposalWaitsAndRejectsCleanupEffects"
+      ],
+      "keyAssertions": [
+        "expect(() => ctx.plugin(callback)).to.throw('inactive context')",
+        "expect(() => ctx.effect(() => () => {})).to.throw('inactive context')",
+        "expect(() => ctx.on('custom-event', () => {})).to.throw('inactive context')",
+        "expect(callback.mock.calls).to.have.length(0)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-0585d2a14db17e10",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / context inspect",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.PluginValidationContextIdentityAndRegistrySnapshot"
+      ],
+      "keyAssertions": [
+        "expect(inspect(root)).to.equal('Context <root>')",
+        "await root.plugin((ctx) => {\n      expect(inspect(ctx)).to.equal('Context <root>')\n    })",
+        "await root.plugin(function foo(ctx) {\n      expect(inspect(ctx)).to.equal('Context <foo>')\n    })",
+        "await root.plugin({\n      name: 'bar',\n      apply: (ctx) => {\n        expect(inspect(ctx)).to.equal('Context <bar>')\n      },\n    })",
+        "await root.plugin(class Qux {\n      constructor(ctx: Context) {\n        expect(inspect(ctx)).to.equal('Context <Qux>')\n      }\n    })"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-16d7051c3f66816d",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / ctx.registry",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.PluginValidationContextIdentityAndRegistrySnapshot"
+      ],
+      "keyAssertions": [],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-7fbc27b2959dc3c6",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / nested plugins",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.RegistryIdentityNestedOwnershipAndRepeatedDispose"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(0)",
+        "expect(root.registry.size).to.equal(3)",
+        "expect(callback.mock.calls).to.have.length(4)",
+        "expect(root.registry.size).to.equal(0)",
+        "expect(callback.mock.calls).to.have.length(1)",
+        "expect(root.registry.size).to.equal(0)",
+        "expect(callback.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-a89baa39a2ee3044",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / compare snapshot",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.HookSnapshotsRestoreAfterDeleteAndReapply"
+      ],
+      "keyAssertions": [
+        "expect(before).to.deep.equal(getHookSnapshot(root))",
+        "expect(after).to.deep.equal(getHookSnapshot(root))"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-f53dd9eb14e8a1c0",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / root dispose",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.RootFiberRestartsAndHostDisposalIsPermanent"
+      ],
+      "keyAssertions": [
+        "expect(root.fiber.uid).to.equal(0)",
+        "expect(fiber.uid).to.equal(1)",
+        "expect(dispose.mock.calls).to.have.length(0)",
+        "expect(root.fiber._disposables.length).to.equal(1)",
+        "expect(root.fiber.uid).to.equal(0)",
+        "expect(fiber.uid).to.equal(null)",
+        "expect(dispose.mock.calls).to.have.length(1)",
+        "expect(root.fiber._disposables.length).to.equal(0)",
+        "expect(root.fiber.uid).to.equal(0)",
+        "expect(fiber.uid).to.equal(null)",
+        "expect(dispose.mock.calls).to.have.length(1)",
+        "expect(root.fiber._disposables.length).to.equal(0)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. The DSH first-checkpoint cancellation hardening supersedes the original test timing; wait for first activation before asserting returned cleanup, and separate immediate-dispose cancellation probe verifies the pinned DSH behavior.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-03f609aa153ba060",
+      "sourceFile": "packages/core/tests/plugin.spec.ts",
+      "sourceTitle": "Plugin / Service.init",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.ExplicitInstanceInitializationOwnsReturnedCleanup"
+      ],
+      "keyAssertions": [
+        "expect(start.mock.calls).to.have.length(1)",
+        "expect(stop.mock.calls).to.have.length(0)",
+        "expect(start.mock.calls).to.have.length(1)",
+        "expect(stop.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-0d5bec1a70eb2558",
+      "sourceFile": "packages/core/tests/reflect.spec.ts",
+      "sourceTitle": "Reflect / Context.is()",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.PluginValidationContextIdentityAndRegistrySnapshot"
+      ],
+      "keyAssertions": [
+        "expect(Context.is(new SubContext())).to.equal(true)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-e8c2f0636de64d66",
+      "sourceFile": "packages/core/tests/reflect.spec.ts",
+      "sourceTitle": "Reflect / access check",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.AccessorAndExplicitLookupRemainSeparate"
+      ],
+      "keyAssertions": [
+        "await root.plugin((ctx) => {\n      expect(() => ctx['prototype']).to.not.throw()\n      expect(() => ctx.constructor).to.not.throw()\n      expect(() => ctx.bar).to.throw('cannot get property \"bar\" without inject')\n      expect(() => ctx.bar = 0).to.throw('cannot set property \"bar\" without provide')\n    })",
+        "await root.plugin((ctx) => {\n      expect(() => ctx.foo = 0).to.throw('cannot set property \"foo\" without provide')\n      expect(() => ctx.provide('foo')).to.not.throw()\n      expect(() => ctx.provide('foo')).to.throw('service \"foo\" has been registered at <root>')\n      expect(() => ctx.foo = 0).to.not.throw()\n    })"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-e003423a57227527",
+      "sourceFile": "packages/core/tests/reflect.spec.ts",
+      "sourceTitle": "Reflect / service injection",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.ServiceMixinIsPropertyNotServiceAndMetadataInherits"
+      ],
+      "keyAssertions": [
+        "expect(root.get('foo')).to.be.ok",
+        "expect(root.get('bar')).to.be.undefined",
+        "expect(root.get('root')).to.be.undefined",
+        "root.inject(['foo'], (ctx) => {\n      warn.mock.resetCalls()\n      expect(warn.mock.calls).to.have.length(0)\n\n      ctx.extend({ baz: 2 }).plugin((ctx) => {\n        warn.mock.resetCalls()\n        expect(ctx.baz).to.equal(2)\n        expect(warn.mock.calls).to.have.length(0)\n      })\n    })"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-4995665a838dadcc",
+      "sourceFile": "packages/core/tests/reflect.spec.ts",
+      "sourceTitle": "Reflect / service inject leak",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.AvailabilityCheckAndSelfAccess"
+      ],
+      "keyAssertions": [
+        "expect(fiber.ctx.foo).to.be.ok",
+        "expect(() => fiber.ctx.foo).to.throw('cannot get required service \"foo\" in inactive context')"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-743bdbad6fd70266",
+      "sourceFile": "packages/core/tests/service.spec.ts",
+      "sourceTitle": "Service / pending inject",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.CoreTests.ProviderReadinessReplacementAndRawConfigResolution"
+      ],
+      "keyAssertions": [
+        "expect(callback.mock.calls).to.have.length(0)",
+        "expect(callback.mock.calls).to.have.length(0)",
+        "expect(callback.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-c2fb0063a15702f3",
+      "sourceFile": "packages/core/tests/service.spec.ts",
+      "sourceTitle": "Service / traceable effect (with inject)",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.TraceableCounterSourceSequence"
+      ],
+      "keyAssertions": [
+        "expect(root.foo.value).to.equal(1)",
+        "expect(warning.mock.calls).to.have.length(0)",
+        "expect(ctx.foo.value).to.equal(2)",
+        "expect(warning.mock.calls).to.have.length(0)",
+        "expect(root.foo.value).to.equal(3)",
+        "expect(warning.mock.calls).to.have.length(0)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-a8aa6cdcd0caca63",
+      "sourceFile": "packages/core/tests/service.spec.ts",
+      "sourceTitle": "Service / traceable effect (without inject)",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.TraceableCounterSourceSequence"
+      ],
+      "keyAssertions": [
+        "expect(root.foo.value).to.equal(1)",
+        "expect(root.foo.value).to.equal(2)",
+        "expect(root.foo.value).to.equal(3)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-98e2b29dbc3e5003",
+      "sourceFile": "packages/core/tests/service.spec.ts",
+      "sourceTitle": "Service / compare snapshot",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.AssociationTests.HookSnapshotsRestoreAfterDeleteAndReapply"
+      ],
+      "keyAssertions": [
+        "expect(before).to.deep.equal(getHookSnapshot(root))",
+        "expect(after).to.deep.equal(getHookSnapshot(root))"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    },
+    {
+      "id": "U-bb3b99f022d976c9",
+      "sourceFile": "packages/core/tests/service.spec.ts",
+      "sourceTitle": "Service / multiple injects",
+      "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+      "dotnet": [
+        "Cordis.Core.Tests.UpstreamTests.MultipleDependenciesActivateTopologically"
+      ],
+      "keyAssertions": [
+        "expect(foo.mock.calls).to.have.length(1)",
+        "expect(bar.mock.calls).to.have.length(1)",
+        "expect(qux.mock.calls).to.have.length(1)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. Service.CreateView explicitly constructs typed caller views with shared state. TrackedObject.Get/Set/Call and explicit Accessor maps replace runtime JS property augmentation; Invoke and ExtendConfig replace callable object syntax. Assertion sequences retain values, receiver types, side-effect ownership and identity relationships.",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
+      ],
+      "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+  private _execute<T>(runner: EffectRunner<T>) {
+    const oldEpoch = runner.epoch
+    return composeError((info) => {
+      const safeCollect = (dispose: void | Disposable) => {
+        if (typeof dispose === 'function') {
+          runner.collect(dispose)
+        } else if (!isNullable(dispose)) {
+          throw new TypeError('Invalid effect')
+        }
+      }
+      const effect: Effect = runner.execute.call(this)
+      if (typeof effect === 'function') {
+        return runner.collect(effect)
+      } else if (isNullable(effect)) {
+        // return
+      } else if (!isObject(effect)) {
+        throw new TypeError('Invalid effect')
+      } else if ('then' in effect) {
+        return effect.then(safeCollect)
+      } else if (Symbol.iterator in effect) {
+        info.error = new Error()
+        const iter = effect[Symbol.iterator]()
+        while (true) {
+          const result = iter.next()
+          safeCollect(result.value)
+          if (result.done) return
+        }
+      } else if (Symbol.asyncIterator in effect) {
+        const iter = effect[Symbol.asyncIterator]()
+        return (async () => {
+          // force async stack trace
+          await Promise.resolve()
+          info.error = new Error()
+          while (true) {
+            if (runner.epoch !== oldEpoch) return
+            const result = await iter.next()
+            safeCollect(result.value)
+            if (result.done) return
+          }
+        })()
+      } else {
+        throw new TypeError('Invalid effect')
+      }
+    }, runner.getOuterStack)
+  }

@@ -1,0 +1,1566 @@
+{
+  "format": "cordis-upstream-map/v1",
+  "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+  "tests": [
+    {
+      "id": "U-0977862c790b75a7",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "serializes mutations, rejects nesting and keeps the queue usable after failure",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 37,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(hmr.runExclusive(async () => {})).rejects.toThrow('cannot be nested')",
+        "expect(order).toEqual([1])",
+        "expect(order).toEqual([1, 2])"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrTests.SerializesMutationsRejectsNestingAndRecoversAfterFailure"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "TaskCompletionSource barriers replace promise gates; exact [1], then [1,2] order, nesting rejection and failed predecessor recovery are asserted.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-10e6676e3a6cd846",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "holds configuration handlers behind configuration mutations",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 62,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(hmr.watchConfig(filename, async () => {})).rejects.toThrow('already registered')",
+        "expect(order).toEqual([])",
+        "expect(order).toEqual(['write', 'refresh'])"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Include_refresh_waits_for_mutation_and_exact_path_is_not_reloaded_twice"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real Include/Loader plus controlled native FileSystemWatcher events. Duplicate registration rejects; refresh is blocked behind mutation, exact write/refresh order is asserted, and the same path cannot also invoke module replacement.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-256861987b9a1790",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "reports unrelated lock-file notifications without reloading",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 91,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(await observed.promise).toBe(pathToFileURL(join(realpathSync(dir), 'package.json.lock')).href)",
+        "expect(loaded).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrTests.RoutesModulesFrameworkAndUnrelatedNotifications"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Canonical native absolute paths replace file URLs. Module callback, host restart and unrelated lock-file notification are independently counted; lock notification cannot reload the plugin.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-c9ba92b727ece94a",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "can dispose HMR from its own transaction without waiting on itself",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 103,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(hmr.runExclusive(async () => {})).rejects.toThrow('disposed')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrTests.DisposalFromOwnTransactionDoesNotWaitOnItself"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Awaited self-disposal does not deadlock and subsequent mutation rejects ObjectDisposedException.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-b0bf36f18616f6b7",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "refreshes an Include through the queue and skips registered exact paths",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 110,
+      "parameter": null,
+      "keyAssertions": [
+        "await vi.waitFor(() => { expect(refresh).toHaveBeenCalledOnce() })",
+        "expect(refresh).toHaveBeenCalledOnce()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Include_refresh_waits_for_mutation_and_exact_path_is_not_reloaded_twice"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real Include/Loader plus controlled native FileSystemWatcher events. Duplicate registration rejects; refresh is blocked behind mutation, exact write/refresh order is asserted, and the same path cannot also invoke module replacement.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-26b701f748842be6",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "queues cached module replacements behind configuration mutations and recovers after failure",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 138,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(replacement).not.toHaveBeenCalled()",
+        "expect(replacement).toHaveBeenCalledOnce()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Module_replacement_waits_for_mutation_and_runs_after_mutation_failure"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Uses a real Loader replacement queued after a failing blocked mutation; candidate activation remains zero until release, then exactly one.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-d17e8a5903eb140b",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "requests the host full-reload hook for framework files",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 165,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(exit).toHaveBeenCalledOnce()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrTests.RoutesModulesFrameworkAndUnrelatedNotifications"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Canonical native absolute paths replace file URLs. Module callback, host restart and unrelated lock-file notification are independently counted; lock notification cannot reload the plugin.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-442d4fa6db612d5b",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "closes an exact watcher from its running transaction",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 180,
+      "parameter": null,
+      "keyAssertions": [],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrTests.ExactWatcherObservesMissingParentsSerializesRefreshAndCloses"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "The live exact watcher is asynchronously disposed from its current owning transaction; re-registration succeeds.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-ce4427c598daef0a",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "rejects unavailable Node internals before starting a watcher",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 186,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(fixture()).rejects.toThrow('--expose-internals')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Explicit_dependency_graph_selects_dependents_and_framework_changes_take_precedence"
+      ],
+      "status": "platform-not-applicable",
+      "adaptation": "Node --expose-internals and process.argv[1] have no CLR counterpart. HmrCoordinator requires neither: callers register native module/framework paths explicitly. Independent native graph/startup verification is linked but is not counted as execution of these Node-specific assertions.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-298d59d4c589e9cc",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "rejects watcher startup failure and logs later watcher errors",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 192,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(fixture({ root: ['.'] })).rejects.toThrow('watch startup failed')",
+        "expect(warn).toHaveBeenCalledWith(expect.objectContaining({ message: 'watch runtime failed' }))"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Watch_start_failure_releases_registration_and_runtime_errors_preserve_identity",
+        "Cordis.Extensions.Tests.HmrWatchTests.Watcher_activation_failure_closes_resource_and_releases_registration(moduleRoot: True)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Injectable native watcher construction failure rejects and frees the path; later native runtime errors preserve the original exception on Error/Warning.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-29a67423dd9bc104",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "starts without a process entry module",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 203,
+      "parameter": null,
+      "keyAssertions": [],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Explicit_dependency_graph_selects_dependents_and_framework_changes_take_precedence"
+      ],
+      "status": "platform-not-applicable",
+      "adaptation": "Node --expose-internals and process.argv[1] have no CLR counterpart. HmrCoordinator requires neither: callers register native module/framework paths explicitly. Independent native graph/startup verification is linked but is not counted as execution of these Node-specific assertions.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-3ab7b6bf78800dbc",
+      "sourceFile": "packages/boot/hmr/tests/coordination.spec.ts",
+      "sourceTitle": "rebinds configuration handlers when its provider is reconfigured within a reload",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 211,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(ctx.hmr).not.toBe(hmr)",
+        "await vi.waitFor(() => { expect(refresh).toHaveBeenCalledOnce() })"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Configuration_bindings_follow_a_provider_reconfigured_inside_its_own_queue"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Actual Core provider fiber is updated inside its old HMR transaction. Injected watcher owner rebinds to a different HmrCoordinator and the new native watcher refreshes exactly once.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-ea8fb0fb205b3f04",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "forwards an unrecognized error without dropping its diagnostic: %j",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 9,
+      "parameter": "null",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(error)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity(error: null)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Eight matching MemberData rows retain null/string/dictionary/array shapes. A real Context logger exporter receives the exact original object identity; dictionary records avoid reflection and remain AOT-safe.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-60579f02d3b32541",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "forwards an unrecognized error without dropping its diagnostic: %j",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 9,
+      "parameter": "'failure'",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(error)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity(error: \"failure\")"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Eight matching MemberData rows retain null/string/dictionary/array shapes. A real Context logger exporter receives the exact original object identity; dictionary records avoid reflection and remain AOT-safe.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-f337c4ca6701f794",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "forwards an unrecognized error without dropping its diagnostic: %j",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 9,
+      "parameter": "{}",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(error)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity(error: [])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Eight matching MemberData rows retain null/string/dictionary/array shapes. A real Context logger exporter receives the exact original object identity; dictionary records avoid reflection and remain AOT-safe.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-1d473f8a32fed465",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "forwards an unrecognized error without dropping its diagnostic: %j",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 9,
+      "parameter": "{ errors: null }",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(error)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity(error: [[\"errors\"] = null])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Eight matching MemberData rows retain null/string/dictionary/array shapes. A real Context logger exporter receives the exact original object identity; dictionary records avoid reflection and remain AOT-safe.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-47e73889e1cc63c2",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "forwards an unrecognized error without dropping its diagnostic: %j",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 9,
+      "parameter": "{ errors: [null] }",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(error)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity(error: [[\"errors\"] = [null]])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Eight matching MemberData rows retain null/string/dictionary/array shapes. A real Context logger exporter receives the exact original object identity; dictionary records avoid reflection and remain AOT-safe.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-0f926c136556eb0e",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "forwards an unrecognized error without dropping its diagnostic: %j",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 9,
+      "parameter": "{ errors: [7] }",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(error)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity(error: [[\"errors\"] = [7]])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Eight matching MemberData rows retain null/string/dictionary/array shapes. A real Context logger exporter receives the exact original object identity; dictionary records avoid reflection and remain AOT-safe.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-75e84070db14705d",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "forwards an unrecognized error without dropping its diagnostic: %j",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 9,
+      "parameter": "{ errors: [{}] }",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(error)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity(error: [[\"errors\"] = [[]]])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Eight matching MemberData rows retain null/string/dictionary/array shapes. A real Context logger exporter receives the exact original object identity; dictionary records avoid reflection and remain AOT-safe.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-f7060de0568274ec",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "forwards an unrecognized error without dropping its diagnostic: %j",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 9,
+      "parameter": "{ errors: [{ text: 7 }] }",
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(error)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity(error: [[\"errors\"] = [[[\"text\"] = 7]]])"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Eight matching MemberData rows retain null/string/dictionary/array shapes. A real Context logger exporter receives the exact original object identity; dictionary records avoid reflection and remain AOT-safe.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-b11024c57a0e1bf5",
+      "sourceFile": "packages/boot/hmr/tests/error.spec.ts",
+      "sourceTitle": "formats compiler source locations and reports unavailable source files",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 18,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith('without location')",
+        "expect(warn).toHaveBeenCalledWith(expect.stringContaining('unexpected token'))",
+        "expect(warn).toHaveBeenCalledWith(expect.objectContaining({ code: 'ENOENT' }))"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Compiler_locations_include_message_and_missing_source_reports_file_error"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Dictionary compiler records preserve text and file/line/column. Native source code frame includes original line/message; FileNotFoundException replaces Node ENOENT. ANSI highlighting is intentionally host presentation, not part of the source assertions.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-9553025453a64991",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "replaces a %s module and retains the latest Loader entry configuration",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 60,
+      "parameter": "'v1'",
+      "keyAssertions": [
+        "expect(mounted.at(-1)).toBe('after:current')",
+        "expect(disposed).toEqual(['before', 'before'])",
+        "expect(event).toHaveBeenCalledOnce()",
+        "expect(mounted.at(-1)).toBe('after:next')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Replacement_retains_latest_entry_configuration_and_remains_updatable",
+        "Cordis.Platform.Tests.ClrTests.Failed_candidate_restores_current_entry_config_and_direct_fibers_then_collects"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Both Node ModuleLoader cache-layout parameters map to one native explicit module contract, not two native cache implementations. Original current/next config, two prior disposals and single success event assertions are preserved. Separate real DLL fixture validates resolver/loader/HMR integration and ALC collection; it is not an extra original instance.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx",
+        "artifacts/hmr-source/hmr-clr-tests.trx"
+      ]
+    },
+    {
+      "id": "U-04394abbadccb5ae",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "replaces a %s module and retains the latest Loader entry configuration",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 60,
+      "parameter": "'v2'",
+      "keyAssertions": [
+        "expect(mounted.at(-1)).toBe('after:current')",
+        "expect(disposed).toEqual(['before', 'before'])",
+        "expect(event).toHaveBeenCalledOnce()",
+        "expect(mounted.at(-1)).toBe('after:next')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Replacement_retains_latest_entry_configuration_and_remains_updatable",
+        "Cordis.Platform.Tests.ClrTests.Failed_candidate_restores_current_entry_config_and_direct_fibers_then_collects"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Both Node ModuleLoader cache-layout parameters map to one native explicit module contract, not two native cache implementations. Original current/next config, two prior disposals and single success event assertions are preserved. Separate real DLL fixture validates resolver/loader/HMR integration and ALC collection; it is not an extra original instance.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx",
+        "artifacts/hmr-source/hmr-clr-tests.trx"
+      ]
+    },
+    {
+      "id": "U-c8c1444dcaf750d3",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "reactivates a source-replaced consumer after provider and consumer configuration changes",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 90,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(mounted).toEqual(['initial:1'])",
+        "expect(mounted.at(-1)).toBe('updated:2')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Replaced_consumer_reactivates_after_provider_and_consumer_updates"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real provider/consumer fibers and Loader replacement preserve initial:1 then updated:2 behavior across provider and consumer config updates.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-4340a287198f8076",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "restores cached modules and keeps the old plugin when replacement import fails",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 116,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(reload.partialReload()).rejects.toThrow('compile failed')",
+        "expect(cache.get(job.url)).toBe(job)",
+        "expect(entry.fiber).toBe(previous)",
+        "expect(apply).toHaveBeenCalledOnce()"
+      ],
+      "dotnet": [
+        "Cordis.Platform.Tests.ClrTests.Real_bundles_replace_cleanup_share_contracts_and_collect"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Node ESM/CommonJS cache objects are represented by ClrModuleResolver loaded leases. Missing DLL/type and rejected switch preserve the exact old IPlugin identity, exact old entry Fiber, and unchanged mount trace. CLR has one explicit lease table rather than two ambient JS caches; real native preparation failures verify rollback ownership.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx",
+        "artifacts/hmr-source/hmr-clr-tests.trx"
+      ]
+    },
+    {
+      "id": "U-977a5b36ed28bb7e",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "does not replace a plugin whose dependencies have not changed",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 131,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(imported).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Explicit_dependency_graph_selects_dependents_and_framework_changes_take_precedence"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Native explicit dependency registration replaces Node ModuleJob graph introspection. Unrelated files cause zero replacement, linked dependency triggers replacement once, and framework changes request host restart without replacing the plugin.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-d68327538a5eebb5",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "replaces a plugin when a linked dependency changes, excluding framework modules",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 143,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(apply).toHaveBeenCalledOnce()",
+        "expect(reload.accepted).toContain(job.url)",
+        "expect(reload.accepted).not.toContain(framework.url)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Explicit_dependency_graph_selects_dependents_and_framework_changes_take_precedence"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Native explicit dependency registration replaces Node ModuleJob graph introspection. Unrelated files cause zero replacement, linked dependency triggers replacement once, and framework changes request host restart without replacing the plugin.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-85c8967563953945",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "classifies dependency cycles and excludes builtins and unchanged leaf modules",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 160,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(reload.accepted).toEqual(new Set([changed.url, parent.url]))",
+        "expect(reload.declined).toEqual(new Set([leaf.url, cycleA.url, cycleB.url]))"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Explicit_dependency_graph_follows_transitive_edges_and_terminates_cycles_without_touching_unrelated_leaves"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "RegisterDependencies declares direct native edges for plugin and non-plugin nodes. Iterative closure follows transitive edges, terminates cycles, and selects exactly changed+parent while leaf/cycles remain untouched; a changed cycle selects each member once. Node builtin jobs/accepted/declined cache sets are replaced by explicit framework exclusions and observable native replacement selection.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-5778b8502ffd44ac",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "rejects failed replacement activation and restores the prior plugin",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 177,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(reload.partialReload()).rejects.toThrow('activation failed')",
+        "expect(cache.get(job.url)).toBe(job)",
+        "expect(mounted).toEqual(['original', 'original'])",
+        "expect(entry.fiber?.runtime?.callback).toBe(original.apply)",
+        "expect(event).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Replacement_failure_restores_old_plugin_and_does_not_emit_success",
+        "Cordis.Platform.Tests.ClrTests.Failed_candidate_restores_current_entry_config_and_direct_fibers_then_collects"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Failed candidate activation restores original plugin identity/mounts and emits no success; real async DLL candidate additionally proves both entry/direct fibers, latest entry options, closed candidate resources, subsequent valid replacement and collected load contexts.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx",
+        "artifacts/hmr-source/hmr-clr-tests.trx"
+      ]
+    },
+    {
+      "id": "U-6c954b80908804ca",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "leaves disposed child instances to their replacing parent",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 196,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(seen).toContain('new:entry')",
+        "expect(seen).not.toContain('new:child')",
+        "expect(seen).toContain('new:independent')",
+        "expect(entry.fiber?._config).toEqual({ value: 'entry' })"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Disposed_child_instances_are_left_to_the_replacing_parent"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Actual old child fiber belongs to disposing entry parent. New entry and independent fiber activate; disposed child is not recreated; raw entry config remains unchanged.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-fb2ad83af482740b",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "invalidates a disabled module without activating it",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 214,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(ctx.loader.resolve(id).fiber).toBeUndefined()",
+        "expect(apply).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Disabled_entries_are_not_activated_by_invalidation"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Disabled Loader entry retains null Fiber and zero candidate activation while its explicit native module notification is processed.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-b29264edc623c364",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "does not disturb an unchanged runtime after an earlier replacement fails",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 226,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(reload.partialReload()).rejects.toThrow('failed before second')",
+        "expect(untouched).toHaveBeenCalledOnce()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Failed_first_module_does_not_disturb_later_runtime"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "A failing first Loader replacement restores its runtime and prevents later registered replacement; independent untouched runtime remains mounted exactly once.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-f954d08a40c8df9a",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "restores the prior plugin when the replacement does not export a plugin",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 240,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(reload.partialReload()).rejects.toThrow('invalid plugin')",
+        "expect(original.apply).toHaveBeenCalledTimes(2)"
+      ],
+      "dotnet": [
+        "Cordis.Platform.Tests.ClrTests.Real_bundles_replace_cleanup_share_contracts_and_collect"
+      ],
+      "status": "partial",
+      "adaptation": "CLR validates the explicit IClrPluginModule/type before stopping live fibers. Preparation rejection preserves running code, but this differs from source invalid export normalization after teardown.",
+      "missingAssertions": [
+        "Exact null-plugin DLL fixture rejects and preserves old fiber/plugin identity. Original invalid-export normalization tears down then remounts (apply twice); CLR validates entry CreatePlugin result before teardown (apply once). This explicit platform adaptation remains partial, not an original assertion pass."
+      ],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx",
+        "artifacts/hmr-source/hmr-clr-tests.trx"
+      ]
+    },
+    {
+      "id": "U-9429cb2c40808dfd",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "reports a missing entry base URL without changing the running module",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 252,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(reload.partialReload()).rejects.toThrow('no base URL')"
+      ],
+      "dotnet": [
+        "Cordis.Platform.Tests.ClrTests.Explicit_map_does_not_discover_or_accept_external_entry_paths"
+      ],
+      "status": "platform-not-applicable",
+      "adaptation": "Node relative entry import requires an ambient entry base URL. CLR mapping instead requires a registered absolute bundle root and explicit contained assembly path; unknown/external entries reject before load. Linked native boundary test does not execute the Node no-base-URL assertion.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx",
+        "artifacts/hmr-source/hmr-clr-tests.trx"
+      ]
+    },
+    {
+      "id": "U-716668de0e1de390",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "ignores framework entries and reports unresolved entry modules",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 264,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalledWith(expect.objectContaining({ message: 'entry gone' }))",
+        "expect(await ctx.hmr.getLinked('missing')).toEqual([])"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Tracked_loader_resolution_warns_for_missing_entries_and_ignores_framework_and_uncached_modules"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "TrackLoader scans current actual Loader entries with an explicit non-loading native locator. Missing mapping warns with original exception identity, framework and uncached entry fibers remain active, unknown GetLinked returns an empty array, and detached tracking emits no warnings. Native host supplies path resolution rather than Node loader introspection.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx",
+        "artifacts/hmr-source/hmr-clr-tests.trx"
+      ]
+    },
+    {
+      "id": "U-50221133fd702000",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "leaves an entry alone when its cache is %s",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 284,
+      "parameter": "'uncached'",
+      "keyAssertions": [
+        "expect(imported).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Explicit_dependency_graph_selects_dependents_and_framework_changes_take_precedence"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Unregistered/non-plugin native nodes cannot start a replacement callback. Explicit RegisterModule is the CLR counterpart of a cached valid plugin namespace; unrelated notifications assert zero replacement. No Node cache-layout inference is performed.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-ad7ab9b12111ef3f",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "leaves an entry alone when its cache is %s",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 284,
+      "parameter": "'no-plugin'",
+      "keyAssertions": [
+        "expect(imported).not.toHaveBeenCalled()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Explicit_dependency_graph_selects_dependents_and_framework_changes_take_precedence"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Unregistered/non-plugin native nodes cannot start a replacement callback. Explicit RegisterModule is the CLR counterpart of a cached valid plugin namespace; unrelated notifications assert zero replacement. No Node cache-layout inference is performed.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-04088499a815b545",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "restores the CommonJS cache when an ESM replacement import fails",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 297,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(reload.partialReload()).rejects.toThrow('compile failed')",
+        "expect(require.cache[filename]).toBe(cached)"
+      ],
+      "dotnet": [
+        "Cordis.Platform.Tests.ClrTests.Real_bundles_replace_cleanup_share_contracts_and_collect"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Node ESM/CommonJS cache objects are represented by ClrModuleResolver loaded leases. Missing DLL/type and rejected switch preserve the exact old IPlugin identity, exact old entry Fiber, and unchanged mount trace. CLR has one explicit lease table rather than two ambient JS caches; real native preparation failures verify rollback ownership.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx",
+        "artifacts/hmr-source/hmr-clr-tests.trx"
+      ]
+    },
+    {
+      "id": "U-ad61f130008bbb76",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "can replace a plugin that has an earlier activation failure",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 313,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(apply).toHaveBeenCalledOnce()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Earlier_activation_failure_does_not_prevent_replacement"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "A real failed old Loader fiber is replaced by an active candidate exactly once.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-d2bb210922bc7fa8",
+      "sourceFile": "packages/boot/hmr/tests/modules.spec.ts",
+      "sourceTitle": "reports the original replacement failure when restoring the old plugin also fails",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 325,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(reload.partialReload()).rejects.toThrow('replacement failed')",
+        "expect(warn).toHaveBeenCalledWith(expect.objectContaining({ message: 'restore failed' }))"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrModuleTests.Rollback_failure_reports_but_preserves_original_replacement_error"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real candidate and restoration both throw. Loader diagnostic receives restore failed, while the HMR caller receives the original replacement failed exception.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-edb40ff76fe37ce3",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "waits for application readiness and applies profile, home and manifest changes",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 58,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(completed).toBe(false)",
+        "expect(f.ctx.get('profileProbe')).toBe('initial')",
+        "expect(f.ctx.get('profileProbe')).toBe('edited')",
+        "expect(f.ctx.get('profileProbe')).toBe('home')",
+        "expect(f.ctx.get('profileProbe')).toBe('edited')",
+        "expect(f.ctx.get('profileProbe')).toBe('edited')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Readiness_gates_watchers_and_replays_edits_made_between_boot_parse_and_registration",
+        "Cordis.Extensions.Tests.ProfileSessionTests.Real_profile_and_home_watches_reapply_precedence_and_recover_from_malformed_input",
+        "Cordis.Extensions.Tests.ProfileSessionTests.Bundle_list_change_reconciles_available_modules_without_restart"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Session owns boot readiness and accepts an external readiness gate. Real profile/home/manifest watches preserve current value until readiness, apply profile/home precedence, remove home effects through an empty patch, and hot-reconcile bundle selection. Native API is StartAsync with explicit resolver; no daemon is created.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-468b6429bfd19124",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "applies configuration while a CLI operation holds the package writer lock",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 89,
+      "parameter": null,
+      "keyAssertions": [
+        "await withFileLock(join(f.dir, 'package.json'), async () => {\n    const original = readFileSync(f.profile.patchPath, 'utf8')\n    writeFileSync(f.profile.patchPath, original.replace('initial', 'during-install'))\n    f.emit(0, f.profile.patchPath)\n    await f.drain()\n    expect(f.ctx.get('profileProbe')).toBe('during-install')\n  })"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Profile_refresh_proceeds_while_package_writer_lock_is_held"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "A real native package.json.cordis-lock FileStream held with FileShare.None remains held while automatic profile update reaches during-install. This is the native package-writer lock convention.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-e2fb28844c34768a",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "ignores dependency-only manifest changes and reloads a changed bundle list",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 101,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(update).not.toHaveBeenCalled()",
+        "expect(update).toHaveBeenCalledOnce()",
+        "expect(update).toHaveBeenCalledOnce()",
+        "expect([...f.ctx.loader.entries()].some(entry => entry.id === 'include:bundled')).toBe(true)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Dependency_only_manifest_changes_do_not_update_the_include"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Exact root update count is zero after dependency-only edit, one after added bundle, still one after duplicate refresh; newly inserted disabled bundled entry exists.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-b69c157a432ebeaa",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "cancels queued reloads when the application exits before readiness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 130,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(f.ctx.get('hmr')).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Startup_interruption_cancels_queued_profile_refreshes",
+        "Cordis.Extensions.Tests.HmrWatchTests.Disposal_cancels_module_and_config_work_waiting_for_startup_readiness"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Owner disposal cancels an unresolved startup gate, completes without self-wait, and permits no queued module/config candidate activation. Closed native Context is no longer publicly readable, unlike JavaScript undefined service access.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-73e7114074ac5cc2",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "reports unreadable inputs and recovers after the file is corrected",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 138,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(warn).toHaveBeenCalled()",
+        "expect(readFileSync(f.profile.patchPath, 'utf8')).toBe(original)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Unreadable_profile_input_reports_failure_and_recovers_without_rewriting_the_file"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Replaces the patch file with a directory to create a real unreadable input, waits for diagnostic, restores exact original bytes, and verifies running value and bytes are preserved.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-47ddff8b9d13e2ad",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "rejects a profile launcher that omits application readiness",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 156,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(ctx.plugin(Hmr, { root: [], ignored: [], debounce: 0 })).rejects.toThrow('Profile HMR requires application readiness')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Readiness_gates_watchers_and_replays_edits_made_between_boot_parse_and_registration"
+      ],
+      "status": "platform-not-applicable",
+      "adaptation": "ProfileSession always constructs and owns its internal application-readiness gate. Omitting the optional external gate never omits boot readiness; the invalid independently installed JS Hmr+profileContext state is not representable by this native launcher API. Independent readiness test is linked, not counted as a rejection test.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-fe633b99c53559a8",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "cancels a queued module notification when startup is interrupted",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 166,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(f.ctx.get('hmr')).toBeUndefined()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Startup_interruption_cancels_queued_profile_refreshes",
+        "Cordis.Extensions.Tests.HmrWatchTests.Disposal_cancels_module_and_config_work_waiting_for_startup_readiness"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Owner disposal cancels an unresolved startup gate, completes without self-wait, and permits no queued module/config candidate activation. Closed native Context is no longer publicly readable, unlike JavaScript undefined service access.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-7a70c9447a6c5d0a",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "logs unchanged inactive entries while applying an unrelated file edit",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 178,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(f.ctx.get('profileProbe')).toBe('edited')",
+        "expect(warn).toHaveBeenCalledWith(expect.stringContaining('missing ('))"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Unchanged_inactive_entries_are_warned_while_an_unrelated_edit_applies"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Unchanged missing module remains inactive and produces missing (missing-module) warning while unrelated plugin config becomes edited.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-e2d68c74d26df034",
+      "sourceFile": "packages/boot/hmr/tests/profile.spec.ts",
+      "sourceTitle": "applies a patch edited after boot parsing but before watcher registration",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 197,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(f.ctx.get('profileProbe')).toBe('initial')",
+        "expect(f.ctx.get('profileProbe')).toBe('edited-during-boot')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.ProfileSessionTests.Readiness_gates_watchers_and_replays_edits_made_between_boot_parse_and_registration"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Prepare callback edits profile after layers were parsed. Existing watch registration replays latest disk contents after readiness, preserving initial then during-boot values.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-32c07d7f83624a72",
+      "sourceFile": "packages/boot/hmr/tests/reconciliation.spec.ts",
+      "sourceTitle": "profile reconciliation / keeps HMR best effort and recovers ($id, async apply: $asyncApply)",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 74,
+      "parameter": "{ id: 'noop', asyncApply: false }",
+      "keyAssertions": [
+        "expect(watchers).toHaveLength(1)",
+        "expect(failures[0]).toBeInstanceOf(Error)",
+        "expect(entryConfig(ctx, id)).toMatchObject({ fail: true })",
+        "expect(failures[1]?.message).toContain(`${id} (./noop.mjs): disabled expression failed: SyntaxError`)",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.options.disabled)\n        .toEqual({ __jsExpr: \"JSON.parse('invalid')\" })",
+        "expect(failures[2]).toBeInstanceOf(Error)",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.options.disabled)\n        .toEqual({ __jsExpr: \"JSON.parse('invalid')\" })",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.fiber?.state).toBe(2)",
+        "expect(failures).toHaveLength(3)",
+        "expect(watchers).toHaveLength(2)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrReconciliationTests.Best_effort_reconciliation_retains_eager_options_and_recovers(id: \"noop\", asynchronous: False)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Exact three id/async parameters use actual Jint expressions and Loader/Include reconciliation. Watcher counts 1/2, eager failed config, original disabled expression, SyntaxError phase diagnostic, malformed recovery, three failures and active final state are asserted; native specifier noop substitutes ./noop.mjs.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-a5f130e4e6f58e2c",
+      "sourceFile": "packages/boot/hmr/tests/reconciliation.spec.ts",
+      "sourceTitle": "profile reconciliation / keeps HMR best effort and recovers ($id, async apply: $asyncApply)",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 74,
+      "parameter": "{ id: 'webserver', asyncApply: false }",
+      "keyAssertions": [
+        "expect(watchers).toHaveLength(1)",
+        "expect(failures[0]).toBeInstanceOf(Error)",
+        "expect(entryConfig(ctx, id)).toMatchObject({ fail: true })",
+        "expect(failures[1]?.message).toContain(`${id} (./noop.mjs): disabled expression failed: SyntaxError`)",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.options.disabled)\n        .toEqual({ __jsExpr: \"JSON.parse('invalid')\" })",
+        "expect(failures[2]).toBeInstanceOf(Error)",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.options.disabled)\n        .toEqual({ __jsExpr: \"JSON.parse('invalid')\" })",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.fiber?.state).toBe(2)",
+        "expect(failures).toHaveLength(3)",
+        "expect(watchers).toHaveLength(2)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrReconciliationTests.Best_effort_reconciliation_retains_eager_options_and_recovers(id: \"webserver\", asynchronous: False)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Exact three id/async parameters use actual Jint expressions and Loader/Include reconciliation. Watcher counts 1/2, eager failed config, original disabled expression, SyntaxError phase diagnostic, malformed recovery, three failures and active final state are asserted; native specifier noop substitutes ./noop.mjs.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-30a3b15c63baa6e5",
+      "sourceFile": "packages/boot/hmr/tests/reconciliation.spec.ts",
+      "sourceTitle": "profile reconciliation / keeps HMR best effort and recovers ($id, async apply: $asyncApply)",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 74,
+      "parameter": "{ id: 'webserver', asyncApply: true }",
+      "keyAssertions": [
+        "expect(watchers).toHaveLength(1)",
+        "expect(failures[0]).toBeInstanceOf(Error)",
+        "expect(entryConfig(ctx, id)).toMatchObject({ fail: true })",
+        "expect(failures[1]?.message).toContain(`${id} (./noop.mjs): disabled expression failed: SyntaxError`)",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.options.disabled)\n        .toEqual({ __jsExpr: \"JSON.parse('invalid')\" })",
+        "expect(failures[2]).toBeInstanceOf(Error)",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.options.disabled)\n        .toEqual({ __jsExpr: \"JSON.parse('invalid')\" })",
+        "expect([...ctx.loader.entries()].find(entry => entry.options.id === id)?.fiber?.state).toBe(2)",
+        "expect(failures).toHaveLength(3)",
+        "expect(watchers).toHaveLength(2)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrReconciliationTests.Best_effort_reconciliation_retains_eager_options_and_recovers(id: \"webserver\", asynchronous: True)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Exact three id/async parameters use actual Jint expressions and Loader/Include reconciliation. Watcher counts 1/2, eager failed config, original disabled expression, SyntaxError phase diagnostic, malformed recovery, three failures and active final state are asserted; native specifier noop substitutes ./noop.mjs.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-543b452e8744c1a3",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / observes %s module roots through a filesystem alias",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 61,
+      "parameter": "'relative'",
+      "keyAssertions": [
+        "expect(cacheHas).toHaveBeenCalledWith(expected)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Filesystem_aliases_canonicalize_module_roots_and_exact_watch_identity(relative: True)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real Windows junction or Unix symbolic link, both relative and absolute module roots. Canonical filesystem event path replaces Node cacheHas(file URL); duplicate exact alias registration rejects.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-bd2b4c96b79c3f70",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / observes %s module roots through a filesystem alias",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 61,
+      "parameter": "'absolute'",
+      "keyAssertions": [
+        "expect(cacheHas).toHaveBeenCalledWith(expected)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Filesystem_aliases_canonicalize_module_roots_and_exact_watch_identity(relative: False)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real Windows junction or Unix symbolic link, both relative and absolute module roots. Canonical filesystem event path replaces Node cacheHas(file URL); duplicate exact alias registration rejects.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-24e0dacba436cc0c",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / collapses filesystem aliases before registering an exact watch",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 96,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(watchConfig(ctx, join(await realpath(target), 'plugins.yml'), {}, () => {}))\n        .rejects.toThrow('config path already registered')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Filesystem_aliases_canonicalize_module_roots_and_exact_watch_identity(relative: False)",
+        "Cordis.Extensions.Tests.HmrWatchTests.Filesystem_aliases_canonicalize_module_roots_and_exact_watch_identity(relative: True)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real Windows junction or Unix symbolic link, both relative and absolute module roots. Canonical filesystem event path replaces Node cacheHas(file URL); duplicate exact alias registration rejects.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-15b23da5aa59c8f0",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / observes add, change, and unlink outside its module roots",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 112,
+      "parameter": null,
+      "keyAssertions": [],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Exact_watch_observes_add_change_unlink_and_registration_inside_transaction"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real FileSystemWatcher add/change/delete events outside module roots are observed; watcher is registered inside transaction, then new contents are received.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-02afd775b1f08d6e",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / observes creation when the config parent did not exist at registration",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 139,
+      "parameter": null,
+      "keyAssertions": [],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrTests.ExactWatcherObservesMissingParentsSerializesRefreshAndCloses"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Registers before parent exists; real parent/file creation reaches refresh, serialized behind a blocked mutation.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-4c8e019fc87f5024",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / processes native events for a watcher registered during a transaction",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 158,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(await observed.promise).toBe('created-after-transaction')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Exact_watch_observes_add_change_unlink_and_registration_inside_transaction"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real FileSystemWatcher add/change/delete events outside module roots are observed; watcher is registered inside transaction, then new contents are received.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-89a4b6afb9bf40a1",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / serializes refreshes and waits for them during disposal",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 175,
+      "parameter": null,
+      "keyAssertions": [
+        "expect(calls).toBe(0)",
+        "expect(disposed).toBe(false)",
+        "expect(maxActive).toBe(1)",
+        "expect(calls).toBe(2)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Watch_disposal_drains_already_dirty_refresh_without_overlap"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Unrelated path keeps calls zero; first refresh blocks; disposal waits; already-dirty refresh drains, max active=1 and calls=2 exactly.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-a80e4841efd3c329",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / observes consecutive writes after the previous configuration was applied",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 216,
+      "parameter": null,
+      "keyAssertions": [
+        "await vi.waitFor(() => { expect(observed).toEqual(['enabled', 'disabled']) }, { timeout: 6_000 })"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Configuration_events_after_the_previous_refresh_are_not_throttled_away"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Controlled native events preserve enabled then disabled refresh values without arbitrary sleeps or module debounce loss.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-2e02a4455051a468",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / rejects a patch path whose parent is a regular file",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 247,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(watchConfig(ctx, join(parent, 'plugins.yml'), {}, () => {}))\n      .rejects.toThrow('config watch parent is not a directory')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Rejects_regular_file_parent_and_allows_registration_after_it_is_corrected"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Real regular-file parent rejects with not a directory and succeeds after correcting the directory.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-a3d70836390e8946",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / stops searching when the filesystem root cannot be read",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 258,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(watchConfig(ctx, join(parse(tmpdir()).root, 'plugins.yml'), {}, () => {})).rejects.toBe(failure)",
+        "expect(read).toHaveBeenCalledOnce()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Root_lookup_stops_once_and_preserves_inaccessible_and_missing_path_errors"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Small metadata-reader seam injects native UnauthorizedAccessException and DirectoryNotFoundException. Original error identities are retained; each missing-root search visits root exactly once and stops, including root itself as target.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-d0e266826c0207d4",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / releases registration after watcher %s fails",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 268,
+      "parameter": "'creation'",
+      "keyAssertions": [
+        "await expect(ctx.hmr.watchConfig(filename, async () => {})).rejects.toBe(failure)",
+        "expect(closed).toHaveBeenCalledOnce()",
+        "expect(warn).toHaveBeenCalledWith(failure)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Watch_start_failure_releases_registration_and_runtime_errors_preserve_identity",
+        "Cordis.Extensions.Tests.HmrWatchTests.Watcher_activation_failure_closes_resource_and_releases_registration(moduleRoot: False)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Constructor failure releases registration; activation failure closes the allocated native watcher once; corrected path can be registered and later runtime warning retains exception identity.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-1c96a04435cfee0d",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / releases registration after watcher %s fails",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 268,
+      "parameter": "'ready'",
+      "keyAssertions": [
+        "await expect(ctx.hmr.watchConfig(filename, async () => {})).rejects.toBe(failure)",
+        "expect(closed).toHaveBeenCalledOnce()",
+        "expect(warn).toHaveBeenCalledWith(failure)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Watcher_activation_failure_closes_resource_and_releases_registration(moduleRoot: False)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "FileSystemWatcher has synchronous EnableRaisingEvents activation instead of chokidar ready promise. Native initialization explicitly validates the named root after construction. The metadata-reader seam deterministically rejects this post-construction phase on both Windows and Linux, retaining original error identity; the allocated watcher closes once, registration frees, recovery and later warning are asserted. No OS-specific renamed-directory activation behavior is assumed.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-04b611bbb16fad31",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / closes a ready watcher when its context has already been disposed",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 295,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(watchConfig(ctx, join(dir, 'plugins.yml'), {}, () => {}))\n      .rejects.toThrow('cannot create effect on inactive context')",
+        "expect(close).toHaveBeenCalledOnce()"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Watcher_created_during_owner_teardown_is_closed_before_activation(moduleRoot: False)"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Synchronous native factory reenters owning HMR disposal before returning allocated watcher. Start detects closed owner, closes new resource exactly once and rejects; this covers ownership race across native activation boundary without inventing an async ready phase.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-df0193c0c75b39ec",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / logs refresh failure %s and continues processing later events",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 313,
+      "parameter": "42",
+      "keyAssertions": [
+        "expect(warn.mock.calls[0]).toEqual(['config reload at %C failed', filename])",
+        "expect(warn.mock.calls[1]?.[0]).toMatchObject({ message: '42' })",
+        "expect(calls).toBe(2)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Watch_refresh_failure_reports_path_and_original_reason_then_recovers"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "CLR only permits Exception throws: numeric 42 is normalized to Exception(\"42\") at this language boundary. Queue warns with config path then exact exception object, and next event runs for calls=2. Warning is structured as one formatted native string rather than JS printf arguments.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-9d63d1c93cdf9fb3",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "HMR exact config paths / logs refresh failure %s and continues processing later events",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 313,
+      "parameter": "new Error('42')",
+      "keyAssertions": [
+        "expect(warn.mock.calls[0]).toEqual(['config reload at %C failed', filename])",
+        "expect(warn.mock.calls[1]?.[0]).toMatchObject({ message: '42' })",
+        "expect(calls).toBe(2)"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrDiagnosticTests.Watch_refresh_failure_reports_path_and_original_reason_then_recovers"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "CLR only permits Exception throws: numeric 42 is normalized to Exception(\"42\") at this language boundary. Queue warns with config path then exact exception object, and next event runs for calls=2. Warning is structured as one formatted native string rather than JS printf arguments.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    },
+    {
+      "id": "U-d484163bce012d2c",
+      "sourceFile": "packages/boot/hmr/tests/watch-config.spec.ts",
+      "sourceTitle": "reports inaccessible configuration paths and missing filesystem roots",
+      "sourceCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+      "sourceLine": 342,
+      "parameter": null,
+      "keyAssertions": [
+        "await expect(ctx.hmr.watchConfig(target, async () => {})).rejects.toThrow('denied')",
+        "await expect(ctx.hmr.watchConfig(root, async () => {})).rejects.toThrow('root missing')"
+      ],
+      "dotnet": [
+        "Cordis.Extensions.Tests.HmrWatchTests.Root_lookup_stops_once_and_preserves_inaccessible_and_missing_path_errors"
+      ],
+      "status": "adapted-test-passed",
+      "adaptation": "Small metadata-reader seam injects native UnauthorizedAccessException and DirectoryNotFoundException. Original error identities are retained; each missing-root search visits root exactly once and stops, including root itself as target.",
+      "missingAssertions": [],
+      "platform": "Windows x64 .NET 10; native DLL cases require ordinary CLR, config/graph/queue mechanisms are AOT-safe",
+      "evidence": [
+        "artifacts/hmr-source/hmr-source-tests.trx"
+      ]
+    }
+  ],
+  "accounting": "68 pinned original instances. adapted-test-passed means native assertion adaptation verified; platform-not-applicable and partial are not original passes. Many originals may map to one native mechanism test. Native probes below add no original instances.",
+  "independentProbes": [
+    {
+      "dotnet": "Cordis.Extensions.Tests.HmrDiagnosticTests.Native_compiler_adapter_diagnostics_flow_through_real_watch_error_channel",
+      "purpose": "Typed native compiler exception is used by real production watcher error pipeline, not only dictionary diagnostic unit calls."
+    },
+    {
+      "dotnet": "Cordis.Platform.Tests.ClrTests.Failed_candidate_restores_current_entry_config_and_direct_fibers_then_collects",
+      "purpose": "Real HMR -> CLR resolver -> Loader bad async DLL rollback, latest public Entry options vs stale raw Fiber config, direct fibers, resources, subsequent replacement, ALC collection."
+    },
+    {
+      "dotnet": "Cordis.Extensions.Tests.ProfileSessionTests.Deployment_refresh_accepts_additions_and_requests_restart_before_remapping_live_code",
+      "purpose": "Resolver generation additions publish; remapping requests restart before live code changes."
+    },
+    {
+      "dotnet": "Cordis.Extensions.Tests.ProfileSessionTests.Hmr_disabled_has_no_automatic_watch_but_manual_refresh_works",
+      "purpose": "No hidden watcher daemon when HMR is omitted."
+    },
+    {
+      "dotnet": "Cordis.Platform.Tests.ClrTests.Callback_can_resolve_modules_and_external_disposal_waits_for_replacement_ownership",
+      "purpose": "Actual CLR replacement callback resolves old and another module without holding the state gate; external Dispose waits until switch commit; nested replacement/self-disposal reject instead of deadlocking; every owned ALC is collected."
+    }
+  ],
+  "nativeTheoryInstanceCounts": {
+    "Cordis.Extensions.Tests.HmrDiagnosticTests.Unrecognized_failure_is_forwarded_without_losing_identity": 8,
+    "Cordis.Extensions.Tests.HmrReconciliationTests.Best_effort_reconciliation_retains_eager_options_and_recovers": 3,
+    "Cordis.Extensions.Tests.HmrWatchTests.Filesystem_aliases_canonicalize_module_roots_and_exact_watch_identity": 2,
+    "Cordis.Extensions.Tests.HmrWatchTests.Watcher_activation_failure_closes_resource_and_releases_registration": 2,
+    "Cordis.Extensions.Tests.HmrWatchTests.Watcher_created_during_owner_teardown_is_closed_before_activation": 2
+  },
+  "parameterEvidence": "Theory references use exact current TRX testName strings. Native theory declaration totals are recorded separately; mapping multiple original ModuleLoader-layout parameters to a single native Fact is a documented language/runtime adaptation, not extra native executions."
+}

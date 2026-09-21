@@ -1,0 +1,586 @@
+{
+  "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+  "pairedScenarios": [
+    {
+      "id": "C01-greeting-lifecycle",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C01-greeting-lifecycle",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::GreetingLifecycle",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C02-effect-immediate-single-shot",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C02-effect-immediate-single-shot",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::ImmediateEffect",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C03-reentrant-owner-disposal",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C03-reentrant-owner-disposal",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::ReentrantDisposal",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C04-pending-owned-effect",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C04-pending-owned-effect",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::PendingEffect",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C05-dispose-before-load-checkpoint",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C05-dispose-before-load-checkpoint",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::BeforeCheckpoint",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C06-async-setup-and-cleanup",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C06-async-setup-and-cleanup",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::AsyncSetup",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C07-owner-joins-started-cleanup",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C07-owner-joins-started-cleanup",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::OwnerJoins",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C08-nested-effect-reverse-order",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C08-nested-effect-reverse-order",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::NestedEffects",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C09-generator-setup-rollback",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C09-generator-setup-rollback",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::SetupRollback",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C10-failed-group-does-not-starve-sibling",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C10-failed-group-does-not-starve-sibling",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::CleanupFailure",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C11-reject-effect-during-unload",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C11-reject-effect-during-unload",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::RejectDuringUnload",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C12-apply-failure-cleanup",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C12-apply-failure-cleanup",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::ApplyFailure",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C13-loading-provider-invisible",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C13-loading-provider-invisible",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::ProviderVisibility",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C14-inject-child-not-parent-restart",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C14-inject-child-not-parent-restart",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::InjectChild",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C15-pending-and-active-config-update",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C15-pending-and-active-config-update",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::ConfigUpdate",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C16-multiple-dependencies",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C16-multiple-dependencies",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::MultipleDependencies",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C17-owner-joins-disposing-child",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C17-owner-joins-disposing-child",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::DisposingChild",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C18-stable-context-on-restart",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/scenarios.mjs#C18-stable-context-on-restart",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::StableContext",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "U01-effects-dispose-by-plugin",
+      "kind": "paired-original-adaptation",
+      "reference": "reference/scenarios.mjs#U01-effects-dispose-by-plugin",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::UpstreamDisposeByPlugin",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "U02-effects-dispose-manually",
+      "kind": "paired-original-adaptation",
+      "reference": "reference/scenarios.mjs#U02-effects-dispose-manually",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::UpstreamDisposeManually",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "U03-effects-return-with-error",
+      "kind": "paired-original-adaptation",
+      "reference": "reference/scenarios.mjs#U03-effects-return-with-error",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::UpstreamReturnWithError",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "U04-effects-yield-with-error",
+      "kind": "paired-original-adaptation",
+      "reference": "reference/scenarios.mjs#U04-effects-yield-with-error",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::UpstreamYieldWithError",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "U05-effects-async-return-with-error",
+      "kind": "paired-original-adaptation",
+      "reference": "reference/scenarios.mjs#U05-effects-async-return-with-error",
+      "dotnet": "tests/Cordis.Conformance/Scenarios.cs::UpstreamAsyncReturnWithError",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C19-event-bail-values-and-once",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C19-event-bail-values-and-once",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::Events",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C20-event-waterfall-veto",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C20-event-waterfall-veto",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::Waterfall",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C21-service-shared-realm",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C21-service-shared-realm",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::Realms",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C22-logger-exporter-removal",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C22-logger-exporter-removal",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::LoggerRemoval",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C23-patch-aliases-and-layer-order",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C23-patch-aliases-and-layer-order",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::Patches",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C24-patch-group-include-boundaries",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C24-patch-group-include-boundaries",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::Boundaries",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C25-fiber-local-update-hooks-survive-reload",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C25-fiber-local-update-hooks-survive-reload",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::UpdateHooks",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C26-owned-timers-and-debounce",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/timer-probes.mjs#C26-owned-timers-and-debounce",
+      "dotnet": "tests/Cordis.Conformance/TimerScenarios.cs::Timers",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C27-unbuffered-eager-timer-iterator",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/timer-probes.mjs#C27-unbuffered-eager-timer-iterator",
+      "dotnet": "tests/Cordis.Conformance/TimerScenarios.cs::Iterator",
+      "keyAssertions": "Ordered trace equality without sorting, plus the explicit state/value/identity assertions in both paired functions. U-prefixed cases duplicate corresponding original effect coverage and are not additional original tests.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C28-internal-set-has-no-dispatch-receiver",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C28-internal-set-has-no-dispatch-receiver",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::InternalSet",
+      "keyAssertions": "The fixed DSH and .NET runs both prove that the writer context is the first event argument, no dispatch receiver suppresses the listener through Context.filter, the hook can continue the write, and direct Set bypasses the hook.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C29-yaml-nonfinite-round-trip",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C29-yaml-nonfinite-round-trip",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::YamlNonFinite",
+      "keyAssertions": "The locked js-yaml writer and ConfigurationFile both preserve positive infinity, negative infinity, and NaN as numeric values across parse-write-parse; NaN is checked with its dedicated predicate.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "C30-json-nonfinite-matches-stringify",
+      "kind": "paired-source-contract-probe",
+      "reference": "reference/extended-scenarios.mjs#C30-json-nonfinite-matches-stringify",
+      "dotnet": "tests/Cordis.Conformance/ExtendedScenarios.cs::JsonNonFinite",
+      "keyAssertions": "The locked JavaScript run executes JSON.stringify(config, null, 2). Object fields, array elements, and nested NaN or infinities become null, while finite numbers, strings, and null remain unchanged. The exact serialized trace is matched by .NET under JIT and static Native AOT.",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "verification/json-nonfinite/evidence.json"
+      ]
+    }
+  ],
+  "additionalPlatformChecks": {
+    "file": "tests/Cordis.Conformance/PlatformScenarios.cs",
+    "ids": [
+      "P01-dotnet-ambient-context",
+      "P02-dotnet-entry-boundary",
+      "P03-static-composition-file-patch-dependency-switch"
+    ]
+  },
+  "sourceExcerptProbes": {
+    "file": "reference/probes/effects.test.mjs",
+    "ids": [
+      "E01",
+      "E02",
+      "E03",
+      "E04",
+      "E05",
+      "E06",
+      "E07",
+      "E08",
+      "E09",
+      "E10",
+      "E11",
+      "E12"
+    ],
+    "kind": "historical excerpt/fixture tests; not original tests or whole-runtime reference execution"
+  }
+}

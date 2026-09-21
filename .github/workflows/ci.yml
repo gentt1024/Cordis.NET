@@ -1,0 +1,81 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify (${{ matrix.os }})
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 10.0.111
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+          cache: npm
+          cache-dependency-path: reference/package-lock.json
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Install Native AOT prerequisites
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang zlib1g-dev
+      - name: Confirm Windows Native AOT toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installation = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $installation) { throw 'MSVC x64 build tools are unavailable.' }
+          Write-Output "MSVC installation: $installation"
+      - name: Fetch read-only pinned reference
+        shell: bash
+        run: |
+          git init ../dsh-reference
+          git -C ../dsh-reference remote add origin https://github.com/deepseek-ai/deepseek-harness.git
+          git -C ../dsh-reference fetch --depth=1 origin ddefc45fbc7f8e46dd73185e68295696d1297887
+          git -C ../dsh-reference checkout --detach FETCH_HEAD
+          git init ../upstream-cordis
+          git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
+          git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
+          git -C ../upstream-cordis checkout --detach FETCH_HEAD
+          npm ci --prefix reference --ignore-scripts
+      - name: Verify package inspector regression
+        run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
+      - name: Verify
+        shell: bash
+        run: |
+          python scripts/check-docs.py
+          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: evidence-${{ matrix.os }}
+          path: artifacts/verification
+          if-no-files-found: warn
+          retention-days: 14
