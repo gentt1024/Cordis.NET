@@ -16,15 +16,24 @@ Cordis.NET 由独立社区维护，不是 DeepSeek、Cordiverse 或 Microsoft �
 dotnet run --project examples/Composition/Composition.csproj
 ```
 
-该示例注册静态插件、应用配置、读取服务并更新配置。包尚未发布，因此仓库暂不提供 `dotnet add package` 命令。
+该示例注册静态插件、应用配置、读取服务并更新配置。
+
+## 安装预发行版
+
+```console
+dotnet add package Cordis.NET.Composition --version 0.1.0-alpha.2
+dotnet tool install --global Cordis.NET.Tool --version 0.1.0-alpha.2
+```
+
+NuGet 包 ID 使用 `Cordis.NET.*` 前缀；CLR 命名空间与程序集名称仍为 `Cordis.*`。
 
 ## 选择部署路径
 
-- **静态与 Native AOT：** 使用 `Cordis.Core`、`Cordis.Composition`，并可选用 `Cordis.Extensions`，模块需静态注册。
-- **CLR 模块：** 添加 `Cordis.Clr`，在普通 .NET 运行时加载托管插件程序集。此路径不兼容 Native AOT。
-- **JavaScript 表达式：** 添加 `Cordis.JavaScript`，通过 Jint 求值 `!!js`。只应处理受信任配置；它不是沙箱，也不承诺 Native AOT 支持。
+- **静态与 Native AOT：** 使用 `Cordis.NET.Core`、`Cordis.NET.Composition`，并可选用 `Cordis.NET.Extensions`，模块需静态注册。
+- **CLR 模块：** 添加 `Cordis.NET.Clr`，在普通 .NET 运行时加载托管插件程序集。此路径不兼容 Native AOT。
+- **JavaScript 表达式：** 添加 `Cordis.NET.JavaScript`，通过 Jint 求值 `!!js`。只应处理受信任配置；它不是沙箱，也不承诺 Native AOT 支持。
 
-`Cordis.Hosting` 提供 Generic Host 集成。`Cordis.Tool` 提供配置验证与预览命令。
+`Cordis.NET.Hosting` 提供 Generic Host 集成。`Cordis.NET.Tool` 提供配置验证与预览命令。
 
 ## 文档
 

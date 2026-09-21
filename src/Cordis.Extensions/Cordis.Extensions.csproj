@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>true</IsAotCompatible><PackageId>Cordis.Extensions</PackageId><Description>Timer, console, profile session, and HMR services for Cordis.NET.</Description></PropertyGroup>
+  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>true</IsAotCompatible><PackageId>Cordis.NET.Extensions</PackageId><Description>Timer, console, profile session, and HMR services for Cordis.NET.</Description></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Cordis.Core/Cordis.Core.csproj" />
     <ProjectReference Include="../Cordis.Composition/Cordis.Composition.csproj" />

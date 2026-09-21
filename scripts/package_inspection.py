@@ -9,15 +9,17 @@ import zipfile
 
 
 PACKAGE_LAYOUTS = {
-    "Cordis.Core": ("lib/net10.0", "Cordis.Core", "T:Cordis.Context"),
-    "Cordis.Composition": ("lib/net10.0", "Cordis.Composition", "T:Cordis.Composition.Loader"),
-    "Cordis.Extensions": ("lib/net10.0", "Cordis.Extensions", "T:Cordis.Extensions.TimerService"),
-    "Cordis.Clr": ("lib/net10.0", "Cordis.Clr", "T:Cordis.Clr.ClrModuleResolver"),
-    "Cordis.Hosting": ("lib/net10.0", "Cordis.Hosting", "T:Cordis.Hosting.CordisHostExtensions"),
-    "Cordis.JavaScript": ("lib/net10.0", "Cordis.JavaScript", "T:Cordis.JavaScript.JintExpressionEvaluator"),
-    "Cordis.Tool": ("tools/net10.0/any", "Cordis.Cli", None),
-    "Cordis.Example.Greeting": ("lib/net10.0", "Greeting.Plugin", "T:Cordis.Example.Greeting.GreetingModule"),
+    "Cordis.NET.Core": ("lib/net10.0", "Cordis.Core", "T:Cordis.Context", set()),
+    "Cordis.NET.Composition": ("lib/net10.0", "Cordis.Composition", "T:Cordis.Composition.Loader", {"Cordis.NET.Core"}),
+    "Cordis.NET.Extensions": ("lib/net10.0", "Cordis.Extensions", "T:Cordis.Extensions.TimerService", {"Cordis.NET.Core", "Cordis.NET.Composition"}),
+    "Cordis.NET.Clr": ("lib/net10.0", "Cordis.Clr", "T:Cordis.Clr.ClrModuleResolver", {"Cordis.NET.Composition"}),
+    "Cordis.NET.Hosting": ("lib/net10.0", "Cordis.Hosting", "T:Cordis.Hosting.CordisHostExtensions", {"Cordis.NET.Core"}),
+    "Cordis.NET.JavaScript": ("lib/net10.0", "Cordis.JavaScript", "T:Cordis.JavaScript.JintExpressionEvaluator", {"Cordis.NET.Composition"}),
+    "Cordis.NET.Tool": ("tools/net10.0/any", "Cordis.Cli", None, set()),
+    "Cordis.Example.Greeting": ("lib/net10.0", "Greeting.Plugin", "T:Cordis.Example.Greeting.GreetingModule", {"Cordis.NET.Composition"}),
 }
+
+PUBLISHABLE_PACKAGE_IDS = tuple(identity for identity in PACKAGE_LAYOUTS if identity.startswith("Cordis.NET."))
 
 
 def inspect_packages(directory: Path, version: str) -> list[str]:
@@ -35,6 +37,7 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
             actual_version = metadata["version"]
             assert identity in PACKAGE_LAYOUTS, (package, identity)
             assert actual_version == version and identity not in found, (identity, actual_version, version)
+            assert package.name == f"{identity}.{version}.nupkg", (package.name, identity, version)
             found.add(identity)
 
             assert "README.md" in entries and "NOTICE.md" in entries and "LICENSE" in entries, package
@@ -49,7 +52,7 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
             readme = archive.read("README.md").decode("utf-8-sig")
             assert readme.startswith(f"# {identity}\n"), (identity, readme.splitlines()[:1])
 
-            folder, assembly, representative_member = PACKAGE_LAYOUTS[identity]
+            folder, assembly, representative_member, expected_dependencies = PACKAGE_LAYOUTS[identity]
             dll_path = f"{folder}/{assembly}.dll"
             xml_path = f"{folder}/{assembly}.xml"
             assert dll_path in entries, (identity, f"missing product assembly {dll_path}")
@@ -60,11 +63,17 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
             if representative_member:
                 assert representative_member in member_names, (identity, representative_member)
 
+            dependencies = {node.attrib["id"] for node in manifest.iter() if node.tag.endswith("}dependency")}
+            internal_dependencies = {dependency for dependency in dependencies if dependency.startswith("Cordis.")}
+            assert internal_dependencies == expected_dependencies, (identity, internal_dependencies, expected_dependencies)
+            if identity == "Cordis.NET.Tool":
+                assert "tools/net10.0/any/Cordis.Composition.dll" in entries, identity
+                assert "tools/net10.0/any/Cordis.Core.dll" in entries, identity
+
             assert any(name.startswith("LICENSES/") for name in entries), package
             assert not any(set(PurePosixPath(name).parts) & {"node_modules", "obj", "reference-materials", ".git"} for name in entries), package
-            if identity == "Cordis.Core":
-                dependencies = [node.attrib["id"] for node in manifest.iter() if node.tag.endswith("}dependency")]
-                assert not any("Jint" in dep or "Hosting" in dep or "Cordis.Clr" in dep for dep in dependencies), dependencies
+            if identity == "Cordis.NET.Core":
+                assert not any(dep in {"Jint", "Cordis.NET.Hosting", "Cordis.NET.Clr"} for dep in dependencies), dependencies
 
     expected = set(PACKAGE_LAYOUTS)
     assert found == expected, (found, expected)
