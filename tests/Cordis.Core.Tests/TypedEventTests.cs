@@ -5,6 +5,256 @@ namespace Cordis.Core.Tests;
 public sealed class TypedEventTests
 {
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Task_int_method_group_compiles_and_matches_raw_observer_result(bool typed, bool once)
+    {
+        await using var root = new Context();
+        await root.RunAsync(async ctx =>
+        {
+            var key = new EventKey<int>("method-group-answer");
+            var answers = 0;
+            var downstream = 0;
+            async Task<int> Answer(EventContext evt, int value)
+            {
+                await Task.Yield();
+                answers++;
+                return value;
+            }
+            Task<int> RawAnswer(EventContext evt, object?[] args) => Answer(evt, (int)args[0]!);
+            if (typed)
+            {
+                if (once) ctx.Once(key, Answer);
+                else ctx.On(key, Answer);
+            }
+            else
+            {
+                if (once) ctx.Once(key.Name, RawAnswer);
+                else ctx.On(key.Name, RawAnswer);
+            }
+            ctx.On(key.Name, (_, _) => { downstream++; return Undefined.Value; });
+            for (var dispatch = 1; dispatch <= 2; dispatch++)
+            {
+                var result = typed ? await ctx.SerialAsync(key, 42) : await ctx.SerialAsync(key.Name, 42);
+                Assert.Same(Undefined.Value, result);
+                Assert.Equal(once ? 1 : dispatch, answers);
+                Assert.Equal(dispatch, downstream);
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData("int", 0, true, false)]
+    [InlineData("int", 0, true, true)]
+    [InlineData("int", 42, true, false)]
+    [InlineData("int", 42, true, true)]
+    [InlineData("string", "", true, false)]
+    [InlineData("string", "", true, true)]
+    [InlineData("string", "answer", true, false)]
+    [InlineData("string", "answer", true, true)]
+    [InlineData("string", null, false, false)]
+    [InlineData("string", null, false, true)]
+    [InlineData("bool", false, false, false)]
+    [InlineData("bool", false, false, true)]
+    [InlineData("bool", true, true, false)]
+    [InlineData("bool", true, true, true)]
+    public async Task Task_results_require_boxing_the_awaited_value_for_serial_bail(
+        string kind, object? value, bool shouldBail, bool once)
+    {
+        switch (kind)
+        {
+            case "int": await AssertSerialResult((int)value!, shouldBail, once); break;
+            case "string": await AssertSerialResult((string?)value, shouldBail, once); break;
+            case "bool": await AssertSerialResult((bool)value!, shouldBail, once); break;
+            default: throw new ArgumentException("Unknown result kind.", nameof(kind));
+        }
+    }
+
+    private static async Task AssertSerialResult<TResult>(TResult value, bool shouldBail, bool once)
+    {
+        foreach (var typed in new[] { false, true })
+        foreach (var shape in new[] { "method-group", "cast-task", "await-and-box-result" })
+        {
+            await using var root = new Context();
+            await root.RunAsync(async ctx =>
+            {
+                var key = new EventKey<int>("serial-result");
+                var gate = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var calls = 0;
+                var downstream = 0;
+                Task<TResult> Answer(EventContext evt, int payload)
+                {
+                    Assert.Equal(7, payload);
+                    calls++;
+                    return gate.Task;
+                }
+                Task<TResult> RawAnswer(EventContext evt, object?[] args) => Answer(evt, (int)args[0]!);
+                if (typed)
+                {
+                    if (shape == "method-group")
+                    {
+                        if (once) ctx.Once(key, Answer);
+                        else ctx.On(key, Answer);
+                    }
+                    else if (shape == "cast-task")
+                    {
+                        if (once) ctx.Once(key, (evt, payload) => (object?)Answer(evt, payload));
+                        else ctx.On(key, (evt, payload) => (object?)Answer(evt, payload));
+                    }
+                    else
+                    {
+                        if (once) ctx.Once(key, async (evt, payload) => (object?)await Answer(evt, payload));
+                        else ctx.On(key, async (evt, payload) => (object?)await Answer(evt, payload));
+                    }
+                }
+                else
+                {
+                    CordisEventHandler listener = shape switch
+                    {
+                        "method-group" => RawAnswer,
+                        "cast-task" => (evt, args) => (object?)RawAnswer(evt, args),
+                        _ => (evt, args) => AdaptRawAnswer(evt, args),
+                    };
+                    async Task<object?> AdaptRawAnswer(EventContext evt, object?[] args)
+                        => (object?)await RawAnswer(evt, args);
+                    if (once) ctx.Once(key.Name, listener);
+                    else ctx.On(key.Name, listener);
+                }
+                ctx.On(key.Name, (_, _) => { downstream++; return "downstream"; });
+                var pending = typed ? ctx.SerialAsync(key, 7) : ctx.SerialAsync(key.Name, 7);
+                Assert.False(pending.IsCompleted);
+                Assert.Equal(1, calls);
+                Assert.Equal(0, downstream);
+                gate.SetResult(value);
+                var bails = shape == "await-and-box-result" && shouldBail;
+                Assert.Equal(bails ? (object?)value : "downstream", await pending);
+                Assert.Equal(bails ? 0 : 1, downstream);
+
+                var second = typed ? await ctx.SerialAsync(key, 7) : await ctx.SerialAsync(key.Name, 7);
+                Assert.Equal(!once && bails ? (object?)value : "downstream", second);
+                Assert.Equal(once ? 1 : 2, calls);
+                Assert.Equal((bails ? 0 : 1) + (once || !bails ? 1 : 0), downstream);
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Parallel_awaits_non_object_tasks_without_using_their_results(bool typed, bool once)
+    {
+        await using var root = new Context();
+        await root.RunAsync(async ctx =>
+        {
+            var key = new EventKey<int>("parallel-result");
+            var gate = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var calls = 0;
+            var downstream = 0;
+            Task<int> Answer(EventContext evt, int payload) { calls++; return gate.Task; }
+            Task<int> RawAnswer(EventContext evt, object?[] args) => Answer(evt, (int)args[0]!);
+            if (typed)
+            {
+                if (once) ctx.Once(key, Answer);
+                else ctx.On(key, Answer);
+            }
+            else
+            {
+                if (once) ctx.Once(key.Name, RawAnswer);
+                else ctx.On(key.Name, RawAnswer);
+            }
+            ctx.On(key.Name, (_, _) => { downstream++; return Undefined.Value; });
+            var pending = typed ? ctx.ParallelAsync(key, 7) : ctx.ParallelAsync(key.Name, 7);
+            Assert.False(pending.IsCompleted);
+            Assert.Equal(1, downstream);
+            gate.SetResult(42);
+            await pending;
+            if (typed) await ctx.ParallelAsync(key, 7);
+            else await ctx.ParallelAsync(key.Name, 7);
+            Assert.Equal(once ? 1 : 2, calls);
+            Assert.Equal(2, downstream);
+        });
+    }
+
+    [Theory]
+    [InlineData("emit", false)]
+    [InlineData("emit", true)]
+    [InlineData("bail", false)]
+    [InlineData("bail", true)]
+    [InlineData("waterfall", false)]
+    [InlineData("waterfall", true)]
+    public async Task Synchronous_dispatch_preserves_pending_task_identity_and_does_not_await(string mode, bool once)
+    {
+        await AssertSynchronousTask(42, mode, once);
+        await AssertSynchronousTask<object?>(false, mode, once);
+    }
+
+    private static async Task AssertSynchronousTask<TResult>(TResult value, string mode, bool once)
+    {
+        foreach (var typed in new[] { false, true })
+        {
+            await using var root = new Context();
+            await root.RunAsync(async ctx =>
+            {
+                var key = new EventKey<int>("sync-task");
+                var gate = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var calls = 0;
+                var downstream = 0;
+                var next = 0;
+                Task<TResult> Answer(EventContext evt, int payload) { calls++; return gate.Task; }
+                Task<TResult> RawAnswer(EventContext evt, object?[] args) => Answer(evt, (int)args[0]!);
+                if (typed)
+                {
+                    if (once) ctx.Once(key, Answer);
+                    else ctx.On(key, Answer);
+                }
+                else
+                {
+                    if (once) ctx.Once(key.Name, RawAnswer);
+                    else ctx.On(key.Name, RawAnswer);
+                }
+                ctx.On(key.Name, (evt, _) => { downstream++; return evt.Next(); });
+                object? Next() { next++; return "next"; }
+                for (var dispatch = 1; dispatch <= 2; dispatch++)
+                {
+                    object? result = null;
+                    switch (mode)
+                    {
+                        case "emit":
+                            if (typed) ctx.Emit(key, 7); else ctx.Emit(key.Name, 7);
+                            break;
+                        case "bail":
+                            result = typed ? ctx.Bail(key, 7) : ctx.Bail(key.Name, 7);
+                            break;
+                        case "waterfall":
+                            result = typed ? ctx.Waterfall(key, Next, 7) : ctx.Waterfall(key.Name, Next, 7);
+                            break;
+                    }
+                    Assert.False(gate.Task.IsCompleted);
+                    Assert.Equal(once ? 1 : dispatch, calls);
+                    if (mode == "emit") Assert.Equal(dispatch, downstream);
+                    else if (!once || dispatch == 1)
+                    {
+                        Assert.Same(gate.Task, result);
+                        Assert.Equal(0, downstream);
+                    }
+                    else
+                    {
+                        Assert.Equal(mode == "bail" ? Undefined.Value : (object?)"next", result);
+                        Assert.Equal(1, downstream);
+                    }
+                    Assert.Equal(mode == "waterfall" && once && dispatch == 2 ? 1 : 0, next);
+                }
+                gate.SetResult(value);
+                await gate.Task;
+            });
+        }
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public async Task Async_start_and_resume_order_matches_raw_dispatch(bool parallel)

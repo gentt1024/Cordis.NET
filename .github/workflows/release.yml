@@ -91,12 +91,15 @@ jobs:
         run: |
           python scripts/check-docs.py
           python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/release-packages
+          python scripts/verify-authoring.py --aot --packages artifacts/release-packages
       - name: Preserve evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release-evidence-${{ matrix.os }}-${{ inputs.tag }}
-          path: artifacts/verification
+          path: |
+            artifacts/verification
+            artifacts/authoring
           if-no-files-found: warn
           retention-days: 30
       - name: Preserve the validated package batch

@@ -15,6 +15,20 @@ dotnet publish examples/Probes/Probes.csproj -c Release -r win-x64 -p:PublishAot
 
 请使用实际构建并运行可执行文件的机器所对应的运行时标识。发布命令本身不是执行成功的证据；已完成结果记录在[验证记录](validation.zh.md)。[V1](../tests/fixtures/ProbeV1/ProbeV1.csproj) 与 [V2](../tests/fixtures/ProbeV2/ProbeV2.csproj) DLL 夹具通过[显式 CLR 入口](../tests/fixtures/ProbeEntry.cs)编译同一份提供者源码。
 
+### 通过 CLR DLL 替换运行同一份提供者
+
+[CLR 控制台宿主](../examples/Probes.Clr/Program.cs)仅引用共享契约和 `Cordis.Clr`（Composition 通过传递引用可用）。它从两个夹具 bundle 加载同一份提供者源码编译出的实现，没有静态引用 `Probes.Plugin` 或任何夹具项目。在仓库根目录执行：
+
+```console
+dotnet build tests/fixtures/ProbeV1/ProbeV1.csproj -c Release
+dotnet build tests/fixtures/ProbeV2/ProbeV2.csproj -c Release
+dotnet run --project examples/Probes.Clr/Probes.Clr.csproj -c Release -- tests/fixtures/ProbeV1/bin/Release/net10.0 tests/fixtures/ProbeV2/bin/Release/net10.0
+```
+
+两个参数都是包含 `ProbePlugin.dll` 及其依赖的 bundle 目录。宿主将自身实际使用的契约程序集传给 `ClrModuleResolver`，加载 V1、激活两个消费者、用 V2 替换 V1，并验证两个消费者均重新取得 caller-bound 视图。释放一个消费者只移除它自己的贡献；释放另一个后，根停止前注册表为空。显式 `ClrModuleDefinition` 使用 `Cordis.ProbeFixture.Entry`；夹具中的其他入口类型用于负向测试。
+
+生命周期清理后，宿主请求卸载，并分别报告回收与影子文件删除。它从不强制 GC。退出码零表示贡献断言、生命周期清理和卸载请求成功；退出时 `collected=False` 或 `shadow deleted=False` 仍可能是正常结果。待清理的临时影子目录会打印出来，供后续清理。宿主不在运行时还原包，部署后也不依赖源码仓库：普通发布宿主，并传入两个预先准备的 bundle 目录即可。这条 CLR 路线要求普通运行时，不支持 Native AOT。[部署测试](../tests/Cordis.Platform.Tests/ProbeDeploymentTests.cs)另外使用仅限测试的强制 GC 验证最终回收。
+
 ## 选择最小而有用的作者写法
 
 | 任务 | 现有写法 | 可选便利入口 | 何时更简单的写法已经够用 |
@@ -36,7 +50,17 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 `EventKey<T>` 只描述一个 payload 槽位。同名 key 共用原始监听表，原始发布者与类型化监听者互通。不会把现有多参数事件隐式转换成 tuple/DTO。原始参数数量或 payload 类型错误会明确失败。可空引用标注不能在运行时强制 payload 非空。
 
-`On` 和 `Once` 保留 `EventOptions`、过滤、receiver、顺序及 effect 所有权。分发参数中 `receiver` 与 payload 分开。Action 观察者返回 `Undefined.Value`。对象结果监听器保留 `null`、`false`、`Undefined.Value`、零和空字符串。Task 重载保留原分发器行为：`ParallelAsync` 与 `SerialAsync` 等待监听器；同步的 `Emit`、`Bail` 和 `Waterfall` 不会变成异步。Task 重载返回 null 时仍是原始 null 结果。重载选择可能模糊返回意图时，使用显式返回 object 的 lambda 或强制转换。`Waterfall` 仍要求显式调用 `next`，观察者不会自动继续。需要观察异步错误时使用可等待的分发方式。
+`On` 和 `Once` 保留 `EventOptions`、过滤、receiver、顺序及 effect 所有权。分发参数中 `receiver` 与 payload 分开。Action 观察者返回 `Undefined.Value`。对象结果监听器保留 `null`、`false`、`Undefined.Value`、零和空字符串。Task 重载沿用现有原始分发器的结果规则。`ParallelAsync` 等待任务但不返回其结果；`SerialAsync` 提取 `Task<object?>` 的结果，却将其他 `Task<T>` 作为观察者等待，并以 `Undefined.Value` 代替结果。返回 `Task<int>`、`Task<string>` 或 `Task<bool>` 的方法组可以直接传入类型化 `On` 或 `Once` 并通过编译；其结果在串行分发时会被丢弃，与原始路径相同。这是继承的原始限制，并非类型化接口独有的回归。
+
+| 监听器写法，其中 `Answer` 返回 `Task<int>` | `SerialAsync` 行为 |
+|---|---|
+| `ctx.On(key, Answer)`（或 `Once`） | 等待任务，以 `Undefined.Value` 代替结果，然后调用下一个监听器。 |
+| `ctx.On(key, (evt, value) => (object?)Answer(evt, value))` | 强制转换任务对象并未适配其结果，行为与上一行相同。 |
+| `ctx.On(key, async (evt, value) => (object?)await Answer(evt, value))` | 产生 `Task<object?>`；保留等待得到的整数并停止串行分发，包括零。 |
+
+`Once` 以及返回 `Task<string>` 或 `Task<bool>` 的方法使用相同的显式适配：`async (evt, value) => (object?)await Answer(evt, value)`。原始监听器应返回等价异步辅助函数产生的 `Task<object?>`。适配后，`null`、`false` 和 `Undefined.Value` 让串行分发继续；零、空字符串和 `true` 则停止分发。分发器不会通过反射读取任意 `Task.Result` 属性。null 任务引用仍保留原始 null 结果。
+
+同步的 `Emit`、`Bail` 和 `Waterfall` 不等待任务。`Emit` 立即调用后续监听器；`Bail` 和 `Waterfall` 中未调用 `next` 就返回的监听器会返回原任务对象，不包装任务或提取结果。`Waterfall` 仍要求显式调用 `next`，观察者不会自动继续。需要观察异步错误时使用可等待的分发方式。
 
 ## 服务提供者与配置
 

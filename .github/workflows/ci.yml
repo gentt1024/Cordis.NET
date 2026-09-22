@@ -70,12 +70,15 @@ jobs:
         shell: bash
         run: |
           python scripts/check-docs.py
-          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package
+          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/ci-packages
+          python scripts/verify-authoring.py --aot --packages artifacts/ci-packages
       - name: Preserve evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: evidence-${{ matrix.os }}
-          path: artifacts/verification
+          path: |
+            artifacts/verification
+            artifacts/authoring
           if-no-files-found: warn
           retention-days: 14

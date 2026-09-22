@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Probes.Contracts/Probes.Contracts.csproj" />
+    <ProjectReference Include="../../src/Cordis.Clr/Cordis.Clr.csproj" />
+  </ItemGroup>
+</Project>
