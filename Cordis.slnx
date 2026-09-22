@@ -3,6 +3,7 @@
     <Project Path="examples/Composition/Composition.csproj" />
     <Project Path="examples/Greeting.Plugin/Greeting.Plugin.csproj" />
     <Project Path="examples/Probes.Contracts/Probes.Contracts.csproj" />
+    <Project Path="examples/Probes.Clr/Probes.Clr.csproj" />
     <Project Path="examples/Probes.Plugin/Probes.Plugin.csproj" />
     <Project Path="examples/Probes/Probes.csproj" />
   </Folder>

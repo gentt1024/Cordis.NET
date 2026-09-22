@@ -253,7 +253,7 @@ def verify_test_suites(gate: Gate, directory: Path):
 
 
 def publish_and_run(gate: Gate, label: str, csproj: Path, assembly: str, rid: str,
-                    *, aot=False, cwd=ROOT, env=None):
+                    *, aot=False, cwd=ROOT, env=None, arguments=(), success_message=SUCCESS_MESSAGE):
     output = gate.directory / label
     command = ["dotnet", "publish", csproj, "-c", "Release", "-r", rid,
                "--self-contained", "true", "-o", output,
@@ -265,12 +265,40 @@ def publish_and_run(gate: Gate, label: str, csproj: Path, assembly: str, rid: st
     executable = output / (assembly + (".exe" if os.name == "nt" else ""))
     if aot and (output / (assembly + ".dll")).exists():
         raise RuntimeError(f"{label}: managed entry assembly remained in the fresh Native AOT output")
-    stdout = gate.run(label + "-run", [executable], output, env)
-    if SUCCESS_MESSAGE not in stdout:
+    stdout = gate.run(label + "-run", [executable, *arguments], output, env)
+    if success_message not in stdout:
         raise RuntimeError(f"{label}: example did not report successful completion")
     gate.record(label + "-scenario", output=output.relative_to(OUT).as_posix(), nativeAot=aot,
                 executableSha256=hashlib.sha256(executable.read_bytes()).hexdigest())
     return stdout
+
+
+def clr_example(gate: Gate, rid: str):
+    # Build the fixtures through the solution, then deploy physical DLL bundles.
+    # The console has no reference to either unloadable provider implementation.
+    bundles = []
+    framework = ET.parse(ROOT / "Directory.Build.props").findtext(".//TargetFramework")
+    for version in ("V1", "V2"):
+        source = ROOT / "tests" / "fixtures" / ("Probe" + version) / "bin" / "Release" / framework
+        bundle = gate.directory / "clr-bundles" / version
+        shutil.copytree(source, bundle)
+        if not (bundle / "ProbePlugin.dll").is_file():
+            raise RuntimeError(f"Missing real provider fixture: {bundle}")
+        bundles.append(bundle)
+    publish_and_run(gate, "clr-jit", ROOT / "examples/Probes.Clr/Probes.Clr.csproj",
+                    "Probes.Clr", rid, arguments=bundles,
+                    success_message=b"CLR probe authoring scenario passed")
+    output = gate.directory / "clr-jit"
+    dependencies = json.loads((output / "Probes.Clr.deps.json").read_text(encoding="utf-8"))
+    forbidden = {"ProbePlugin", "ProbeV1", "ProbeV2", "Probes.Plugin"}
+    if any(name.split("/")[0] in forbidden for name in dependencies["libraries"]) or any(
+            (output / (name + ".dll")).exists() for name in forbidden):
+        raise RuntimeError("CLR host deployment contains a static provider implementation dependency")
+    gate.record("clr-deployment-boundaries", nativeAot=False, staticProviderDependencies=0,
+                bundles={bundle.name: {path.relative_to(bundle).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                                      for path in sorted(bundle.rglob("*")) if path.is_file()}
+                         for bundle in bundles},
+                unloadEvidence="Lifecycle cleanup and unload requests; collection is observed without forcing GC")
 
 
 def package_consumer(gate: Gate, package_dir: Path, version: str, rid: str, aot: bool):
@@ -345,6 +373,7 @@ def main() -> int:
                                     "--logger", "trx", "--results-directory", results])
         verify_test_suites(gate, results)
         compilation_contracts(gate)
+        clr_example(gate, rid)
         jit = publish_and_run(gate, "example-jit", ROOT / "examples/Probes/Probes.csproj", "Probes", rid)
         if options.aot:
             native = publish_and_run(gate, "example-aot", ROOT / "examples/Probes/Probes.csproj", "Probes", rid, aot=True)

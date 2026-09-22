@@ -15,6 +15,20 @@ dotnet publish examples/Probes/Probes.csproj -c Release -r win-x64 -p:PublishAot
 
 Use the runtime identifier for the machine that will build and run the executable. A publish command is not evidence that it ran successfully: completed results belong in [validation](validation.md). The [V1](../tests/fixtures/ProbeV1/ProbeV1.csproj) and [V2](../tests/fixtures/ProbeV2/ProbeV2.csproj) DLL fixtures compile the same provider source behind an [explicit CLR entry](../tests/fixtures/ProbeEntry.cs).
 
+### Run the same provider through CLR DLL replacement
+
+The [CLR console host](../examples/Probes.Clr/Program.cs) references only the shared contracts and `Cordis.Clr` (with Composition transitively available). It loads the same provider source from the two fixture bundles; it has no static reference to `Probes.Plugin` or either fixture. From the repository root:
+
+```console
+dotnet build tests/fixtures/ProbeV1/ProbeV1.csproj -c Release
+dotnet build tests/fixtures/ProbeV2/ProbeV2.csproj -c Release
+dotnet run --project examples/Probes.Clr/Probes.Clr.csproj -c Release -- tests/fixtures/ProbeV1/bin/Release/net10.0 tests/fixtures/ProbeV2/bin/Release/net10.0
+```
+
+The two arguments are bundle directories containing `ProbePlugin.dll` and its dependencies. The host passes its exact contract assembly to `ClrModuleResolver`, loads V1, activates two consumers, replaces V1 with V2, and verifies both consumers reacquire caller-bound views. Disposing one consumer removes only its contribution; disposing the other leaves an empty registry before the root stops. The explicit `ClrModuleDefinition` uses `Cordis.ProbeFixture.Entry`; the other fixture entry types exist for negative tests.
+
+After lifecycle cleanup, the host requests unload and reports collection and shadow deletion separately. It never forces GC. Exit code zero means the contribution checks, lifecycle cleanup and unload requests succeeded; `collected=False` or `shadow deleted=False` may legitimately remain at exit. Pending temporary shadow directories are printed for later cleanup. The host performs no runtime package restore and needs no source checkout when deployed: publish it normally and pass two prepared bundle directories. This CLR route requires an ordinary runtime and does not support Native AOT. The [deployment test](../tests/Cordis.Platform.Tests/ProbeDeploymentTests.cs) separately verifies eventual collection with test-only forced GC.
+
 ## Choose the smallest useful authoring form
 
 | Task | Existing form | Optional convenience | When the simpler form is enough |
@@ -36,7 +50,17 @@ The generic read has the same cast behavior as the handwritten cast: incompatibl
 
 An `EventKey<T>` describes exactly one payload slot. Keys with the same name share the raw listener table; raw publishers and typed listeners interoperate. There is no implicit tuple/DTO conversion for existing multi-argument events. Wrong raw argument counts or incompatible payload types fail explicitly. Nullable reference annotations cannot enforce non-null payloads at runtime.
 
-`On` and `Once` preserve `EventOptions`, filtering, receiver, ordering and effect ownership. Dispatch accepts `receiver` separately from the payload. Action observers return `Undefined.Value`. Object-result listeners preserve `null`, `false`, `Undefined.Value`, zero and empty strings. Task overloads preserve the raw dispatcher: `ParallelAsync` and `SerialAsync` await listeners; synchronous `Emit`, `Bail` and `Waterfall` do not become asynchronous. A null returned through a task overload remains the raw null result. Use an explicit object-returning lambda or cast when overload selection would obscure the intended return type. `Waterfall` still requires explicit `next`; an observer does not continue automatically. Use awaited dispatch to observe asynchronous errors.
+`On` and `Once` preserve `EventOptions`, filtering, receiver, ordering and effect ownership. Dispatch accepts `receiver` separately from the payload. Action observers return `Undefined.Value`. Object-result listeners preserve `null`, `false`, `Undefined.Value`, zero and empty strings. Task overloads retain the existing raw dispatcher's result rules. `ParallelAsync` awaits tasks without returning their results; `SerialAsync` extracts the result of `Task<object?>`, but awaits other `Task<T>` values as observers and substitutes `Undefined.Value`. A method group returning `Task<int>`, `Task<string>` or `Task<bool>` compiles when passed directly to typed `On` or `Once`; its result is therefore discarded during serial dispatch, just as on the raw path. This is an inherited raw limitation, not a typed-only regression.
+
+| Listener shape, where `Answer` returns `Task<int>` | `SerialAsync` behavior |
+|---|---|
+| `ctx.On(key, Answer)` (or `Once`) | Awaits the task, substitutes `Undefined.Value`, then invokes the next listener. |
+| `ctx.On(key, (evt, value) => (object?)Answer(evt, value))` | Casting the task object does not adapt its result; behavior is the same as above. |
+| `ctx.On(key, async (evt, value) => (object?)await Answer(evt, value))` | Produces `Task<object?>`; the awaited integer is preserved and stops serial dispatch, including when it is zero. |
+
+Use the same explicit `async (evt, value) => (object?)await Answer(evt, value)` adapter with `Once` and with `Task<string>` or `Task<bool>`. For raw listeners, return a `Task<object?>` from an equivalent async helper. After adaptation, `null`, `false` and `Undefined.Value` let serial dispatch continue; zero, an empty string and `true` stop it. The dispatcher does not reflect over arbitrary `Task.Result` properties. A null task reference remains the raw null result.
+
+Synchronous `Emit`, `Bail` and `Waterfall` do not await tasks. `Emit` invokes subsequent listeners immediately; `Bail` and a listener that returns without calling `next` in `Waterfall` return the original task object, without wrapping it or extracting its result. `Waterfall` still requires explicit `next`; an observer does not continue automatically. Use awaited dispatch to observe asynchronous errors.
 
 ## Service providers and configuration
 
