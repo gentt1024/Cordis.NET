@@ -40,6 +40,7 @@
     <File Path="CONTRIBUTING.md" />
     <File Path="upstream.lock.json" />
     <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
     <File Path="Directory.Build.targets" />
     <File Path="build.ps1" />
     <File Path="build.sh" />
