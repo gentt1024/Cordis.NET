@@ -38,6 +38,7 @@ The package IDs use the `Cordis.NET.*` prefix. CLR namespaces and assembly names
 ## Documentation
 
 - [Getting started](docs/getting-started.md)
+- [Plugin and application authoring](docs/authoring.md)
 - [Core concepts](docs/core-concepts.md)
 - [Compatibility and evidence](docs/compatibility.md)
 - [Upstream baseline and provenance](docs/upstream.md)

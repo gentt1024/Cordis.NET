@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsAotCompatible>true</IsAotCompatible></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Probes.Contracts/Probes.Contracts.csproj" />
+    <ProjectReference Include="../../src/Cordis.Composition/Cordis.Composition.csproj" />
+    <EmbeddedResource Include="cordis.patch.yml" LogicalName="Probes.cordis.patch.yml" />
+  </ItemGroup>
+</Project>

@@ -221,6 +221,12 @@
           "Jint": "[4.7.0, )"
         }
       },
+      "probes.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Cordis.NET.Core": "[0.1.0-alpha.2, )"
+        }
+      },
       "shared": {
         "type": "Project"
       }

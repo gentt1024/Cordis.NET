@@ -9,6 +9,9 @@
     <ProjectReference Include="../../src/Cordis.Hosting/Cordis.Hosting.csproj" />
     <ProjectReference Include="../../src/Cordis.JavaScript/Cordis.JavaScript.csproj" />
     <ProjectReference Include="../fixtures/Shared/Shared.csproj" />
+    <ProjectReference Include="../../examples/Probes.Contracts/Probes.Contracts.csproj" />
+    <ProjectReference Include="../fixtures/ProbeV1/ProbeV1.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../fixtures/ProbeV2/ProbeV2.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../fixtures/PluginV1/PluginV1.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../fixtures/PluginV2/PluginV2.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../fixtures/PluginBad/PluginBad.csproj" ReferenceOutputAssembly="false" />
@@ -18,9 +21,13 @@
       <V1Fixture Include="../fixtures/PluginV1/bin/$(Configuration)/net10.0/**/*" />
       <V2Fixture Include="../fixtures/PluginV2/bin/$(Configuration)/net10.0/**/*" />
       <BadFixture Include="../fixtures/PluginBad/bin/$(Configuration)/net10.0/**/*" />
+      <ProbeV1Fixture Include="../fixtures/ProbeV1/bin/$(Configuration)/net10.0/**/*" />
+      <ProbeV2Fixture Include="../fixtures/ProbeV2/bin/$(Configuration)/net10.0/**/*" />
     </ItemGroup>
     <Copy SourceFiles="@(V1Fixture)" DestinationFiles="@(V1Fixture->'$(OutDir)fixtures/v1/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(V2Fixture)" DestinationFiles="@(V2Fixture->'$(OutDir)fixtures/v2/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(BadFixture)" DestinationFiles="@(BadFixture->'$(OutDir)fixtures/bad/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(ProbeV1Fixture)" DestinationFiles="@(ProbeV1Fixture->'$(OutDir)fixtures/probe-v1/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(ProbeV2Fixture)" DestinationFiles="@(ProbeV2Fixture->'$(OutDir)fixtures/probe-v2/%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 </Project>

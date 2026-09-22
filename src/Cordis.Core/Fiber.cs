@@ -18,6 +18,7 @@ public sealed class Fiber : IAsyncDisposable
     private string _epoch;
     private Task? _inertia;
     private Exception? _error;
+    private string? _failurePhase;
     private object? _rawConfig;
     private object? _config;
     internal Fiber(Runtime runtime, Context root)
@@ -67,6 +68,9 @@ public sealed class Fiber : IAsyncDisposable
     /// Gets the error value.
     /// </summary>
     public Exception? Error => _error;
+    /// <summary>The activation operation that produced Error: "configuration" or "apply", or null when no activation error is retained.</summary>
+    /// <remarks>This value identifies where the error occurred, regardless of its exception type. A successful activation or an update that clears Error also clears this value.</remarks>
+    public string? FailurePhase => Volatile.Read(ref _failurePhase);
     internal CordisExecutionContext Execution => _runtime.Execution;
     /// <summary>
     /// Gets the context value.
@@ -195,6 +199,7 @@ public sealed class Fiber : IAsyncDisposable
     private async Task LoadAsync()
     {
         string epoch = _epoch;
+        var phase = "configuration";
         foreach (var name in Inject.Keys)
             if (_runtime.Resolve(Context, name, true) is { } entry)
                 Store[name] = entry;
@@ -204,14 +209,17 @@ public sealed class Fiber : IAsyncDisposable
             if (_epoch == epoch)
             {
                 _config = ResolveConfig(_rawConfig);
+                phase = "apply";
                 if (Definition is not null)
                     await Definition.Apply(Context, _config);
                 _error = null;
+                _failurePhase = null;
             }
         }
         catch (Exception error)
         {
             _error = error;
+            _failurePhase = phase;
             _epoch = Inactive;
             Report(error);
         }
@@ -300,6 +308,7 @@ public sealed class Fiber : IAsyncDisposable
         if (State != FiberState.Active)
         {
             _error = null;
+            _failurePhase = null;
             BeginRestart();
             return;
         }
@@ -309,6 +318,7 @@ public sealed class Fiber : IAsyncDisposable
         {
             _config = resolved;
             _error = null;
+            _failurePhase = null;
             BeginRestart();
             return Undefined.Value;
         }, resolved, noSave);

@@ -7,6 +7,8 @@ using Xunit;
 
 namespace Cordis.Platform.Tests;
 
+// These tests observe process-wide GC/finalization and native DLL release as separate steps.
+[Collection("Collectible CLR")]
 public sealed class ClrTests
 {
     [Fact]

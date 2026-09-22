@@ -2,7 +2,7 @@ using Cordis;
 namespace Cordis.Composition;
 
 /// <summary>
-/// Represents the entry diagnostic component.
+/// A current entry failure or pending dependency, retaining the original exception for short-lived debugging.
 /// </summary>
 /// <param name="Id">The id value.</param>
 /// <param name="Module">The module value.</param>
@@ -13,8 +13,26 @@ namespace Cordis.Composition;
 public sealed record EntryDiagnostic(string Id, string Module, FiberState? State, Exception? Error, IReadOnlyList<string> Missing, bool Required)
 {
     /// <summary>
-    /// Gets the phase value.
+    /// The operation that failed, when the loader can identify it.
     /// </summary>
+    public string? Phase { get; init; }
+
+    /// <summary>Copies this diagnostic to values suitable for retention after a collectible plugin is unloaded.</summary>
+    /// <remarks>The exception is rendered to text, and dependency names are copied. The original diagnostic and exception are unchanged.</remarks>
+    public EntryDiagnosticSnapshot ToSnapshot() => new(Id, Module, State,
+        Error is null ? null : StartupException.DescribeError(Error), Array.AsReadOnly(Missing.ToArray()), Required) { Phase = Phase };
+}
+
+/// <summary>A diagnostic containing only names, state and error text; it does not retain plugin exceptions or runtime objects.</summary>
+/// <param name="Id">The qualified Loader entry identity.</param>
+/// <param name="Module">The configured module name.</param>
+/// <param name="State">The observed fiber state, or null when no fiber was created.</param>
+/// <param name="Error">Rendered error evidence, or null for a pending dependency without an error.</param>
+/// <param name="Missing">Names of dependencies unavailable at the time of observation.</param>
+/// <param name="Required">Whether the caller's startup policy requires this entry to activate.</param>
+public sealed record EntryDiagnosticSnapshot(string Id, string Module, FiberState? State, string? Error, IReadOnlyList<string> Missing, bool Required)
+{
+    /// <summary>The operation that failed, when known.</summary>
     public string? Phase { get; init; }
 }
 /// <summary>
@@ -98,12 +116,25 @@ public sealed class StartupException : Exception
 /// </summary>
 public static class ApplicationBoot
 {
-    /// <summary>Prepare the host, mount the root file, audit required entries and dispose a failed startup.</summary>
+    /// <summary>Boot with the DSH compatibility policy: default required entry names and the dshHomePath service.</summary>
+    /// <remarks>Only entries present in the mounted tree are audited. Missing names in the required set do not install or require new entries. The caller owns the returned context.</remarks>
     public static async Task<Context> BootAsync(string configurationPath, IModuleResolver resolver, List<EntryOptions>? patches = null,
         Func<Context, Task>? prepare = null, IReadOnlySet<string>? required = null, IExpressionEvaluator? evaluator = null, Action<string>? warn = null, DshHomePaths? homePaths = null)
+        => await BootCoreAsync(configurationPath, resolver, patches, prepare, required ?? DshRequiredEntries, evaluator, warn, homePaths ?? new DshHomePaths());
+
+    /// <summary>Prepare and mount a generic application without DSH services or default required entries.</summary>
+    /// <remarks>
+    /// Waits for current Loader work to settle; pending dependencies remain legal unless their present entry is explicitly required.
+    /// Optional failures are reported through warn. Required failures dispose the context and throw StartupException with original evidence.
+    /// The caller owns the returned context. The resolver retains its existing caller-owned lifetime.
+    /// </remarks>
+    public static Task<Context> BootGenericAsync(string configurationPath, IModuleResolver resolver, List<EntryOptions>? patches = null,
+        Func<Context, Task>? prepare = null, IReadOnlySet<string>? required = null, IExpressionEvaluator? evaluator = null, Action<string>? warn = null)
+        => BootCoreAsync(configurationPath, resolver, patches, prepare, required, evaluator, warn, null);
+
+    private static async Task<Context> BootCoreAsync(string configurationPath, IModuleResolver resolver, List<EntryOptions>? patches,
+        Func<Context, Task>? prepare, IReadOnlySet<string>? required, IExpressionEvaluator? evaluator, Action<string>? warn, DshHomePaths? homePaths)
     {
-        required ??= DshRequiredEntries;
-        homePaths ??= new DshHomePaths();
         var messages = new List<Exception>(); var logs = new List<LogMessage>(); var collecting = true;
         void Collect(Exception error) { if (collecting) messages.Add(error); }
         var context = new Context(Collect); Loader? loader = null; LogSubscription? collector = null; var stage = "host preparation failed";
@@ -112,7 +143,7 @@ public static class ApplicationBoot
             await context.RunAsync(async _ =>
             {
                 collector = context.Logger.Subscribe(new DelegateLogExporter(logs.Add, (int)LogLevel.Warn));
-                context.Provide("dshHomePath", (DshHomePath)homePaths.PathOf);
+                if (homePaths is not null) context.Provide("dshHomePath", (DshHomePath)homePaths.PathOf);
                 loader = new Loader(context, resolver, new Uri(Path.GetFullPath(configurationPath)), evaluator, Collect);
                 if (prepare is not null) await prepare(context);
             });
@@ -132,7 +163,18 @@ public static class ApplicationBoot
             if (error is StartupException startup) { startup.ConfigurationPath = configurationPath; startup.StartupMessages = messages.ToArray(); startup.StartupLogs = logs.ToArray(); throw; }
             throw new InvalidOperationException($"{stage}: {StartupException.DescribeError(error)}", error);
         }
-        finally { collecting = false; if (collector is not null) await collector.DisposeAsync(); }
+        finally
+        {
+            collecting = false;
+            try { if (collector is not null) await collector.DisposeAsync(); }
+            finally
+            {
+                // Runtime and Loader keep Collect for their lifetime. Release the startup
+                // evidence retained by its closure after any StartupException owns copies.
+                messages.Clear();
+                logs.Clear();
+            }
+        }
     }
     private static async Task<bool> IsInstalledAsync(Context context)
     {
@@ -161,7 +203,7 @@ public static class ApplicationBoot
             foreach (var entry in loader.Entries())
             {
                 Exception? error = entry.LastError;
-                string? phase = null;
+                string? phase = error is null ? null : entry.Fiber?.FailurePhase ?? (entry.Fiber is null ? "module resolution" : null);
                 try { if (entry.Disabled) continue; } catch (Exception failure) { error = failure; phase = "disabled expression failed"; }
                 if (error is null && entry.Fiber?.State == FiberState.Active) continue;
                 var missing = entry.Fiber is { } fiber ? fiber.Inject.Keys.Where(name => !fiber.Context.Reflect.IsAvailable(name)).ToArray() : [];

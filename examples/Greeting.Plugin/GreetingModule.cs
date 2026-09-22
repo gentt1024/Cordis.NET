@@ -1,3 +1,5 @@
+using Cordis.Composition;
+
 namespace Cordis.Example.Greeting;
 
 /// <summary>
@@ -18,11 +20,5 @@ public static class GreetingModule
     /// <summary>
     /// Reads patch.
     /// </summary>
-    public static string ReadPatch()
-    {
-        using var stream = typeof(GreetingModule).Assembly.GetManifestResourceStream("Cordis.Example.Greeting.cordis.patch.yml")
-            ?? throw new InvalidOperationException("Packaged composition resource is missing.");
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
+    public static string ReadPatch() => PatchResources.ReadText(typeof(GreetingModule).Assembly, "Cordis.Example.Greeting.cordis.patch.yml");
 }

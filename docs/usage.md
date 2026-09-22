@@ -1,5 +1,8 @@
 # Composition and deployment
 
+For service, event, configuration and callback authoring, see the [authoring guide](authoring.md)
+([中文](authoring.zh.md)), including the generic/DSH startup choice and deployed patch resources.
+
 Start with `examples/Composition` and `examples/Greeting.Plugin`. They use an ordinary
 ProjectReference for development; the verification gate consumes their packed NuGet artifact
 from a separate directory and isolated cache. The patch is an embedded assembly resource,
@@ -54,8 +57,9 @@ loading extra assemblies; register replacement callbacks and dependency edges ex
 
 Without the `Cordis.NET.JavaScript` package, evaluating a raw `!!js` fails explicitly. Pass
 `new JintExpressionEvaluator()` to Loader, ApplicationBoot or ProfileSession for real JS.
-Service/function access is through the live context. ApplicationBoot supplies the DSH home
-path service; a ProfileSession uses its own launch home. This adapter requires ordinary JIT.
+Service/function access is through the live context. ApplicationBoot.BootAsync supplies the DSH
+home path service; BootGenericAsync does not. A ProfileSession uses its own launch home.
+This adapter requires ordinary JIT.
 
 For Generic Host, call `services.AddCordis(options => options.Borrow<MyService>("service")
 .Configure((ctx, services, cancellation) => ...))`. The container owns `MyService`; Cordis
