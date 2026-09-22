@@ -6,7 +6,7 @@ These optional .NET authoring helpers use the existing Cordis runtime. A package
 
 ## Start with the runnable example
 
-The authoring helpers on this page are not yet available in the published NuGet packages. Use this source checkout and its project references for the commands below, with the SDK selected by `global.json`. Installing the published packages is not a substitute for building this source.
+The authoring helpers on this page require the authoring release listed in the [release notes](../CHANGELOG.md); older NuGet packages do not include them. Until that release is available on NuGet, use this source checkout. The commands below run the repository examples through project references with the SDK selected by `global.json`; installing packages alone does not provide the example projects.
 
 The [shared contracts](../examples/Probes.Contracts/Probes.cs), [provider and configuration](../examples/Probes.Plugin/ProbeModule.cs), and [static host with two consumers](../examples/Probes/Program.cs) are the authoritative source examples. They show a plain formatting capability, a caller-bound probe registry, typed events, early revocation, provider disappearance and consumer reactivation.
 

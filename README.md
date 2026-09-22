@@ -25,7 +25,7 @@ dotnet add package Cordis.NET.Composition --prerelease
 dotnet tool install --global Cordis.NET.Tool --prerelease
 ```
 
-These commands select the latest published packages, including prereleases, for the released runtime and CLI. This checkout's Composition and Probes examples use unpublished helpers such as `PatchResources`; run them from source through their project references. See [getting started](docs/getting-started.md) and the [authoring guide](docs/authoring.md).
+These commands select the latest published packages, including prereleases. The Composition and Probes examples use the authoring helpers described in the [release notes](CHANGELOG.md); older packages do not include them. Until that release is available on NuGet, run the examples from source through their project references. See [getting started](docs/getting-started.md) and the [authoring guide](docs/authoring.md).
 
 The package IDs use the `Cordis.NET.*` prefix. CLR namespaces and assembly names remain `Cordis.*`.
 
