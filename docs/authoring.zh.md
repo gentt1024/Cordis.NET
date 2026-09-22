@@ -6,7 +6,7 @@
 
 ## 从可运行示例开始
 
-本页的作者辅助 API 尚未包含在已发布的 NuGet 包中。请使用当前源码检出及其项目引用运行下面的命令，并使用 `global.json` 指定的 SDK。安装已发布包不能替代构建当前源码。
+本页的作者辅助 API 要求使用[发布说明](../CHANGELOG.md)中列出的作者接口版本；旧 NuGet 包不包含这些 API。在对应版本上架 NuGet 前，请使用当前源码检出。下面的命令通过项目引用运行仓库示例，并使用 `global.json` 指定的 SDK；仅安装包不会提供示例项目。
 
 [共享契约](../examples/Probes.Contracts/Probes.cs)、[提供者与配置](../examples/Probes.Plugin/ProbeModule.cs)和[包含两个消费者的静态宿主](../examples/Probes/Program.cs)是示例的权威源码。它们展示普通格式化能力、caller-bound 状态探针注册服务、类型化事件、提前撤销、提供者消失和消费者重新激活。
 

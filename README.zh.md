@@ -25,7 +25,7 @@ dotnet add package Cordis.NET.Composition --prerelease
 dotnet tool install --global Cordis.NET.Tool --prerelease
 ```
 
-这些命令选择最新已发布包，包括预发行版，用于已发布的运行时和 CLI。当前检出的 Composition 与 Probes 示例使用了 `PatchResources` 等尚未发布的辅助 API，请通过项目引用从源码运行。参见[入门页](docs/getting-started.zh.md)与[作者指南](docs/authoring.zh.md)。
+这些命令选择最新已发布包，包括预发行版。Composition 与 Probes 示例使用[发布说明](CHANGELOG.md)中列出的作者辅助 API；旧包不包含这些 API。在对应版本上架 NuGet 前，请通过项目引用从源码运行示例。参见[入门页](docs/getting-started.zh.md)与[作者指南](docs/authoring.zh.md)。
 
 NuGet 包 ID 使用 `Cordis.NET.*` 前缀；CLR 命名空间与程序集名称仍为 `Cordis.*`。
 

@@ -3,8 +3,9 @@
 For service, event, configuration and callback authoring, see the [authoring guide](authoring.md)
 ([中文](authoring.zh.md)), including the generic/DSH startup choice and deployed patch resources.
 
-`BootGenericAsync` and the new authoring helpers are source-only until released; use the
-project references and source commands in that guide, not the published NuGet packages.
+`BootGenericAsync` and the other authoring helpers require the authoring release listed in
+the [release notes](../CHANGELOG.md). Until it is available on NuGet, use the project references
+and source commands in that guide; older packages do not include these APIs.
 
 Start with `examples/Composition` and `examples/Greeting.Plugin`. They use an ordinary
 ProjectReference for development; the verification gate consumes their packed NuGet artifact

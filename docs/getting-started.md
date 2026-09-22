@@ -13,7 +13,7 @@ dotnet restore examples/Composition/Composition.csproj --locked-mode
 dotnet run --project examples/Composition/Composition.csproj
 ```
 
-The example uses `StaticModuleResolver`, so it runs in JIT and can be published with Native AOT. Its project references build the current source, including the unpublished `PatchResources` helper used by the Greeting plugin. Keep those project references when running this example. Start with [core concepts](core-concepts.md) before replacing its greeting plugin.
+The example uses `StaticModuleResolver`, so it runs in JIT and can be published with Native AOT. Its project references build the current source, including the `PatchResources` helper used by the Greeting plugin. Keep those project references when running this example. Start with [core concepts](core-concepts.md) before replacing its greeting plugin.
 
 ## Install from NuGet
 
@@ -25,7 +25,7 @@ dotnet tool install --global Cordis.NET.Tool --prerelease
 
 Run the package commands in your application's project directory; they select the latest published runtime packages, including prereleases, and record the selected versions in your project. This is separate from running the source example above. The Greeting plugin is example source in this repository, not an additional public package to install.
 
-The helpers described in the [authoring guide](authoring.md), including `EventKey<T>` and `BootGenericAsync`, are not yet published. Run the Probes examples from this source checkout; installing the published packages does not enable those APIs. Source builds and local package examples use the version from [Directory.Build.props](../Directory.Build.props), which is not a promise that the current source has been published.
+The helpers described in the [authoring guide](authoring.md), including `EventKey<T>` and `BootGenericAsync`, require the authoring release listed in the [release notes](../CHANGELOG.md). Until it is available on NuGet, run the Probes examples from this source checkout; older packages do not enable those APIs. Source builds and local package examples use the version from [Directory.Build.props](../Directory.Build.props), which is not a promise that the current source has been published.
 
 Use `Cordis.NET.Clr`, `Cordis.NET.Hosting`, or `Cordis.NET.JavaScript` only for the corresponding optional adapter. Package IDs have the `Cordis.NET.*` prefix; the source namespaces remain `Cordis.*`.
 
