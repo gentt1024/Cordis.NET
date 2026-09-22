@@ -12,6 +12,8 @@ dotnet msbuild src/Cordis.Core/Cordis.Core.csproj -getProperty:Version
 
 Ordinary commits do not require a package version bump. The source version does not establish NuGet availability; use the [installation guide](getting-started.md) for published packages and the [authoring guide](authoring.md) for source-only APIs.
 
+Third-party dependency versions are declared in [Directory.Packages.props](../Directory.Packages.props); projects keep their own `PackageReference` items and metadata. Each project's `packages.lock.json` records its resolved dependency graph, and validation continues to use `--locked-mode`. Transitive pinning is not enabled. SDK-provided implicit packages remain controlled by the selected SDK.
+
 ```console
 dotnet restore Cordis.slnx --locked-mode
 dotnet build Cordis.slnx -c Release --no-restore
