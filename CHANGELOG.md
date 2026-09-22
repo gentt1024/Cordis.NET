@@ -5,7 +5,7 @@
 - Prepared bilingual public documentation, package readmes, community templates, and documentation checks.
 - Replaced private handoff material and machine-specific raw logs with public summaries.
 
-## [0.1.0-alpha.3] - Pending publication
+## [0.1.0-alpha.3] - 2026-09-22
 
 - Added optional typed event, configuration binding, owned external callback, and boot/resource helpers over the existing runtime.
 - Added static and CLR Probes examples covering caller contributions, provider replacement, reactivation, cleanup, and unload observation.
