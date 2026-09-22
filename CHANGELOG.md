@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Prepared bilingual public documentation, package readmes, community templates, and documentation checks.
+- Replaced private handoff material and machine-specific raw logs with public summaries.
+
 ## [0.1.0-alpha.3] - Pending publication
 
 - Added optional typed event, configuration binding, owned external callback, and boot/resource helpers over the existing runtime.
@@ -9,10 +12,6 @@
 - Documented asynchronous event result adaptation and verified raw/typed boundaries without changing synchronous event semantics.
 - Extended Windows/Linux gates with authoring negative compilation, real JIT/Native AOT execution, and isolated consumers of the same validated package batch.
 - Centralized existing third-party dependency versions without upgrades and isolated the CI SDK selected from `global.json`.
-
-
-- Prepared bilingual public documentation, package readmes, community templates, and documentation checks.
-- Replaced private handoff material and machine-specific raw logs with public summaries.
 
 ## [0.1.0-alpha.2] - 2026-09-21
 
