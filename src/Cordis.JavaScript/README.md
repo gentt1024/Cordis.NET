@@ -1,7 +1,7 @@
 # Cordis.NET.JavaScript
 
 ```console
-dotnet add package Cordis.NET.JavaScript --version 0.1.0-alpha.2
+dotnet add package Cordis.NET.JavaScript --prerelease
 ```
 
 Optional Jint evaluator for Cordis.NET `!!js` configuration expressions. It provides a controlled context bridge but no Node module environment.

@@ -1,7 +1,7 @@
 # Cordis.NET.Composition
 
 ```console
-dotnet add package Cordis.NET.Composition --version 0.1.0-alpha.2
+dotnet add package Cordis.NET.Composition --prerelease
 ```
 
 Configuration, loader, include/group, profiles, deployment resolution, and static module composition for Cordis.NET. Use `StaticModuleResolver` when publishing a Native AOT application.
