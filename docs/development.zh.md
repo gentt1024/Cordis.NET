@@ -4,6 +4,14 @@
 
 ## 快速循环
 
+源码构建的包版本统一定义在 [Directory.Build.props](../Directory.Build.props)。项目继承该值，包验证脚本也读取它来构建隔离消费者。需要精确的本地包版本时，查询同一个值：
+
+```console
+dotnet msbuild src/Cordis.Core/Cordis.Core.csproj -getProperty:Version
+```
+
+普通提交不需要提升包版本。源码版本号不代表 NuGet 上已存在对应实现；已发布包请按[安装指南](getting-started.zh.md)使用，尚未发布的 API 请按[作者指南](authoring.zh.md)从源码运行。
+
 ```console
 dotnet restore Cordis.slnx --locked-mode
 dotnet build Cordis.slnx -c Release --no-restore

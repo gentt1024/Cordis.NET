@@ -21,9 +21,11 @@ The example registers a static plugin, applies configuration, observes its servi
 ## Install the prerelease
 
 ```console
-dotnet add package Cordis.NET.Composition --version 0.1.0-alpha.2
-dotnet tool install --global Cordis.NET.Tool --version 0.1.0-alpha.2
+dotnet add package Cordis.NET.Composition --prerelease
+dotnet tool install --global Cordis.NET.Tool --prerelease
 ```
+
+These commands select the latest published packages, including prereleases, for the released runtime and CLI. This checkout's Composition and Probes examples use unpublished helpers such as `PatchResources`; run them from source through their project references. See [getting started](docs/getting-started.md) and the [authoring guide](docs/authoring.md).
 
 The package IDs use the `Cordis.NET.*` prefix. CLR namespaces and assembly names remain `Cordis.*`.
 

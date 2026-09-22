@@ -4,6 +4,14 @@
 
 ## Fast loop
 
+The package version for source builds is defined once in [Directory.Build.props](../Directory.Build.props). Projects inherit it; package verification scripts read it for their isolated consumers. When an exact local package version is needed, query that same value:
+
+```console
+dotnet msbuild src/Cordis.Core/Cordis.Core.csproj -getProperty:Version
+```
+
+Ordinary commits do not require a package version bump. The source version does not establish NuGet availability; use the [installation guide](getting-started.md) for published packages and the [authoring guide](authoring.md) for source-only APIs.
+
 ```console
 dotnet restore Cordis.slnx --locked-mode
 dotnet build Cordis.slnx -c Release --no-restore

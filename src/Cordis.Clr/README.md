@@ -1,7 +1,7 @@
 # Cordis.NET.Clr
 
 ```console
-dotnet add package Cordis.NET.Clr --version 0.1.0-alpha.2
+dotnet add package Cordis.NET.Clr --prerelease
 ```
 
 Optional managed assembly module resolver for Cordis.NET. It loads, replaces, rolls back, and cooperatively unloads CLR plugin assemblies. This package requires an ordinary .NET runtime and is not Native AOT compatible.
