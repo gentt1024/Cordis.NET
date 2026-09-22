@@ -25,11 +25,30 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      # Read only the version: setup-dotnet also interprets global.json rollForward.
+      - name: Read verification SDK version
+        id: sdk
+        shell: pwsh
+        run: |
+          $version = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          "version=$version" >> $env:GITHUB_OUTPUT
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/cordis-dotnet
         with:
-          global-json-file: global.json
+          dotnet-version: ${{ steps.sdk.outputs.version }}
           cache: true
           cache-dependency-path: '**/packages.lock.json'
+      - name: Confirm selected SDK
+        shell: pwsh
+        env:
+          EXPECTED_SDK: ${{ steps.sdk.outputs.version }}
+        run: |
+          $actual = dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $actual -ne $env:EXPECTED_SDK) {
+            throw "Expected SDK $env:EXPECTED_SDK; selected $actual"
+          }
+          Write-Output "Verification SDK: $actual"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.12.0
