@@ -9,6 +9,7 @@ PAIRS = [
     ("CONTRIBUTING.md", "CONTRIBUTING.zh.md"),
     ("docs/getting-started.md", "docs/getting-started.zh.md"),
     ("docs/core-concepts.md", "docs/core-concepts.zh.md"),
+    ("docs/authoring.md", "docs/authoring.zh.md"),
     ("docs/compatibility.md", "docs/compatibility.zh.md"),
     ("docs/upstream.md", "docs/upstream.zh.md"),
     ("docs/development.md", "docs/development.zh.md"),

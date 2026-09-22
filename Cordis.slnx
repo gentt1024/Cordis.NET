@@ -2,6 +2,9 @@
   <Folder Name="/Examples/">
     <Project Path="examples/Composition/Composition.csproj" />
     <Project Path="examples/Greeting.Plugin/Greeting.Plugin.csproj" />
+    <Project Path="examples/Probes.Contracts/Probes.Contracts.csproj" />
+    <Project Path="examples/Probes.Plugin/Probes.Plugin.csproj" />
+    <Project Path="examples/Probes/Probes.csproj" />
   </Folder>
   <Folder Name="/Libraries/">
     <Project Path="src/Cordis.Clr/Cordis.Clr.csproj" />
@@ -23,6 +26,8 @@
     <Project Path="tests/fixtures/PluginBad/PluginBad.csproj" />
     <Project Path="tests/fixtures/PluginV1/PluginV1.csproj" />
     <Project Path="tests/fixtures/PluginV2/PluginV2.csproj" />
+    <Project Path="tests/fixtures/ProbeV1/ProbeV1.csproj" />
+    <Project Path="tests/fixtures/ProbeV2/ProbeV2.csproj" />
     <Project Path="tests/fixtures/Shared/Shared.csproj" />
   </Folder>
   <Folder Name="/Tools/">

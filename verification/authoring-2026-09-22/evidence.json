@@ -1,0 +1,212 @@
+{
+  "date": "2026-09-22",
+  "status": "requested-checks-passed",
+  "scope": "W1-W6 authoring additions over the existing pinned runtime; local execution, not publication or complete upstream compatibility",
+  "baselineCommit": "d88ab4600a77a2a7207493386527dcf09cfb88b8",
+  "testedWorkingTree": "baseline plus authoring changes; exact tested source bytes are recorded in source-sha256.json",
+  "sourceUnchangedAcrossBothGates": true,
+  "sourceFileCount": 252,
+  "sourceManifest": "source-sha256.json",
+  "sourceManifestSha256": "ada424fb035f90b3501bd73c0e6d57247140e186e19cd98a8969bab7dd6cb31a",
+  "platform": "Windows x64",
+  "sdk": "10.0.111",
+  "node": "24.12.0",
+  "implementation": {
+    "status": "complete",
+    "publicApi": "additive; no pre-existing public API snapshot line removed",
+    "runtimeOwnership": "existing service names/realms, event dispatcher, Fiber, Effect and Loader retained"
+  },
+  "executed": {
+    "dotnetTests": {
+      "passed": 508,
+      "failed": 0,
+      "skipped": 0,
+      "byAssembly": {
+        "Cordis.Composition.Tests": 297,
+        "Cordis.Core.Tests": 99,
+        "Cordis.Extensions.Tests": 92,
+        "Cordis.Platform.Tests": 20
+      }
+    },
+    "originalSourceTests": {
+      "originalCoreLoader": 98,
+      "originalComposition": 311
+    },
+    "dshJitAndNativeAotTraceCases": 35,
+    "jitTraceRuns": 3,
+    "authoringSuites": {
+      "Cordis.Core.Tests.TypedEventTests": 10,
+      "Cordis.Composition.Tests.ServiceAuthoringTests": 8,
+      "Cordis.Composition.Tests.ConfigBindingTests": 14,
+      "Cordis.Extensions.Tests.ExternalCallbackTests": 10,
+      "Cordis.Composition.Tests.AuthoringBootTests": 6,
+      "Cordis.Platform.Tests.BootCollectionTests": 1,
+      "Cordis.Platform.Tests.ProbeDeploymentTests": 3
+    },
+    "negativeCompilation": {
+      "compile-wrong-payload": [
+        "CS1503"
+      ],
+      "compile-wrong-listener": [
+        "CS1503"
+      ]
+    },
+    "deployment": {
+      "example-jit-scenario": {
+        "name": "example-jit-scenario",
+        "status": "passed",
+        "output": "run-_scupmda/example-jit",
+        "nativeAot": false,
+        "executableSha256": "06d1509554be42521b9fd4b289dec9e68dc8ae198ecb695af8893eb635ff256a"
+      },
+      "example-aot-scenario": {
+        "name": "example-aot-scenario",
+        "status": "passed",
+        "output": "run-_scupmda/example-aot",
+        "nativeAot": true,
+        "executableSha256": "c5f5747bedd0298cfa077e57de329c8d5ad0d5f628f4387e95e8378dde7d5eb3"
+      },
+      "package-jit-scenario": {
+        "name": "package-jit-scenario",
+        "status": "passed",
+        "output": "run-_scupmda/package-jit",
+        "nativeAot": false,
+        "executableSha256": "7a6f53aa2ddc0935aa7535580467c29ef953b2945ac87c58d66c706fa67f92e2"
+      },
+      "package-aot-scenario": {
+        "name": "package-aot-scenario",
+        "status": "passed",
+        "output": "run-_scupmda/package-aot",
+        "nativeAot": true,
+        "executableSha256": "26a7d972bd2fe65a6b6d935415d8561d093b12ab9412ccd9cd3cb315553a096d"
+      }
+    },
+    "packageSha256": {
+      "Cordis.Example.Greeting.0.1.0-alpha.2.nupkg": "17042b903e8141efa89d0d85dab667fc75cab67832f38005ff86d3add7246033",
+      "Cordis.NET.Clr.0.1.0-alpha.2.nupkg": "0e611c7ffa74ceb6cfc027595715313ecd0ab5ce8d80e0251a66012f5effdd2f",
+      "Cordis.NET.Composition.0.1.0-alpha.2.nupkg": "5a585d0308143cbe33149641c4614b86797294ee15381526c9ae59db157d39be",
+      "Cordis.NET.Core.0.1.0-alpha.2.nupkg": "fc3239a9ee8b5a74993530b9345838748a48e109875c0bc8dc0d836d5962c06a",
+      "Cordis.NET.Extensions.0.1.0-alpha.2.nupkg": "9f24ec58acd378c21b026195e1be4bd7839fb83ae4faa84ad2238fe012a62186",
+      "Cordis.NET.Hosting.0.1.0-alpha.2.nupkg": "cab03db689a08119ade3d2a07e6c9c241e05d3ec6c0638e317108b95966c849a",
+      "Cordis.NET.JavaScript.0.1.0-alpha.2.nupkg": "74fd1ccc7e01e3d72ee31104911a507593655976a213940152443f143067ccae",
+      "Cordis.NET.Tool.0.1.0-alpha.2.nupkg": "ac1e250b86193152012f91030bac748dce13238079a7bf3e31c055a6b6b723eb"
+    },
+    "repositoryExternalConsumer": "physically copied real example sources and embedded patch; only Core/Composition/Extensions PackageReferences; isolated NuGet caches; no ProjectReference",
+    "apiAndDocumentation": "API snapshot check and 9 bilingual documentation pairs passed"
+  },
+  "assertionReview": {
+    "newUpstreamAssertionsClaimedReviewed": 0,
+    "existingInventoryAndMappingsChanged": false,
+    "meaning": "source execution, adapter tests and full original-assertion review remain distinct; no compatibility percentage upgrade"
+  },
+  "acceptance": {
+    "A01-A04": {
+      "status": "passed",
+      "evidence": [
+        "tests/Cordis.Composition.Tests/ServiceAuthoringTests.cs",
+        "examples/Probes/Program.cs"
+      ]
+    },
+    "A05-A06": {
+      "status": "passed",
+      "evidence": [
+        "tests/Cordis.Core.Tests/TypedEventTests.cs"
+      ]
+    },
+    "A07": {
+      "status": "passed",
+      "evidence": [
+        "compile-positive",
+        "compile-wrong-payload",
+        "compile-wrong-listener",
+        "tests/Cordis.Core.Tests/TypedEventTests.cs"
+      ]
+    },
+    "A08-A09": {
+      "status": "passed",
+      "evidence": [
+        "tests/Cordis.Composition.Tests/ConfigBindingTests.cs"
+      ]
+    },
+    "A10": {
+      "status": "passed",
+      "evidence": [
+        "tests/Cordis.Extensions.Tests/ExternalCallbackTests.cs",
+        "examples/Probes/Program.cs"
+      ]
+    },
+    "A11": {
+      "status": "passed",
+      "evidence": [
+        "tests/Cordis.Composition.Tests/AuthoringBootTests.cs",
+        "tests/Cordis.Platform.Tests/HostAndJavaScriptTests.cs"
+      ]
+    },
+    "A12": {
+      "status": "passed",
+      "evidence": [
+        "tests/Cordis.Composition.Tests/AuthoringBootTests.cs",
+        "package-jit-scenario",
+        "package-aot-scenario"
+      ]
+    },
+    "A13": {
+      "status": "passed",
+      "evidence": [
+        "example-aot-scenario",
+        "example-jit-aot-output-parity",
+        "jit-aot-differential"
+      ]
+    },
+    "A14-A16": {
+      "status": "passed",
+      "evidence": [
+        "tests/Cordis.Platform.Tests/ProbeDeploymentTests.cs",
+        "tests/Cordis.Platform.Tests/ClrTests.cs",
+        "tests/Cordis.Platform.Tests/BootCollectionTests.cs"
+      ]
+    },
+    "A17": {
+      "status": "passed",
+      "evidence": [
+        "existing-package-content-boundaries",
+        "package-consumer-isolation",
+        "package-jit-scenario",
+        "package-aot-scenario"
+      ]
+    }
+  },
+  "failureAndCorrection": [
+    {
+      "issue": "boot collector closure retained optional collectible-plugin startup exceptions for the live root lifetime",
+      "correction": "clear startup lists after copying failure evidence",
+      "verification": "real collectible custom-exception regression failed before and passed after; original StartupMessages/StartupLogs preserved"
+    },
+    {
+      "issue": "concurrent test classes forced process-wide GC; collection assertions passed but an immediate shadow-DLL deletion failed",
+      "correction": "put all CLR GC observer test classes in one collection, retaining assertions, GC limits and within-test concurrency",
+      "verification": "isolated old test 5/5; combined before grouping 4/5; grouped combined 5/5; both final gates passed",
+      "rawFailureLogs": [
+        "artifacts/authoring-first-gate.json",
+        "artifacts/authoring-first-test.stdout.log",
+        "artifacts/clr-combined-3.log"
+      ]
+    }
+  ],
+  "reproduce": [
+    "python scripts/verify.py --dsh <pinned-dsh-checkout> --origin <pinned-origin-checkout> --aot --package --package-output <empty-local-package-directory>",
+    "python scripts/verify-authoring.py --aot --packages <same-local-package-directory>",
+    "python scripts/check-docs.py"
+  ],
+  "rawEvidence": [
+    "artifacts/verification/verification.json",
+    "artifacts/authoring/results.json"
+  ],
+  "limitations": [
+    "New authoring gates executed on Windows x64 only; no new Linux or hosted-CI execution claimed.",
+    "CLR DLL loading/replacement is not a Native AOT capability; the optional Jint path retains its existing boundary.",
+    "Already-started external callback tasks remain observed but are not implicitly cancelled or drained.",
+    "CLR views, metadata, callbacks, exceptions and the existing bounded raw logger buffer can delay collection while retained; collection does not guarantee immediate native-file deletion.",
+    "No push, tag, release or NuGet upload performed. Generator/Attribute automation remains a future cost-benefit decision, not a missing runtime requirement."
+  ]
+}

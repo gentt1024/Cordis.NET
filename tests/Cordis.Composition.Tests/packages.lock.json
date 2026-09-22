@@ -107,6 +107,19 @@
       },
       "Cordis.NET.Core": {
         "type": "Project"
+      },
+      "probes.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Cordis.NET.Core": "[0.1.0-alpha.2, )"
+        }
+      },
+      "probes.plugin": {
+        "type": "Project",
+        "dependencies": {
+          "Cordis.NET.Composition": "[0.1.0-alpha.2, )",
+          "Probes.Contracts": "[0.1.0-alpha.2, )"
+        }
       }
     }
   }

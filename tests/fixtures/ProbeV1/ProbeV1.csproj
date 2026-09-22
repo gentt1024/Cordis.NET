@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>ProbePlugin</AssemblyName><CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../examples/Probes.Contracts/Probes.Contracts.csproj" />
+    <ProjectReference Include="../../../src/Cordis.Clr/Cordis.Clr.csproj" />
+    <Compile Include="../ProbeEntry.cs" Link="ProbeEntry.cs" />
+    <Compile Include="../../../examples/Probes.Plugin/ProbeModule.cs" Link="ProbeModule.cs" />
+    <EmbeddedResource Include="../../../examples/Probes.Plugin/cordis.patch.yml" LogicalName="Probes.cordis.patch.yml" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,9 @@
+- insert:
+    - id: probe
+      name: probe-module
+      config:
+        value: original
+        expression: !!js context.value
+- id: probe
+  config:
+    value: patched

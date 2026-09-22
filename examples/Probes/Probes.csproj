@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><IsAotCompatible>true</IsAotCompatible></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Probes.Plugin/Probes.Plugin.csproj" />
+    <ProjectReference Include="../../src/Cordis.Extensions/Cordis.Extensions.csproj" />
+  </ItemGroup>
+</Project>

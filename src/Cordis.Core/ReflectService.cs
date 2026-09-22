@@ -44,6 +44,13 @@ public sealed class ReflectService(Context context)
     /// Gets the requested type.
     /// </summary>
     public T? Get<T>(string name, bool strict = true) => (T?)Get(name, strict);
+    /// <summary>
+    /// Cast property-style access to the contract type after the existing injection, interception
+    /// and caller tracing rules. The type does not participate in service identity or add Inject.
+    /// A missing/null reference stays null; incompatible values throw InvalidCastException
+    /// (null to a non-nullable value type throws). Reacquire views after each activation.
+    /// </summary>
+    public T Read<T>(string name, object? receiver = null) => (T)Read(name, receiver)!;
     /// <summary>Property-style access checks declared injection and inherits the provider snapshot.</summary>
     public object? Read(string name, object? receiver = null)
     {

@@ -38,6 +38,7 @@ NuGet 包 ID 使用 `Cordis.NET.*` 前缀；CLR 命名空间与程序集名称�
 ## 文档
 
 - [入门](docs/getting-started.zh.md)
+- [插件与应用作者指南](docs/authoring.zh.md)
 - [核心概念](docs/core-concepts.zh.md)
 - [兼容性与证据](docs/compatibility.zh.md)
 - [上游基线与来源](docs/upstream.zh.md)
