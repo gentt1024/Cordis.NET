@@ -13,14 +13,16 @@ namespace Cordis.Platform.Tests;
 public sealed class ClrTests
 {
     private static object? retainedConfigReference;
-    [Fact]
-    public async Task Scalar_reference_does_not_keep_collectible_effective_poco_alive()
+    [Theory]
+    [InlineData("ConfigurationEntry")]
+    [InlineData("ComposedConfigurationEntry")]
+    public async Task Scalar_reference_does_not_keep_collectible_effective_poco_alive(string entryType)
     {
         var shadow = Path.Combine(Path.GetTempPath(), "cordis-scalar-poco-" + Guid.NewGuid().ToString("N"));
         ClrUnloadObservation[] observations = [];
         try
         {
-            observations = await RetainScalarFromCollectiblePocoAsync(shadow);
+            observations = await RetainScalarFromCollectiblePocoAsync(shadow, entryType);
             var observation = Assert.Single(observations);
             Assert.True(observation.UnloadRequested);
             for (var attempt = 0; attempt < 12 && !observation.IsCollected; attempt++)
@@ -53,15 +55,16 @@ public sealed class ClrTests
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static async Task<ClrUnloadObservation[]> RetainScalarFromCollectiblePocoAsync(string shadow)
+    private static async Task<ClrUnloadObservation[]> RetainScalarFromCollectiblePocoAsync(string shadow, string entryType)
     {
         await using var context = new Context();
         await using var resolver = new ClrModuleResolver(shadow);
-        resolver.Register("fixture", Definition("v1") with { EntryType = "VersionedPlugin.ConfigurationEntry" });
+        resolver.Register("fixture", Definition("v1") with { EntryType = "VersionedPlugin." + entryType });
         await context.RunAsync(async ctx =>
         {
             var module = await resolver.ResolveAsync("fixture", new Uri("file:///"));
-            var fiber = ctx.Plugin(module, "old-value");
+            var fiber = ctx.Plugin(module, entryType == "ConfigurationEntry" ? "old-value" :
+                new Dictionary<string, object?> { ["value"] = "old-value" });
             await fiber.WaitAsync();
             Assert.Equal(FiberState.Active, fiber.State);
             Assert.NotNull(fiber.Config);
@@ -167,14 +170,16 @@ public sealed class ClrTests
         return (resolver, failure, assembly);
     }
 
-    [Fact]
-    public async Task Typed_configuration_reference_retains_its_bundle_only_until_the_host_releases_it()
+    [Theory]
+    [InlineData("ConfigurationEntry")]
+    [InlineData("ComposedConfigurationEntry")]
+    public async Task Typed_configuration_reference_retains_its_bundle_only_until_the_host_releases_it(string entryType)
     {
         var shadow = Path.Combine(Path.GetTempPath(), "cordis-clr-config-lifetime-" + Guid.NewGuid().ToString("N"));
         ClrUnloadObservation[] observations;
         try
         {
-            observations = await ExerciseTypedConfigurationLifetime(shadow);
+            observations = await ExerciseTypedConfigurationLifetime(shadow, entryType);
             GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
             Assert.False(observations[0].IsCollected);
             Assert.True(ReferenceTypeBelongsTo(retainedConfigReference!, observations[0]));
@@ -192,24 +197,25 @@ public sealed class ClrTests
         => ReferenceEquals(AssemblyLoadContext.GetLoadContext(reference.GetType().GetGenericArguments()[0].Assembly), observation.LoadContext.Target);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static async Task<ClrUnloadObservation[]> ExerciseTypedConfigurationLifetime(string shadow)
+    private static async Task<ClrUnloadObservation[]> ExerciseTypedConfigurationLifetime(string shadow, string entryType)
     {
         await using var context = new Context();
         await using var resolver = new ClrModuleResolver(shadow, [typeof(IVersionedService).Assembly]);
-        resolver.Register("fixture", Definition("v1") with { EntryType = "VersionedPlugin.ConfigurationEntry" });
+        resolver.Register("fixture", Definition("v1") with { EntryType = "VersionedPlugin." + entryType });
         Loader? loader = null;
         await context.RunAsync(async ctx =>
         {
             ctx.Provide("trace", new List<string>());
             loader = new Loader(ctx, resolver);
-            await loader.CreateAsync(new() { Id = "row", Name = "fixture", Config = "old" });
+            await loader.CreateAsync(new() { Id = "row", Name = "fixture", Config = entryType == "ConfigurationEntry" ? "old" :
+                new Dictionary<string, object?> { ["value"] = "old" } });
             await loader.WaitAsync();
             retainedConfigReference = ctx.Get("configured-reference");
             Assert.NotNull(retainedConfigReference);
             Assert.NotNull(loader.Resolve("row").Fiber!.ConfigDescription);
             Assert.Equal("old", loader.Resolve("row").Fiber!.GetConfigReference<string>("value").Value);
         });
-        await resolver.ReplaceAsync("fixture", Definition("v2") with { EntryType = "VersionedPlugin.ConfigurationEntry" }, async (previous, replacement) => await loader!.ReplacePluginAsync(previous, replacement));
+        await resolver.ReplaceAsync("fixture", Definition("v2") with { EntryType = "VersionedPlugin." + entryType }, async (previous, replacement) => await loader!.ReplacePluginAsync(previous, replacement));
         await context.RunAsync(ctx =>
         {
             Assert.NotSame(retainedConfigReference, ctx.Get("configured-reference"));

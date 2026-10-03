@@ -2,11 +2,13 @@
 
 [中文](configuration-description.zh.md)
 
-These APIs belong to the `0.2.0-alpha.1` source release. A source version does not establish availability on NuGet. See the [release notes](../CHANGELOG.md).
+The existing description/reference APIs are available from `0.2.0-alpha.1`. The recommended `ConfigObject<T>` helper is a current source addition. See the [release notes](../CHANGELOG.md); a source version does not establish package availability.
 
 `Plugin<T>.Config` remains the validation authority. A plugin can optionally supply `Configuration = new ConfigSchema<T>(validator, descriptor)`. If both properties are supplied, they must refer to the same delegate. Registration captures the validator, description, and explicit field projections together. Existing `IPlugin` implementations need no new members; adapters can opt into `IConfigurationPlugin.CaptureConfiguration()` and forward the captured bundle.
 
 The author supplies the validation rules and keeps the descriptor's raw keys, shape and defaults consistent with them. Every marked fixed field needs one projection of its effective value. For a POCO, `WithOrdinaryEquality` must compare every ordinary field and exclude live fields; `WithSimplify` must return complete raw data the validator can read again. Structural maps can use the descriptor's ordinary comparison and simplification. Test typed adapters together, including ordinary changes and save round trips.
+
+For complete data objects, prefer Composition's `ConfigObject<T>` below. A field combines its raw key, descriptor and pure plain-value projection. The helper supplies live bindings, compares every declared ordinary field with existing strict equality, and saves all declared fields including defaults. Authors must declare the complete field set and keep the validator's keys/defaults consistent. Share default constants when useful. Nested live bindings, opaque values, custom conversion or equality use `ConfigSchema<T>` directly. The old `Config` delegate remains supported. This helper is currently a source addition, not part of the published `0.2.0-alpha.1` packages.
 
 The library captures these declarations together, rejects missing, extra or blocked projections, and publishes immutable snapshots atomically. It does not infer POCO fields, verify that a custom validator implements the declared defaults, or run another validation engine. A false ordinary comparison sends an update through the ordinary lifecycle.
 
@@ -36,16 +38,10 @@ static ConfigResult<Settings> Validate(object? raw)
     }
 }
 
-var schema = new ConfigSchema<Settings>(Validate,
-    ConfigDescriptor.Object(
-        ("limit", ConfigDescriptor.Number().Default(1).Volatile()),
-        ("label", ConfigDescriptor.String().Default("worker"))))
-    .WithVolatile("limit", value => value.Limit)
-    .WithOrdinaryEquality((left, right) => left.Label == right.Label)
-    .WithSimplify(value => new EntryOptions
-    {
-        ["limit"] = value.Limit, ["label"] = value.Label
-    });
+var schema = ConfigObject<Settings>.Create(Validate)
+    .Field("limit", ConfigDescriptor.Number().Default(1).Volatile(), value => value.Limit)
+    .Field("label", ConfigDescriptor.String().Default("worker"), value => value.Label)
+    .Build();
 
 var references = new List<ConfigReference<int>>();
 Plugin<Settings> CreatePlugin(string implementation) => new()

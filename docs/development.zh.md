@@ -31,3 +31,18 @@ python scripts/verify-authoring.py --aot --packages artifacts/upgrade-packages
 完整门禁检查锁定的 SDK 与依赖、分析器、测试、上游源码执行、差分场景、Native AOT、API 形状、包和隔离消费者。发布候选应在 Windows x64 与真实 Linux x64 上运行。最近完成的证据见[验证记录](validation.zh.md)，证据含义见[兼容性文档](compatibility.zh.md)。
 
 生成输出和原始日志可能包含本地路径或用户名。应将其保存在公开树之外；只提交脱敏摘要与稳定的机器可读证据。
+
+## 应用基础设施实施片
+
+沿用已完成的应用范围矩阵，参照 `upstream.lock.json` 中固定的 DSH 提交，不重新开展全仓审查。Core 保持领域无关；管理、作者能力和平台接入复用其上既有所有者。
+
+| 实施片 | 状态 | 验收 |
+|---|---|---|
+| A：完整 typed 字段组合 | 已实现；最终验证待完成 | 实际手写/组合消费者、透明包装、live/普通更新、完整保存/默认往返、换代、collectible 正反例、JIT/AOT 与隔离包消费 |
+| B：一个字段编辑动作 | 待实施 | 既有 operations/session 所有权、校验、revision、失败后的保存值/生效值 |
+| C：一个设置视图 | 依赖 B，待实施 | 明确 live-only 合同、脱敏和 revision、实际 TypeScript 消费；不将 Core 描述图声称为 Schemastery 或 JSON Schema |
+| D：一个客户端制品交付动作 | 待实施 | 明确清单/入口合同、宿主交付、实际客户端执行和代际失效 |
+
+A 的有界规则是完整、显式的 plain-data 投影，保留 validator 权威，不推断默认值，不建全局回调/类型缓存。既有语义使用固定源码对照和原生回归验证；新增作者辅助通过实际消费者验证。作者门禁让未修改的断言对付移除 live 绑定、忽略普通 effective 变化、漏保存字段的 helper mutation。破坏版必须编译成功，并因指定运行时原因失败。不得为通过放宽断言或修改正式行为锁。
+
+每片执行实现、引用规则/源码/反例的独立只读审查、修复和复验。规则修正独立审查后在批次间应用。断言退役值时保存转换前的值，原生 Fiber 本身会复用。提交、命令结果、未执行项和源码哈希沿用既有验证记录及私有证据输出，不代表新增发布授权。此工作方式借鉴[迁移文章](https://claude.com/blog/ai-code-migration)及[工具包 README/操作规则](https://github.com/anthropics/code-migration-kit-with-claude-code)，不导入其任务队列、工具禁令或逐阶段审批。

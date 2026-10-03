@@ -46,6 +46,22 @@ HMR serializes config and code mutations, rejects nested transactions, and avoid
 on its own callback during teardown. A framework change invokes an explicit host restart
 hook. File/config changes and code replacement remain separate operations.
 
+## Application infrastructure ownership
+
+Repository scope includes generic application infrastructure above Cordis, not only Core.
+`PluginConfigurationOperations` owns profile management mutations; `ProfileSession` owns the
+running Context, Loader, Include and HMR coordination. Host, client, transport and package
+adapters reuse these owners. Products choose domain services, pages, identities and policies.
+Reusable TypeScript client mechanisms can remain TypeScript; their location in a UI directory
+does not exclude them. Scope does not imply that an unimplemented adapter is available.
+
+`ConfigObject<T>` belongs to Composition and builds the existing `ConfigSchema<T>` contract.
+It shares explicit field projections across reference binding, ordinary comparison, description
+data and complete persistence without changing Core validation or update paths. Transparent
+plugin wrappers forward `IConfigurationPlugin` as well as `IPlugin`; dropping the optional
+declaration is a wrapper wiring defect, not a reason for runtime inference. No Maker source is
+changed or claimed verified here.
+
 ## Platform evidence
 
 The same scenario executable is published and executed under Native AOT, with

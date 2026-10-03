@@ -52,7 +52,7 @@ class Gate:
         self.steps.append({"name": label, "status": "passed", **detail})
         print(f"PASS {label}", flush=True)
 
-    def run(self, label: str, command, cwd=ROOT, env=None, diagnostic_failure=False):
+    def run(self, label: str, command, cwd=ROOT, env=None, diagnostic_failure=False, runtime_failure=None):
         command = [str(argument) for argument in command]
         started = time.monotonic()
         stdout_path = self.directory / f"{label}.stdout.log"
@@ -61,7 +61,8 @@ class Gate:
             "name": label, "command": command, "cwd": str(cwd),
             "stdout": stdout_path.relative_to(OUT).as_posix(),
             "stderr": stderr_path.relative_to(OUT).as_posix(),
-            "expected": "compiler CS0411/CS1503 rejection" if diagnostic_failure else "exit 0",
+            "expected": "compiler CS0411/CS1503 rejection" if diagnostic_failure else
+                f"runtime rejection containing {runtime_failure}" if runtime_failure else "exit 0",
             "status": "failed",
         }
         self.steps.append(step)
@@ -79,6 +80,9 @@ class Gate:
                 # A restore failure cannot count as a successful negative compilation check.
                 if re.search(rb"\berror (?:NU|MSB)\d+\b", stdout + stderr):
                     raise RuntimeError(f"{label}: restore/MSBuild failed before the intended compile check")
+            elif runtime_failure:
+                if process.returncode == 0 or runtime_failure.encode() not in stdout + stderr:
+                    raise RuntimeError(f"{label}: did not reject the targeted runtime defect")
             elif process.returncode != 0:
                 raise RuntimeError(f"{label}: command exited {process.returncode}")
             step["status"] = "passed"
@@ -352,6 +356,40 @@ def package_consumer(gate: Gate, package_dir: Path, version: str, rid: str, aot:
         gate.record("package-jit-aot-output-parity")
 
 
+def configuration_mutations(gate: Gate):
+    # Run the unchanged public consumer against deliberately broken production helpers.
+    # Each copy is outside the checkout; the original source and contract assertions stay frozen.
+    mutations = (
+        ("live-binding", "descriptor.IsVolatile ? schema.WithVolatile(name, project) : schema", "schema", "requires an explicit typed projection"),
+        ("ordinary-equality", "!field.Descriptor.IsVolatile && !ConfigDescriptor.StrictEquals(field.Project(left), field.Project(right))", "field.Name.Length < 0", "ordinary effective change refuses live commit"),
+        ("persistence", "result.Add(field.Name, field.Project(value));", "if (field.Name != \"category\") result.Add(field.Name, field.Project(value));", "complete persistence"),
+    )
+    files = source_hashes()
+    for name, before, after, expected in mutations:
+        directory = standalone_directory("cordis-configuration-mutant-")
+        for relative in files:
+            # Only copy the production libraries, actual consumer, and their build inputs.
+            if not (relative.startswith(("src/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/"))
+                    or "/" not in relative):
+                continue
+            source = ROOT / relative
+            target = directory / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        path = directory / "src/Cordis.Composition/ConfigObject.cs"
+        text = path.read_text(encoding="utf-8")
+        if text.count(before) != 1:
+            raise RuntimeError(f"Mutation {name} no longer identifies exactly one production expression")
+        path.write_text(text.replace(before, after), encoding="utf-8")
+        consumer = directory / "examples/Probes/Probes.csproj"
+        gate.run(f"configuration-mutant-{name}-restore", ["dotnet", "restore", consumer, "--locked-mode"], directory)
+        gate.run(f"configuration-mutant-{name}-build", ["dotnet", "build", consumer, "-c", "Release", "--no-restore"], directory)
+        gate.run(f"configuration-mutant-{name}-rejected", ["dotnet", "run", "--project", consumer, "-c", "Release", "--no-build", "--no-restore"],
+                 directory, runtime_failure=expected)
+        gate.record(f"configuration-mutant-{name}", sourceExpression=before, replacement=after,
+                    expectedRejection=expected, consumerAssertionsChanged=False)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--aot", action="store_true", help="Publish and run the actual probe scenario with Native AOT too")
@@ -373,6 +411,7 @@ def main() -> int:
                                     "--logger", "trx", "--results-directory", results])
         verify_test_suites(gate, results)
         compilation_contracts(gate)
+        configuration_mutations(gate)
         clr_example(gate, rid)
         jit = publish_and_run(gate, "example-jit", ROOT / "examples/Probes/Probes.csproj", "Probes", rid)
         if options.aot:

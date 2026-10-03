@@ -2,7 +2,9 @@
 
 [English](README.md)
 
-Cordis.NET 是 DeepSeek Harness 所锁定插件运行时与组合行为的原生 .NET 实现，提供基于上下文的插件模型、依赖注入、生命周期 effect、配置组合，以及可选的 CLR 模块、Generic Host 和 JavaScript 表达式适配器。
+Cordis.NET 忠实实现固定提交中 DSH 维护的 Cordis。仓库范围包含领域无关的运行时，以及构建、运行、配置、管理和交付模块化应用的通用基础设施。Core 保持领域无关；应用库和平台适配位于 Core 之上。
+
+当前提供生命周期与注入、Profile/Bundle/Patch 合成、运行会话协调、配置引用、插件启停与部署协调，以及可选的 CLR、Generic Host 和 JavaScript 适配。字段编辑、设置视图、客户端交付、CLI 应用调用和包工具适配属于范围内能力，目前尚未全部实现。Agent/LLM 业务、RSI 目标和 FSM 领域逻辑由产品承担。
 
 Cordis.NET 由独立社区维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。
 

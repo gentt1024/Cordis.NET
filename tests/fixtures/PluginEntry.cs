@@ -1,5 +1,6 @@
 using Cordis;
 using Cordis.Clr;
+using Cordis.Composition;
 using Cordis.Fixtures;
 using Cordis.Fixtures.Private;
 using System.Runtime.Loader;
@@ -61,6 +62,25 @@ public sealed class PrimitiveConfigurationEntry : IClrPluginModule
             ConfigDescriptor.Object(("value", ConfigDescriptor.Number().Volatile())))
             .WithVolatile("value", settings => (int)settings["value"]!),
         Apply = (ctx, _) => ctx.Provide("primitive-reference", ctx.Fiber.GetConfigReference<int>("value")),
+    };
+}
+
+public sealed class ComposedConfigurationEntry : IClrPluginModule
+{
+    public IPlugin CreatePlugin() => new Plugin<CollectibleSettings>
+    {
+        Configuration = ConfigObject<CollectibleSettings>.Create(raw =>
+            raw is IReadOnlyDictionary<string, object?> map && map.GetValueOrDefault("value") is string value
+                ? ConfigResult<CollectibleSettings>.Success(new(value))
+                : ConfigResult<CollectibleSettings>.Failure("expected value map"))
+            .Field("value", ConfigDescriptor.String().Volatile(), settings => settings.Value)
+            .Field("marker", ConfigDescriptor.Any().Optional().Volatile(), settings => settings.Marker)
+            .Build(),
+        Apply = (ctx, _) =>
+        {
+            ctx.Provide("configured-reference", ctx.Fiber.GetConfigReference<TypedMarker?>("marker"));
+            ctx.Provide("configured-value", ctx.Fiber.GetConfigReference<string>("value"));
+        },
     };
 }
 

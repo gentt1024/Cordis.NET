@@ -59,6 +59,7 @@ await root.RunAsync(async ctx =>
     feed.Publish(new("external", "late"));
     Check(events.SequenceEqual(["connected", "online"]), "external callback ownership");
 });
+await ConfigurationScenario.RunAsync();
 Console.WriteLine("probe authoring scenario passed");
 
 static void Check(bool condition, string message)

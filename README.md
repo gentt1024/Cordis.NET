@@ -2,7 +2,9 @@
 
 [中文](README.zh.md)
 
-Cordis.NET is a native .NET implementation of the plugin runtime and composition behavior pinned by DeepSeek Harness. It provides a context based plugin model, dependency injection, lifecycle effects, configuration composition, and optional adapters for CLR modules, Generic Host, and JavaScript expressions.
+Cordis.NET implements the DSH-maintained Cordis at a fixed revision. Its scope includes a domain-independent runtime and generic infrastructure for building, running, configuring, managing, and shipping modular applications. Core remains domain-independent; application libraries and platform adapters sit above it.
+
+Available components include lifecycle and injection, profile/bundle/patch composition, running-session coordination, configuration references, plugin enablement and deployment reconciliation, and optional CLR, Generic Host and JavaScript adapters. Field editing, settings views, client delivery, CLI application invocation and package-tool adapters are in scope but are not all implemented. Agent/LLM business logic, RSI goals and FSM domain logic belong to products.
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
 

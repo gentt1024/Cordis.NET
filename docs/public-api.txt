@@ -404,6 +404,10 @@ Cordis.Composition: Cordis.Composition.CommandLineArguments : System.Object [] f
   Constructor Void .ctor(System.Collections.Generic.IEnumerable`1[System.String]) attrs= params=arguments:NotNull/NotNull<NotNull/NotNull>
 Cordis.Composition: Cordis.Composition.ConfigBinding : System.Object [] flags=Public, Abstract, Sealed, BeforeFieldInit attrs=
   Method System.Func`2[System.Object,Cordis.ConfigResult`1[T]] FromJsonTypeInfo[T](System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[T], System.Func`2[T,System.Collections.Generic.IEnumerable`1[System.String]]) attrs= params=typeInfo:NotNull/NotNull<Nullable/Nullable> ;validate:Nullable/Nullable<Nullable/Nullable,NotNull/NotNull<NotNull/NotNull>> optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<Nullable/Nullable,NotNull/NotNull<Nullable/Nullable>> constraints=T:None:
+Cordis.Composition: Cordis.Composition.ConfigObject`1 : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs= constraints=T:None:
+  Method Cordis.Composition.ConfigObject`1[T] Create(System.Func`2[System.Object,Cordis.ConfigResult`1[T]]) attrs= params=validate:NotNull/NotNull<Nullable/Nullable,NotNull/NotNull<Nullable/Nullable>>  return=NotNull/NotNull<Nullable/Nullable>
+  Method Cordis.Composition.ConfigObject`1[T] Field[TValue](System.String, Cordis.ConfigDescriptor, System.Func`2[T,TValue]) attrs= params=name:NotNull/NotNull ;descriptor:NotNull/NotNull ;project:NotNull/NotNull<Nullable/Nullable,Nullable/Nullable>  return=NotNull/NotNull<Nullable/Nullable> constraints=TValue:None:
+  Method Cordis.ConfigSchema`1[T] Build() attrs= params= return=NotNull/NotNull<Nullable/Nullable>
 Cordis.Composition: Cordis.Composition.ConfigurationChange : System.Object [System.IEquatable`1[Cordis.Composition.ConfigurationChange]] flags=Public, Sealed, BeforeFieldInit attrs=
   Property Boolean Changed attrs= NotNull/NotNull get=True set=True init=True
   Property Boolean Enabled attrs= NotNull/NotNull get=True set=True init=True
