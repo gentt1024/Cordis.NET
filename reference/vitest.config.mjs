@@ -3,11 +3,13 @@ import { resolve, dirname, relative } from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
+import { readFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const dsh = resolve(process.env.CORDIS_DSH_REFERENCE || '../deepseek-harness');
 const origin = resolve(process.env.CORDIS_ORIGIN_REFERENCE || '../upstream-cordis');
-if (execFileSync('git', ['-C', dsh, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== 'ddefc45fbc7f8e46dd73185e68295696d1297887') throw new Error('Unpinned DSH');
+const pin = JSON.parse(readFileSync(new URL('../upstream.lock.json', import.meta.url), 'utf8')).harness.commit;
+if (execFileSync('git', ['-C', dsh, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== pin) throw new Error('Unpinned DSH');
 if (execFileSync('git', ['-C', origin, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== '56b3d4f725681cf4556c1a8695a709cc3b6eed74') throw new Error('Unpinned origin tests');
 for (const path of [dsh, origin]) if (execFileSync('git', ['-C', path, 'status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim()) throw new Error('Reference has modified tracked files: ' + path);
 const core = resolve(origin, 'packages/core/src');

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.Json;
 using Cordis.Composition;
 
 namespace Cordis.Clr;
@@ -32,11 +33,13 @@ public sealed class ClrUnloadObservation
     /// </summary>
     public string ShadowDirectory { get; }
     /// <summary>
-    /// Gets the unload requested value.
+    /// Records an attempted unload request; an observer can throw before native release completes.
     /// </summary>
     public bool UnloadRequested { get; internal set; }
+    /// <summary>Error text from a cooperative unload observer failure, without retaining the exception or its collectible type.</summary>
+    public string? UnloadError { get; internal set; }
     /// <summary>
-    /// Gets the is collected value.
+    /// Observes collection of the managed load-context wrapper, not release of its native loader.
     /// </summary>
     public bool IsCollected => !LoadContext.IsAlive;
     /// <summary>
@@ -44,7 +47,7 @@ public sealed class ClrUnloadObservation
     /// </summary>
     public bool ShadowDeleted => !Directory.Exists(ShadowDirectory);
 
-    /// <summary>Does not force GC. A remaining plugin reference can legitimately delay collection.</summary>
+    /// <summary>Does not force GC. Retained references or an interrupted unload can prevent shadow deletion even after the context wrapper is collected.</summary>
     public bool TryDeleteShadow()
     {
         if (!UnloadRequested || !IsCollected) return false;
@@ -224,9 +227,7 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             if (context is null) Directory.Delete(destination, recursive: true);
             else
             {
-                var observation = new ClrUnloadObservation(new WeakReference(context), destination) { UnloadRequested = true };
-                unloads.Add(observation);
-                context.Unload();
+                RequestUnload(context, destination);
             }
             throw;
         }
@@ -253,10 +254,22 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         lease.Plugin = null;
         var context = lease.Context!;
         lease.Context = null;
-        var observation = new ClrUnloadObservation(new WeakReference(context), lease.Directory) { UnloadRequested = true };
+        return RequestUnload(context, lease.Directory);
+    }
+
+    private ClrUnloadObservation RequestUnload(BundleContext context, string directory)
+    {
+        var observation = new ClrUnloadObservation(new WeakReference(context), directory) { UnloadRequested = true };
         unloads.Add(observation);
-        context.Unload();
+        try { context.Unload(); }
+        catch (Exception error) { observation.UnloadError = DescribeUnloadError(error); }
         return observation;
+    }
+
+    private static string DescribeUnloadError(Exception error)
+    {
+        try { return error.ToString(); }
+        catch { return error.GetType().FullName ?? "Unload observer failed."; }
     }
 
     /// <summary>
@@ -292,8 +305,79 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
     private sealed class BundleContext(string main, IReadOnlyDictionary<string, Assembly> shared)
         : AssemblyLoadContext($"Cordis:{Guid.NewGuid():N}", isCollectible: true)
     {
+        private static readonly HashSet<string> FrameworkAssemblies = ReadFrameworkAssemblies();
         private readonly AssemblyDependencyResolver resolver = new(main);
         private readonly string directory = Path.GetDirectoryName(main)!;
+
+        private static HashSet<string> ReadFrameworkAssemblies()
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { typeof(object).Assembly.GetName().Name! };
+            AddCoreFrameworkAssemblies(names);
+            AddHostFrameworkAssemblies(names);
+            AddSharedFrameworkAssemblies(names);
+            return names;
+        }
+
+        private static void AddCoreFrameworkAssemblies(HashSet<string> names)
+        {
+            // SDK reference names survive bundling. CoreLib.Location may be empty,
+            // and the TPA list also contains private application dependencies.
+            using var stream = typeof(ClrModuleResolver).Assembly.GetManifestResourceStream("Cordis.Clr.CoreFrameworkAssemblies.txt")
+                ?? throw new InvalidOperationException("The core framework assembly manifest is missing.");
+            using var reader = new StreamReader(stream);
+            while (reader.ReadLine() is { } name)
+            {
+                if (!string.IsNullOrWhiteSpace(name)) names.Add(name);
+            }
+        }
+
+        private static void AddHostFrameworkAssemblies(HashSet<string> names)
+        {
+            // Self-contained hosts have no shared-framework deps paths. The shipped
+            // build target captures only their SDK-resolved framework references.
+            using var stream = Assembly.GetEntryAssembly()?.GetManifestResourceStream("Cordis.Clr.HostFrameworks.txt");
+            if (stream is null) return;
+            using var reader = new StreamReader(stream);
+            while (reader.ReadLine() is { } line)
+            {
+                var separator = line.IndexOf('|');
+                if (separator > 0 && separator < line.Length - 1)
+                    names.Add(line[(separator + 1)..]);
+            }
+        }
+
+        private static void AddSharedFrameworkAssemblies(HashSet<string> names)
+        {
+            // hostpolicy lists app and resolved framework deps, not additional deps.
+            // Accept only shared/<framework>/<version>/<framework>.deps.json;
+            // application manifests cannot admit arbitrary private dependencies.
+            var depsFiles = AppContext.GetData("APP_CONTEXT_DEPS_FILES") as string ?? "";
+            var entryName = Assembly.GetEntryAssembly()?.GetName().Name;
+            var applicationDeps = entryName is null ? null : Path.Combine(AppContext.BaseDirectory, entryName + ".deps.json");
+            var pathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            foreach (var deps in depsFiles.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (string.Equals(deps, applicationDeps, pathComparison)) continue;
+                var versionDirectory = Path.GetDirectoryName(deps);
+                var frameworkDirectory = versionDirectory is null ? null : Directory.GetParent(versionDirectory);
+                if (frameworkDirectory?.Parent?.Name != "shared" ||
+                    Path.GetFileName(deps) != frameworkDirectory.Name + ".deps.json") continue;
+                using var manifest = JsonDocument.Parse(File.ReadAllText(deps));
+                if (!manifest.RootElement.TryGetProperty("runtimeTarget", out var runtimeTarget) ||
+                    !runtimeTarget.TryGetProperty("name", out var targetName) ||
+                    !manifest.RootElement.TryGetProperty("targets", out var targets) ||
+                    !targets.TryGetProperty(targetName.GetString()!, out var target)) continue;
+                foreach (var library in target.EnumerateObject())
+                {
+                    if (!library.Value.TryGetProperty("runtime", out var runtime)) continue;
+                    foreach (var asset in runtime.EnumerateObject())
+                    {
+                        if (asset.Name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                            names.Add(Path.GetFileNameWithoutExtension(asset.Name));
+                    }
+                }
+            }
+        }
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
@@ -304,7 +388,9 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
                 var local = Path.Combine(directory, assemblyName.Name + ".dll");
                 if (File.Exists(local)) path = local;
             }
-            return path is null ? null : LoadFromAssemblyPath(path);
+            if (path is not null) return LoadFromAssemblyPath(path);
+            if (FrameworkAssemblies.Contains(assemblyName.Name!)) return null;
+            throw new FileNotFoundException($"Private dependency '{assemblyName}' is absent from the plugin bundle and is not a shared contract.", assemblyName.Name + ".dll");
         }
 
         protected override nint LoadUnmanagedDll(string unmanagedDllName)

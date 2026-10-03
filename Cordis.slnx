@@ -23,6 +23,10 @@
     <Project Path="tests/Cordis.Platform.Tests/Cordis.Platform.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Fixtures/">
+    <Project Path="tests/fixtures/ClrDeployment/AspNetHost/AspNetHost.csproj" />
+    <Project Path="tests/fixtures/ClrDeployment/AspNetPlugin/AspNetPlugin.csproj" />
+    <Project Path="tests/fixtures/ClrDeployment/Host/Host.csproj" />
+    <Project Path="tests/fixtures/ClrDeployment/Plugin/Plugin.csproj" />
     <Project Path="tests/fixtures/Dependency/Dependency.csproj" />
     <Project Path="tests/fixtures/PluginBad/PluginBad.csproj" />
     <Project Path="tests/fixtures/PluginV1/PluginV1.csproj" />

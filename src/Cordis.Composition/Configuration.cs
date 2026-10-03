@@ -1,11 +1,25 @@
 using Cordis;
 namespace Cordis.Composition;
 
-/// <summary>
-/// Represents the js expression component.
-/// </summary>
-/// <param name="Source">The source value.</param>
-public sealed record JsExpression(string Source);
+/// <summary>A raw expression transport node, equivalent to the JSON __jsExpr mapping.</summary>
+/// <param name="Source">Expression source text; raw comparison never evaluates it.</param>
+public sealed record JsExpression(string Source) : IReadOnlyDictionary<string, object?>
+{
+    object? IReadOnlyDictionary<string, object?>.this[string key] => key == "__jsExpr" ? Source : throw new KeyNotFoundException(key);
+    IEnumerable<string> IReadOnlyDictionary<string, object?>.Keys => ["__jsExpr"];
+    IEnumerable<object?> IReadOnlyDictionary<string, object?>.Values => [Source];
+    int IReadOnlyCollection<KeyValuePair<string, object?>>.Count => 1;
+    bool IReadOnlyDictionary<string, object?>.ContainsKey(string key) => key == "__jsExpr";
+    bool IReadOnlyDictionary<string, object?>.TryGetValue(string key, out object? value)
+    {
+        value = key == "__jsExpr" ? Source : null;
+        return key == "__jsExpr";
+    }
+    IEnumerator<KeyValuePair<string, object?>> IEnumerable<KeyValuePair<string, object?>>.GetEnumerator() =>
+        ((IEnumerable<KeyValuePair<string, object?>>)[KeyValuePair.Create<string, object?>("__jsExpr", Source)]).GetEnumerator();
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+        ((IEnumerable<KeyValuePair<string, object?>>)this).GetEnumerator();
+}
 /// <summary>
 /// Evaluates expressions embedded in Cordis configuration.
 /// </summary>
@@ -22,7 +36,7 @@ public interface ITreeCarrierPlugin : IPlugin { }
 /// Represents the tree carrier plugin component.
 /// </summary>
 /// <param name="plugin">The plugin value.</param>
-public sealed class TreeCarrierPlugin(IPlugin plugin) : ITreeCarrierPlugin
+public sealed class TreeCarrierPlugin(IPlugin plugin) : ITreeCarrierPlugin, IConfigurationPlugin
 {
     /// <summary>
     /// Gets the identity value.
@@ -40,6 +54,8 @@ public sealed class TreeCarrierPlugin(IPlugin plugin) : ITreeCarrierPlugin
     /// Resolves config.
     /// </summary>
     public object? ResolveConfig(object? configuration) => plugin.ResolveConfig(configuration);
+    /// <summary>Retains the wrapped plugin's optional captured configuration contract.</summary>
+    public PluginConfiguration? CaptureConfiguration() => (plugin as IConfigurationPlugin)?.CaptureConfiguration();
     /// <summary>
     /// Applies async.
     /// </summary>

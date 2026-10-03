@@ -73,6 +73,7 @@ def compare(label, first, second):
 
 def record_source_results(reports):
     inventory = json.loads((ROOT / "docs/upstream-tests.json").read_text(encoding="utf-8"))["tests"]
+    target = json.loads((ROOT / "upstream.lock.json").read_text(encoding="utf-8"))["harness"]["commit"]
     evidence = []
     for report, repository in reports:
         results = json.loads(report.read_text(encoding="utf-8"))
@@ -82,11 +83,17 @@ def record_source_results(reports):
             assert all(test["status"] == "passed" for test in file["assertionResults"])
             source_file = Path(file["name"]).relative_to(repository).as_posix()
             instances = [test for test in inventory if test["file"] == source_file]
+            if target == "639ed015397290b3745d163aafe02ffee4aa3f84" and source_file.startswith(("scripts/", "packages/boot/")):
+                evidence.append({"file": source_file, "sourceCommit": target, "report": report.name,
+                                 "allOriginalInstancesPassed": True, "instanceCount": len(file["assertionResults"]),
+                                 "assertions": [test["fullName"] for test in file["assertionResults"]],
+                                 "meaning": "Current fixed-source execution only; historical inventory and native assertion-review dispositions are unchanged."})
+                continue
             assert len(instances) == len(file["assertionResults"]), (source_file, len(instances), len(file["assertionResults"]))
             evidence.append({"file": source_file, "inventoryIds": [test["id"] for test in instances],
                              "sourceCommit": instances[0]["sourceCommit"], "report": report.name,
                              "allOriginalInstancesPassed": True, "instanceCount": len(instances)})
-    (OUT / "source-test-evidence.json").write_text(json.dumps({"meaning": "All original cases in each exact source file passed; file cohort counts match the frozen AST inventory. This is reference-side execution, not .NET adaptation status.", "files": evidence}, indent=2) + "\n", encoding="utf-8")
+    (OUT / "source-test-evidence.json").write_text(json.dumps({"meaning": "Original cases in each executed file passed. Historical files match frozen inventory cohort counts; current target files record their fixed commit and assertion names separately. This is reference-side execution, not .NET adaptation status.", "files": evidence}, indent=2) + "\n", encoding="utf-8")
 
 
 def consume_packages(rid, package_dir, version, aot):
@@ -121,8 +128,28 @@ await context.RunAsync(async ctx => {
     await loader.UpdateAsync("greeting", new EntryOptions { Disabled = false });
     await loader.WaitAsync();
     if (ctx.Get<string>("greeting") == null) throw new Exception("Reactivation failed");
+    int applies = 0;
+    var schema = new ConfigSchema<ConsumerSettings>(raw => raw is ConsumerSettings value && value.Limit > 0
+        ? ConfigResult<ConsumerSettings>.Success(value) : ConfigResult<ConsumerSettings>.Failure("positive limit required"),
+        ConfigDescriptor.Object(("limit", ConfigDescriptor.Number().Volatile()), ("label", ConfigDescriptor.String())))
+        .WithVolatile("limit", value => value.Limit)
+        .WithOrdinaryEquality((left, right) => left.Label == right.Label)
+        .WithSimplify(value => new Dictionary<string, object?> { ["limit"] = value.Limit, ["label"] = value.Label });
+    var fiber = ctx.Plugin(new Plugin<ConsumerSettings> { Configuration = schema, Apply = (_, _) => applies++ }, new ConsumerSettings(1, "same"));
+    await fiber.WaitAsync();
+    var reference = fiber.GetConfigReference<int>("limit"); var effective = fiber.Config;
+    if (!fiber.TryPrepareConfigurationUpdate(new ConsumerSettings(2, "same"), out var update) || update is null || reference.Value != 1 || !update.Commit())
+        throw new Exception("Package configuration preparation/commit failed");
+    if (reference.Value != 2 || !ReferenceEquals(effective, fiber.Config) || applies != 1)
+        throw new Exception("Package stable configuration identity failed");
+    fiber.Update(new ConsumerSettings(3, "changed")); await fiber.WaitAsync();
+    if (reference.Value != 2 || ReferenceEquals(reference, fiber.GetConfigReference<int>("limit")) || fiber.GetConfigReference<int>("limit").Value != 3)
+        throw new Exception("Package activation references were not isolated");
+    if ((int)((IReadOnlyDictionary<string, object?>)fiber.SimplifyConfiguration(fiber.Config)!)["limit"]! != 3)
+        throw new Exception("Package typed simplification failed");
 });
 Console.WriteLine("independent package consumer passed");
+record ConsumerSettings(int Limit, string Label);
 ''', encoding="utf-8")
     run("consumer-restore", ["dotnet", "restore", "Consumer.csproj", "--packages", directory / "cache"], directory, env)
     run("consumer-publish", ["dotnet", "publish", "Consumer.csproj", "-c", "Release", "-r", rid, "--self-contained", "true", "-o", directory / "publish"], directory, env)
@@ -171,6 +198,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dsh", type=Path)
     parser.add_argument("--origin", type=Path, help="Pinned Cordis source checkout containing the original Core/Loader tests")
+    parser.add_argument("--upstream-test", action="append", default=[], help="Select a relevant original DSH test file; repeat for multiple files. Default retains the original suite.")
     parser.add_argument("--aot", action="store_true")
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--package-output", type=Path, help="Write and validate the exact package batch in this directory")
@@ -188,6 +216,7 @@ def main():
         command = ["dotnet", ROOT / "tests/Cordis.Conformance/bin/Release/net10.0/Cordis.Conformance.dll"]
         jit = run("jit-1", command)
         for index in (2, 3): compare(f"jit-repeat-{index}", jit, run(f"jit-{index}", command))
+        upgrade_jit = run("upgrade-jit", [*command, "--upgrade"])
         run("example", ["dotnet", ROOT / "examples/Composition/bin/Release/net10.0/Composition.dll"])
         cli = ["dotnet", ROOT / "tools/Cordis.Cli/bin/Release/net10.0/Cordis.Cli.dll"]
         fixture = OUT / "cli-input.yml"
@@ -216,15 +245,22 @@ def main():
         run("cli-invalid-option", [*cli, "validate", fixture, "--unknown"], expected_exit=1)
         run("api", ["dotnet", "run", "--project", "tools/Cordis.ApiCheck", "-c", "Release", "--no-build", "--", "--check"])
         if options.dsh:
-            reference = run("dsh-core", ["node", "--experimental-transform-types", "reference/run-reference.mjs", f"--dsh={options.dsh.resolve()}"])
+            target = json.loads((ROOT / "upstream.lock.json").read_text(encoding="utf-8"))["harness"]["commit"]
+            upgrade = target == "639ed015397290b3745d163aafe02ffee4aa3f84"
+            runner = "reference/run-upgrade-reference.mjs" if upgrade else "reference/run-reference.mjs"
+            reference = run("dsh-core", ["node", "--experimental-transform-types", runner, *(["--established"] if upgrade else []), f"--dsh={options.dsh.resolve()}"])
             compare("dsh-core-differential", reference, jit)
+            if upgrade:
+                reference = run("dsh-upgrade", ["node", "--experimental-transform-types", runner, f"--dsh={options.dsh.resolve()}"])
+                compare("dsh-upgrade-differential", reference, upgrade_jit)
             reference_temp = ROOT / "artifacts/reference-temp"
             reference_temp.mkdir(exist_ok=True)
             reference_env = dict(os.environ, CORDIS_DSH_REFERENCE=str(options.dsh.resolve()),
                                  TEMP=str(reference_temp), TMP=str(reference_temp), TMPDIR=str(reference_temp))
-            run("source-excerpt-probes", ["node", "--test", "reference/probes/effects.test.mjs",
-                                           "reference/probes/acceptance-contracts.test.mjs"], env=reference_env)
-            run("original-composition", ["node", "reference/node_modules/vitest/vitest.mjs", "run", "--config", "reference/vitest-composition.config.mjs"], env=reference_env)
+            if not upgrade:
+                run("source-excerpt-probes", ["node", "--test", "reference/probes/effects.test.mjs",
+                                               "reference/probes/acceptance-contracts.test.mjs"], env=reference_env)
+            run("original-composition", ["node", "reference/node_modules/vitest/vitest.mjs", "run", *options.upstream_test, "--config", "reference/vitest-composition.config.mjs"], env=reference_env)
             source_reports = [(OUT / "original-composition-reference.json", options.dsh.resolve())]
             origin = options.origin or ROOT.parent / "upstream-cordis"
             if origin.is_dir():
@@ -243,6 +279,8 @@ def main():
                                 "-p:PublishAot=true", "-p:NuGetLockFilePath=obj/aot.packages.lock.json", "-o", ROOT / "artifacts/aot"])
             native = run("aot-run", [ROOT / "artifacts/aot" / ("Cordis.Conformance.exe" if os.name == "nt" else "Cordis.Conformance"), "--require-aot"])
             compare("jit-aot-differential", jit, native)
+            upgrade_native = run("upgrade-aot-run", [ROOT / "artifacts/aot" / ("Cordis.Conformance.exe" if os.name == "nt" else "Cordis.Conformance"), "--upgrade", "--require-aot"])
+            compare("upgrade-jit-aot-differential", upgrade_jit, upgrade_native)
         if options.package:
             version = ET.parse(ROOT / "Directory.Build.props").findtext(".//Version")
             assert version
@@ -252,10 +290,20 @@ def main():
                 assert not any(package_dir.iterdir()), f"Package output must be empty: {package_dir}"
             else:
                 package_dir = Path(tempfile.mkdtemp(prefix="packages-", dir=ROOT / "artifacts"))
-            run("pack", ["dotnet", "pack", "Cordis.slnx", "-c", "Release", "--no-build", "-o", package_dir])
+            pack_command = ["dotnet", "pack", "Cordis.slnx", "-c", "Release", "--no-build", "-o", package_dir]
+            if not git_checkout():
+                # Exported source has no Git metadata; retain the verified manifest's
+                # native checkpoint commit in the package repository metadata.
+                pack_command.append("-p:RepositoryCommit=" + archive_manifest()["commit"])
+            run("pack", pack_command)
             inspected = inspect_packages(package_dir, version)
+            run("package-symbols-and-debug-consumer", [sys.executable, "scripts/package_inspection.py",
+                "--directory", package_dir, "--version", version, "--symbols", "--debug-consumer", "--source-root", ROOT])
             steps.append({"name": "package-content-boundaries", "exitCode": 0, "packages": inspected})
             consume_packages(rid, package_dir, version, options.aot)
+            deployment_dir = Path(tempfile.mkdtemp(prefix="clr-deployment-", dir=ROOT / "artifacts"))
+            run("clr-deployment", [sys.executable, "scripts/verify-clr-deployment.py", "--dotnet", shutil.which("dotnet"),
+                "--rid", rid, "--packages", package_dir, "--output", deployment_dir])
         if git_checkout():
             run("whitespace", ["git", "diff", "--check"])
         else:

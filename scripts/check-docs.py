@@ -14,6 +14,9 @@ PAIRS = [
     ("docs/upstream.md", "docs/upstream.zh.md"),
     ("docs/development.md", "docs/development.zh.md"),
     ("docs/validation.md", "docs/validation.zh.md"),
+    ("docs/configuration-description.md", "docs/configuration-description.zh.md"),
+    ("docs/upgrade-0.2.0-rc.2.md", "docs/upgrade-0.2.0-rc.2.zh.md"),
+    ("docs/publication-readiness.md", "docs/publication-readiness.zh.md"),
 ]
 PACKAGES = [
     "src/Cordis.Core", "src/Cordis.Composition", "src/Cordis.Extensions",

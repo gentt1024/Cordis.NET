@@ -1,4 +1,6 @@
 <Project>
+  <!-- ProjectReference consumers use the same target NuGet imports transitively. -->
+  <Import Project="$(MSBuildThisFileDirectory)src/Cordis.Clr/buildTransitive/Cordis.NET.Clr.targets" />
   <PropertyGroup Condition="'$(IsPackable)' == 'true'">
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeSymbols>true</IncludeSymbols>

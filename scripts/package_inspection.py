@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
+import argparse
+import json
 import re
+import subprocess
+import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -69,12 +73,81 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
             if identity == "Cordis.NET.Tool":
                 assert "tools/net10.0/any/Cordis.Composition.dll" in entries, identity
                 assert "tools/net10.0/any/Cordis.Core.dll" in entries, identity
+            if identity == "Cordis.NET.Clr":
+                assert "buildTransitive/Cordis.NET.Clr.targets" in entries, identity
 
             assert any(name.startswith("LICENSES/") for name in entries), package
             assert not any(set(PurePosixPath(name).parts) & {"node_modules", "obj", "reference-materials", ".git"} for name in entries), package
             if identity == "Cordis.NET.Core":
                 assert not any(dep in {"Jint", "Cordis.NET.Hosting", "Cordis.NET.Clr"} for dep in dependencies), dependencies
+            symbol_package = directory / f"{identity}.{version}.snupkg"
+            assert symbol_package.is_file(), (identity, "missing matching snupkg")
+            with zipfile.ZipFile(symbol_package) as symbols:
+                assert f"{folder}/{assembly}.pdb" in symbols.namelist(), (identity, "missing product portable PDB")
 
     expected = set(PACKAGE_LAYOUTS)
     assert found == expected, (found, expected)
     return sorted(found)
+
+
+def inspect_symbols(directory: Path, source_root: Path, dotnet: str = "dotnet", frame: Path | None = None) -> dict:
+    """Bind actual portable PDBs to their DLLs and committed/manifested source bytes."""
+    project = Path(__file__).resolve().parent / "PackageSymbols" / "PackageSymbols.csproj"
+    command = [dotnet, "run", "--project", str(project), "-c", "Release", "--",
+               str(directory.resolve()), str(source_root.resolve())]
+    if frame is not None:
+        command.append(str(frame))
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if result.returncode:
+        raise RuntimeError(f"Package symbol inspection failed:\n{result.stdout}\n{result.stderr}")
+    return json.loads(result.stdout.strip().splitlines()[-1])
+
+
+def inspect_debug_consumer(directory: Path, version: str, source_root: Path, dotnet: str = "dotnet") -> dict:
+    """Run an isolated NuGet consumer and resolve its actual library stack frame offline."""
+    with tempfile.TemporaryDirectory() as temporary:
+        consumer = Path(temporary)
+        project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
+        properties = ET.SubElement(project, "PropertyGroup")
+        for key, value in {"OutputType": "Exe", "TargetFramework": "net10.0", "ImplicitUsings": "enable", "Nullable": "enable",
+                           "RestorePackagesPath": str(consumer / "cache")}.items():
+            ET.SubElement(properties, key).text = value
+        ET.SubElement(ET.SubElement(project, "ItemGroup"), "PackageReference", Include="Cordis.NET.Core", Version=version)
+        ET.ElementTree(project).write(consumer / "Consumer.csproj", encoding="utf-8", xml_declaration=True)
+        config = ET.Element("configuration")
+        feeds = ET.SubElement(config, "packageSources")
+        ET.SubElement(feeds, "clear")
+        ET.SubElement(feeds, "add", key="validated-batch", value=str(directory.resolve()))
+        ET.ElementTree(config).write(consumer / "NuGet.Config", encoding="utf-8", xml_declaration=True)
+        (consumer / "Program.cs").write_bytes((Path(__file__).parent / "PackageSymbols" / "DebugConsumer.cs").read_bytes())
+        build = subprocess.run([dotnet, "build", "-c", "Release"], cwd=consumer, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if build.returncode:
+            raise RuntimeError(f"Debug consumer build failed:\n{build.stdout}\n{build.stderr}")
+        output = consumer / "bin" / "Release" / "net10.0"
+        with zipfile.ZipFile(directory / f"Cordis.NET.Core.{version}.snupkg") as archive:
+            (output / "Cordis.Core.pdb").write_bytes(archive.read("lib/net10.0/Cordis.Core.pdb"))
+        execution = subprocess.run([dotnet, str(output / "Consumer.dll")], capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if execution.returncode:
+            raise RuntimeError(f"Debug consumer execution failed:\n{execution.stdout}\n{execution.stderr}")
+        frame = consumer / "frame.json"
+        frame.write_text(execution.stdout, encoding="utf-8")
+        try:
+            report = inspect_symbols(directory, source_root, dotnet, frame)
+        except RuntimeError as error:
+            raise RuntimeError(f"Consumer executed and located frame {execution.stdout.strip()}, but source binding failed:\n{error}") from error
+        return {"frame": json.loads(execution.stdout), "symbols": report}
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--directory", type=Path, required=True)
+    parser.add_argument("--version", required=True)
+    parser.add_argument("--source-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--dotnet", default="dotnet")
+    parser.add_argument("--symbols", action="store_true", help="Verify matching snupkg, SourceLink and source checksums")
+    parser.add_argument("--debug-consumer", action="store_true", help="Execute an isolated Core NuGet consumer and locate its embedded source frame")
+    options = parser.parse_args()
+    packages = inspect_packages(options.directory, options.version)
+    symbols = inspect_symbols(options.directory, options.source_root, options.dotnet) if options.symbols else None
+    consumer = inspect_debug_consumer(options.directory, options.version, options.source_root, options.dotnet) if options.debug_consumer else None
+    print(json.dumps({"packages": packages, "symbols": symbols, "debugConsumer": consumer}, indent=2))

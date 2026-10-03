@@ -5,12 +5,14 @@
   "description": "Development-only tools for executing the locked TypeScript reference; not product dependencies.",
   "dependencies": {
     "@babel/code-frame": "7.29.0",
+    "@eslint-community/regexpp": "4.12.2",
     "@standard-schema/spec": "1.0.0",
     "chokidar": "4.0.3",
-    "js-yaml": "4.2.0",
+    "js-yaml": "4.3.2",
     "node-addon-require-builtin": "0.1.6",
     "picomatch": "4.0.4",
     "resolve.exports": "2.0.3",
+    "semver": "7.8.5",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   }

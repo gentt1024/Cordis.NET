@@ -92,6 +92,7 @@ public static class ConfigBinding
             case float or double: throw new DataBindingException(path, "numbers must be finite.");
             case JsonElement element: WriteElement(writer, element, path, depth, ancestors); return;
             case Undefined: throw new DataBindingException(path, "undefined is not a data value.");
+            case JsExpression: throw new DataBindingException(path, "unevaluated expressions are not data values.");
         }
 
         if (!ancestors.Add(value)) throw new DataBindingException(path, "cyclic data is not supported.");
@@ -122,6 +123,8 @@ public static class ConfigBinding
     private static void WriteMap(Utf8JsonWriter writer, IEnumerable<KeyValuePair<string, object?>> map,
         string path, int depth, HashSet<object> ancestors)
     {
+        if (map.Any(pair => pair.Key == "__jsExpr"))
+            throw new DataBindingException(path, "unevaluated expressions are not data values.");
         CheckContainerDepth(path, depth);
         writer.WriteStartObject();
         foreach (var pair in map)

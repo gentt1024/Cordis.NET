@@ -97,7 +97,7 @@ jobs:
         run: |
           git init ../dsh-reference
           git -C ../dsh-reference remote add origin https://github.com/deepseek-ai/deepseek-harness.git
-          git -C ../dsh-reference fetch --depth=1 origin ddefc45fbc7f8e46dd73185e68295696d1297887
+          git -C ../dsh-reference fetch --depth=1 origin "$(python -c 'import json; print(json.load(open("upstream.lock.json"))["harness"]["commit"])')"
           git -C ../dsh-reference checkout --detach FETCH_HEAD
           git init ../upstream-cordis
           git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git

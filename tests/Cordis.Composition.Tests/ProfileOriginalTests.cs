@@ -18,7 +18,9 @@ public sealed class ProfileOriginalTests : IDisposable
         Assert.Equal(["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-acp-app"], DshProfilePolicy.Templates["acp"]);
         Assert.Equal(["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-sdk-app"], DshProfilePolicy.Templates["sdk"]);
         Assert.Equal(["@deepseek-ai/dsh-sdk-minimal"], DshProfilePolicy.Templates["sdk-minimal"]);
-        await Assert.ThrowsAsync<FileNotFoundException>(() => DshProfilePolicy.LoadNamedAsync(directory, "web", maps));
+        var shipped = await DshProfilePolicy.LoadNamedAsync(directory, "web", maps);
+        Assert.Empty(shipped.Bundles);
+        Assert.Equal(DshProfilePolicy.Templates["web"], shipped.SkippedBundles.Select(bundle => bundle.Name));
         Assert.Equal(DshProfilePolicy.Templates["web"], PackageManifest.Read(Path.Combine(Profiles.ResolveDirectory(directory, "web"), "package.json")).Bundles);
     }
     [Theory]
@@ -82,11 +84,13 @@ public sealed class ProfileOriginalTests : IDisposable
         File.WriteAllText(Path.Combine(profilePath, "package.json"), "{\"name\":\"bare\"}"); Assert.Empty((await Profiles.LoadAsync(profilePath, maps)).Bundles);
     }
     [Fact]
-    public async Task MissingBundleDeclarationFails()
+    public async Task MissingBundleDeclarationIsSkippedWithItsReason()
     {
         var bundle = At("bundle"); Directory.CreateDirectory(bundle); File.WriteAllText(Path.Combine(bundle, "package.json"), "{}");
         Profiles.Initialize(directory, ["bundle"]);
-        var error = await Assert.ThrowsAsync<FormatException>(() => Profiles.LoadAsync(directory, new Dictionary<string, string> { ["bundle"] = bundle })); Assert.Contains("declares no dsh.bundle", error.Message);
+        var profile = await Profiles.LoadAsync(directory, new Dictionary<string, string> { ["bundle"] = bundle });
+        Assert.Empty(profile.Bundles);
+        Assert.Contains("declares no dsh.bundle", Assert.Single(profile.SkippedBundles).Reason);
     }
     private sealed class EnvironmentEvaluator : IExpressionEvaluator
     {

@@ -6,7 +6,7 @@ Cordis.NET 是 DeepSeek Harness 所锁定插件运行时与组合行为的原生
 
 Cordis.NET 由独立社区维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。
 
-行为目标为 `deepseek-ai/deepseek-harness@ddefc45fbc7f8e46dd73185e68295696d1297887`，其中 vendored `@deepseek-ai/cordis` 的版本为 `4.0.2`。本项目将可观察契约适配到 .NET；不声称与任意 TypeScript 插件完全兼容。
+行为目标为 `deepseek-ai/deepseek-harness@639ed015397290b3745d163aafe02ffee4aa3f84`，其中 vendored `@deepseek-ai/cordis` 的版本为 `4.0.4`。本项目将可观察契约适配到 .NET；不声称与任意 TypeScript 插件完全兼容。
 
 ## 从源码试用
 
@@ -44,6 +44,8 @@ NuGet 包 ID 使用 `Cordis.NET.*` 前缀；CLR 命名空间与程序集名称�
 - [核心概念](docs/core-concepts.zh.md)
 - [兼容性与证据](docs/compatibility.zh.md)
 - [上游基线与来源](docs/upstream.zh.md)
+- [DSH 0.2.0-rc.2 升级矩阵](docs/upgrade-0.2.0-rc.2.zh.md)
+- [可选配置描述](docs/configuration-description.zh.md)
 - [开发与验证](docs/development.zh.md)
 - [安全策略](SECURITY.md)
 - [贡献指南](CONTRIBUTING.zh.md)

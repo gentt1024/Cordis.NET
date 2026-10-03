@@ -1,7 +1,7 @@
 namespace Cordis;
 /// <summary>A reusable plugin definition. The same definition can own several fibers.</summary>
 /// <typeparam name = "T">The plugin's validated configuration type.</typeparam>
-public sealed class Plugin<T> : IPlugin
+public sealed class Plugin<T> : IPlugin, IConfigurationPlugin
 {
     /// <summary>The diagnostic name; it is not a service name or a Loader entry id.</summary>
     public string? Name
@@ -15,6 +15,8 @@ public sealed class Plugin<T> : IPlugin
     {
         get; init;
     }
+    /// <summary>Optional typed configuration description bound to the same validator as Config.</summary>
+    public ConfigSchema<T>? Configuration { get; init; }
     /// <summary>Synchronous apply body. Specify exactly one of Apply, ApplyAsync and ApplyEffect.</summary>
     public Action<Context, T>? Apply
     {
@@ -46,8 +48,9 @@ public sealed class Plugin<T> : IPlugin
         .GroupBy(pair => pair.Key, StringComparer.Ordinal)
         .ToDictionary(group => group.Key, group => group.Last().Value, StringComparer.Ordinal);
 
-    object? IPlugin.ResolveConfig(object? raw) => Config is null ? (T)raw! : Config(raw).GetValue();
+    object? IPlugin.ResolveConfig(object? raw) => (Config ?? Configuration?.Validator) is { } validate ? validate(raw).GetValue() : (T)raw!;
     Task IPlugin.ApplyAsync(Context ctx, object? config) => Capture().Apply(ctx, config);
+    PluginConfiguration? IConfigurationPlugin.CaptureConfiguration() => Configuration?.CapturePluginConfiguration(Config);
     internal PluginDefinition Capture()
     {
         if ((Apply is null ? 0 : 1) + (ApplyAsync is null ? 0 : 1) + (ApplyEffect is null ? 0 : 1) != 1)
@@ -58,7 +61,9 @@ public sealed class Plugin<T> : IPlugin
             ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Action<Context, T>? sync = Apply;
         Func<Context, T, Task>? async = ApplyAsync;
-        Func<object?, ConfigResult<T>>? validate = Config;
+        if (Config is not null && Configuration is not null && !Config.Equals(Configuration.Validator))
+            throw new ArgumentException("Configuration must describe the same validator as Config.");
+        Func<object?, ConfigResult<T>>? validate = Config ?? Configuration?.Validator;
         return new PluginDefinition((object?)sync ?? (object?)async ?? ApplyEffect!, Name, ((IPlugin)this).Dependencies, raw => validate is null ? (T)raw! : validate(raw).GetValue(), (ctx, value) =>
         {
             if (sync is not null)
@@ -74,11 +79,11 @@ public sealed class Plugin<T> : IPlugin
             }
 
             return async!(ctx, (T)value!) ?? throw new InvalidOperationException("ApplyAsync returned a null Task.");
-        });
+        }, Configuration?.Capture());
     }
 }
 
-internal sealed record PluginDefinition(object Identity, string? Name, IReadOnlyDictionary<string, object?> Inject, Func<object?, object?> ResolveConfig, Func<Context, object?, Task> Apply);
+internal sealed record PluginDefinition(object Identity, string? Name, IReadOnlyDictionary<string, object?> Inject, Func<object?, object?> ResolveConfig, Func<Context, object?, Task> Apply, CapturedConfigSchema? Configuration = null);
 /// <summary>A small value/issues adapter; it does not impose a JSON or DataAnnotations schema.</summary>
 public sealed class ConfigResult<T>
 {

@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
 using Cordis.Clr;
 using Cordis.Composition;
 using Cordis.Fixtures;
@@ -11,6 +12,283 @@ namespace Cordis.Platform.Tests;
 [Collection("Collectible CLR")]
 public sealed class ClrTests
 {
+    private static object? retainedConfigReference;
+    [Fact]
+    public async Task Scalar_reference_does_not_keep_collectible_effective_poco_alive()
+    {
+        var shadow = Path.Combine(Path.GetTempPath(), "cordis-scalar-poco-" + Guid.NewGuid().ToString("N"));
+        ClrUnloadObservation[] observations = [];
+        try
+        {
+            observations = await RetainScalarFromCollectiblePocoAsync(shadow);
+            var observation = Assert.Single(observations);
+            Assert.True(observation.UnloadRequested);
+            for (var attempt = 0; attempt < 12 && !observation.IsCollected; attempt++)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                await Task.Yield();
+            }
+            Assert.Equal("old-value", Assert.IsType<ConfigReference<string>>(retainedConfigReference).Value);
+            Assert.True(observation.IsCollected);
+            Assert.True(observation.TryDeleteShadow());
+        }
+        finally
+        {
+            // Release test-owned state even on the expected pre-fix assertion failure.
+            retainedConfigReference = null;
+            for (var attempt = 0; attempt < 12 && observations.Any(item => !item.IsCollected); attempt++)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                await Task.Yield();
+            }
+            foreach (var observation in observations)
+                if (observation.IsCollected) observation.TryDeleteShadow();
+            if (Directory.Exists(shadow) && !Directory.EnumerateFileSystemEntries(shadow).Any())
+                Directory.Delete(shadow);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task<ClrUnloadObservation[]> RetainScalarFromCollectiblePocoAsync(string shadow)
+    {
+        await using var context = new Context();
+        await using var resolver = new ClrModuleResolver(shadow);
+        resolver.Register("fixture", Definition("v1") with { EntryType = "VersionedPlugin.ConfigurationEntry" });
+        await context.RunAsync(async ctx =>
+        {
+            var module = await resolver.ResolveAsync("fixture", new Uri("file:///"));
+            var fiber = ctx.Plugin(module, "old-value");
+            await fiber.WaitAsync();
+            Assert.Equal(FiberState.Active, fiber.State);
+            Assert.NotNull(fiber.Config);
+            Assert.True(AssemblyLoadContext.GetLoadContext(fiber.Config!.GetType().Assembly)!.IsCollectible);
+            retainedConfigReference = ctx.Get("configured-value");
+            Assert.IsType<ConfigReference<string>>(retainedConfigReference);
+            // Never retain configured-reference, fiber.Config, module, Assembly or Type outside this boundary.
+        });
+        await context.DisposeAsync();
+        await resolver.DisposeAsync();
+        return resolver.Unloads.ToArray();
+    }
+
+    [Fact]
+    public async Task Primitive_configuration_reference_with_plain_effective_data_does_not_retain_the_bundle()
+    {
+        var shadow = Path.Combine(Path.GetTempPath(), "cordis-clr-primitive-ref-" + Guid.NewGuid().ToString("N"));
+        ClrUnloadObservation[] observations;
+        try
+        {
+            observations = await ExercisePrimitiveConfigurationLifetime(shadow);
+            for (var attempt = 0; attempt < 12 && observations.Any(item => !item.IsCollected); attempt++)
+            { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); await Task.Yield(); }
+            Assert.Equal(7, Assert.IsType<ConfigReference<int>>(retainedConfigReference).Value);
+            Assert.All(observations, item => Assert.True(item.IsCollected));
+            Assert.All(observations, item => Assert.True(item.TryDeleteShadow()));
+        }
+        finally { retainedConfigReference = null; }
+        Directory.Delete(shadow);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task<ClrUnloadObservation[]> ExercisePrimitiveConfigurationLifetime(string shadow)
+    {
+        await using var context = new Context();
+        await using var resolver = new ClrModuleResolver(shadow);
+        resolver.Register("fixture", Definition("v1") with { EntryType = "VersionedPlugin.PrimitiveConfigurationEntry" });
+        await context.RunAsync(async ctx =>
+        {
+            var module = await resolver.ResolveAsync("fixture", new Uri("file:///"));
+            var fiber = ctx.Plugin(module, new Dictionary<string, object?> { ["value"] = 7 });
+            await fiber.WaitAsync();
+            Assert.Equal(FiberState.Active, fiber.State);
+            Assert.IsType<Dictionary<string, object?>>(fiber.Config);
+            retainedConfigReference = ctx.Get("primitive-reference");
+            Assert.IsType<ConfigReference<int>>(retainedConfigReference);
+        });
+        await context.DisposeAsync();
+        await resolver.DisposeAsync();
+        return resolver.Unloads.ToArray();
+    }
+
+    [Fact]
+    public async Task Automatic_unload_observations_do_not_retain_collectible_exception_types_after_actual_unload()
+    {
+        var shadow = Path.Combine(Path.GetTempPath(), "cordis-clr-unload-snapshot-" + Guid.NewGuid().ToString("N"));
+        var state = await ExerciseCollectibleUnloadFailure(shadow);
+        for (var attempt = 0; attempt < 12 && (state.Failure.IsAlive || state.Assembly.IsAlive || state.Resolver.Unloads.Any(item => !item.IsCollected)); attempt++)
+        { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); await Task.Yield(); }
+        Assert.False(state.Failure.IsAlive);
+        Assert.False(state.Assembly.IsAlive);
+        Assert.IsType<string>(state.Resolver.Unloads[0].UnloadError);
+        Assert.All(state.Resolver.Unloads, item => Assert.True(item.IsCollected));
+        Assert.All(state.Resolver.Unloads, item => Assert.True(item.TryDeleteShadow()));
+        GC.KeepAlive(state.Resolver);
+        Directory.Delete(shadow);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task<(ClrModuleResolver Resolver, WeakReference Failure, WeakReference Assembly)> ExerciseCollectibleUnloadFailure(string shadow)
+    {
+        var resolver = new ClrModuleResolver(shadow, [typeof(IVersionedService).Assembly]);
+        resolver.Register("fixture", Definition("v1"));
+        var previous = await resolver.ResolveAsync("fixture", new Uri("file:///"));
+        System.Reflection.Assembly? candidateAssembly = null;
+        var primary = new InvalidOperationException("switch rejected before teardown");
+        Assert.Same(primary, await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.ReplaceAsync("fixture",
+            Definition("v2") with { EntryType = "VersionedPlugin.UnloadFailureEntry" }, (_, candidate) =>
+            {
+                candidateAssembly = Assert.IsType<Plugin<object?>>(candidate).Apply!.Method.Module.Assembly;
+                throw primary;
+            }).AsTask()));
+        Assert.Same(previous, await resolver.ResolveAsync("fixture", new Uri("file:///")));
+        var observation = Assert.Single(resolver.Unloads);
+        Assert.True(observation.UnloadRequested);
+        // An Unloading handler has thrown before Unload completes. The request is not
+        // proof of collection; this helper still holds the actual assembly/context.
+        Assert.False(observation.IsCollected);
+        Assert.False(observation.TryDeleteShadow());
+        var diagnostic = observation.UnloadError!.ToString();
+        Assert.Contains("VersionedPlugin.CollectibleUnloadException", diagnostic);
+        Assert.Contains("collectible unload observer rejected", diagnostic);
+        Assert.Contains("UnloadFailureEntry", diagnostic);
+        var failure = Assert.IsType<WeakReference>(candidateAssembly!.GetType("VersionedPlugin.UnloadFailureEntry")!.GetProperty("LastFailure")!.GetValue(null));
+        var assembly = new WeakReference(candidateAssembly);
+        // Unloading observers run before the CLR completes release. A throwing observer
+        // can suppress that release even after the managed ALC wrapper becomes unreachable.
+        // The fixture removed its own failing handler, so retry the real CLR request while
+        // holding the actual context. No production retry or fabricated collection is used.
+        AssemblyLoadContext.GetLoadContext(candidateAssembly)!.Unload();
+        candidateAssembly = null; previous = null;
+        await resolver.DisposeAsync();
+        return (resolver, failure, assembly);
+    }
+
+    [Fact]
+    public async Task Typed_configuration_reference_retains_its_bundle_only_until_the_host_releases_it()
+    {
+        var shadow = Path.Combine(Path.GetTempPath(), "cordis-clr-config-lifetime-" + Guid.NewGuid().ToString("N"));
+        ClrUnloadObservation[] observations;
+        try
+        {
+            observations = await ExerciseTypedConfigurationLifetime(shadow);
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            Assert.False(observations[0].IsCollected);
+            Assert.True(ReferenceTypeBelongsTo(retainedConfigReference!, observations[0]));
+        }
+        finally { retainedConfigReference = null; }
+        for (var attempt = 0; attempt < 12 && observations.Any(item => !item.IsCollected); attempt++)
+        { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); await Task.Yield(); }
+        Assert.All(observations, item => Assert.True(item.IsCollected));
+        Assert.All(observations, item => Assert.True(item.TryDeleteShadow()));
+        Directory.Delete(shadow);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool ReferenceTypeBelongsTo(object reference, ClrUnloadObservation observation)
+        => ReferenceEquals(AssemblyLoadContext.GetLoadContext(reference.GetType().GetGenericArguments()[0].Assembly), observation.LoadContext.Target);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task<ClrUnloadObservation[]> ExerciseTypedConfigurationLifetime(string shadow)
+    {
+        await using var context = new Context();
+        await using var resolver = new ClrModuleResolver(shadow, [typeof(IVersionedService).Assembly]);
+        resolver.Register("fixture", Definition("v1") with { EntryType = "VersionedPlugin.ConfigurationEntry" });
+        Loader? loader = null;
+        await context.RunAsync(async ctx =>
+        {
+            ctx.Provide("trace", new List<string>());
+            loader = new Loader(ctx, resolver);
+            await loader.CreateAsync(new() { Id = "row", Name = "fixture", Config = "old" });
+            await loader.WaitAsync();
+            retainedConfigReference = ctx.Get("configured-reference");
+            Assert.NotNull(retainedConfigReference);
+            Assert.NotNull(loader.Resolve("row").Fiber!.ConfigDescription);
+            Assert.Equal("old", loader.Resolve("row").Fiber!.GetConfigReference<string>("value").Value);
+        });
+        await resolver.ReplaceAsync("fixture", Definition("v2") with { EntryType = "VersionedPlugin.ConfigurationEntry" }, async (previous, replacement) => await loader!.ReplacePluginAsync(previous, replacement));
+        await context.RunAsync(ctx =>
+        {
+            Assert.NotSame(retainedConfigReference, ctx.Get("configured-reference"));
+            Assert.Equal("old", ctx.Get<ConfigReference<string>>("configured-value")!.Value);
+            return Task.CompletedTask;
+        });
+        await context.DisposeAsync(); await resolver.DisposeAsync();
+        return resolver.Unloads.ToArray();
+    }
+
+    [Fact]
+    public async Task Candidate_unload_observer_failure_does_not_replace_the_switch_failure()
+    {
+        var shadow = Path.Combine(Path.GetTempPath(), "cordis-clr-unload-error-" + Guid.NewGuid().ToString("N"));
+        await using var resolver = new ClrModuleResolver(shadow, [typeof(IVersionedService).Assembly]);
+        resolver.Register("fixture", Definition("v1"));
+        var previous = await resolver.ResolveAsync("fixture", new Uri("file:///"));
+        var primary = new InvalidOperationException("switch rejected");
+        var secondary = new IOException("unloading observer rejected");
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.ReplaceAsync("fixture", Definition("v2"), (_, candidate) =>
+        {
+            var assembly = Assert.IsType<Plugin<object?>>(candidate).Apply!.Method.Module.Assembly;
+            AssemblyLoadContext.GetLoadContext(assembly)!.Unloading += _ => throw secondary;
+            throw primary;
+        }).AsTask());
+        Assert.Same(primary, error);
+        Assert.Same(previous, await resolver.ResolveAsync("fixture", new Uri("file:///")));
+        Assert.True(Assert.Single(resolver.Unloads).UnloadRequested);
+        Assert.Equal(secondary.ToString(), Assert.Single(resolver.Unloads).UnloadError);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Missing_private_dependency_binds_to_host_only_when_explicitly_shared(bool shareDependency)
+    {
+        var source = Directory.CreateTempSubdirectory("cordis-clr-private-");
+        var shadow = Path.Combine(Path.GetTempPath(), "cordis-clr-private-shadow-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var original = Definition("v1").BundleDirectory;
+            var privateFile = Path.Combine(original, "Dependency.dll");
+            var hostAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(privateFile);
+            Assert.Same(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(hostAssembly));
+            foreach (var file in Directory.GetFiles(original, "*", SearchOption.AllDirectories))
+            {
+                var target = Path.Combine(source.FullName, Path.GetRelativePath(original, file));
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!); File.Copy(file, target);
+            }
+            File.Delete(Path.Combine(source.FullName, "Dependency.dll"));
+            var observations = await ExerciseMissingPrivateDependency(source.FullName, shadow, shareDependency ? hostAssembly : null);
+            for (var attempt = 0; attempt < 12 && observations.Any(item => !item.IsCollected); attempt++)
+            { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); await Task.Yield(); }
+            Assert.All(observations, item => Assert.True(item.TryDeleteShadow()));
+            Directory.Delete(shadow);
+        }
+        finally { source.Delete(true); }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task<ClrUnloadObservation[]> ExerciseMissingPrivateDependency(string source, string shadow, System.Reflection.Assembly? sharedDependency)
+    {
+        await using var context = new Context();
+        await using var resolver = new ClrModuleResolver(shadow, sharedDependency is null ? [typeof(IVersionedService).Assembly] : [typeof(IVersionedService).Assembly, sharedDependency]);
+        resolver.Register("fixture", new(source, "VersionedPlugin.dll", "VersionedPlugin.Entry"));
+        await context.RunAsync(async ctx =>
+        {
+            ctx.Provide("trace", new List<string>());
+            var fiber = ctx.Plugin(await resolver.ResolveAsync("fixture", new Uri("file:///")), "private");
+            await fiber.WaitAsync();
+            var service = ctx.Get<IVersionedService>("versioned")!;
+            if (sharedDependency is null) Assert.Throws<FileNotFoundException>(() => service.Dependency);
+            else Assert.Equal("private-bundle-dependency", service.Dependency);
+            Assert.Equal("v1", service.Version);
+        });
+        await context.DisposeAsync(); await resolver.DisposeAsync();
+        return resolver.Unloads.ToArray();
+    }
+
     [Fact]
     public async Task Callback_can_resolve_modules_and_external_disposal_waits_for_replacement_ownership()
     {
