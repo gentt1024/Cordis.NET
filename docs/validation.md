@@ -2,6 +2,8 @@
 
 [中文](validation.zh.md)
 
+The fixed upstream locale-file test calls `context.skip()` when its filesystem cannot store both `en.json` and `EN.json`. The verifier records that exact assertion and reason as skipped, not passed; it still rejects failures, unknown skips and inconsistent report totals. Linux executes the assertion on its case-sensitive filesystem. This reference-side capability outcome is separate from .NET test results and does not remove any upstream test.
+
 ## Public-review repair candidate, 2026-10-02
 
 The following upgrade record describes the prior delivery. The current 0.2.0-alpha.1 candidate adds the bounded fixes in the upgrade matrix. Final-source verification, authoring, actual CLR deployments, portable PDB/source checksum checks and offline NuGet consumer frame results are recorded separately in its delivery evidence. Hosted CI and remote SourceLink retrieval are not claimed.

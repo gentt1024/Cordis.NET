@@ -77,15 +77,32 @@ def record_source_results(reports):
     evidence = []
     for report, repository in reports:
         results = json.loads(report.read_text(encoding="utf-8"))
-        assert results["success"] and results["numTotalTests"] == results["numPassedTests"]
+        assert results["success"] and results["numFailedTests"] == 0, f"Failed upstream report: {report}"
+        report_skipped = 0
         for file in results["testResults"]:
             assert file["status"] == "passed"
-            assert all(test["status"] == "passed" for test in file["assertionResults"])
             source_file = Path(file["name"]).relative_to(repository).as_posix()
+            skipped = []
+            for test in file["assertionResults"]:
+                if test["status"] == "passed":
+                    continue
+                # This pinned test detects the filesystem capability itself and calls
+                # context.skip(). Keep that outcome visible; never count it as a pass.
+                filesystem_skip = (
+                    target == "639ed015397290b3745d163aafe02ffee4aa3f84"
+                    and source_file == "packages/boot/app-boot/tests/package-meta.spec.ts"
+                    and test["fullName"] == "plugin locale display metadata rejects case-equivalent language files on case-sensitive filesystems"
+                    and test["status"] == "skipped"
+                )
+                assert filesystem_skip, f"Unexpected upstream outcome: {source_file}: {test['fullName']} [{test['status']}]"
+                skipped.append({"assertion": test["fullName"],
+                                "reason": "Pinned upstream calls context.skip() on case-insensitive filesystems that cannot store both en.json and EN.json."})
+            report_skipped += len(skipped)
             instances = [test for test in inventory if test["file"] == source_file]
             if target == "639ed015397290b3745d163aafe02ffee4aa3f84" and source_file.startswith(("scripts/", "packages/boot/")):
                 evidence.append({"file": source_file, "sourceCommit": target, "report": report.name,
-                                 "allOriginalInstancesPassed": True, "instanceCount": len(file["assertionResults"]),
+                                 "allOriginalInstancesPassed": not skipped, "instanceCount": len(file["assertionResults"]),
+                                 "passedInstanceCount": len(file["assertionResults"]) - len(skipped), "skippedInstances": skipped,
                                  "assertions": [test["fullName"] for test in file["assertionResults"]],
                                  "meaning": "Current fixed-source execution only; historical inventory and native assertion-review dispositions are unchanged."})
                 continue
@@ -93,7 +110,9 @@ def record_source_results(reports):
             evidence.append({"file": source_file, "inventoryIds": [test["id"] for test in instances],
                              "sourceCommit": instances[0]["sourceCommit"], "report": report.name,
                              "allOriginalInstancesPassed": True, "instanceCount": len(instances)})
-    (OUT / "source-test-evidence.json").write_text(json.dumps({"meaning": "Original cases in each executed file passed. Historical files match frozen inventory cohort counts; current target files record their fixed commit and assertion names separately. This is reference-side execution, not .NET adaptation status.", "files": evidence}, indent=2) + "\n", encoding="utf-8")
+        assert results["numPendingTests"] == report_skipped, f"Unrecorded upstream skips: {report}"
+        assert results["numTotalTests"] == results["numPassedTests"] + report_skipped, f"Inconsistent upstream totals: {report}"
+    (OUT / "source-test-evidence.json").write_text(json.dumps({"meaning": "Original case outcomes are recorded per executed file. Historical files match frozen inventory cohort counts; current target files record their fixed commit, assertion names and the explicit filesystem-capability skip separately. Skipped cases are not passes. This is reference-side execution, not .NET adaptation status.", "files": evidence}, indent=2) + "\n", encoding="utf-8")
 
 
 def consume_packages(rid, package_dir, version, aot):
