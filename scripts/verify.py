@@ -47,6 +47,7 @@ def source_hashes():
 
 
 def run(label, command, cwd=ROOT, env=None, expected_exit=0):
+    print(f"RUN {label}", flush=True)
     started = time.time()
     process = subprocess.run([str(a) for a in command], cwd=cwd, env=env, capture_output=True)
     (OUT / f"{label}.stdout.log").write_bytes(process.stdout)
@@ -54,7 +55,7 @@ def run(label, command, cwd=ROOT, env=None, expected_exit=0):
     steps.append({"name": label, "command": [str(a) for a in command], "exitCode": process.returncode,
                   "seconds": round(time.time() - started, 3), "stdout": f"{label}.stdout.log", "stderr": f"{label}.stderr.log"})
     steps[-1]["expectedExitCode"] = expected_exit
-    print(f"{'PASS' if process.returncode == expected_exit else 'FAIL'} {label}", flush=True)
+    print(f"{'PASS' if process.returncode == expected_exit else 'FAIL'} {label} ({steps[-1]['seconds']}s)", flush=True)
     if process.returncode != expected_exit:
         print(process.stdout.decode("utf-8", "replace")[-12000:])
         print(process.stderr.decode("utf-8", "replace")[-12000:], file=sys.stderr)
@@ -97,6 +98,7 @@ def record_source_results(reports):
                 assert filesystem_skip, f"Unexpected upstream outcome: {source_file}: {test['fullName']} [{test['status']}]"
                 skipped.append({"assertion": test["fullName"],
                                 "reason": "Pinned upstream calls context.skip() on case-insensitive filesystems that cannot store both en.json and EN.json."})
+                print(f"SOURCE SKIP {source_file}: {test['fullName']} (case-insensitive filesystem)", flush=True)
             report_skipped += len(skipped)
             instances = [test for test in inventory if test["file"] == source_file]
             if target == "639ed015397290b3745d163aafe02ffee4aa3f84" and source_file.startswith(("scripts/", "packages/boot/")):

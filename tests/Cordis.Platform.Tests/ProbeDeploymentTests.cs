@@ -21,10 +21,16 @@ public sealed class ProbeDeploymentTests
         Assert.False(held.Observations[0].IsCollected);
         Assert.False(held.Observations[0].TryDeleteShadow());
         held.Release();
-        for (var attempt = 0; attempt < 12 && held.Observations.Any(item => !item.IsCollected); attempt++)
-        { Collect(); await Task.Yield(); }
+        // The managed ALC wrapper can disappear before the native loader releases
+        // its DLL handles. Observe both outcomes within the same bounded GC loop.
+        for (var attempt = 0; attempt < 12 && held.Observations.Any(item => !item.IsCollected || !item.ShadowDeleted); attempt++)
+        {
+            Collect();
+            await Task.Yield();
+            foreach (var observation in held.Observations) observation.TryDeleteShadow();
+        }
         Assert.All(held.Observations, item => Assert.True(item.IsCollected, item.ShadowDirectory));
-        Assert.All(held.Observations, item => Assert.True(item.TryDeleteShadow()));
+        Assert.All(held.Observations, item => Assert.True(item.TryDeleteShadow(), item.ShadowDirectory));
         Directory.Delete(held.ShadowRoot);
     }
 
