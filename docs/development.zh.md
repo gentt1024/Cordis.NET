@@ -24,7 +24,8 @@ python scripts/check-docs.py
 ## 完整门禁
 
 ```console
-python scripts/verify.py
+python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/upgrade-packages
+python scripts/verify-authoring.py --aot --packages artifacts/upgrade-packages
 ```
 
 完整门禁检查锁定的 SDK 与依赖、分析器、测试、上游源码执行、差分场景、Native AOT、API 形状、包和隔离消费者。发布候选应在 Windows x64 与真实 Linux x64 上运行。最近完成的证据见[验证记录](validation.zh.md)，证据含义见[兼容性文档](compatibility.zh.md)。

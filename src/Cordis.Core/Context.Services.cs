@@ -179,7 +179,8 @@ public sealed partial class Context
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(plugin);
-        return _runtime.Register(this, new PluginDefinition(plugin.Identity, plugin.Name, plugin.Dependencies, plugin.ResolveConfig, plugin.ApplyAsync), configuration);
+        var captured = (plugin as IConfigurationPlugin)?.CaptureConfiguration();
+        return _runtime.Register(this, new PluginDefinition(plugin.Identity, plugin.Name, plugin.Dependencies, captured?.Validate ?? plugin.ResolveConfig, plugin.ApplyAsync, captured?.Schema), configuration);
     }
 
     /// <summary>

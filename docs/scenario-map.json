@@ -1,5 +1,5 @@
 {
-  "targetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+  "targetCommit": "639ed015397290b3745d163aafe02ffee4aa3f84",
   "pairedScenarios": [
     {
       "id": "C01-greeting-lifecycle",
@@ -582,5 +582,76 @@
       "E12"
     ],
     "kind": "historical excerpt/fixture tests; not original tests or whole-runtime reference execution"
-  }
+  },
+  "historicalInventoryTargetCommit": "ddefc45fbc7f8e46dd73185e68295696d1297887",
+  "referenceRunner": "reference/run-upgrade-reference.mjs --established",
+  "upgradeReferenceRunner": "reference/run-upgrade-reference.mjs",
+  "upgradePairedScenarios": [
+    {
+      "id": "V01-volatile-entry-generations",
+      "reference": "reference/upgrade-volatile.mjs",
+      "dotnet": "tests/Cordis.Conformance/UpgradeScenarios.cs",
+      "keyAssertions": "Raw/effective/noSave distinction, unchanged activation and effective identity, old activation references freeze, owner-only postcommit notifications.",
+      "kind": "paired-actual-fixed-source",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "V02-unchanged-snapshot-identity",
+      "reference": "reference/upgrade-volatile.mjs",
+      "dotnet": "tests/Cordis.Conformance/UpgradeScenarios.cs",
+      "keyAssertions": "A strict-equal immutable map snapshot retains identity while another projected field changes.",
+      "kind": "paired-actual-fixed-source",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "P01-ordered-bundles-atomic-failure-and-provenance",
+      "reference": "reference/upgrade-profile.mjs",
+      "dotnet": "tests/Cordis.Conformance/ProfileUpgradeScenarios.cs",
+      "keyAssertions": "Ordered patch layers, file-relative provenance, atomic bundle failure, selected/loaded/skipped diagnostics, user layer errors.",
+      "kind": "paired-actual-fixed-source",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "V03-expression-source",
+      "reference": "reference/public-review-scenarios.mjs",
+      "dotnet": "tests/Cordis.Conformance/PublicReviewScenarios.cs",
+      "keyAssertions": "Raw expression source equality, live reference stability and ordinary restart when source text changes.",
+      "kind": "paired-actual-fixed-source",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "V04-finite-lazy-tree",
+      "reference": "reference/public-review-scenarios.mjs",
+      "dotnet": "tests/Cordis.Conformance/PublicReviewScenarios.cs",
+      "keyAssertions": "A factory recursive description resolves only finite input and returns actual activated tree names.",
+      "kind": "paired-actual-fixed-source",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md"
+      ]
+    },
+    {
+      "id": "V05-zero-reference-default",
+      "reference": "reference/public-review-scenarios.mjs",
+      "dotnet": "tests/Cordis.Conformance/PublicReviewScenarios.cs",
+      "keyAssertions": "Equivalent explicit ordinary defaults retain effective identity and raw input without config hooks; actual ordinary changes restart.",
+      "kind": "paired-actual-fixed-source",
+      "platform": "Windows/Linux JIT and static Native AOT",
+      "evidence": [
+        "docs/validation.md"
+      ]
+    }
+  ]
 }

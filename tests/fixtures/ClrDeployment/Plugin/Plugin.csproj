@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>DeploymentPlugin</AssemblyName><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../../../src/Cordis.Clr/Cordis.Clr.csproj" /></ItemGroup>
+</Project>

@@ -6,6 +6,47 @@ namespace Cordis.Extensions.Tests;
 /// <summary>Portable assertions from pinned boot/hmr/modules.spec.ts; module mapping is explicit on CLR.</summary>
 public sealed class HmrModuleTests
 {
+    private sealed record LiveSettings(int Limit, string Tag);
+
+    [Fact]
+    public async Task Replacement_and_recovery_mint_fresh_config_references_and_freeze_retained_generations()
+    {
+        await using var root = new Context(); await using var hmr = new HmrCoordinator();
+        var references = new List<ConfigReference<int>>();
+        var schema = new ConfigSchema<LiveSettings>(raw => raw is IDictionary<string, object?> values && values["limit"] is int limit
+            ? ConfigResult<LiveSettings>.Success(new(limit, (string)values["tag"]!)) : ConfigResult<LiveSettings>.Failure("invalid settings"),
+            ConfigDescriptor.Object(("limit", ConfigDescriptor.Number().Volatile()), ("tag", ConfigDescriptor.String())))
+            .WithVolatile("limit", settings => settings.Limit).WithOrdinaryEquality((left, right) => left.Tag == right.Tag);
+        Plugin<LiveSettings> Version(bool fail = false) => new()
+        {
+            Configuration = schema,
+            ApplyAsync = async (ctx, _) =>
+            {
+                references.Add(ctx.Fiber.GetConfigReference<int>("limit"));
+                await Task.Yield();
+                if (fail) throw new InvalidOperationException("candidate failed");
+            }
+        };
+        EntryOptions Raw(int limit) => new() { ["limit"] = limit, ["tag"] = "same" };
+        var before = Version(); var after = Version(); var failed = Version(true);
+        var loader = await MountAsync(root, before, Raw(1));
+        var first = Assert.Single(references);
+        await loader.UpdateAsync("row", new() { Config = Raw(2) }); await loader.WaitAsync();
+        Assert.Equal(2, first.Value); Assert.Single(references);
+        hmr.RegisterModule("plugin.dll", () => loader.ReplacePluginAsync(before, after));
+        await hmr.NotifyChangedAsync("plugin.dll");
+        var second = references[1]; Assert.NotSame(first, second); Assert.Equal(2, second.Value);
+        await loader.UpdateAsync("row", new() { Config = Raw(3) }); await loader.WaitAsync();
+        Assert.Equal(2, first.Value); Assert.Equal(3, second.Value); Assert.Equal(2, references.Count);
+        hmr.RegisterModule("plugin.dll", () => loader.ReplacePluginAsync(after, failed));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => hmr.NotifyChangedAsync("plugin.dll"));
+        Assert.Equal(4, references.Count);
+        Assert.NotSame(second, references[2]); Assert.NotSame(second, references[3]); Assert.NotSame(references[2], references[3]);
+        await loader.UpdateAsync("row", new() { Config = Raw(4) }); await loader.WaitAsync();
+        Assert.Equal(2, first.Value); Assert.Equal(3, second.Value); Assert.Equal(3, references[2].Value); Assert.Equal(4, references[3].Value);
+        Assert.Equal(FiberState.Active, loader.Resolve("row").Fiber!.State);
+    }
+
     [Fact]
     public async Task Tracked_loader_resolution_warns_for_missing_entries_and_ignores_framework_and_uncached_modules()
     {
@@ -205,6 +246,77 @@ public sealed class HmrModuleTests
         hmr.RegisterModule("plugin.dll", () => loader.ReplacePluginAsync(original, candidate));
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => hmr.NotifyChangedAsync("plugin.dll"));
         Assert.Equal("replacement failed", error.Message); Assert.Contains(errors, item => item.Message == "restore failed");
+    }
+
+    [Fact]
+    public async Task Rollback_diagnostic_observer_cannot_replace_the_activation_failure()
+    {
+        await using var root = new Context(); await using var hmr = new HmrCoordinator();
+        var primary = new InvalidOperationException("candidate activation failed");
+        var recovery = new IOException("old activation failed");
+        bool restoring = false;
+        var original = new Plugin<string> { Apply = (_, _) => { if (restoring) throw recovery; } };
+        var candidate = new Plugin<string> { ApplyAsync = async (_, _) => { await Task.Yield(); throw primary; } };
+        var diagnostics = new List<Exception>();
+        var loader = await MountAsync(root, original, "entry", error => { diagnostics.Add(error); throw new Exception("observer failed"); });
+        restoring = true;
+        int notifications = 0; hmr.Reloaded += _ => notifications++;
+        hmr.RegisterModule("plugin.dll", () => loader.ReplacePluginAsync(original, candidate));
+        Assert.Same(primary, await Assert.ThrowsAsync<InvalidOperationException>(() => hmr.NotifyChangedAsync("plugin.dll")));
+        Assert.Contains(recovery, diagnostics);
+        Assert.Equal(0, notifications);
+        await root.RunAsync(ctx => { Assert.Same(loader.Resolve("row").Fiber, Assert.Single(ctx.Registry.Get(original)!.Fibers)); return Task.CompletedTask; });
+        Assert.False(loader.Resolve("row").Disabled);
+    }
+
+    [Fact]
+    public async Task Candidate_activation_is_awaited_and_settled_pending_is_a_successful_replacement()
+    {
+        await using var root = new Context(); await using var hmr = new HmrCoordinator();
+        var original = new Plugin<string> { Apply = (_, _) => { } };
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var candidate = new Plugin<string> { ApplyAsync = async (_, _) => { entered.SetResult(); await release.Task; } };
+        var loader = await MountAsync(root, original, "entry");
+        int notifications = 0; hmr.Reloaded += _ => notifications++;
+        hmr.RegisterModule("plugin.dll", () => loader.ReplacePluginAsync(original, candidate));
+        var replacing = hmr.NotifyChangedAsync("plugin.dll");
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(replacing.IsCompleted); Assert.Equal(0, notifications);
+        release.SetResult(); await replacing;
+        Assert.Equal(1, notifications);
+
+        int calls = 0;
+        var pending = new Plugin<string> { Inject = ["dependency"], Apply = (_, value) => { Assert.Equal("entry", value); calls++; } };
+        hmr.RegisterModule("plugin.dll", () => loader.ReplacePluginAsync(candidate, pending));
+        await hmr.NotifyChangedAsync("plugin.dll").WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(FiberState.Pending, loader.Resolve("row").Fiber!.State);
+        Assert.Equal(2, notifications); Assert.Equal(0, calls);
+        await root.RunAsync(async ctx => { ctx.Provide("dependency", new object()); await loader.WaitAsync(); });
+        Assert.Equal(FiberState.Active, loader.Resolve("row").Fiber!.State); Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task Import_failure_leaves_the_old_fiber_and_disposer_warning_allows_a_later_success()
+    {
+        var warnings = new List<Exception>();
+        await using var root = new Context(warnings.Add); await using var hmr = new HmrCoordinator();
+        var cleanup = new IOException("old cleanup warning");
+        var original = new Plugin<string> { Apply = (ctx, _) => ctx.Effect(() => (Action)(() => throw cleanup)) };
+        int applies = 0, notifications = 0;
+        var replacement = new Plugin<string> { Apply = (_, _) => applies++ };
+        var loader = await MountAsync(root, original, "entry");
+        var previousFiber = loader.Resolve("row").Fiber;
+        var importing = new FileNotFoundException("candidate module missing");
+        hmr.Reloaded += _ => notifications++;
+        hmr.RegisterModule("plugin.dll", () => throw importing);
+        Assert.Same(importing, await Assert.ThrowsAsync<FileNotFoundException>(() => hmr.NotifyChangedAsync("plugin.dll")));
+        Assert.Same(previousFiber, loader.Resolve("row").Fiber); Assert.Empty(warnings); Assert.Equal(0, notifications);
+        hmr.RegisterModule("plugin.dll", () => loader.ReplacePluginAsync(original, replacement));
+        await hmr.NotifyChangedAsync("plugin.dll");
+        Assert.Same(cleanup, Assert.Single(warnings));
+        Assert.Equal(1, applies); Assert.Equal(1, notifications);
+        Assert.Equal(FiberState.Active, loader.Resolve("row").Fiber!.State);
     }
 
     [Fact]

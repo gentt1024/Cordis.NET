@@ -11,7 +11,7 @@
       "Cordis.NET.Composition": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.1.0-alpha.2, )",
+          "Cordis.NET.Core": "[0.2.0-alpha.1, )",
           "YamlDotNet": "[16.3.0, )"
         }
       },

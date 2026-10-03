@@ -7,6 +7,72 @@ namespace Cordis.Extensions.Tests;
 public sealed class ProfileSessionTests
 {
     [Fact]
+    public async Task ExplicitDshAdmissionSurvivesCorruptGrantsAndRemainsInstalledAcrossRefresh()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var package = Path.Combine(scenario.Directory, "external-plugin");
+        System.IO.Directory.CreateDirectory(package);
+        var module = Path.Combine(package, "plugin.dll");
+        await File.WriteAllTextAsync(module, "manifest lookup only; static test resolver owns the implementation");
+        await File.WriteAllTextAsync(Path.Combine(package, "package.json"), "{\"name\":\"external-plugin\",\"version\":\"1.0.0\",\"peerDependencies\":{\"@deepseek-ai/dsh\":\"<0.1.0\"}}");
+        var uri = new Uri(module).AbsoluteUri;
+        int applies = 0;
+        scenario.Resolver.Register(uri, new Plugin<object?> { Apply = (_, _) => applies++ });
+        await File.WriteAllTextAsync(scenario.Config, $"- id: external\n  name: {uri}\n");
+        var compatibility = Path.Combine(scenario.Launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename);
+        const string corrupt = "{\"bad-record\":42}";
+        await File.WriteAllTextAsync(compatibility, corrupt);
+        var warnings = new List<string>();
+        var launch = scenario.Launch with { RuntimeIdentity = new DshRuntimeIdentity("0.2.0-rc.2"), CompatibilityWarning = warnings.Add };
+        await using (var session = await ProfileSession.StartAsync(scenario.Config, launch, scenario.Resolver))
+        {
+            Assert.Equal(0, applies); Assert.True(session.Loader.Resolve("root:external").Disabled);
+            await File.WriteAllTextAsync(scenario.ProfilePatch, "# force profile composition refresh\n[]\n");
+            await session.RefreshAsync();
+            Assert.Equal(0, applies); Assert.True(session.Loader.Resolve("root:external").Disabled);
+            Assert.Equal(corrupt, await File.ReadAllTextAsync(compatibility));
+            Assert.Contains(warnings, warning => warning.Contains("compatibility", StringComparison.Ordinal));
+        }
+        await using var generic = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
+        Assert.Equal(1, applies); Assert.False(generic.Loader.Resolve("root:external").Disabled);
+        Assert.Equal(corrupt, await File.ReadAllTextAsync(compatibility));
+    }
+
+    [Fact]
+    public async Task Multiple_bundle_patches_refresh_atomically_and_publish_skip_diagnostics()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var bundle = Path.Combine(scenario.Directory, "multiple");
+        System.IO.Directory.CreateDirectory(bundle);
+        await File.WriteAllTextAsync(Path.Combine(bundle, "package.json"), "{\"dsh\":{\"bundle\":{\"patch\":[\"first.yml\",\"second.yml\"]}}}");
+        await File.WriteAllTextAsync(Path.Combine(bundle, "first.yml"), "- id: p\n  config: first\n");
+        await File.WriteAllTextAsync(Path.Combine(bundle, "second.yml"), "- id: p\n  config: second\n");
+        scenario.Mappings["multiple"] = bundle;
+        await File.WriteAllTextAsync(Path.Combine(scenario.Launch.Profile.Directory, "package.json"), "{\"dsh\":{\"profile\":{\"bundles\":[\"missing\",\"multiple\"]}}}");
+        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
+        await scenario.ExpectAsync("second");
+        Assert.Equal(["missing", "multiple"], session.SelectedBundles);
+        Assert.Equal(["multiple"], session.LoadedBundles);
+        Assert.Equal("missing", Assert.Single(session.SkippedBundles).Name);
+        var warnings = new List<string>();
+        session.Warning += warnings.Add;
+        File.Delete(Path.Combine(bundle, "second.yml"));
+        await File.WriteAllTextAsync(scenario.ProfilePatch, "# trigger an owned profile refresh\n[]\n");
+        await session.RefreshAsync();
+        await scenario.ExpectAsync("initial");
+        Assert.Empty(session.LoadedBundles);
+        Assert.Equal(["missing", "multiple"], session.SkippedBundles.Select(item => item.Name));
+        Assert.Equal(2, warnings.Count(message => message.Contains("skipping profile bundle", StringComparison.Ordinal)));
+        await File.WriteAllTextAsync(Path.Combine(bundle, "second.yml"), "- id: p\n  config: recovered\n");
+        await File.WriteAllTextAsync(scenario.ProfilePatch, "# retry\n[]\n");
+        await session.RefreshAsync();
+        await scenario.ExpectAsync("recovered");
+        Assert.Equal(["multiple"], session.LoadedBundles);
+        Assert.Equal("missing", Assert.Single(session.SkippedBundles).Name);
+        Assert.False(session.RequiresRestart);
+    }
+
+    [Fact]
     public async Task Profile_refresh_proceeds_while_package_writer_lock_is_held()
     {
         await using var scenario = await Scenario.CreateAsync();

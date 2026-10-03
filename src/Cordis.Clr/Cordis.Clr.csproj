@@ -1,4 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>false</IsAotCompatible><IsTrimmable>false</IsTrimmable><PackageId>Cordis.NET.Clr</PackageId><Description>Managed assembly module loading and replacement for Cordis.NET.</Description></PropertyGroup>
   <ItemGroup><ProjectReference Include="../Cordis.Composition/Cordis.Composition.csproj" /></ItemGroup>
+  <ItemGroup>
+    <None Remove="buildTransitive/Cordis.NET.Clr.targets" />
+    <None Include="buildTransitive/Cordis.NET.Clr.targets" Pack="true" PackagePath="buildTransitive/" />
+  </ItemGroup>
+  <Target Name="EmbedCoreFrameworkAssemblyNames" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveReferences" Condition="'$(NoBuild)' != 'true'">
+    <ItemGroup>
+      <_CoreFrameworkReference Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'Microsoft.NETCore.App.Ref'" />
+    </ItemGroup>
+    <Error Condition="'@(_CoreFrameworkReference)' == ''" Text="The SDK did not resolve Microsoft.NETCore.App framework references." />
+    <WriteLinesToFile File="$(IntermediateOutputPath)CoreFrameworkAssemblies.txt"
+                      Lines="@(_CoreFrameworkReference->'%(Filename)')" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(IntermediateOutputPath)CoreFrameworkAssemblies.txt" LogicalName="Cordis.Clr.CoreFrameworkAssemblies.txt" />
+    </ItemGroup>
+  </Target>
 </Project>

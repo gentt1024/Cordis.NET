@@ -149,6 +149,7 @@ public static class ConfigurationFile
     }
     private static void WriteYaml(IEmitter emitter, object? value)
     {
+        if (value is IncludeOptions include) value = IncludeData(include);
         switch (value)
         {
             case JsExpression expression: emitter.Emit(new Scalar(AnchorName.Empty, new TagName("tag:yaml.org,2002:js"), expression.Source, ScalarStyle.Plain, false, false)); break;
@@ -172,6 +173,7 @@ public static class ConfigurationFile
     }
     private static void WriteJson(Utf8JsonWriter writer, object? value)
     {
+        if (value is IncludeOptions include) value = IncludeData(include);
         switch (value)
         {
             case null: writer.WriteNullValue(); break;
@@ -187,5 +189,14 @@ public static class ConfigurationFile
             case decimal number: writer.WriteNumberValue(number); break;
             default: throw new FormatException($"Unsupported configuration value {value.GetType().FullName}.");
         }
+    }
+    private static EntryOptions IncludeData(IncludeOptions include)
+    {
+        // Host-owned preparation callbacks are runtime capabilities, never configuration data.
+        var raw = new EntryOptions { ["path"] = include.Path };
+        if (include.Initial is not null) raw["initial"] = include.Initial;
+        if (include.Patches is not null) raw["patches"] = include.Patches;
+        if (include.EnableLogs) raw["enableLogs"] = true;
+        return raw;
     }
 }

@@ -180,6 +180,133 @@ public sealed class DeploymentResolutionTests
     }
 
     [Fact]
+    public void ExistingLocalTargetCannotChangeWithoutPublishing()
+    {
+        using var f = new Fixture();
+        var original = f.Package("local", "local");
+        var redirected = f.Package("redirected", "local");
+        var first = new DeploymentGeneration(f.Profiles, f.Active, [], new Dictionary<string, string> { ["local"] = original });
+        var resolver = new DeploymentPackageResolver(first);
+        var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
+        var metadata = resolver.PackageOf("local", parent);
+        var next = new DeploymentGeneration(f.Profiles, f.Active, [], new Dictionary<string, string> { ["local"] = redirected });
+        Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(next));
+        Assert.Same(first, resolver.Generation);
+        Assert.Same(metadata, resolver.PackageOf("local", parent));
+        Assert.Equal(original, resolver.PackageDirectory("local", parent));
+    }
+
+    [Fact]
+    public async Task LinkedRootRemovalStopsRoutingButKeepsLoadedModuleAndHistoricalTarget()
+    {
+        using var f = new Fixture();
+        var shared = f.Package("shared", "peer");
+        var linked = f.Package("workspace/link", "linked", peers: ["peer"]);
+        var other = f.Package("workspace/other", "linked", peers: ["peer"]);
+        var native = f.Package("native", "peer");
+        var entries = new[] { new DeploymentEntry("peer", shared, "1", f.Installation, DeploymentPackageScope.Installation) };
+        var first = new DeploymentGeneration(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", linked)]);
+        var packages = new DeploymentPackageResolver(first, native: (_, _) => native);
+        var plugin = new Plugin<object?> { Apply = (_, _) => { } };
+        var modules = new DeploymentModuleResolver(packages, new StaticModuleResolver().Register("shared-plugin", plugin)).Register(shared, ".", "shared-plugin");
+        var parent = new Uri(Path.Combine(linked, "entry.cs"));
+        var loaded = await modules.ResolveAsync("peer", parent);
+        Assert.Same(plugin, loaded);
+        var removed = new DeploymentGeneration(f.Profiles, f.Active, entries);
+        packages.Replace(removed);
+        Assert.Equal(native, packages.PackageDirectory("peer", parent));
+        Assert.Same(plugin, loaded);
+        packages.Replace(first);
+        Assert.Same(loaded, await modules.ResolveAsync("peer", parent));
+        packages.Replace(removed);
+        var redirected = new DeploymentGeneration(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", other), new("new-link", linked)]);
+        Assert.Throws<DeploymentRestartRequiredException>(() => packages.Replace(redirected));
+        Assert.Same(removed, packages.Generation);
+        Assert.Equal(native, packages.PackageDirectory("peer", parent));
+        packages.Replace(new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("new-link", other)]));
+        Assert.Equal(shared, packages.PackageDirectory("peer", new Uri(Path.Combine(other, "entry.cs"))));
+    }
+
+    [Fact]
+    public void LinkedPeersAreReadAgainAndInstallationImportersRemainNative()
+    {
+        using var f = new Fixture();
+        var shared = f.Package("shared", "peer");
+        var linked = f.Package("workspace/link", "linked");
+        var privateDependency = f.Package("private", "peer");
+        var entries = new[] { new DeploymentEntry("peer", shared, "1", f.Installation, DeploymentPackageScope.Installation) };
+        var packages = new DeploymentPackageResolver(new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", linked), new("installed", shared)]), native: (_, _) => privateDependency);
+        var parent = new Uri(Path.Combine(linked, "nested", "entry.cs"));
+        Assert.Equal(privateDependency, packages.PackageDirectory("peer", parent));
+        f.Package("workspace/link", "linked", peers: ["peer"]);
+        Assert.Equal(shared, packages.PackageDirectory("peer", parent));
+        f.Package("workspace/link", "linked");
+        Assert.Equal(privateDependency, packages.PackageDirectory("peer", parent));
+        Assert.Equal(privateDependency, packages.PackageDirectory("peer", new Uri(Path.Combine(shared, "entry.cs"))));
+        var nearest = new DeploymentPackageResolver(new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", linked)]), local: (_, _) => privateDependency);
+        f.Package("workspace/link", "linked", peers: ["peer"]);
+        Assert.Equal(privateDependency, nearest.PackageDirectory("peer", parent));
+    }
+
+    [Fact]
+    public void LinkedAliasTargetIsCapturedBeforeRetargetAndHistoryDoesNotFollowIt()
+    {
+        using var f = new Fixture();
+        var firstTarget = f.Package("first-target", "linked");
+        var secondTarget = f.Package("second-target", "linked");
+        var alias = Path.Combine(f.Root, "alias");
+        CreateDirectoryAlias(alias, firstTarget);
+        try
+        {
+            var first = new DeploymentGeneration(f.Profiles, f.Active, [], localPackages: null, linkedRoots: [new("linked", alias)]);
+            var resolver = new DeploymentPackageResolver(first);
+            Assert.Equal(firstTarget, Assert.Single(first.LinkedRoots).Directory);
+            Directory.Delete(alias); CreateDirectoryAlias(alias, secondTarget);
+            var redirected = new DeploymentGeneration(f.Profiles, f.Active, [], localPackages: null, linkedRoots: [new("linked", alias)]);
+            Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(redirected));
+            Assert.Same(first, resolver.Generation);
+        }
+        finally { Directory.Delete(alias); }
+    }
+
+    [Fact]
+    public void MappingTargetsAreCapturedByGenerationBeforeResolverPublication()
+    {
+        using var f = new Fixture();
+        var original = f.Package("original-target", "lib");
+        var redirected = f.Package("redirected-target", "lib");
+        var alias = Path.Combine(f.Root, "alias");
+        CreateDirectoryAlias(alias, original);
+        try
+        {
+            var first = new DeploymentGeneration(f.Profiles, f.Active, [new("lib", alias, "1", f.Installation, DeploymentPackageScope.Installation)]);
+            Directory.Delete(alias); CreateDirectoryAlias(alias, redirected);
+            var resolver = new DeploymentPackageResolver(first);
+            var next = new DeploymentGeneration(f.Profiles, f.Active, [new("lib", alias, "1", f.Installation, DeploymentPackageScope.Installation)]);
+            Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(next));
+            Assert.Same(first, resolver.Generation);
+            Assert.Equal(original, resolver.PackageDirectory("lib", new Uri(Path.Combine(f.Active, "entry.cs"))));
+        }
+        finally { Directory.Delete(alias); }
+    }
+
+    [Fact]
+    public async Task ModuleRegistrationAndPackageSelectionUseTheSameCanonicalTarget()
+    {
+        using var f = new Fixture();
+        var directory = f.Package("module-target", "plugin");
+        var alias = Path.Combine(f.Root, "alias"); CreateDirectoryAlias(alias, directory);
+        try
+        {
+            var packages = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("plugin", alias, "1", f.Installation, DeploymentPackageScope.Installation)]));
+            var plugin = new Plugin<object?> { Apply = (_, _) => { } };
+            var resolver = new DeploymentModuleResolver(packages, new StaticModuleResolver().Register("mapped", plugin)).Register(alias, ".", "mapped");
+            Assert.Same(plugin, await resolver.ResolveAsync("plugin", new Uri(Path.Combine(f.Active, "entry.cs"))));
+        }
+        finally { Directory.Delete(alias); }
+    }
+
+    [Fact]
     public void MalformedSuccessorLeavesPublishedGenerationAndWritesNothing()
     {
         using var f = new Fixture();

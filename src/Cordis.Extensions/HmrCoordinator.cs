@@ -434,7 +434,8 @@ public sealed class HmrCoordinator : IAsyncDisposable
         public async ValueTask DisposeAsync()
         {
             Close();
-            lock (owner._gate) owner._watches.Remove(filename);
+            lock (owner._gate)
+                if (owner._watches.TryGetValue(filename, out var registered) && ReferenceEquals(registered, this)) owner._watches.Remove(filename);
             if (!owner._executing.Value) await _running.ConfigureAwait(false);
         }
     }

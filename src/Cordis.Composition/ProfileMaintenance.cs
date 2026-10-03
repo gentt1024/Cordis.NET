@@ -38,7 +38,7 @@ public static class ProfileMaintenance
         var dependencies = (manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?> ?? new EntryOptions()).Select(pair =>
         {
             var installed = Optional(pair.Key, installedPackages); var bundle = Optional(pair.Key, installationBundles) ?? installed;
-            return new ProfileDependency(pair.Key, installed?.Raw.GetValueOrDefault("version") as string ?? (string)pair.Value!, bundle?.BundlePatch is not null, manifest.Bundles.Contains(pair.Key));
+            return new ProfileDependency(pair.Key, installed?.Raw.GetValueOrDefault("version") as string ?? (string)pair.Value!, bundle?.HasBundleDeclaration == true, manifest.Bundles.Contains(pair.Key));
         }).ToArray();
         return new(manifest, dependencies);
     }
@@ -111,6 +111,67 @@ public static class ProfileMaintenance
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         File.Move(temporary, filename, true); return true;
     }
+    /// <summary>Grants or revokes an exact DSH compatibility exemption, independently of manifest and patch files.</summary>
+    public static async Task SetVersionExemptionAsync(string directory, string packageVersion, string runtimeVersion,
+        DshRuntimeIdentity runtime, bool enabled, bool acceptRisk = false, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(runtime);
+        DshProfilePolicy.ValidatePackageVersion(packageVersion);
+        DshProfilePolicy.ValidateExactVersion(runtimeVersion);
+        if (enabled && (!acceptRisk || runtimeVersion != runtime.Version))
+            throw new InvalidOperationException("Granting an exemption requires explicit risk acknowledgment and the current exact DSH version.");
+        cancellationToken.ThrowIfCancellationRequested();
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, DshProfilePolicy.CompatibilityFilename);
+        await using var fileLock = await AcquireCompatibilityLockAsync(path + ".lock", cancellationToken);
+        var read = DshProfilePolicy.ReadCompatibility(directory);
+        if (!read.Rewritable) throw new InvalidOperationException("Cannot rewrite corrupt compatibility data: " + string.Join(" ", read.Warnings));
+        var grants = read.Exemptions.ToDictionary(pair => pair.Key, pair => pair.Value.ToList(), StringComparer.Ordinal);
+        if (enabled)
+        {
+            if (!grants.TryGetValue(packageVersion, out var versions)) grants[packageVersion] = versions = [];
+            if (!versions.Contains(runtimeVersion, StringComparer.Ordinal)) versions.Add(runtimeVersion);
+        }
+        else if (grants.TryGetValue(packageVersion, out var versions))
+        {
+            versions.RemoveAll(version => version == runtimeVersion);
+            if (versions.Count == 0) grants.Remove(packageVersion);
+        }
+        using var buffer = new MemoryStream();
+        using (var json = new System.Text.Json.Utf8JsonWriter(buffer, new() { Indented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }))
+        {
+            json.WriteStartObject();
+            foreach (var (package, versions) in grants)
+            {
+                json.WriteStartArray(package);
+                foreach (var version in versions) json.WriteStringValue(version);
+                json.WriteEndArray();
+            }
+            json.WriteEndObject();
+        }
+        buffer.WriteByte((byte)'\n');
+        var temporary = path + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            await File.WriteAllBytesAsync(temporary, buffer.ToArray(), cancellationToken);
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporary, path, true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+
+    private static async Task<FileStream> AcquireCompatibilityLockAsync(string path, CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try { return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+            catch (IOException error) when ((error.HResult & 0xffff) is 11 or 32 or 33)
+            { await Task.Delay(20, cancellationToken); }
+        }
+    }
+
     private sealed class SyntaxNode(int start, int column)
     {
         public int Start { get; } = start;

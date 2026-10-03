@@ -37,6 +37,8 @@ public enum DeploymentResolutionBehavior
 
 /// <summary>A selected package directory, with the edge that selected it.</summary>
 public sealed record DeploymentEntry(string Name, string Directory, string? Version, string Declarer, DeploymentPackageScope Scope);
+/// <summary>An external package root explicitly linked into the active deployment profile.</summary>
+public sealed record DeploymentLinkedRoot(string Name, string Directory);
 /// <summary>Immutable deployment routing data. Package acquisition remains the host's responsibility.</summary>
 public sealed class DeploymentGeneration
 {
@@ -60,17 +62,28 @@ public sealed class DeploymentGeneration
     /// Gets the local package names value.
     /// </summary>
     public IReadOnlyList<string> LocalPackageNames { get; }
+    /// <summary>External importer roots for this generation, with their canonical targets captured.</summary>
+    public IReadOnlyList<DeploymentLinkedRoot> LinkedRoots { get; }
+    internal FrozenDictionary<string, (string Directory, string Declarer)> Targets { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeploymentGeneration"/> type.
     /// </summary>
     public DeploymentGeneration(string profilesDirectory, string? profileDirectory, IEnumerable<DeploymentEntry> entries, IReadOnlyDictionary<string, string>? localPackages = null)
+        : this(profilesDirectory, profileDirectory, entries, localPackages, null) { }
+
+    /// <summary>Capture explicit linked roots alongside the existing deployment routing data.</summary>
+    public DeploymentGeneration(string profilesDirectory, string? profileDirectory, IEnumerable<DeploymentEntry> entries, IReadOnlyDictionary<string, string>? localPackages, IEnumerable<DeploymentLinkedRoot>? linkedRoots)
     {
         ProfilesDirectory = Path.GetFullPath(profilesDirectory);
         ProfileDirectory = profileDirectory is null ? null : Path.GetFullPath(profileDirectory);
-        Entries = Array.AsReadOnly(entries.Select(entry => entry with { Directory = Path.GetFullPath(entry.Directory), Declarer = Path.GetFullPath(entry.Declarer), }).ToArray());
+        Entries = Array.AsReadOnly(entries.Select(entry => entry with { Directory = DeploymentPackageResolver.Canonical(entry.Directory), Declarer = Path.GetFullPath(entry.Declarer), }).ToArray());
+        Targets = Entries.ToFrozenDictionary(entry => entry.Name, entry => (entry.Directory, DeploymentPackageResolver.Canonical(entry.Declarer)), StringComparer.Ordinal);
         LocalPackageNames = Array.AsReadOnly((localPackages?.Keys ?? []).ToArray());
-        LocalPackages = (localPackages ?? new Dictionary<string, string>()).ToFrozenDictionary(pair => pair.Key, pair => Path.GetFullPath(pair.Value), StringComparer.Ordinal);
+        LocalPackages = (localPackages ?? new Dictionary<string, string>()).ToFrozenDictionary(pair => pair.Key, pair => DeploymentPackageResolver.Canonical(pair.Value), StringComparer.Ordinal);
+        LinkedRoots = Array.AsReadOnly((linkedRoots ?? []).Select(root => root with { Directory = DeploymentPackageResolver.Canonical(root.Directory) }).OrderBy(root => root.Name, StringComparer.Ordinal).ToArray());
+        if (LinkedRoots.Select(root => root.Name).Distinct(StringComparer.Ordinal).Count() != LinkedRoots.Count)
+            throw new ArgumentException("Linked package names must be unique.", nameof(linkedRoots));
     }
 
     /// <summary>
@@ -188,10 +201,13 @@ public sealed class DeploymentPackageResolver
     {
         internal DeploymentGeneration? Generation { get; } = generation;
         internal FrozenDictionary<string, DeploymentEntry> Entries { get; } = (generation?.Entries ?? []).ToFrozenDictionary(entry => entry.Name, StringComparer.Ordinal);
+        internal FrozenDictionary<string, (string Directory, string Declarer)> Targets { get; } = generation?.Targets ?? FrozenDictionary<string, (string Directory, string Declarer)>.Empty;
+        internal IReadOnlyDictionary<string, string> LocalTargets { get; } = generation?.LocalPackages ?? FrozenDictionary<string, string>.Empty;
         internal Dictionary<(string Directory, string Name), DeploymentPackage?> Packages { get; } = [];
     }
 
     private State current;
+    private readonly Dictionary<string, string> linkedTargets = new(StringComparer.Ordinal);
     private readonly object gate = new();
     private readonly Func<string, Uri, string?>? native;
     private readonly Func<string, Uri, string?>? local;
@@ -212,7 +228,11 @@ public sealed class DeploymentPackageResolver
     /// <summary>
     /// Initializes a new instance of the <see cref="DeploymentPackageResolver"/> type.
     /// </summary>
-    public DeploymentPackageResolver(DeploymentGeneration generation, Func<string, Uri, string?>? native = null, Func<string, Uri, string?>? local = null, Func<string, Uri, string?>? ancestor = null, DeploymentResolutionBehavior behavior = DeploymentResolutionBehavior.Enforce) => (current, this.native, this.local, this.ancestor, this.behavior) = (new(generation), native, local, ancestor, behavior);
+    public DeploymentPackageResolver(DeploymentGeneration generation, Func<string, Uri, string?>? native = null, Func<string, Uri, string?>? local = null, Func<string, Uri, string?>? ancestor = null, DeploymentResolutionBehavior behavior = DeploymentResolutionBehavior.Enforce)
+    {
+        (current, this.native, this.local, this.ancestor, this.behavior) = (new(generation), native, local, ancestor, behavior);
+        foreach (var root in generation.LinkedRoots) linkedTargets.Add(root.Name, root.Directory);
+    }
     private DeploymentPackageResolver(Func<string, Uri, string?> native) => (current, this.native) = (new(null), native);
     /// <summary>
     /// Performs the native operation.
@@ -231,16 +251,22 @@ public sealed class DeploymentPackageResolver
                 throw new DeploymentRestartRequiredException("A generation cannot change its profile scope.");
             foreach (var entry in current.Entries.Values)
             {
-                if (!next.Entries.TryGetValue(entry.Name, out var replacement) || !SamePath(entry.Directory, replacement.Directory) || !SamePath(entry.Declarer, replacement.Declarer) || entry.Version != replacement.Version || entry.Scope != replacement.Scope)
+                if (!next.Entries.TryGetValue(entry.Name, out var replacement) || !SameCanonicalPath(current.Targets[entry.Name].Directory, next.Targets[entry.Name].Directory) || !SameCanonicalPath(current.Targets[entry.Name].Declarer, next.Targets[entry.Name].Declarer) || entry.Version != replacement.Version || entry.Scope != replacement.Scope)
                     throw new DeploymentRestartRequiredException($"Replacing package '{entry.Name}' requires a process restart.");
             }
 
             foreach (var name in old.LocalPackageNames)
                 if (!generation.LocalPackages.ContainsKey(name))
                     throw new DeploymentRestartRequiredException($"Removing local package '{name}' requires a process restart.");
+                else if (!SameCanonicalPath(current.LocalTargets[name], next.LocalTargets[name]))
+                    throw new DeploymentRestartRequiredException($"Replacing local package '{name}' requires a process restart.");
             foreach (var name in generation.LocalPackageNames)
                 if (!old.LocalPackages.ContainsKey(name) && current.Entries.ContainsKey(name))
                     throw new DeploymentRestartRequiredException($"Overriding package '{name}' locally requires a process restart.");
+            foreach (var root in generation.LinkedRoots)
+                if (linkedTargets.TryGetValue(root.Name, out var previous) && !SameCanonicalPath(previous, root.Directory))
+                    throw new DeploymentRestartRequiredException($"Relinking package '{root.Name}' requires a process restart.");
+            foreach (var root in generation.LinkedRoots) linkedTargets.TryAdd(root.Name, root.Directory);
             current = next;
         }
     }
@@ -286,7 +312,7 @@ public sealed class DeploymentPackageResolver
     {
         var expected = Resolve(state, name, parent);
         var generation = state.Generation;
-        bool scoped = parent.IsFile && generation is not null && (Within(parent.LocalPath, generation.ProfilesDirectory) || generation.ProfileDirectory is not null && Within(parent.LocalPath, generation.ProfileDirectory));
+        bool scoped = parent.IsFile && generation is not null && (Within(parent.LocalPath, generation.ProfilesDirectory) || generation.ProfileDirectory is not null && Within(parent.LocalPath, generation.ProfileDirectory) || IsLinkedImporter(state, parent.LocalPath));
         if (behavior != DeploymentResolutionBehavior.Verify || !scoped)
             return expected;
         var actual = native?.Invoke(name, parent);
@@ -303,7 +329,16 @@ public sealed class DeploymentPackageResolver
         bool active = parent.IsFile && generation.ProfileDirectory is not null && Within(parent.LocalPath, generation.ProfileDirectory);
         bool scoped = parent.IsFile && (active || Within(parent.LocalPath, generation.ProfilesDirectory));
         if (!scoped)
+        {
+            if (!parent.IsFile || !IsLinkedImporter(state, parent.LocalPath)) return native?.Invoke(name, parent);
+            if (local?.Invoke(name, parent) is { } privatePackage) return privatePackage;
+            if (state.Entries.TryGetValue(name, out var peer))
+            {
+                for (var directory = Path.GetDirectoryName(Canonical(parent.LocalPath)); directory is not null; directory = Path.GetDirectoryName(directory))
+                    if (DeclaresPeer(directory, name)) return peer.Directory;
+            }
             return native?.Invoke(name, parent);
+        }
         if (active && generation.LocalPackages.TryGetValue(name, out var installed))
             return installed;
         if (local?.Invoke(name, parent) is { } nearest)
@@ -318,6 +353,23 @@ public sealed class DeploymentPackageResolver
             profilesDirectory = canonicalProfiles;
         var after = new Uri(Path.Combine(Path.GetDirectoryName(profilesDirectory)!, "package.json"));
         return ancestor?.Invoke(name, after);
+    }
+
+    private static bool IsLinkedImporter(State state, string path)
+    {
+        var canonical = Canonical(path);
+        return state.Generation!.LinkedRoots.Any(root => LexicallyWithin(canonical, root.Directory))
+            && !state.Entries.Values.Any(entry => entry.Scope == DeploymentPackageScope.Installation && LexicallyWithin(canonical, state.Targets[entry.Name].Directory));
+    }
+
+    private static bool DeclaresPeer(string directory, string name)
+    {
+        try
+        {
+            var manifest = DeploymentGeneration.ReadManifest(Path.Combine(directory, "package.json"));
+            return manifest.TryGetProperty("peerDependencies", out var peers) && peers.ValueKind == JsonValueKind.Object && peers.TryGetProperty(name, out _);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or FormatException) { return false; }
     }
 
     /// <summary>
@@ -406,7 +458,8 @@ public sealed class DeploymentPackageResolver
     }
 
     private static bool SamePath(string left, string right) => string.Equals(Canonical(left), Canonical(right), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-    private static string Canonical(string path)
+    private static bool SameCanonicalPath(string left, string right) => string.Equals(left, right, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    internal static string Canonical(string path)
     {
         path = Path.GetFullPath(path);
         var directory = Path.GetDirectoryName(path);
@@ -434,13 +487,13 @@ public sealed class DeploymentModuleResolver(DeploymentPackageResolver packages,
     /// </summary>
     public DeploymentPackageResolver Packages => packages;
 
-    private readonly Dictionary<(string Directory, string Subpath), string> mappings = [];
+    private readonly Dictionary<(string Directory, string Subpath), string> mappings = new(new ModuleKeyComparer());
     /// <summary>
     /// Performs the register operation.
     /// </summary>
     public DeploymentModuleResolver Register(string packageDirectory, string subpath, string moduleSpecifier)
     {
-        mappings[(Path.GetFullPath(packageDirectory), subpath)] = moduleSpecifier;
+        mappings[(DeploymentPackageResolver.Canonical(packageDirectory), subpath)] = moduleSpecifier;
         return this;
     }
 
@@ -456,8 +509,16 @@ public sealed class DeploymentModuleResolver(DeploymentPackageResolver packages,
         if (directory is null)
             throw new FileNotFoundException($"Cannot resolve package '{name}' from '{baseUri}'.");
         var subpath = specifier.Length == name.Length ? "." : "." + specifier[name.Length..];
-        if (!mappings.TryGetValue((Path.GetFullPath(directory), subpath), out var target))
+        if (!mappings.TryGetValue((DeploymentPackageResolver.Canonical(directory), subpath), out var target))
             throw new FileNotFoundException($"Package '{name}' has no deployed CLR module '{subpath}' (importer '{baseUri}').");
         return modules.ResolveAsync(target, new Uri(Path.Combine(directory, "package.json")), cancellationToken);
+    }
+
+    private sealed class ModuleKeyComparer : IEqualityComparer<(string Directory, string Subpath)>
+    {
+        private static StringComparer Paths => OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        public bool Equals((string Directory, string Subpath) left, (string Directory, string Subpath) right)
+            => Paths.Equals(left.Directory, right.Directory) && StringComparer.Ordinal.Equals(left.Subpath, right.Subpath);
+        public int GetHashCode((string Directory, string Subpath) key) => HashCode.Combine(Paths.GetHashCode(key.Directory), StringComparer.Ordinal.GetHashCode(key.Subpath));
     }
 }

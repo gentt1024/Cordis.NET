@@ -128,7 +128,7 @@ public sealed class ConfigBindingTests
     {
         using var document = JsonDocument.Parse("""{"ignored":[1e999]}""");
         Assert.Contains("$['ignored'][0]", Assert.Single(Reject(Bind, document.RootElement).Issues));
-        foreach (var value in new object[] { new object(), (Action)(() => { }), Undefined.Value, new JsExpression("1"), float.NaN, DateTime.UnixEpoch })
+        foreach (var value in new object[] { new object(), (Action)(() => { }), Undefined.Value, new JsExpression("1"), new EntryOptions { ["__jsExpr"] = "1" }, float.NaN, DateTime.UnixEpoch })
             Assert.Contains("$['ignored'][0]", Assert.Single(Reject(Bind, new EntryOptions { ["ignored"] = new[] { value } }).Issues));
     }
 

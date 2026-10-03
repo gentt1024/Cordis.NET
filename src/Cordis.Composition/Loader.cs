@@ -232,51 +232,122 @@ public sealed class Entry
             return false;
         }
     }
-    internal Entry(Loader loader, EntryGroup parent) { Loader = loader; Parent = parent; Context = parent.Context.Extend(); Context.Metadata[MetadataKey] = this; }
-    private void PatchContext()
+    internal Entry(Loader loader, EntryGroup parent)
     {
-        Context.Reparent(Parent.Context);
-        var realms = new Dictionary<string, object>(StringComparer.Ordinal);
-        if (Options.GetValueOrDefault("isolate") is IDictionary<string, object?> isolates)
-            foreach (var pair in isolates)
-            {
-                if (!Data.Truthy(pair.Value)) continue;
-                if (pair.Value is true) { if (!localRealms.TryGetValue(pair.Key, out var realm)) localRealms[pair.Key] = realm = new object(); realms[pair.Key] = realm; }
-                else realms[pair.Key] = Loader.NamedRealm(pair.Key, Convert.ToString(pair.Value, System.Globalization.CultureInfo.InvariantCulture)!);
-            }
-        Context.SetIsolations(realms);
-        Context.SetIntercepts(Options.GetValueOrDefault("intercept") as IReadOnlyDictionary<string, object?> ?? new Dictionary<string, object?>());
+        Loader = loader;
+        Parent = parent;
+        Context = parent.Context.Extend();
+        Context.Metadata[MetadataKey] = this;
+    }
+    private void PatchContext(IReadOnlyList<string> changes)
+    {
+        Context.Events.WaterfallWith(Context, "loader/patch-context", () =>
+        {
+            Context.Reparent(Parent.Context);
+            var realms = new Dictionary<string, object>(StringComparer.Ordinal);
+            if (Options.GetValueOrDefault("isolate") is IDictionary<string, object?> isolates)
+                foreach (var pair in isolates)
+                {
+                    if (!Data.Truthy(pair.Value)) continue;
+                    if (pair.Value is true) { if (!localRealms.TryGetValue(pair.Key, out var realm)) localRealms[pair.Key] = realm = new object(); realms[pair.Key] = realm; }
+                    else realms[pair.Key] = Loader.NamedRealm(pair.Key, Convert.ToString(pair.Value, System.Globalization.CultureInfo.InvariantCulture)!);
+                }
+            Context.SetIsolations(realms);
+            Context.SetIntercepts(Options.GetValueOrDefault("intercept") as IReadOnlyDictionary<string, object?> ?? new Dictionary<string, object?>());
+            if (Fiber?.Uid is not null && (changes.Contains("config") || Options.Group)) Fiber.Update(Options.RawConfig, true);
+            return Undefined.Value;
+        }, this);
     }
     /// <summary>
     /// Refreshes async.
     /// </summary>
     public Task RefreshAsync() => Context.RunAsync(async _ => { if (Fiber is null && !Disabled) await InitAsync(); });
     /// <summary>
-    /// Updates async.
+    /// Apply partial options, committing compatible snapshots or following the ordinary lifecycle.
     /// </summary>
     public Task UpdateAsync(EntryOptions options, bool create = false, bool force = false) => Context.RunAsync(_ => UpdateCoreAsync(options, create, force));
     private async Task UpdateCoreAsync(EntryOptions options, bool create, bool force)
     {
         var previous = new EntryOptions(Options);
-        var oldConfig = Options.RawConfig;
         if (create) Options = options;
-        else foreach (var pair in options) { if (pair.Value is null) Options.Remove(pair.Key); else Options[pair.Key] = pair.Value; }
+        else
+        {
+            foreach (var pair in options)
+            {
+                if (pair.Value is null) Options.Remove(pair.Key);
+                else Options[pair.Key] = pair.Value;
+            }
+        }
         if (Subgroup is not null && Options.Config is IEnumerable<object?>) Options.Config = Data.Entries(Options.Config);
-        if (Disabled) { if (Fiber is not null) { Removing = true; await Fiber.DisposeAsync(); Fiber = null; Removing = false; } return; }
-        PatchContext();
+        if (Disabled)
+        {
+            if (Fiber is not null)
+            {
+                Removing = true;
+                // Detach only after teardown succeeds. A teardown error propagates
+                // with the Fiber and removal marker still present, as before.
+                await Fiber.DisposeAsync();
+                Fiber = null;
+                Removing = false;
+            }
+            return;
+        }
         if (Fiber?.Uid is not null)
         {
-            if (!force && Data.DeepEquals(previous, Options)) return;
-            if (!Data.DeepEquals(oldConfig, Options.RawConfig) || Options.Group) Fiber.Update(Options.RawConfig, true);
+            var changes = previous.Keys.Concat(Options.Keys).Distinct(StringComparer.Ordinal)
+                .Where(key => !(key == "config"
+                    ? ConfigDescriptor.StrictEquals(previous.GetValueOrDefault(key, Undefined.Value), Options.GetValueOrDefault(key, Undefined.Value))
+                    : Data.DeepEquals(previous.GetValueOrDefault(key, Undefined.Value), Options.GetValueOrDefault(key, Undefined.Value)))).ToArray();
+            var volatileOnly = changes.Length == 1 && changes[0] == "config"
+                && Fiber.State == FiberState.Active && ReferenceEquals(Context.ScopeParent, Parent.Context)
+                && Fiber.ConfigDescription?.IsVolatileOnly(previous.RawConfig, Options.RawConfig) == true;
+            var pending = volatileOnly && CommitVolatile() ? Array.Empty<string>() : changes;
+            if (pending.Length == 0 && !force) return;
+            Context.Events.EmitWith(Context, "loader/partial-dispose", this, previous, true);
+            PatchContext(pending);
         }
         else await InitAsync();
+    }
+    private bool CommitVolatile()
+    {
+        var fiber = Fiber!;
+        // Raw input belongs to the next activation even when this live validation fails.
+        fiber.RetainRawConfiguration(Options.RawConfig);
+        if (!fiber.HasConfigReferences) return true;
+        ConfigurationUpdate? candidate;
+        try
+        {
+            if (!fiber.TryPrepareConfigurationUpdate(Options.RawConfig, out candidate)) return false;
+        }
+        catch (Exception error)
+        {
+            Context.Logger.Warn($"volatile config update failed for {Options.Id}");
+            Context.Logger.Warn(error);
+            return true;
+        }
+        if (!candidate!.Commit()) return false;
+        if (candidate.ChangedPaths.Count == 0) return true;
+        var receiver = fiber.Context.Extend();
+        receiver.Filter = owner => ReferenceEquals(owner.Fiber, fiber);
+        // Every field is already published. Observer failures cannot roll back a
+        // subset of the snapshots or change this into an ordinary lifecycle update.
+        try { fiber.Context.Events.EmitWith(receiver, "loader/volatile-update", candidate.ChangedPaths); }
+        catch (Exception error) { Context.Logger.Warn(error); }
+        return true;
     }
     /// <summary>
     /// Performs the init async operation.
     /// </summary>
     public async Task InitAsync()
     {
-        try { await (Initializing ??= InitializeAsync()); } finally { Initializing = null; }
+        try
+        {
+            await (Initializing ??= InitializeAsync());
+        }
+        finally
+        {
+            Initializing = null;
+        }
         if (Fiber is not null) _ = NotifySettledAsync(Fiber);
     }
     private async Task NotifySettledAsync(Fiber fiber)
@@ -290,7 +361,10 @@ public sealed class Entry
         IPlugin plugin;
         try { plugin = await Loader.ResolveAsync(Options.Name, Parent.Tree.BaseUri); }
         catch (Exception error) { LastError = error; Loader.Report(error); return; }
-        PatchContext(); LastError = null; Removing = false; IsTreeCarrier = plugin is ITreeCarrierPlugin;
+        PatchContext([]);
+        LastError = null;
+        Removing = false;
+        IsTreeCarrier = plugin is ITreeCarrierPlugin;
         if (ReferenceEquals(plugin, Loader.Builtins["group"])) Options.Config = Data.Entries(Options.Config);
         Fiber = Context.Plugin(plugin, Options.RawConfig);
         // A resolved import still crosses the JavaScript import/activation checkpoint.
@@ -371,7 +445,7 @@ public sealed class Loader : EntryTree
         }, new EventOptions { Global = true });
         context.On("internal/update", (e, args) =>
         {
-            if (e.Receiver is Fiber fiber && roots.TryGetValue(fiber, out var entry) && args[1] is not true) { entry.Options.Config = args[0]; entry.Parent.Tree.Write(); }
+            if (e.Receiver is Fiber fiber && roots.TryGetValue(fiber, out var entry) && args[1] is not true) { entry.Options.Config = fiber.SimplifyConfiguration(args[0]); entry.Parent.Tree.Write(); }
             return e.Next();
         }, new EventOptions { Global = true, Prepend = true });
     }
@@ -386,7 +460,7 @@ public sealed class Loader : EntryTree
         var rows = fibers.Select(f => (Fiber: f, Entry: roots.GetValueOrDefault(f), Parent: f.Parent, Raw: roots.TryGetValue(f, out var entry) ? entry.Options.RawConfig : f.RawConfig)).ToArray();
         foreach (var row in rows) if (row.Entry is not null) row.Entry.Removing = true;
         foreach (var row in rows)
-            try { await row.Fiber.DisposeAsync(); } catch (Exception error) { Report(error); }
+            try { await row.Fiber.DisposeAsync(); } catch (Exception error) { ReportReplacementFailure(error); }
         var activated = new List<(Fiber Fiber, Entry? Entry)>();
         try
         {
@@ -402,7 +476,7 @@ public sealed class Loader : EntryTree
         catch
         {
             foreach (var row in activated)
-                try { await row.Fiber.DisposeAsync(); } catch (Exception error) { Report(error); }
+                try { await row.Fiber.DisposeAsync(); } catch (Exception error) { ReportReplacementFailure(error); }
             var restored = new List<Fiber>();
             foreach (var row in rows)
             {
@@ -412,13 +486,18 @@ public sealed class Loader : EntryTree
                     var fiber = row.Parent.Plugin(previous, row.Raw); restored.Add(fiber);
                     if (row.Entry is not null) row.Entry.Fiber = fiber;
                 }
-                catch (Exception error) { Report(error); }
+                catch (Exception error) { ReportReplacementFailure(error); }
             }
-            foreach (var fiber in restored) try { await fiber.WaitAsync(); } catch (Exception error) { Report(error); }
+            foreach (var fiber in restored) try { await fiber.WaitAsync(); } catch (Exception error) { ReportReplacementFailure(error); }
             throw;
         }
         finally { foreach (var row in rows) if (row.Entry is not null) row.Entry.Removing = false; }
     });
+    private void ReportReplacementFailure(Exception error)
+    {
+        try { Report(error); }
+        catch { /* Diagnostic observers cannot replace an activation error or interrupt recovery. */ }
+    }
     internal object NamedRealm(string name, string label) { if (!realms.TryGetValue((name, label), out var realm)) realms[(name, label)] = realm = new object(); return realm; }
     internal void Report(Exception error) { Diagnostic?.Invoke(error); }
     internal ValueTask<IPlugin> ResolveAsync(string name, Uri baseUri) => name.StartsWith("cordis:", StringComparison.Ordinal)

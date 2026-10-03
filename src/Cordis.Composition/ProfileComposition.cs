@@ -10,13 +10,27 @@ namespace Cordis.Composition;
 /// <param name="InstallationBundles">The installation bundles value.</param>
 /// <param name="LocalBundles">The local bundles value.</param>
 /// <param name="TelemetryDisabledEnv">The telemetry disabled env value.</param>
-public sealed record ProfileLaunch(Profile Profile, string Home, IReadOnlyList<ConfigurationLayer> Overlays, IReadOnlyDictionary<string, string> InstallationBundles, IReadOnlyDictionary<string, string>? LocalBundles = null, string? TelemetryDisabledEnv = null);
+public sealed record ProfileLaunch(Profile Profile, string Home, IReadOnlyList<ConfigurationLayer> Overlays, IReadOnlyDictionary<string, string> InstallationBundles, IReadOnlyDictionary<string, string>? LocalBundles = null, string? TelemetryDisabledEnv = null)
+{
+    /// <summary>Explicit running DSH identity. Null retains generic composition without DSH version policy.</summary>
+    public DshRuntimeIdentity? RuntimeIdentity { get; init; }
+    /// <summary>Optional sink for corrupt grant data and explicitly exempted compatibility warnings.</summary>
+    public Action<string>? CompatibilityWarning { get; init; }
+    /// <summary>Host-owned manifest lookup for static or CLR identifiers when DSH admission is enabled.</summary>
+    public Func<string, Uri, PackageManifest?>? ManifestLocator { get; init; }
+}
 /// <summary>
 /// Represents the profile refresh component.
 /// </summary>
 /// <param name="Layers">The layers value.</param>
 /// <param name="CurrentBundles">The current bundles value.</param>
-public sealed record ProfileRefresh(IReadOnlyList<ConfigurationLayer> Layers, IReadOnlyList<string> CurrentBundles);
+public sealed record ProfileRefresh(IReadOnlyList<ConfigurationLayer> Layers, IReadOnlyList<string> CurrentBundles)
+{
+    /// <summary>Manifest selection, including bundles that contributed no layer.</summary>
+    public IReadOnlyList<string> SelectedBundles { get; init; } = CurrentBundles;
+    /// <summary>Current load failures, in selection order.</summary>
+    public IReadOnlyList<SkippedBundle> SkippedBundles { get; init; } = [];
+}
 
 /// <summary>
 /// Represents the profile composition component.
@@ -26,16 +40,18 @@ public static class ProfileComposition
     /// <summary>Re-read bundle/profile/home sources while retaining the launch-time overlay values.</summary>
     public static async Task<ProfileRefresh> RefreshAsync(ProfileLaunch launch)
     {
-        var current = await Profiles.LoadAsync(launch.Profile.Directory, launch.InstallationBundles, launch.LocalBundles, userLayer: false);
+        var admission = launch.RuntimeIdentity is { } runtime
+            ? DshProfilePolicy.CreateAdmission(launch.Profile.Directory, runtime, launch.CompatibilityWarning) : null;
+        var current = await Profiles.LoadAsync(launch.Profile.Directory, launch.InstallationBundles, launch.LocalBundles, false, admission);
         var homePath = Path.Combine(launch.Home, "cordis.patch.yml");
-        var layers = current.Bundles.Select(bundle => new ConfigurationLayer(bundle.PatchPath, bundle.Patches))
+        var layers = current.Bundles.SelectMany(bundle => bundle.PatchLayers)
             .Append(new ConfigurationLayer(launch.Profile.UserLayer.Source, await Profiles.ReadPatchesAsync(launch.Profile.UserLayer.Source, true)))
             .Append(new ConfigurationLayer(homePath, await Profiles.ReadPatchesAsync(homePath, true))).Concat(launch.Overlays).ToList();
         // DSH's privacy opt-out is literal: even "0" and "false" disable telemetry.
         if (!string.IsNullOrEmpty(launch.TelemetryDisabledEnv) && Profiles.Compose(layers).Any(row => row.Id == "session-telemetry-otel"))
             layers.Add(new("DSH_TELEMETRY_DISABLED", [new() { Id = "session-telemetry-otel", Disabled = true }]));
         var names = current.Bundles.Select(b => b.Name).ToArray();
-        return new(layers, names);
+        return new(layers, names) { SelectedBundles = current.SelectedBundles, SkippedBundles = current.SkippedBundles };
     }
     /// <summary>
     /// Performs the flatten operation.

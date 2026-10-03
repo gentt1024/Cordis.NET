@@ -298,7 +298,12 @@ public sealed class UpstreamRegressions
         await System.IO.File.WriteAllTextAsync(System.IO.Path.Combine(local, "package.json"), "{\"dsh\":{\"bundle\":{\"patch\":\"cordis.patch.yml\"}}}");
         await System.IO.File.WriteAllTextAsync(System.IO.Path.Combine(local, "cordis.patch.yml"), "- insert:\n  - id: row\n    name: local\n");
         var fallback = await Profiles.LoadAsync(profile, new Dictionary<string, string>(), new Dictionary<string, string> { ["bundle"] = local }); Assert.Equal("local", Assert.Single(Profiles.Compose(fallback.Layers)).Name);
-        await Assert.ThrowsAsync<FileNotFoundException>(() => Profiles.LoadAsync(profile, new Dictionary<string, string>()));
+        // The fixed 0.2.0 target retains selection and reports bundle failures instead of aborting profile startup.
+        var missing = await Profiles.LoadAsync(profile, new Dictionary<string, string>());
+        Assert.Equal(["bundle"], missing.SelectedBundles); Assert.Empty(missing.Bundles);
+        Assert.Equal("bundle", Assert.Single(missing.SkippedBundles).Name);
+        Assert.Equal("Cannot resolve profile bundle 'bundle'.", missing.SkippedBundles[0].Reason);
+        Assert.Equal("bundle", Assert.Single(PackageManifest.Read(System.IO.Path.Combine(profile, "package.json")).Bundles));
     }
     private sealed class BooleanEvaluator : IExpressionEvaluator { public object Evaluate(string expression, Context context) => bool.Parse(expression); }
     private sealed class UndefinedEvaluator : IExpressionEvaluator { public object Evaluate(string expression, Context context) => Undefined.Value; }

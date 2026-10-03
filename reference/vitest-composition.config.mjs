@@ -3,9 +3,12 @@ import { resolve, dirname } from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
+import { readFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const root = resolve(process.env.CORDIS_DSH_REFERENCE);
-if (execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== 'ddefc45fbc7f8e46dd73185e68295696d1297887') throw new Error('Unpinned DSH');
+const pin = JSON.parse(readFileSync(new URL('../upstream.lock.json', import.meta.url), 'utf8')).harness.commit;
+const upgrade = pin === '639ed015397290b3745d163aafe02ffee4aa3f84';
+if (execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== pin) throw new Error('Unpinned DSH');
 if (execFileSync('git', ['-C', root, 'status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim()) throw new Error('DSH reference has modified tracked files');
 const local = {
   '@deepseek-ai/cordis': 'vendor/cordis/src/index.ts',
@@ -19,6 +22,7 @@ const local = {
   '@deepseek-ai/dsh-launch-environment': 'packages/util/launch-environment/src/index.ts',
   '@deepseek-ai/dsh-atomic-write': 'packages/util/atomic-write/src/index.ts',
   '@deepseek-ai/dsh-app-boot': 'packages/boot/app-boot/src/index.ts',
+  '@deepseek-ai/dsh-hmr': 'packages/boot/hmr/src/index.ts',
   '@deepseek-ai/dsh-system-prompt': 'packages/core/system-prompt/src/index.ts',
   '@deepseek-ai/dsh-scope': 'packages/core/scope/src/index.ts',
 };
@@ -41,12 +45,17 @@ export default defineConfig({
     'chokidar': require.resolve('chokidar'),
     'picomatch': require.resolve('picomatch'),
     '@babel/code-frame': require.resolve('@babel/code-frame'),
+    ...(upgrade ? { semver: require.resolve('semver'), '@eslint-community/regexpp': require.resolve('@eslint-community/regexpp') } : {}),
   } },
   test: {
     execArgv: ['--experimental-transform-types'],
     setupFiles: [resolve('reference/native-specifier-hooks.mjs')],
     server: { deps: { external: [/vendor[/\\]/] } },
-    include: ['packages/boot/app-boot/tests/*.spec.ts', 'packages/boot/hmr/tests/*.spec.ts'],
+    include: upgrade ? [
+      'scripts/loader-config-diff.spec.ts', 'scripts/loader-volatile-update.spec.ts', 'scripts/volatile-config.spec.ts',
+      'packages/boot/app-boot/tests/{app-boot,compatibility-preflight,config-reload,linked-resolution-matrix,loader-shape.compat,package-meta,plugin-compatibility,profile-compatibility,profile-plugins,profile-resolution-service,profile-resolution-worker-bootstrap,profile-resolution,profile-sanitize,profile,user-patches}.spec.ts',
+      'packages/boot/hmr/tests/*.spec.ts',
+    ] : ['packages/boot/app-boot/tests/*.spec.ts', 'packages/boot/hmr/tests/*.spec.ts'],
     testTimeout: 15000, fileParallelism: false, reporters: ['default', 'json'],
     outputFile: resolve('artifacts/verification/original-composition-reference.json'),
   },

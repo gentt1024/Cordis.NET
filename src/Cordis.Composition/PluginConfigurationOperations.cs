@@ -78,20 +78,20 @@ public sealed class PluginConfigurationOperations(ProfileLaunch launch, Include 
             return (PackageManifest.Read(Path.Combine(packageDirectory, "package.json")), packageDirectory);
         }
 
-        var selected = after.Bundles.Where(name => !oldDependencies.Contains(name) && !dependencies.Contains(name) || dependencies.Contains(name) && Resolve(name).Manifest.BundlePatch is not null).ToList();
+        var selected = after.Bundles.Where(name => !oldDependencies.Contains(name) && !dependencies.Contains(name) || dependencies.Contains(name) && Resolve(name).Manifest.HasBundleDeclaration).ToList();
         var plain = new List<string>();
         foreach (var name in dependencies)
         {
             if (oldDependencies.Contains(name))
                 continue;
             var package = Resolve(name);
-            if (package.Manifest.BundlePatch is not { } patch)
+            if (!package.Manifest.HasBundleDeclaration)
             {
                 plain.Add(name);
                 continue;
             }
 
-            await Profiles.ReadPatchesAsync(Path.Combine(package.Directory, patch));
+            await Profiles.ReadBundleAsync(name, package.Directory, package.Manifest);
             if (!selected.Contains(name))
                 selected.Add(name);
         }
@@ -126,7 +126,7 @@ public sealed class PluginConfigurationOperations(ProfileLaunch launch, Include 
     public async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync()
     {
         var profile = await Profiles.LoadAsync(launch.Profile.Directory, launch.InstallationBundles, launch.LocalBundles, userLayer: false);
-        var profileLayers = profile.Bundles.Select(bundle => new ConfigurationLayer(bundle.PatchPath, bundle.Patches)).Append(new ConfigurationLayer(PatchPath, await Profiles.ReadPatchesAsync(PatchPath, true)));
+        var profileLayers = profile.Bundles.SelectMany(bundle => bundle.PatchLayers).Append(new ConfigurationLayer(PatchPath, await Profiles.ReadPatchesAsync(PatchPath, true)));
         var rows = Flatten(Profiles.Compose(profileLayers)).ToArray();
         var result = new List<PluginConfigurationInfo>();
         await include.Context.RunAsync(_ =>
@@ -333,7 +333,7 @@ public sealed class PluginConfigurationOperations(ProfileLaunch launch, Include 
         if (!launch.InstallationBundles.TryGetValue(name, out var directory) && !(launch.LocalBundles?.TryGetValue(name, out directory) ?? false))
             throw new FileNotFoundException($"Cannot resolve bundle '{name}'.");
         var manifest = PackageManifest.Read(Path.Combine(directory!, "package.json"));
-        return manifest.BundlePatch is { } patch ? (manifest, await Profiles.ReadPatchesAsync(Path.Combine(directory!, patch))) : null;
+        return manifest.HasBundleDeclaration ? (manifest, (await Profiles.ReadBundleAsync(name, directory!, manifest)).Patches) : null;
     }
 
     private bool ProtectsManager(List<EntryOptions> patches) => Flatten(Profiles.Compose([new("bundle", patches)])).Any(row => ProtectedModules.Contains(row.Name) || include.Owner?.Id + ":" + row.Id == ownerEntryId);

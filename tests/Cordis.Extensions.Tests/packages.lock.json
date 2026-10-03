@@ -101,7 +101,7 @@
       "Cordis.NET.Composition": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.1.0-alpha.2, )",
+          "Cordis.NET.Core": "[0.2.0-alpha.1, )",
           "YamlDotNet": "[16.3.0, )"
         }
       },
@@ -111,14 +111,14 @@
       "Cordis.NET.Extensions": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Composition": "[0.1.0-alpha.2, )",
-          "Cordis.NET.Core": "[0.1.0-alpha.2, )"
+          "Cordis.NET.Composition": "[0.2.0-alpha.1, )",
+          "Cordis.NET.Core": "[0.2.0-alpha.1, )"
         }
       },
       "Cordis.NET.JavaScript": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Composition": "[0.1.0-alpha.2, )",
+          "Cordis.NET.Composition": "[0.2.0-alpha.1, )",
           "Jint": "[4.7.0, )"
         }
       },

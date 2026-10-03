@@ -243,8 +243,14 @@ public static class ApplicationBoot
         var priorFibers = snapshots.Values.Where(s => s.Fiber is not null).Select(s => (Fiber: s.Fiber!, Failed: s.Fiber!.State is FiberState.Failed or FiberState.Disposed)).ToArray();
         if (include.Owner is { } owner)
         {
-            var config = owner.Options.Config is IDictionary<string, object?> raw ? new EntryOptions(raw) : new EntryOptions { ["path"] = include.Options.Path };
-            config["patches"] = patches;
+            object config;
+            if (owner.Options.Config is IncludeOptions old) config = old with { Patches = patches };
+            else
+            {
+                var raw = owner.Options.Config is IDictionary<string, object?> values ? new EntryOptions(values) : new EntryOptions { ["path"] = include.Options.Path };
+                raw["patches"] = patches;
+                config = raw;
+            }
             await owner.UpdateAsync(new EntryOptions { Config = config });
         }
         else await include.UpdateOptionsAsync(include.Options with { Patches = patches });

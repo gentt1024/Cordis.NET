@@ -11222,7 +11222,7 @@
         "expect(() => loadProfile('t', 'demo', anchor, home)).toThrow('declares no dsh.bundle')"
       ],
       "dotnet": [
-        "Cordis.Composition.Tests.ProfileOriginalTests.MissingBundleDeclarationFails"
+        "Cordis.Composition.Tests.ProfileOriginalTests.MissingBundleDeclarationIsSkippedWithItsReason"
       ],
       "platform": "JIT and static AOT data path; explicit CLR module/bundle mappings replace Node resolution",
       "status": "adapted-passed",
@@ -11230,7 +11230,7 @@
         "verification/publication-readiness/windows/test-map-evidence.json",
         "verification/publication-readiness/linux/test-map-evidence.json"
       ],
-      "note": "Original assertion behavior adapted to .NET typed errors, structured EntryDiagnostic metadata, explicit module mappings and serialized Context execution.",
+      "note": "Historical 0.1.6 source assertion expected startup failure. The fixed 0.2.0 target changes this to an atomic skipped bundle with reason and retained selection; the current named .NET regression tests that new contract. This historical disposition does not assert that the current implementation throws as the old source did.",
       "mappingSource": "tests/Cordis.Composition.Tests/upstream-map.json",
       "componentEvidence": [
         "dotnet test tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj -c Release --filter FullyQualifiedName~BootOriginalTests: 19 passed",

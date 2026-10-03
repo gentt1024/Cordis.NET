@@ -1,7 +1,7 @@
 # Attribution
 
 Cordis.NET is an independently maintained .NET implementation targeting the Cordis sources vendored in
-DeepSeek Harness at `ddefc45fbc7f8e46dd73185e68295696d1297887`. It is not an official
+DeepSeek Harness at `639ed015397290b3745d163aafe02ffee4aa3f84`. It is not an official
 DeepSeek, Cordiverse or Microsoft project. The lock distinguishes the Harness release label,
 vendored package version and source origins.
 

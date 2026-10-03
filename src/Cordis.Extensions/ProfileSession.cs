@@ -85,6 +85,12 @@ public sealed class ProfileSession : IAsyncDisposable
     /// Gets the error value.
     /// </summary>
     public event Action<Exception>? Error;
+    /// <summary>The latest manifest selection, including skipped bundles.</summary>
+    public IReadOnlyList<string> SelectedBundles { get; private set; } = [];
+    /// <summary>Bundles that contributed layers to the latest successful composition.</summary>
+    public IReadOnlyList<string> LoadedBundles { get; private set; } = [];
+    /// <summary>Current bundle failures, in manifest order.</summary>
+    public IReadOnlyList<SkippedBundle> SkippedBundles { get; private set; } = [];
     /// <summary>
     /// Gets the warning value.
     /// </summary>
@@ -116,7 +122,11 @@ public sealed class ProfileSession : IAsyncDisposable
                 session.Loader = new Loader(ctx, resolver, new Uri(Path.GetFullPath(configurationPath)), evaluator, session.Report);
                 if (prepare is not null) await prepare(ctx);
             });
-            session.Include = await ApplicationBoot.MountAsync(session.Loader, configurationPath, ProfileComposition.Flatten(refresh.Layers));
+            session.Include = session.launch.RuntimeIdentity is { } runtime
+                ? await DshProfilePolicy.MountAsync(session.Loader, configurationPath, session.launch.Profile.Directory, runtime,
+                    ProfileComposition.Flatten(refresh.Layers), session.packages, session.launch.CompatibilityWarning, session.launch.ManifestLocator)
+                : await ApplicationBoot.MountAsync(session.Loader, configurationPath, ProfileComposition.Flatten(refresh.Layers));
+            await session.AcceptBundlesAsync(refresh);
             await session.WarnInactiveAsync(await ApplicationBoot.AuditAsync(session.Loader, required));
             session.successfulProfileInputs = inputs;
             await session.SynchronizeWatchesAsync();
@@ -158,6 +168,7 @@ public sealed class ProfileSession : IAsyncDisposable
                 // can make its new code available without restarting the existing modules.
                 var refresh = await ProfileComposition.RefreshAsync(launch);
                 await WarnInactiveAsync(await ApplicationBoot.ReconcileAsync(Include, ProfileComposition.Flatten(refresh.Layers), required));
+                await AcceptBundlesAsync(refresh);
                 successfulProfileInputs = inputs;
                 successfulMappings = mappings;
                 acceptedInstallation = new(launch.InstallationBundles, StringComparer.Ordinal);
@@ -278,6 +289,18 @@ public sealed class ProfileSession : IAsyncDisposable
         foreach (var entry in entries)
         {
             var message = $"{entry.Id} ({entry.Module}): {entry.Error?.Message ?? "inactive"}";
+            await Context.RunAsync(ctx => { ctx.Logger.Warn(message); return Task.CompletedTask; });
+            try { Warning?.Invoke(message); } catch { }
+        }
+    }
+    private async Task AcceptBundlesAsync(ProfileRefresh refresh)
+    {
+        SelectedBundles = refresh.SelectedBundles;
+        LoadedBundles = refresh.CurrentBundles;
+        SkippedBundles = refresh.SkippedBundles;
+        foreach (var skipped in SkippedBundles)
+        {
+            var message = $"skipping profile bundle {ConfigurationFile.Write(skipped.Name, true).TrimEnd()}: {skipped.Reason}";
             await Context.RunAsync(ctx => { ctx.Logger.Warn(message); return Task.CompletedTask; });
             try { Warning?.Invoke(message); } catch { }
         }

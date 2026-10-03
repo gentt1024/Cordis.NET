@@ -6,7 +6,7 @@ Cordis.NET is a native .NET implementation of the plugin runtime and composition
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
 
-The behavior target is `deepseek-ai/deepseek-harness@ddefc45fbc7f8e46dd73185e68295696d1297887`, whose vendored `@deepseek-ai/cordis` reports version `4.0.2`. This project adapts observable contracts to .NET; it does not claim complete compatibility with arbitrary TypeScript plugins.
+The behavior target is `deepseek-ai/deepseek-harness@639ed015397290b3745d163aafe02ffee4aa3f84`, whose vendored `@deepseek-ai/cordis` reports version `4.0.4`. This project adapts observable contracts to .NET; it does not claim complete compatibility with arbitrary TypeScript plugins.
 
 ## Try it from source
 
@@ -44,6 +44,8 @@ The package IDs use the `Cordis.NET.*` prefix. CLR namespaces and assembly names
 - [Core concepts](docs/core-concepts.md)
 - [Compatibility and evidence](docs/compatibility.md)
 - [Upstream baseline and provenance](docs/upstream.md)
+- [DSH 0.2.0-rc.2 upgrade matrix](docs/upgrade-0.2.0-rc.2.md)
+- [Optional configuration descriptions](docs/configuration-description.md)
 - [Development and verification](docs/development.md)
 - [Security policy](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)

@@ -10,6 +10,8 @@ namespace Cordis.Composition;
 /// <param name="EnableLogs">The enable logs value.</param>
 public sealed record IncludeOptions(string Path, List<EntryOptions>? Initial = null, List<EntryOptions>? Patches = null, bool EnableLogs = false)
 {
+    /// <summary>Optional host-owned preparation of complete effective rows before import. File content remains unchanged.</summary>
+    public Func<List<EntryOptions>, Uri, List<EntryOptions>>? PrepareEntries { get; init; }
     /// <summary>
     /// Performs the from operation.
     /// </summary>
@@ -57,7 +59,11 @@ public sealed class Include : EntryTree
         var data = ConfigurationFile.ParseEntries(incoming, Path.GetExtension(Filename) == ".json");
         content = incoming; parsed = data; return true;
     }
-    private List<EntryOptions> Patched() => EntryPatches.Apply(parsed!, Options.Patches, message => Loader.Report(new InvalidOperationException(message)));
+    private List<EntryOptions> Patched()
+    {
+        var rows = EntryPatches.Apply(parsed!, Options.Patches, message => Loader.Report(new InvalidOperationException(message)));
+        return Options.PrepareEntries?.Invoke(rows, BaseUri) ?? rows;
+    }
     /// <summary>
     /// Starts async.
     /// </summary>

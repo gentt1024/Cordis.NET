@@ -21,6 +21,8 @@ public sealed class Fiber : IAsyncDisposable
     private string? _failurePhase;
     private object? _rawConfig;
     private object? _config;
+    private ConfigurationCell? _configurationCell;
+    private readonly Dictionary<string, object> _configurationReferences = new(StringComparer.Ordinal);
     internal Fiber(Runtime runtime, Context root)
     {
         _runtime = runtime;
@@ -104,6 +106,82 @@ public sealed class Fiber : IAsyncDisposable
     /// Gets the config value.
     /// </summary>
     public object? Config => Volatile.Read(ref _config);
+    /// <summary>The optional captured description of the Fiber's captured validator.</summary>
+    public ConfigDescriptor? ConfigDescription => Definition?.Configuration?.Descriptor;
+    /// <summary>Whether this activation has captured live configuration projections.</summary>
+    public bool HasConfigReferences => Definition?.Configuration?.Bindings.Count > 0;
+    /// <summary>Obtain an identity-stable readonly reference to an explicitly projected volatile field.</summary>
+    public ConfigReference<T> GetConfigReference<T>(string path)
+    {
+        Context.VerifyAccess();
+        ArgumentNullException.ThrowIfNull(path);
+        var binding = Definition?.Configuration?.Bindings.SingleOrDefault(binding => binding.Path == path)
+            ?? throw new KeyNotFoundException($"No volatile configuration field '{path}' is declared.");
+        if (binding.ValueType != typeof(T)) throw new InvalidCastException($"The configuration reference '{path}' has another value type.");
+        if (_configurationCell is null || !_configurationCell.State.Values.ContainsKey(path))
+            throw new InvalidOperationException($"The configuration field '{path}' cannot be snapshotted as its declared type.");
+        if (!_configurationReferences.TryGetValue(path, out var reference))
+            _configurationReferences.Add(path, reference = binding.CreateReference(_configurationCell));
+        return (ConfigReference<T>)reference;
+    }
+    /// <summary>Obtain the stable reference for an explicitly declared root whole-value boundary.</summary>
+    public ConfigReference<T> GetConfigReference<T>() => GetConfigReference<T>("");
+    /// <summary>Obtain a stable reference by its exact nested object-key path.</summary>
+    public ConfigReference<T> GetConfigReference<T>(IReadOnlyList<string> path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        return GetConfigReference<T>(ConfigBinding.DisplayPath(path));
+    }
+    /// <summary>Retain a Loader's latest raw input, including rejected candidates, without changing activation or effective values.</summary>
+    public void RetainRawConfiguration(object? raw)
+    {
+        Context.VerifyAccess();
+        _rawConfig = raw;
+    }
+    /// <summary>Convert an opted-in effective value to detached raw persistence data; legacy plugins retain their existing value.</summary>
+    public object? SimplifyConfiguration(object? effective)
+    {
+        Context.VerifyAccess();
+        if (Definition?.Configuration is not { } schema) return effective;
+        return schema.Simplify is null ? schema.Descriptor.Simplify(effective) : ConfigSnapshots.Create(schema.Simplify(effective));
+    }
+    /// <summary>Validate once and detach all volatile field candidates without publishing raw, effective, or reference values.</summary>
+    /// <remarks>False requests an ordinary lifecycle update. Validation exceptions propagate; no effective state changes.</remarks>
+    public bool TryPrepareConfigurationUpdate(object? raw, out ConfigurationUpdate? candidate)
+    {
+        Context.VerifyAccess();
+        candidate = null;
+        if (State != FiberState.Active || _uid < 0 || Definition?.Configuration is not { } schema || _configurationCell is not { } cell) return false;
+        var previous = cell.State;
+        var resolved = ResolveConfig(raw);
+        if (schema.Bindings.Count == 0 || schema.Descriptor.HasBlockedVolatilePlacement() ||
+            !schema.TryProject(resolved, out var values) || values.Count != previous.Values.Count ||
+            !(schema.OrdinaryEquality?.Invoke(Config, resolved) ?? schema.Descriptor.EffectiveEquals(Config, resolved))) return false;
+        candidate = new ConfigurationUpdate(this, cell, previous, values, resolved, raw);
+        return true;
+    }
+    internal bool CommitConfiguration(ConfigurationCell cell, ConfigurationState previous, ConfigurationState next)
+    {
+        if (State != FiberState.Active || _uid < 0 || !ReferenceEquals(cell, _configurationCell) || !ReferenceEquals(previous, cell.State)) return false;
+        // One publication switches every field snapshot together. Effective config
+        // keeps its activation identity; retired cells never receive later generations.
+        cell.State = next;
+        return true;
+    }
+    private void PublishConfiguration(object? resolved)
+    {
+        if (Definition?.Configuration is { } schema)
+        {
+            if (schema.Descriptor.HasBlockedVolatilePlacement())
+                throw new ConfigurationValidationException(["Volatile fields require a fixed object path without an enclosing volatile field."]);
+            schema.Descriptor.ValidateBindings(schema.Bindings);
+            if (!schema.TryProject(resolved, out var values))
+                throw new ConfigurationValidationException(["Volatile fields must project to their declared readonly snapshot types."]);
+            _configurationCell = new(new(values));
+            _configurationReferences.Clear();
+        }
+        _config = resolved;
+    }
     /// <summary>
     /// Gets the raw config value.
     /// </summary>
@@ -208,7 +286,7 @@ public sealed class Fiber : IAsyncDisposable
             await Task.Yield();
             if (_epoch == epoch)
             {
-                _config = ResolveConfig(_rawConfig);
+                PublishConfiguration(ResolveConfig(_rawConfig));
                 phase = "apply";
                 if (Definition is not null)
                     await Definition.Apply(Context, _config);
@@ -316,7 +394,7 @@ public sealed class Fiber : IAsyncDisposable
         var resolved = ResolveConfig(configuration);
         Context.Events.WaterfallWith(this, "internal/update", () =>
         {
-            _config = resolved;
+            PublishConfiguration(resolved);
             _error = null;
             _failurePhase = null;
             BeginRestart();
@@ -326,8 +404,11 @@ public sealed class Fiber : IAsyncDisposable
 
     private object? ResolveConfig(object? raw)
     {
-        var resolved = Context.Events.WaterfallWith(this, "internal/config", () => raw, raw);
-        return Definition is null ? resolved : Definition.ResolveConfig(resolved);
+        var input = Context.Events.WaterfallWith(this, "internal/config", () => raw, raw);
+        var resolved = Definition is null ? input : Definition.ResolveConfig(input);
+        if (Definition?.Configuration is { } schema)
+            schema.Descriptor.ResolveLazy(schema.DescriptionData is null ? input : schema.DescriptionData(resolved));
+        return resolved;
     }
 
     /// <summary>

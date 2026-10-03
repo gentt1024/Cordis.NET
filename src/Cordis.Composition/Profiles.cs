@@ -7,13 +7,66 @@ namespace Cordis.Composition;
 /// <param name="Patches">The patches value.</param>
 public sealed record ConfigurationLayer(string Source, List<EntryOptions> Patches);
 /// <summary>
-/// Represents the bundle component.
+/// Ordered file layers are the authoritative bundle data. Legacy properties are views over those layers.
 /// </summary>
 /// <param name="Name">The name value.</param>
 /// <param name="Directory">The directory value.</param>
 /// <param name="PatchPath">The patch path value.</param>
 /// <param name="Patches">The patches value.</param>
-public sealed record Bundle(string Name, string Directory, string PatchPath, List<EntryOptions> Patches);
+public sealed record Bundle(string Name, string Directory, string PatchPath, List<EntryOptions> Patches)
+{
+    private IReadOnlyList<ConfigurationLayer> layers = Array.AsReadOnly(new[] { new ConfigurationLayer(PatchPath, Patches) });
+
+    /// <summary>The primary file source, or an empty string for an empty declaration. Assignment relabels only the primary layer.</summary>
+    public string PatchPath
+    {
+        get => layers.FirstOrDefault()?.Source ?? "";
+        init
+        {
+            layers = Array.AsReadOnly(layers.Count == 0
+                ? [new ConfigurationLayer(value, [])]
+                : layers.Select((layer, index) => index == 0 ? layer with { Source = value } : layer).ToArray());
+        }
+    }
+
+    /// <summary>All patch rows in file order. Single-file bundles retain their mutable list; multi-file bundles return a flattened copy.</summary>
+    /// <remarks>Assignment replaces the entire bundle with one layer at the current primary source. Use PatchLayers to retain multiple file sources.</remarks>
+    public List<EntryOptions> Patches
+    {
+        get => layers.Count == 1 ? layers[0].Patches : layers.SelectMany(layer => layer.Patches).ToList();
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            layers = Array.AsReadOnly(new[] { new ConfigurationLayer(PatchPath, value) });
+        }
+    }
+
+    /// <summary>Declared patch sources in application order. Assignment relabels existing layers without changing their count.</summary>
+    /// <exception cref="ArgumentException">The source count differs from the layer count. Assign PatchLayers to replace the declaration.</exception>
+    public IReadOnlyList<string> PatchPaths
+    {
+        get => Array.AsReadOnly(layers.Select(layer => layer.Source).ToArray());
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            if (value.Count != layers.Count) throw new ArgumentException("PatchPaths must label every existing layer; use PatchLayers to change the declaration.", nameof(PatchPaths));
+            layers = Array.AsReadOnly(layers.Select((layer, index) => layer with { Source = value[index] }).ToArray());
+        }
+    }
+
+    /// <summary>Individual file layers preserve patch provenance and file-relative inserted modules.</summary>
+    public IReadOnlyList<ConfigurationLayer> PatchLayers
+    {
+        get => layers;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            layers = Array.AsReadOnly(value.ToArray());
+        }
+    }
+}
+/// <summary>A selected bundle that contributed no layer, with its load or admission failure.</summary>
+public sealed record SkippedBundle(string Name, string Reason);
 /// <summary>
 /// Represents the profile component.
 /// </summary>
@@ -23,10 +76,14 @@ public sealed record Bundle(string Name, string Directory, string PatchPath, Lis
 /// <param name="UserLayer">The user layer value.</param>
 public sealed record Profile(string Name, string Directory, IReadOnlyList<Bundle> Bundles, ConfigurationLayer UserLayer)
 {
+    /// <summary>Manifest selection, including bundles that failed to load.</summary>
+    public IReadOnlyList<string> SelectedBundles { get; init; } = Bundles.Select(bundle => bundle.Name).ToArray();
+    /// <summary>Failures in manifest selection order. Loading does not print diagnostics.</summary>
+    public IReadOnlyList<SkippedBundle> SkippedBundles { get; init; } = [];
     /// <summary>
     /// Gets the layers value.
     /// </summary>
-    public IEnumerable<ConfigurationLayer> Layers => Bundles.Select(b => new ConfigurationLayer(b.PatchPath, b.Patches)).Append(UserLayer);
+    public IEnumerable<ConfigurationLayer> Layers => Bundles.SelectMany(b => b.PatchLayers).Append(UserLayer);
 }
 
 /// <summary>Reads DSH composition metadata without treating npm dependencies as service injection.</summary>
@@ -48,7 +105,22 @@ public sealed class PackageManifest
     /// <summary>
     /// Gets the bundle patch value.
     /// </summary>
-    public string? BundlePatch => (Dsh?.GetValueOrDefault("bundle") as IDictionary<string, object?>)?.GetValueOrDefault("patch") as string;
+    public string? BundlePatch => BundlePatchFiles.FirstOrDefault();
+    /// <summary>Whether this package declares bundle metadata, independently of its patch count.</summary>
+    public bool HasBundleDeclaration => Dsh?.GetValueOrDefault("bundle") is IDictionary<string, object?>;
+    /// <summary>Ordered package-relative files. Invalid declarations fail rather than silently becoming plain packages.</summary>
+    public IReadOnlyList<string> BundlePatchFiles
+    {
+        get
+        {
+            if (!HasBundleDeclaration) return [];
+            var declared = ((IDictionary<string, object?>)Dsh!["bundle"]!).GetValueOrDefault("patch");
+            if (declared is string path) return [path];
+            if (declared is IEnumerable<object?> values)
+                return values.Select(value => value as string ?? throw new FormatException("dsh.bundle.patch must be a file path or a list of file paths.")).ToArray();
+            throw new FormatException("dsh.bundle.patch must be a file path or a list of file paths.");
+        }
+    }
     /// <summary>
     /// Gets the bundles value.
     /// </summary>
@@ -96,18 +168,42 @@ public static class Profiles
         var patch = Path.Combine(directory, "cordis.patch.yml"); if (!File.Exists(patch)) File.WriteAllText(patch, "[]\n");
     }
     /// <summary>Installation mappings have priority over profile mappings for bundle layers.</summary>
-    public static async Task<Profile> LoadAsync(string directory, IReadOnlyDictionary<string, string> installationBundles, IReadOnlyDictionary<string, string>? profileBundles = null, bool userLayer = true)
+    public static Task<Profile> LoadAsync(string directory, IReadOnlyDictionary<string, string> installationBundles, IReadOnlyDictionary<string, string>? profileBundles = null, bool userLayer = true)
+        => LoadAsync(directory, installationBundles, profileBundles, userLayer, null);
+    /// <summary>Load with an explicit bundle admission policy. Generic loading supplies no version policy.</summary>
+    public static async Task<Profile> LoadAsync(string directory, IReadOnlyDictionary<string, string> installationBundles, IReadOnlyDictionary<string, string>? profileBundles, bool userLayer, Action<PackageManifest>? admitBundle)
     {
         directory = Path.GetFullPath(directory); var manifest = PackageManifest.Read(Path.Combine(directory, "package.json")); var bundles = new List<Bundle>();
-        foreach (var name in manifest.Bundles)
+        var selected = manifest.Bundles; var skipped = new List<SkippedBundle>();
+        foreach (var name in selected)
         {
-            if (!installationBundles.TryGetValue(name, out var packageDirectory) && !(profileBundles?.TryGetValue(name, out packageDirectory) ?? false)) throw new FileNotFoundException($"Cannot resolve profile bundle '{name}'.");
-            var bundleManifest = PackageManifest.Read(Path.Combine(packageDirectory!, "package.json"));
-            var declaration = bundleManifest.BundlePatch ?? throw new FormatException($"Profile bundle '{name}' declares no dsh.bundle.patch.");
-            var patch = Path.GetFullPath(Path.Combine(packageDirectory!, declaration)); bundles.Add(new(name, packageDirectory!, patch, await ReadPatchesAsync(patch)));
+            try
+            {
+                if (!installationBundles.TryGetValue(name, out var packageDirectory) && !(profileBundles?.TryGetValue(name, out packageDirectory) ?? false)) throw new FileNotFoundException($"Cannot resolve profile bundle '{name}'.");
+                var bundleManifest = PackageManifest.Read(Path.Combine(packageDirectory!, "package.json"));
+                if (!bundleManifest.HasBundleDeclaration) throw new FormatException($"Profile bundle '{name}' declares no dsh.bundle in its package.json.");
+                admitBundle?.Invoke(bundleManifest);
+                bundles.Add(await ReadBundleAsync(name, packageDirectory!, bundleManifest));
+            }
+            catch (Exception error) { skipped.Add(new(name, error.Message)); }
         }
         var userPath = Path.Combine(directory, "cordis.patch.yml");
-        return new(Path.GetFileName(directory), directory, bundles, new(userPath, userLayer ? await ReadPatchesAsync(userPath, optional: true) : []));
+        return new(Path.GetFileName(directory), directory, bundles, new(userPath, userLayer ? await ReadPatchesAsync(userPath, optional: true) : []))
+        { SelectedBundles = selected, SkippedBundles = skipped };
+    }
+    internal static async Task<Bundle> ReadBundleAsync(string name, string directory, PackageManifest manifest)
+    {
+        var paths = manifest.BundlePatchFiles.Select(path => Path.GetFullPath(Path.Combine(directory, path))).ToArray();
+        var layers = new List<ConfigurationLayer>();
+        foreach (var path in paths) layers.Add(new(path, await ReadPatchesAsync(path)));
+        // Publish only after every declared file succeeds; an earlier prefix never leaks.
+        return new(name, directory, paths.FirstOrDefault() ?? "", []) { PatchLayers = layers };
+    }
+    /// <summary>Report each skipped selection once when the caller elects to report this load.</summary>
+    public static void ReportSkippedBundles(Profile profile, Action<string> report, string diagnosticName = "cordis")
+    {
+        foreach (var skipped in profile.SkippedBundles)
+            report($"{diagnosticName}: skipping profile bundle {ConfigurationFile.Write(skipped.Name, true).TrimEnd()}: {skipped.Reason}");
     }
     /// <summary>
     /// Reads patches async.

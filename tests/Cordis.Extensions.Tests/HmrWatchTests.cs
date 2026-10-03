@@ -7,6 +7,45 @@ namespace Cordis.Extensions.Tests;
 public sealed class HmrWatchTests
 {
     [Fact]
+    public async Task Initially_missing_parents_read_new_content_and_old_disposal_does_not_remove_replacement_watch()
+    {
+        var directory = Directory.CreateTempSubdirectory("cordis-hmr-missing-parents-");
+        try
+        {
+            await using var hmr = new HmrCoordinator();
+            var filename = Path.Combine(directory.FullName, "missing", "nested", "plugins.yml");
+            var observed = Channel.CreateUnbounded<string>();
+            async Task Refresh()
+            {
+                try { observed.Writer.TryWrite(await File.ReadAllTextAsync(filename)); }
+                catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { observed.Writer.TryWrite("missing"); }
+            }
+            var previous = hmr.WatchConfig(filename, Refresh);
+            await hmr.RunExclusiveAsync(async () =>
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(filename)!);
+                await File.WriteAllTextAsync(filename, "first");
+            });
+            await Expect("first");
+            await hmr.RunExclusiveAsync(() => File.WriteAllTextAsync(filename, "second"));
+            await Expect("second");
+            await previous.DisposeAsync();
+            await using var replacement = hmr.WatchConfig(filename, Refresh);
+            await Expect("second");
+            await previous.DisposeAsync();
+            Assert.Throws<InvalidOperationException>(() => hmr.WatchConfig(filename, Refresh));
+            await hmr.RunExclusiveAsync(() => File.WriteAllTextAsync(filename, "third"));
+            await Expect("third");
+            async Task Expect(string value)
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                while (await observed.Reader.ReadAsync(timeout.Token) != value) { }
+            }
+        }
+        finally { directory.Delete(true); }
+    }
+
+    [Fact]
     public async Task Include_refresh_waits_for_mutation_and_exact_path_is_not_reloaded_twice()
     {
         var directory = Directory.CreateTempSubdirectory("cordis-hmr-include-");

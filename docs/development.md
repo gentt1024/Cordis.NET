@@ -24,7 +24,8 @@ python scripts/check-docs.py
 ## Full gate
 
 ```console
-python scripts/verify.py
+python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/upgrade-packages
+python scripts/verify-authoring.py --aot --packages artifacts/upgrade-packages
 ```
 
 The full gate checks the locked SDK and dependencies, analyzers, tests, upstream source execution, differential scenarios, Native AOT, API shape, packages, and isolated consumers. Run it on Windows x64 and actual Linux x64 for release candidates. See [validation](validation.md) for the latest completed evidence and [compatibility](compatibility.md) for what that evidence means.

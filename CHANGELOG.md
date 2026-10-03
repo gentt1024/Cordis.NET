@@ -2,8 +2,22 @@
 
 ## [Unreleased]
 
+No changes beyond the unpublished `0.2.0-alpha.1` candidate below.
+
+## [0.2.0-alpha.1] - Unpublished
+
+- Fixed scalar configuration references retaining collectible effective objects and parent expression markers being compared as volatile child fields. Added declared host-framework manifests for self-contained ASP.NET CLR hosts, and run the deployment matrix through isolated NuGet consumers in the existing package gate.
+- Updated the pinned DSH behavior baseline to `639ed015397290b3745d163aafe02ffee4aa3f84` (`dsh-v0.2.0-rc.2`). Cordis.NET keeps its own prerelease version.
+- Added optional captured configuration descriptions, typed live projections, stable immutable references, and explicit ordinary equality and persistence adapters. Existing `IPlugin` and `Plugin<T>.Config` authoring remain supported.
+- Added ordered profile patch files, explicit DSH profile admission, linked resolver generations, and HMR candidate settlement and recovery. Generic Loader does not enforce DSH product version policy.
+- Preserved ordinary update/save/veto behavior. Compatible live updates retain the effective configuration and reference identities; invalid live input retains raw input without replacing running values. Restart and code replacement create new references and leave old references at their final values.
+- Migration: descriptor defaults and field paths must match the validator; POCO configurations need typed ordinary equality and save projections. Multi-file profiles apply patches in declaration order. Static Native AOT code changes require republishing; runtime CLR replacement remains a separate deployment path.
+- Lazy descriptions resolve only used input paths. Typed raw input can provide `WithDescriptionData`; lazy unions need a branch selector consistent with the validator. Descriptions with callbacks cannot be serialized as if those callbacks were data.
+- Updated reference-only `js-yaml` to 4.3.2 to address its recorded security advisories. Runtime NuGet dependencies are unchanged.
 - Prepared bilingual public documentation, package readmes, community templates, and documentation checks.
 - Replaced private handoff material and machine-specific raw logs with public summaries.
+
+This prerelease has not been published to NuGet. Release verification and remote publication are separate steps.
 
 ## [0.1.0-alpha.3] - 2026-09-22
 

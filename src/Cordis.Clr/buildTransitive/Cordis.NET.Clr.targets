@@ -1,0 +1,17 @@
+<Project>
+  <!-- A self-contained bundle has no shared-framework deps paths. Capture only
+       SDK-resolved framework references from the actual host, never app packages. -->
+  <Target Name="EmbedCordisHostFrameworks" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveReferences"
+          Condition="'$(NoBuild)' != 'true' and ('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe')">
+    <ItemGroup>
+      <_CordisClrReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'Cordis.Clr'" />
+      <_CordisHostFramework Include="@(ReferencePath)" Condition="'%(ReferencePath.FrameworkReferenceName)' != ''" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)CordisHostFrameworks.txt"
+                      Lines="@(_CordisHostFramework->'%(FrameworkReferenceName)|%(Filename)')"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" Condition="'@(_CordisClrReference)' != ''" />
+    <ItemGroup Condition="'@(_CordisClrReference)' != ''">
+      <EmbeddedResource Include="$(IntermediateOutputPath)CordisHostFrameworks.txt" LogicalName="Cordis.Clr.HostFrameworks.txt" />
+    </ItemGroup>
+  </Target>
+</Project>

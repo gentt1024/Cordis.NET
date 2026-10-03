@@ -7,17 +7,18 @@
     <Deterministic>true</Deterministic>
     <AnalysisLevel>latest</AnalysisLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.1.0-alpha.3</Version>
+    <Version>0.2.0-alpha.1</Version>
     <Authors>gentt1024 and Cordis.NET contributors</Authors>
     <Description>A native .NET implementation of the pinned DeepSeek Harness Cordis model.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>dotnet;plugin-system;modularity;cordis</PackageTags>
-    <PackageReleaseNotes>Optional authoring helpers, runnable CLR provider replacement, and expanded JIT/Native AOT deployment verification; pinned runtime semantics are preserved.</PackageReleaseNotes>
+    <PackageReleaseNotes>Optional configuration descriptions and stable references, ordered profile patch files, explicit DSH admission, resolver generations, and HMR/CLR recovery; source builds retain an independent Cordis.NET package version.</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/gentt1024/Cordis.NET.git</RepositoryUrl>
     <PackageProjectUrl>https://github.com/gentt1024/Cordis.NET</PackageProjectUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <EmbedAllSources>true</EmbedAllSources>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <IsPackable Condition="'$(IsPackable)' == ''">false</IsPackable>
   </PropertyGroup>
