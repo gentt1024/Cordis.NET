@@ -38,8 +38,8 @@ python scripts/verify-authoring.py --aot --packages artifacts/upgrade-packages
 
 | 实施片 | 状态 | 验收 |
 |---|---|---|
-| A：完整 typed 字段组合 | 已实现；最终验证待完成 | 实际手写/组合消费者、透明包装、live/普通更新、完整保存/默认往返、换代、collectible 正反例、JIT/AOT 与隔离包消费 |
-| B：一个字段编辑动作 | 待实施 | 既有 operations/session 所有权、校验、revision、失败后的保存值/生效值 |
+| A：完整 typed 字段组合 | 已实现；Windows JIT/AOT 与独立包消费验证通过 | 实际手写/组合消费者、透明包装、live/普通更新、完整保存/默认往返、换代、collectible 正反例、JIT/AOT 与隔离包消费 |
+| B：一个字段编辑动作 | 已实现；独立审查修正与定向消费者验证通过 | 既有 operations/session 所有权、校验、revision、失败后的保存值/生效值 |
 | C：一个设置视图 | 依赖 B，待实施 | 明确 live-only 合同、脱敏和 revision、实际 TypeScript 消费；不将 Core 描述图声称为 Schemastery 或 JSON Schema |
 | D：一个客户端制品交付动作 | 待实施 | 明确清单/入口合同、宿主交付、实际客户端执行和代际失效 |
 

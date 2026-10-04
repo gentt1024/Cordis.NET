@@ -46,13 +46,15 @@ public sealed record BundleConfigurationInfo(string Name, string? Version, strin
 /// <param name="Warnings">The warnings value.</param>
 public sealed record ConfigurationChange(bool Changed, string Application, string Target, bool Enabled, string? Error = null, string? Diagnostic = null, IReadOnlyList<EntryDiagnostic>? Warnings = null);
 /// <summary>Persistent profile configuration operations. Package installation and remote UI transport belong to the host.</summary>
-public sealed class PluginConfigurationOperations(ProfileLaunch launch, Include include, string? ownerEntryId = null)
+public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, Include include, string? ownerEntryId = null)
 {
     private readonly SemaphoreSlim mutation = new(1, 1);
     private string ManifestPath => Path.Combine(launch.Profile.Directory, "package.json");
     private string PatchPath => launch.Profile.UserLayer.Source;
     /// <summary>Set to the active host HMR coordinator's RunExclusiveAsync. Null means startup-only configuration.</summary>
     public Func<Func<Task>, Task>? RunExclusiveAsync { get; set; }
+    /// <summary>Optional session-owned reconciliation called inside the existing exclusive queue, without re-entering it.</summary>
+    public Func<IReadOnlySet<string>?, Task<IReadOnlyList<EntryDiagnostic>>>? ReconcileAsync { get; set; }
     /// <summary>Modules needed to retain the management path. Hosts may extend this set for their own control plane.</summary>
     public ISet<string> ProtectedModules { get; } = new HashSet<string>(["cordis:manager", "cordis:include", "cordis:loader", "cordis:timer", "@deepseek-ai/dsh-plugin-manager", "@deepseek-ai/cordis-plugin-loader", "@deepseek-ai/cordis-plugin-include", "@deepseek-ai/dsh-api-gateway", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-client-modules", "@deepseek-ai/dsh-client-ui-settings-plugin-inventory", "@deepseek-ai/dsh-client-ui-plugin-manager", "@deepseek-ai/dsh-host-plugin-inventory", "@deepseek-ai/dsh-typert-registry", "@deepseek-ai/dsh-api-remotes", "@deepseek-ai/cordis-plugin-timer", "@deepseek-ai/dsh-client-connection", "@deepseek-ai/dsh-host-frontend-static", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-hmr"], StringComparer.Ordinal);
     /// <summary>
@@ -227,6 +229,8 @@ public sealed class PluginConfigurationOperations(ProfileLaunch launch, Include 
     {
         if (RunExclusiveAsync is null)
             return [];
+        if (ReconcileAsync is { } reconcile)
+            return await reconcile(required);
         var refresh = await ProfileComposition.RefreshAsync(launch);
         return await ApplicationBoot.ReconcileAsync(include, ProfileComposition.Flatten(refresh.Layers), required);
     }

@@ -147,7 +147,18 @@ public static class ConfigurationFile
         using var output = new StringWriter(CultureInfo.InvariantCulture);
         var emitter = new Emitter(output); emitter.Emit(new StreamStart()); emitter.Emit(new DocumentStart()); WriteYaml(emitter, value); emitter.Emit(new DocumentEnd(true)); emitter.Emit(new StreamEnd()); return output.ToString();
     }
-    private static void WriteYaml(IEmitter emitter, object? value)
+    internal static string WriteFlow(object? value)
+    {
+        using var output = new StringWriter(CultureInfo.InvariantCulture);
+        var emitter = new Emitter(output);
+        emitter.Emit(new StreamStart());
+        emitter.Emit(new DocumentStart());
+        WriteYaml(emitter, value, true);
+        emitter.Emit(new DocumentEnd(true));
+        emitter.Emit(new StreamEnd());
+        return output.ToString().TrimEnd();
+    }
+    private static void WriteYaml(IEmitter emitter, object? value, bool flow = false)
     {
         if (value is IncludeOptions include) value = IncludeData(include);
         switch (value)
@@ -155,9 +166,9 @@ public static class ConfigurationFile
             case JsExpression expression: emitter.Emit(new Scalar(AnchorName.Empty, new TagName("tag:yaml.org,2002:js"), expression.Source, ScalarStyle.Plain, false, false)); break;
             case IDictionary<string, object?> expression when expression.TryGetValue("__jsExpr", out var source): emitter.Emit(new Scalar(AnchorName.Empty, new TagName("tag:yaml.org,2002:js"), (string)source!, ScalarStyle.Plain, false, false)); break;
             case IDictionary<string, object?> map:
-                emitter.Emit(new MappingStart()); foreach (var pair in map) { WriteYamlString(emitter, pair.Key); WriteYaml(emitter, pair.Value); }
+                emitter.Emit(new MappingStart(AnchorName.Empty, TagName.Empty, true, flow ? MappingStyle.Flow : MappingStyle.Block)); foreach (var pair in map) { WriteYamlString(emitter, pair.Key); WriteYaml(emitter, pair.Value, flow); }
                 emitter.Emit(new MappingEnd()); break;
-            case IEnumerable<object?> list: emitter.Emit(new SequenceStart(AnchorName.Empty, TagName.Empty, true, SequenceStyle.Block)); foreach (var item in list) WriteYaml(emitter, item); emitter.Emit(new SequenceEnd()); break;
+            case IEnumerable<object?> list: emitter.Emit(new SequenceStart(AnchorName.Empty, TagName.Empty, true, flow ? SequenceStyle.Flow : SequenceStyle.Block)); foreach (var item in list) WriteYaml(emitter, item, flow); emitter.Emit(new SequenceEnd()); break;
             case string text:
                 WriteYamlString(emitter, text); break;
             case double number when double.IsNaN(number): emitter.Emit(new Scalar(".nan")); break;

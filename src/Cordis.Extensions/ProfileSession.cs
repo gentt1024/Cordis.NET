@@ -59,6 +59,8 @@ public sealed class ProfileSession : IAsyncDisposable
     /// Gets the include value.
     /// </summary>
     public Include Include { get; private set; } = null!;
+    /// <summary>Profile mutations sharing this session's lifecycle queue and refresh ownership.</summary>
+    public PluginConfigurationOperations ConfigurationOperations { get; private set; } = null!;
     /// <summary>Null when automatic watching was not requested. Manual refresh remains available.</summary>
     public HmrCoordinator? Hmr { get; }
     /// <summary>
@@ -127,6 +129,16 @@ public sealed class ProfileSession : IAsyncDisposable
                     ProfileComposition.Flatten(refresh.Layers), session.packages, session.launch.CompatibilityWarning, session.launch.ManifestLocator)
                 : await ApplicationBoot.MountAsync(session.Loader, configurationPath, ProfileComposition.Flatten(refresh.Layers));
             await session.AcceptBundlesAsync(refresh);
+            session.ConfigurationOperations = new(session.launch, session.Include)
+            {
+                RunExclusiveAsync = session.queue.RunExclusiveAsync,
+                ReconcileAsync = async requiredEntries =>
+                {
+                    await session.RefreshCoreAsync(requiredEntries);
+                    if (session.RequiresRestart) throw new DeploymentRestartRequiredException("The profile deployment requires a host restart before configuration can be reconciled.");
+                    return await ApplicationBoot.AuditAsync(session.Loader, session.required);
+                },
+            };
             await session.WarnInactiveAsync(await ApplicationBoot.AuditAsync(session.Loader, required));
             session.successfulProfileInputs = inputs;
             await session.SynchronizeWatchesAsync();
@@ -146,9 +158,9 @@ public sealed class ProfileSession : IAsyncDisposable
         => await boot.ConfigureAwait(false) && (application is null || await application.ConfigureAwait(false));
 
     /// <summary>Serialize an explicit refresh with automatic configuration and code reloads.</summary>
-    public Task RefreshAsync() => queue.RunExclusiveAsync(RefreshCoreAsync);
+    public Task RefreshAsync() => queue.RunExclusiveAsync(() => RefreshCoreAsync());
 
-    private async Task RefreshCoreAsync()
+    private async Task RefreshCoreAsync(IReadOnlySet<string>? editedEntries = null)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         try
@@ -167,7 +179,9 @@ public sealed class ProfileSession : IAsyncDisposable
                 // Bundle selection only changes composition. An additive resolver generation
                 // can make its new code available without restarting the existing modules.
                 var refresh = await ProfileComposition.RefreshAsync(launch);
-                await WarnInactiveAsync(await ApplicationBoot.ReconcileAsync(Include, ProfileComposition.Flatten(refresh.Layers), required));
+                var requiredEntries = editedEntries is null ? required
+                    : new HashSet<string>((required ?? new HashSet<string>()).Concat(editedEntries), StringComparer.Ordinal);
+                await WarnInactiveAsync(await ApplicationBoot.ReconcileAsync(Include, ProfileComposition.Flatten(refresh.Layers), requiredEntries));
                 await AcceptBundlesAsync(refresh);
                 successfulProfileInputs = inputs;
                 successfulMappings = mappings;
@@ -221,7 +235,7 @@ public sealed class ProfileSession : IAsyncDisposable
             watches.Remove(path);
         }
         foreach (var path in paths)
-            if (!watches.ContainsKey(path)) watches.Add(path, queue.WatchConfig(path, RefreshCoreAsync));
+            if (!watches.ContainsKey(path)) watches.Add(path, queue.WatchConfig(path, () => RefreshCoreAsync()));
     }
 
     private async Task<string> ProfileInputSnapshotAsync()

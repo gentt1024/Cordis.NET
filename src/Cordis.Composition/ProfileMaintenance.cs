@@ -26,7 +26,7 @@ public sealed record ProfileReconciliation(ProfileInventory Inventory, IReadOnly
 /// <summary>
 /// Represents the profile maintenance component.
 /// </summary>
-public static class ProfileMaintenance
+public static partial class ProfileMaintenance
 {
     /// <summary>
     /// Performs the inventory operation.
@@ -177,21 +177,41 @@ public static class ProfileMaintenance
         public int Start { get; } = start;
         public int Column { get; } = column;
         public int End { get; set; }
+        public int ContentEnd { get; set; }
+        public int EndColumn { get; set; }
+        public int KeyStart { get; set; }
+        public bool Container { get; set; }
         public bool Flow { get; set; }
         public List<SyntaxNode> Children { get; } = [];
         public Dictionary<string, SyntaxNode> Fields { get; } = new(StringComparer.Ordinal);
     }
     private static SyntaxNode ReadNode(IParser parser)
     {
-        if (parser.TryConsume<Scalar>(out var scalar)) return new(checked((int)scalar.Start.Index), checked((int)scalar.Start.Column)) { End = checked((int)scalar.End.Index) };
-        if (parser.TryConsume<AnchorAlias>(out var alias)) return new(checked((int)alias.Start.Index), checked((int)alias.Start.Column)) { End = checked((int)alias.End.Index) };
+        if (parser.TryConsume<Scalar>(out var scalar)) return new(checked((int)scalar.Start.Index), checked((int)scalar.Start.Column)) { End = checked((int)scalar.End.Index), ContentEnd = checked((int)scalar.End.Index) };
+        if (parser.TryConsume<AnchorAlias>(out var alias)) return new(checked((int)alias.Start.Index), checked((int)alias.Start.Column)) { End = checked((int)alias.End.Index), ContentEnd = checked((int)alias.End.Index) };
         if (parser.TryConsume<SequenceStart>(out var sequence))
         {
-            var node = new SyntaxNode(checked((int)sequence.Start.Index), checked((int)sequence.Start.Column)) { Flow = sequence.Style == SequenceStyle.Flow };
-            while (!parser.Accept<SequenceEnd>(out _)) node.Children.Add(ReadNode(parser)); node.End = checked((int)parser.Consume<SequenceEnd>().Start.Index); return node;
+            var node = new SyntaxNode(checked((int)sequence.Start.Index), checked((int)sequence.Start.Column)) { Flow = sequence.Style == SequenceStyle.Flow, Container = true };
+            while (!parser.Accept<SequenceEnd>(out _)) node.Children.Add(ReadNode(parser));
+            var end = parser.Consume<SequenceEnd>();
+            node.End = checked((int)end.Start.Index);
+            node.ContentEnd = node.Flow ? checked(node.End + 1) : node.End;
+            node.EndColumn = checked((int)end.Start.Column);
+            return node;
         }
-        var mapping = parser.Consume<MappingStart>(); var result = new SyntaxNode(checked((int)mapping.Start.Index), checked((int)mapping.Start.Column)) { Flow = mapping.Style == MappingStyle.Flow };
-        while (!parser.Accept<MappingEnd>(out _)) { var key = parser.Consume<Scalar>(); result.Fields[key.Value] = ReadNode(parser); }
-        result.End = checked((int)parser.Consume<MappingEnd>().Start.Index); return result;
+        var mapping = parser.Consume<MappingStart>();
+        var result = new SyntaxNode(checked((int)mapping.Start.Index), checked((int)mapping.Start.Column)) { Flow = mapping.Style == MappingStyle.Flow, Container = true };
+        while (!parser.Accept<MappingEnd>(out _))
+        {
+            var key = parser.Consume<Scalar>();
+            var value = ReadNode(parser);
+            value.KeyStart = checked((int)key.Start.Index);
+            result.Fields[key.Value] = value;
+        }
+        var ending = parser.Consume<MappingEnd>();
+        result.End = checked((int)ending.Start.Index);
+        result.ContentEnd = result.Flow ? checked(result.End + 1) : result.End;
+        result.EndColumn = checked((int)ending.Start.Column);
+        return result;
     }
 }

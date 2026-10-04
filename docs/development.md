@@ -38,8 +38,8 @@ Work follows the completed application-scope matrix, using the fixed DSH revisio
 
 | Slice | State | Acceptance |
 |---|---|---|
-| A: complete typed field composition | Implemented; final verification pending | Real manual/composed consumer, transparent wrapper, live and ordinary updates, full save/default round trip, replacement, collectible controls, JIT/AOT and isolated packages |
-| B: one field-edit operation | Pending | Existing operations/session ownership, validation, revision, saved/effective failure outcomes |
+| A: complete typed field composition | Implemented; Windows JIT/AOT and independent package checks passed | Real manual/composed consumer, transparent wrapper, live and ordinary updates, full save/default round trip, replacement, collectible controls, JIT/AOT and isolated packages |
+| B: one field-edit operation | Implemented; independent review repairs and targeted consumer checks passed | Existing operations/session ownership, validation, revision, saved/effective failure outcomes |
 | C: one settings view | Pending after B | Explicit live-only contract, redaction and revision, real TypeScript consumer; no claim that Core's graph is Schemastery or JSON Schema |
 | D: one client artifact delivery | Pending | Explicit manifest/entry contract, host delivery, actual client execution and generation invalidation |
 
