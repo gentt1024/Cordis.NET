@@ -60,7 +60,8 @@ It shares explicit field projections across reference binding, ordinary comparis
 data and complete persistence without changing Core validation or update paths. Transparent
 plugin wrappers forward `IConfigurationPlugin` as well as `IPlugin`; dropping the optional
 declaration is a wrapper wiring defect, not a reason for runtime inference. No Maker source is
-changed or claimed verified here.
+changed here. Read-only inspection confirmed that the inspected Maker wrappers forward only
+the old interface; no Maker runtime validation is claimed.
 
 Field edits use `ProfileSession.ConfigurationOperations`, its existing exclusive queue and
 normal Loader validation/reconciliation. A content/activation hash fences stale writes;

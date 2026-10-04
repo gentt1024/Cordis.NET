@@ -2,6 +2,31 @@
 
 [English](validation.md)
 
+## 应用基础设施实施片，2026-10-04
+
+实现检查点 `06966e49bb287220c56d1a7e326d10f9800cbfb2` 使用 SDK 10.0.111，在 Windows x64 与 WSL2 中真实的 Ubuntu 24.04 x64 通过既有完整门禁。最后的消费者诊断修正 `9e6af99bcf248c316f1c4db3f42bba99e11daa07` 没有修改生产源码、断言或验证器条件；独立只读审查及两平台作者门禁复跑通过。最终交付文档另行绑定到这些未经改变的已验证源码。正式 upstream lock 与已发布 alpha.1 均未改变。
+
+| 检查 | 两平台实际结果 |
+|---|---|
+| Release 构建 / 原生测试 | 零警告；672 通过，零失败/跳过：Core 148、Composition 395、Extensions 100、Platform 29 |
+| 既有语义 | 35 个既有及 3 个升级成对 trace，在 JIT 与真实静态 Native AOT 下均与固定 DSH 一致；JIT 重复三次 |
+| 相关上游执行 | 具名五个应用/volatile 文件中的 109 项，另有 98 项来源 Core/Loader；属于参考侧执行，不是原生断言闭合 |
+| 新能力消费验收 | 手写/组合 typed 配置、字段编辑、真实 HTTP/未修改的 DSH form-model/store 消费；源码与隔离 NuGet 消费者均覆盖 JIT/AOT |
+| 指定原因拒绝 | 九个生产/客户端破坏版编译后因指定运行原因被拒绝，未放宽断言 |
+| 部署及制品 | CLR 私有依赖与 collectible 边界；framework-dependent 及 self-contained ASP.NET folder/single-file JIT 部署；八包检查、符号/checksum、离线消费者源码定位；可选适配器和安装后的 CLI |
+
+```console
+npm ci --prefix reference --ignore-scripts
+python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --upstream-test scripts/volatile-config.spec.ts --upstream-test scripts/loader-config-diff.spec.ts --upstream-test scripts/loader-volatile-update.spec.ts --upstream-test packages/boot/app-boot/tests/profile.spec.ts --upstream-test packages/boot/app-boot/tests/user-patches.spec.ts --aot --package --package-output artifacts/application-infrastructure-packages
+python scripts/verify-authoring.py --aot --packages artifacts/application-infrastructure-packages
+python -m unittest discover -s scripts/tests -p "test_*.py" -v
+python scripts/check-docs.py
+```
+
+两平台验证器自测均通过。原始报告、源码清单、包哈希、独立审查及实际命令保存于交付证据。Linux 成功 Git checkout 的 324 个原始源码哈希与冻结 ZIP 全部相同；首次 checkout 的两个换行差异使用冻结 bytes 替换，没有语义 Git diff。没有增加全仓 S0 或无关 DSH 套件。
+
+失败保留：Linux 旧 SDK 首次拒绝 restore；无 Git 导出随后通过运行时/AOT 检查，但因没有生成 SourceLink 记录而未通过符号打包。导出符号路径仍未关闭，源码 ZIP 的构建/运行和 Git checkout 的成功符号检查不能关闭该项。Node data URL 错误输出截断导致指定拒绝检查失败，随后独立审查诊断修正并复跑。托管 CI、远端 SourceLink 取源、浏览器 UI 渲染、其他 RID 和 Maker 产品运行均未执行。Settings 仍限定顶层 primitive/live SET-only；完整 schema 导出、reset/多字段、模块图、远程协议和安装工具仍是独立缺口。
+
 固定上游的语言文件用例在文件系统无法同时保存 `en.json` 与 `EN.json` 时调用 `context.skip()`。验证器将该准确断言及原因记录为跳过，不计为通过；仍拒绝失败、未知跳过和不一致的报告计数。Linux 在大小写敏感文件系统上执行该断言。这个参考侧能力结果与 .NET 测试结果分开记录，没有删除任何上游测试。
 
 ## 公开审查修复候选，2026-10-02
