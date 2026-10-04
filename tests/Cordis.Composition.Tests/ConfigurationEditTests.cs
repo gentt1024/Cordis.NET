@@ -159,6 +159,17 @@ public sealed class ConfigurationEditTests
         public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() => values.GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
+
+    [Fact]
+    public async Task Raw_snapshot_detaches_read_only_maps_from_host_authored_layers()
+    {
+        var backing = new Dictionary<string, object?> { ["value"] = "original" };
+        var config = new EntryOptions { ["limit"] = 1, ["label"] = "worker", ["extra"] = new ReadOnlyView(backing) };
+        await using var fixture = await Fixture.StartAsync(overlays: [new("host", [new() { Id = "worker", Config = config }])]);
+        var snapshot = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        backing["value"] = "mutated";
+        Assert.Equal("original", Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(snapshot.Raw["extra"])["value"]);
+    }
     [Fact]
     public async Task Field_edit_preserves_live_identity_validates_and_rejects_stale_revision()
     {
@@ -247,14 +258,15 @@ public sealed class ConfigurationEditTests
         public PluginConfigurationOperations Operations { get; private set; } = null!;
         public int Activations { get; private set; }
 
-        public static async Task<Fixture> StartAsync(string source = "# retained\n[]\n", bool inserted = false, bool whole = false)
+        public static async Task<Fixture> StartAsync(string source = "# retained\n[]\n", bool inserted = false, bool whole = false,
+            IReadOnlyList<ConfigurationLayer>? overlays = null)
         {
             var fixture = new Fixture();
             Directory.CreateDirectory(fixture.directory);
             Directory.CreateDirectory(fixture.Home);
             Profiles.Initialize(fixture.directory, []);
             await File.WriteAllTextAsync(fixture.Patch, source);
-            var launch = new ProfileLaunch(await Profiles.LoadAsync(fixture.directory, new Dictionary<string, string>()), fixture.Home, [], new Dictionary<string, string>(), new Dictionary<string, string>());
+            var launch = new ProfileLaunch(await Profiles.LoadAsync(fixture.directory, new Dictionary<string, string>()), fixture.Home, overlays ?? [], new Dictionary<string, string>(), new Dictionary<string, string>());
             IPlugin plugin = new Plugin<Settings>
             {
                 Configuration = ConfigObject<Settings>.Create(raw => raw is IReadOnlyDictionary<string, object?> map

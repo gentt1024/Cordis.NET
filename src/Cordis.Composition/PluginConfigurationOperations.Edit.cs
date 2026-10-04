@@ -184,7 +184,7 @@ public sealed partial class PluginConfigurationOperations
         if (raw is null || raw is Undefined) return new();
         if (raw is not IDictionary<string, object?> map || map.ContainsKey("__jsExpr")) throw new Refusal("opaque-configuration");
         _ = RawFingerprint(map);
-        return (EntryOptions)Data.Clone(map)!;
+        return (EntryOptions)DetachData(map)!;
     }
 
     private static object? DetachData(object? value) => value switch
