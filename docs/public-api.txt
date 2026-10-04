@@ -400,6 +400,13 @@ Cordis.Composition: Cordis.Composition.BundleConfigurationRow : System.Object [S
   Method System.String ToString() attrs= params= return=NotNull/NotNull
   Constructor Void .ctor(System.String, System.String, System.String) attrs= params=RowId:NotNull/NotNull ;ModuleName:NotNull/NotNull ;EntryId:Nullable/Nullable
   Method Void Deconstruct(System.String ByRef, System.String ByRef, System.String ByRef) attrs= params=RowId:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];ModuleName:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];EntryId:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.ClientArtifact : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property Int64 Length attrs= NotNull/Unknown get=True set=False init=False
+  Method System.IO.Stream OpenRead() attrs= params= return=NotNull/NotNull
+  Property System.String ETag attrs= NotNull/Unknown get=True set=False init=False
+  Property System.String PackageName attrs= NotNull/Unknown get=True set=False init=False
+  Property System.String Revision attrs= NotNull/Unknown get=True set=False init=False
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.ClientArtifact] CaptureAsync(Cordis.Composition.DeploymentPackageResolver, System.String, System.Uri, System.Threading.CancellationToken) attrs= params=packages:NotNull/NotNull ;packageName:NotNull/NotNull ;parent:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
 Cordis.Composition: Cordis.Composition.CommandLineArguments : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Cordis.EffectHandle Provide(Cordis.Context, System.Collections.Generic.IEnumerable`1[System.String], System.String) attrs= params=context:NotNull/NotNull ;arguments:NotNull/NotNull<NotNull/NotNull> ;serviceName:NotNull/NotNull optional="cmdlineArgs" [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
   Method System.Collections.Generic.IReadOnlyList`1[System.String] Get() attrs= params= return=NotNull/NotNull<NotNull/NotNull>
@@ -799,8 +806,10 @@ Cordis.Composition: Cordis.Composition.PluginConfigurationOperations : System.Ob
   Method System.Threading.Tasks.Task`1[Cordis.Composition.ConfigurationChange] SetBundleEnabledAsync(System.String, Boolean, System.Threading.CancellationToken) attrs= params=name:NotNull/NotNull ;enabled:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.ConfigurationChange] SetPluginEnabledAsync(System.String, Boolean, System.Threading.CancellationToken) attrs= params=entryId:NotNull/NotNull ;enabled:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.ConfigurationEditResult] EditConfigurationFieldAsync(System.String, System.Collections.Generic.IReadOnlyList`1[System.String], System.Object, System.String, Boolean, System.Threading.CancellationToken) attrs= params=entryId:NotNull/NotNull ;path:NotNull/NotNull<NotNull/NotNull> ;value:Nullable/Nullable ;expectedRevision:NotNull/NotNull ;liveOnly:NotNull/NotNull optional=false [System.Runtime.InteropServices.OptionalAttribute()];cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.ConfigurationEditResult] EditSettingsFieldAsync(System.String, System.String, System.Object, System.String, Cordis.Composition.SettingsPolicy, System.Threading.CancellationToken) attrs= params=entryId:NotNull/NotNull ;field:NotNull/NotNull ;value:Nullable/Nullable ;expectedRevision:NotNull/NotNull ;policy:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.ConfigurationSnapshot] ReadConfigurationAsync(System.String, System.Threading.CancellationToken) attrs= params=entryId:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.ProfileReconciliation] ReconcileDeployedPackagesAsync(System.String, Cordis.Composition.PackageManifest, System.Collections.Generic.IReadOnlyDictionary`2[System.String,System.String], System.Collections.Generic.IReadOnlyDictionary`2[System.String,System.String]) attrs= params=directory:NotNull/NotNull ;before:NotNull/NotNull ;installedPackages:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull> ;installationBundles:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull>  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.SettingsView] ReadSettingsAsync(System.String, Cordis.Composition.SettingsPolicy, System.Threading.CancellationToken) attrs= params=entryId:NotNull/NotNull ;policy:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.BundleConfigurationInfo]] ListBundlesAsync() attrs= params= return=NotNull/NotNull<NotNull/NotNull<NotNull/NotNull>>
   Method System.Threading.Tasks.Task`1[System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.PluginConfigurationInfo]] ListPluginsAsync() attrs= params= return=NotNull/NotNull<NotNull/NotNull<NotNull/NotNull>>
   Method System.Threading.Tasks.Task`1[System.String] PreviewAsync(Boolean) attrs= params=json:NotNull/NotNull optional=false [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
@@ -901,6 +910,34 @@ Cordis.Composition: Cordis.Composition.Profiles : System.Object [] flags=Public,
   Method System.Threading.Tasks.Task`1[System.Collections.Generic.List`1[Cordis.Composition.EntryOptions]] ReadPatchesAsync(System.String, Boolean) attrs= params=path:NotNull/NotNull ;optional:NotNull/NotNull optional=false [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull<NotNull/NotNull>>
   Method Void Initialize(System.String, System.Collections.Generic.IReadOnlyList`1[System.String]) attrs= params=directory:NotNull/NotNull ;bundles:NotNull/NotNull<NotNull/NotNull>  return=NotNull/NotNull
   Method Void ReportSkippedBundles(Cordis.Composition.Profile, System.Action`1[System.String], System.String) attrs= params=profile:NotNull/NotNull ;report:NotNull/NotNull<NotNull/NotNull> ;diagnosticName:NotNull/NotNull optional="cordis" [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.SettingsField : System.Object [System.IEquatable`1[Cordis.Composition.SettingsField]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.SettingsField) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Property Boolean Overridden attrs= NotNull/NotNull get=True set=True init=True
+  Method Cordis.Composition.SettingsField <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.Object Value attrs= Nullable/Nullable get=True set=True init=True
+  Property System.String Kind attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String Name attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.String, System.Object, Boolean) attrs= params=Name:NotNull/NotNull ;Kind:NotNull/NotNull ;Value:Nullable/Nullable ;Overridden:NotNull/NotNull
+  Method Void Deconstruct(System.String ByRef, System.String ByRef, System.Object ByRef, Boolean ByRef) attrs= params=Name:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Kind:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Value:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];Overridden:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.SettingsPolicy : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property System.Collections.Generic.IReadOnlyList`1[System.String] Fields attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
+  Property System.Collections.Generic.IReadOnlyList`1[System.String] HiddenFields attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
+  Constructor Void .ctor(System.Collections.Generic.IEnumerable`1[System.String], System.Collections.Generic.IEnumerable`1[System.String]) attrs= params=fields:NotNull/NotNull<NotNull/NotNull> ;hiddenFields:Nullable/Nullable<NotNull/NotNull> optional=null [System.Runtime.InteropServices.OptionalAttribute()]
+Cordis.Composition: Cordis.Composition.SettingsView : System.Object [System.IEquatable`1[Cordis.Composition.SettingsView]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.SettingsView) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.SettingsView <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.SettingsField] Fields attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True
+  Property System.Collections.Generic.IReadOnlyList`1[System.String] Diagnostics attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True
+  Property System.String EntryId attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String Revision attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.String, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.SettingsField], System.Collections.Generic.IReadOnlyList`1[System.String]) attrs= params=EntryId:NotNull/NotNull ;Revision:NotNull/NotNull ;Fields:NotNull/NotNull<NotNull/NotNull> ;Diagnostics:NotNull/NotNull<NotNull/NotNull>
+  Method Void Deconstruct(System.String ByRef, System.String ByRef, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.SettingsField] ByRef, System.Collections.Generic.IReadOnlyList`1[System.String] ByRef) attrs= params=EntryId:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Revision:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Fields:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()];Diagnostics:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.SkippedBundle : System.Object [System.IEquatable`1[Cordis.Composition.SkippedBundle]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.SkippedBundle) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull

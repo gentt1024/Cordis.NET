@@ -55,9 +55,11 @@ public sealed class ConfigurationEditTests
     [Fact]
     public async Task User_layer_insert_is_editable_and_unrelated_expression_remains_opaque()
     {
-        const string source = "# retained\n- insert:\n  - id: worker\n    name: worker\n    config: { limit: 1, label: worker }\n- id: absent\n  config: !!js throw new Error('must not run')\n";
+        const string source = "# retained\n- insert:\n  - id: worker\n    name: worker\n    config: { limit: 1, label: worker }\n- id: absent\n  insert: null\n  config: !!js throw new Error('must not run')\n";
         await using var fixture = await Fixture.StartAsync(source, inserted: true);
         var snapshot = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        var insertedView = await fixture.Operations.ReadSettingsAsync("root:worker", new SettingsPolicy(["limit"]));
+        Assert.True(Assert.Single(insertedView.Fields).Overridden);
         var result = await fixture.Operations.EditConfigurationFieldAsync("root:worker", ["limit"], 2, snapshot.Revision);
         Assert.True(result.Applied, result.Diagnostic);
         Assert.Equal(2, fixture.Loader.Resolve("root:worker").Fiber!.ConfigurationValues["limit"]);
@@ -119,6 +121,31 @@ public sealed class ConfigurationEditTests
         Assert.True(result.Applied, result.Diagnostic);
         var published = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(fixture.Loader.Resolve("root:worker").Fiber!.ConfigurationValues[""]);
         Assert.Equal("original", Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(published["extra"])["value"]);
+    }
+
+    [Fact]
+    public async Task Settings_read_and_submit_enforce_selection_redaction_and_live_only()
+    {
+        await using var fixture = await Fixture.StartAsync();
+        var policy = new SettingsPolicy(["limit", "label", "credential"], ["credential"]);
+        var before = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
+        var field = Assert.Single(before.Fields);
+        Assert.Equal("limit", field.Name);
+        Assert.Equal(1, field.Value);
+        Assert.False(field.Overridden);
+        Assert.Contains("credential: hidden", before.Diagnostics);
+        var hidden = await fixture.Operations.EditSettingsFieldAsync("root:worker", "credential", "must not save", before.Revision, policy);
+        Assert.Equal("field-not-offered", hidden.Error);
+        var ordinary = await fixture.Operations.EditSettingsFieldAsync("root:worker", "label", "new", before.Revision, policy);
+        Assert.Equal("field-not-offered", ordinary.Error);
+        var changed = await fixture.Operations.EditSettingsFieldAsync("root:worker", "limit", 2, before.Revision, policy);
+        Assert.True(changed.Applied, changed.Diagnostic);
+        var after = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
+        Assert.Equal(2, Assert.Single(after.Fields).Value);
+        Assert.True(after.Fields[0].Overridden);
+        Assert.Equal(1, fixture.Activations);
+        changed = await fixture.Operations.EditSettingsFieldAsync("root:worker", "limit", 3, before.Revision, policy);
+        Assert.Equal("conflict", changed.Error);
     }
 
     private sealed class ReadOnlyView(Dictionary<string, object?> values) : IReadOnlyDictionary<string, object?>
@@ -183,6 +210,28 @@ public sealed class ConfigurationEditTests
         Assert.Equal("overridden", overridden.Error);
         Assert.False(overridden.Saved);
         Assert.Equal(text, await File.ReadAllTextAsync(fixture.Patch));
+    }
+
+    [Fact]
+    public async Task Observer_failure_cannot_replace_success_or_primary_recovery_result()
+    {
+        await using var fixture = await Fixture.StartAsync();
+        var notifications = 0;
+        fixture.Operations.Changed += _ => throw new InvalidOperationException("observer rejected");
+        fixture.Operations.Changed += _ => notifications++;
+        var before = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        var changed = await fixture.Operations.EditConfigurationFieldAsync("root:worker", ["limit"], 2, before.Revision);
+        Assert.True(changed.Saved && changed.Applied, changed.Diagnostic);
+        Assert.Equal(2, fixture.Loader.Resolve("root:worker").Fiber!.ConfigurationValues["limit"]);
+        var text = await File.ReadAllTextAsync(fixture.Patch);
+        before = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        var failed = await fixture.Operations.EditConfigurationFieldAsync("root:worker", ["label"], "fail", before.Revision);
+        Assert.Equal("reconcile-failed", failed.Error);
+        Assert.Contains("activation rejected", failed.Diagnostic);
+        Assert.False(failed.Saved);
+        Assert.False(failed.Applied);
+        Assert.Equal(text, await File.ReadAllTextAsync(fixture.Patch));
+        Assert.Equal(2, notifications);
     }
 
     private sealed record Settings(int Limit, string Label);

@@ -44,8 +44,12 @@ public sealed partial class PluginConfigurationOperations
 
     /// <summary>Edit one fixed object-key path in its profile user layer, after normal validation and overlay checks.</summary>
     /// <remarks>Requires a fresh revision. Live-only requests also require an existing live binding and compatible effective ordinary values.</remarks>
-    public async Task<ConfigurationEditResult> EditConfigurationFieldAsync(string entryId, IReadOnlyList<string> path,
+    public Task<ConfigurationEditResult> EditConfigurationFieldAsync(string entryId, IReadOnlyList<string> path,
         object? value, string expectedRevision, bool liveOnly = false, CancellationToken cancellationToken = default)
+        => EditFieldCoreAsync(entryId, path, value, expectedRevision, liveOnly, cancellationToken);
+
+    private async Task<ConfigurationEditResult> EditFieldCoreAsync(string entryId, IReadOnlyList<string> path,
+        object? value, string expectedRevision, bool liveOnly, CancellationToken cancellationToken, SettingsPolicy? settings = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedRevision);
@@ -70,6 +74,8 @@ public sealed partial class PluginConfigurationOperations
                     entry = EditableEntry(entryId, refresh.Layers);
                     revision = Revision(entry, refresh.Layers);
                     if (revision != expectedRevision) throw new Refusal("conflict");
+                    if (settings is not null && (!settings.Allows(keys[0]) || !TrySettingsValue(entry, keys[0], out _, out _)))
+                        throw new Refusal("field-not-offered");
                     next = RawObject(entry.Options.Config);
                     SetField(next, keys, incoming);
                     // A successful SET must persist the same data, including null, expressions and non-finite numbers.
@@ -131,9 +137,24 @@ public sealed partial class PluginConfigurationOperations
                     error is ConfigurationValidationException ? "invalid-configuration" :
                     error is DeploymentRestartRequiredException ? "restart-required" : "operation-error", error.Message);
             }
-            finally { Changed?.Invoke("configuration"); }
+            finally { NotifyConfigurationChanged(); }
         }, cancellationToken);
         return result;
+    }
+
+    private void NotifyConfigurationChanged()
+    {
+        if (Changed is not { } changed) return;
+        foreach (Action<string> observer in changed.GetInvocationList())
+        {
+            try { observer("configuration"); }
+            catch (Exception error)
+            {
+                // A secondary observer cannot replace a durable result or a primary recovery failure.
+                try { include.Context.Logger.Warn("Configuration observer failed: " + error.Message); }
+                catch { /* Diagnostic sinks cannot change the already completed operation either. */ }
+            }
+        }
     }
 
     private async Task ConfigurationTransactionAsync(Func<Task> action, CancellationToken cancellationToken)

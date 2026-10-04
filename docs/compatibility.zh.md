@@ -25,6 +25,10 @@ Cordis.NET 不执行任意服务端 TypeScript 插件。JavaScript 原型、抛�
 
 `ConfigObject<T>` 是 Composition 中组合既有 `ConfigSchema<T>` 的作者适配，不是第二套 validator。它将显式、完整的数据字段投影组合为 live 绑定、严格普通比较及完整保存转换。默认值、校验、raw 往返和完整字段覆盖仍由作者负责。此源码新增能力尚未包含在已发布的 `0.2.0-alpha.1` 包中。
 
+字段编辑复用固定 ConfigEditor 的职责：所属层定位、正常 hook/校验、完整 raw 用户覆盖、overlay 拒绝、持久写入和协作恢复。为保留无关注释，原生编辑可保留 YAML flow 根。revision 使用原生内容/激活哈希；不能无损往返的 `Undefined` SET 会被拒绝，不改变运行时 sentinel 语义。部署需重启时在保存前拒绝。Settings 当前只暴露选中的顶层 primitive live 快照，并在提交时同样强制选择/脱敏政策。用户来源 presence 纳入唯一的同源 inserted row，是明确的原生适配，不按 effective 值比较推断。reset、多字段原子设置提交、完整 Schemastery 和 JSON Schema 导出仍是缺口。Core 不推断 secret 元数据，宿主必须显式提供 secret 政策。
+
+客户端制品通过部署包路由复用 `dsh.client.platform=web` 与 `exports['./client']`，真实路径检查覆盖目录链接。示例支持的适配是自包含 ESM、SHA-256 URL、ETag 和轮询失效；不声称外部 import、完整 DSH 模块图、RPC 或 UI 渲染已验证。既有作者验收门禁执行正确实现和定向破坏版。Node ESM 执行证据与浏览器渲染、上游源码测试分开记录。这些新增能力不改变正式行为锁或已发布包批次。
+
 部署解析代在既有包映射和本地映射之外接受显式外部链接根。每一代捕获链接的真实目标；撤下根只停止其调用者的路由，不卸载保留的模块。同名链接改指另一目标需要重启，即使中间曾撤下该根。链接的 peer 声明从当前祖先 manifest 读取；私有依赖查找仍由宿主提供，CLR 导出仍使用显式映射。这不安装 Node loader，也不模拟 Node exports、包自引用、CommonJS/ESM 差异或 worker 传播。
 
 HMR 等待候选生命周期完成；缺失服务时 fiber 可以停在 Pending。激活失败恢复原插件，后续清理、恢复或诊断观察者失败不会覆盖原始错误。保留的配置引用停留在该代最后提交的值，替换与恢复的 fiber 获得全新引用。若引用的泛型值类型属于可回收 bundle，宿主保留该引用也会保留 bundle，直到释放引用。CLR bundle 的私有托管依赖从影子副本或显式共享的宿主契约解析；无关的默认上下文程序集不能补齐缺失私有依赖。框架程序集仍使用运行时，原生库查找保留 CLR/操作系统的加载规则。

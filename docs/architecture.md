@@ -62,6 +62,24 @@ plugin wrappers forward `IConfigurationPlugin` as well as `IPlugin`; dropping th
 declaration is a wrapper wiring defect, not a reason for runtime inference. No Maker source is
 changed or claimed verified here.
 
+Field edits use `ProfileSession.ConfigurationOperations`, its existing exclusive queue and
+normal Loader validation/reconciliation. A content/activation hash fences stale writes;
+`Saved` and `Applied` describe separate outcomes. Recovery restores source and attempts
+normal reconciliation, without promising an atomic rollback of the entire live tree.
+`Fiber.ConfigurationValues` exports only detached published reference snapshots; it does
+not export or retain the plugin configuration object.
+
+`SettingsPolicy` is host selection/redaction above Core. The current view supports top-level
+primitive live fields and one SET; it does not export schema callbacks, defaults or ordinary
+raw values. The unchanged fixed DSH form model/store remain TypeScript in the example.
+The adapter maps draft tokens to their original host hashes, and rejects unsupported atomic
+multi-edit/reset requests. HTTP authentication and authorization belong to deployed hosts.
+
+`ClientArtifact` captures a deployed package's explicit web export and immutable bytes.
+SHA-256/ETag and self-contained ESM are explicit platform adaptations. The example polls
+content identities and returns 404 for retired URLs after acceptance; it does not emulate
+DSH's complete module graph, dependency bundler or notification protocol.
+
 ## Platform evidence
 
 The same scenario executable is published and executed under Native AOT, with

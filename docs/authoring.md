@@ -98,6 +98,22 @@ Use an explicit assembly and manifest resource name with `PatchResources.Read`; 
 
 `AuditAsync` reports module-resolution failures, missing dependencies and activation errors. `Fiber.FailurePhase` distinguishes configuration from Apply by the operation that actually failed, rather than guessing from exception type. Disabled-expression diagnostics retain their own phase. Original exceptions remain available for short-lived debugging. Convert each `EntryDiagnostic` with `ToSnapshot()` before retaining a report long term: the snapshot contains names, state, copied dependency names and error text. Do not retain the original `StartupException`, log argument objects or other plugin references merely because a snapshot also exists. Callback errors use the callback sink; CLR unload status uses `ClrUnloadObservation`.
 
+## Application configuration and client consumption
+
+Use the session's existing `ConfigurationOperations` rather than creating a second manager. Read a fresh configuration revision, then edit one fixed path. Ordinary fields keep normal restart behavior; `liveOnly` additionally requires a captured live boundary and compatible ordinary effective values. Handle `Saved`, `Applied` and recovery diagnostics separately. The original Config delegate and advanced `ConfigSchema<T>` authoring remain available.
+
+The example's primitive live view requires explicit host selection and hidden fields. Do not expose a raw configuration read as a browser settings response. Its transport is loopback-only demonstration code; deployed hosts provide authentication, authorization, request limits and their policy. The retained DSH form model stages drafts and saves through the real host. SET-only does not support inherited reset or splitting multi-field saves into sequential writes. Build and run from the repository root:
+
+```console
+npm ci --prefix reference --ignore-scripts
+node reference/node_modules/typescript/bin/tsc -p examples/Probes/client/tsconfig.json
+node scripts/build-application-client.mjs artifacts/application-client
+dotnet run --project examples/Probes/Probes.csproj -c Release -- --application-host http://127.0.0.1:17639/ artifacts/application-client
+node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/application-client
+```
+
+The final command runs in another terminal and mutates only the generated example artifact to verify a new content generation. Stop the demonstration host with POST `/stop`. The artifact layout uses the upstream web/client declaration, while immutable ESM delivery is a native adaptation. Full UI, module dependencies, JSON Schema export and installation tools remain separate future work. The existing authoring gate repeats this real client chain under source and independently consumed packages, including Native AOT when requested.
+
 ## Deployment and verification boundaries
 
 | Path | Code and configuration | Boundary |

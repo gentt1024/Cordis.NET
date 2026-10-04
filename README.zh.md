@@ -4,7 +4,7 @@
 
 Cordis.NET 忠实实现固定提交中 DSH 维护的 Cordis。仓库范围包含领域无关的运行时，以及构建、运行、配置、管理和交付模块化应用的通用基础设施。Core 保持领域无关；应用库和平台适配位于 Core 之上。
 
-当前提供生命周期与注入、Profile/Bundle/Patch 合成、运行会话协调、配置引用、插件启停与部署协调，以及可选的 CLR、Generic Host 和 JavaScript 适配。字段编辑、设置视图、客户端交付、CLI 应用调用和包工具适配属于范围内能力，目前尚未全部实现。Agent/LLM 业务、RSI 目标和 FSM 领域逻辑由产品承担。
+当前提供生命周期与注入、Profile/Bundle/Patch 合成、运行会话协调、配置引用、插件启停与部署协调，以及可选的 CLR、Generic Host 和 JavaScript 适配。最新源码还提供 typed 字段组合、revision 约束的字段编辑、primitive live 设置子集与捕获的 Web 客户端制品；Probes 示例演示其 HTTP/TypeScript 接入。完整设置/UI 协议、客户端模块图、CLI 应用调用和包工具适配仍是范围内缺口。Agent/LLM 业务、RSI 目标和 FSM 领域逻辑由产品承担。这些源码新增能力尚未包含在已发布的 `0.2.0-alpha.1` 批次中。
 
 Cordis.NET 由独立社区维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。
 

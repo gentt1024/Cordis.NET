@@ -98,6 +98,22 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 `AuditAsync` 报告模块解析失败、缺失依赖和激活错误。`Fiber.FailurePhase` 根据实际失败操作区分配置与 Apply，不通过异常类型猜测。disabled 表达式诊断保留自己的阶段。原始异常继续用于短期调试。长期保存报告前，对各项 `EntryDiagnostic` 调用 `ToSnapshot()`：快照只包含名称、状态、复制的依赖名称和错误文本。不能因为已经有快照，就继续永久保存原 `StartupException`、日志参数对象或其他插件引用。回调错误使用回调出口，CLR 卸载状态使用 `ClrUnloadObservation`。
 
+## 应用配置与客户端消费
+
+使用 Session 既有的 `ConfigurationOperations`，不另建 manager。读取新配置 revision 后编辑一个固定路径。普通字段保持原有重启行为；`liveOnly` 另要求已捕获的 live 边界及兼容的普通 effective 值。分别处理 `Saved`、`Applied` 与恢复诊断。旧 Config delegate 与高级 `ConfigSchema<T>` 作者入口继续保留。
+
+示例的 primitive live 视图要求宿主显式选择字段并指定隐藏字段。不要直接把 raw 配置读取暴露成浏览器 Settings 响应。传输只演示 loopback；部署宿主负责认证、授权、请求限制及自身政策。保留的 DSH 表单模型暂存草稿，通过真实宿主保存。SET-only 不支持继承 reset，也不把多字段保存拆成连续写入。在仓库根目录构建运行：
+
+```console
+npm ci --prefix reference --ignore-scripts
+node reference/node_modules/typescript/bin/tsc -p examples/Probes/client/tsconfig.json
+node scripts/build-application-client.mjs artifacts/application-client
+dotnet run --project examples/Probes/Probes.csproj -c Release -- --application-host http://127.0.0.1:17639/ artifacts/application-client
+node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/application-client
+```
+
+最后一条命令在另一终端运行，只修改生成的示例制品，以验证新的内容代。向 `/stop` 发送 POST 可结束示例宿主。制品布局复用上游 web/client 声明，不可变 ESM 交付是原生适配。完整 UI、模块依赖、JSON Schema 导出和安装工具仍是后续独立工作。既有作者门禁在源码与独立包消费中重复这条真实客户端链，指定时包含 Native AOT。
+
 ## 部署与验证边界
 
 | 路线 | 代码与配置 | 边界 |

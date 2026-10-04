@@ -3,6 +3,12 @@ using Cordis.Composition;
 using Cordis.Example.Probes;
 using Cordis.Extensions;
 
+if (args is ["--application-host", var prefix, var clientDirectory])
+{
+    await ApplicationHost.RunAsync(prefix, clientDirectory);
+    return;
+}
+
 await using var root = new Context();
 await root.RunAsync(async ctx =>
 {
