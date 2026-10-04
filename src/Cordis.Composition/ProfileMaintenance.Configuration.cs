@@ -14,7 +14,7 @@ public static partial class ProfileMaintenance
         parser.Consume<DocumentStart>();
         var root = ReadNode(parser);
         var matches = rows.Select((row, index) => (row, index)).Where(item => item.row.Id == id
-            && !item.row.ContainsKey("insert") && (item.row.Name.Length == 0 || item.row.Name == name)).ToArray();
+            && !Data.Truthy(item.row.GetValueOrDefault("insert")) && (item.row.Name.Length == 0 || item.row.Name == name)).ToArray();
 
         // Keep a flow root in place so comments attached to unrelated rows survive.
         // This is a source-format adaptation; the same parsed patch document is applied.

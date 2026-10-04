@@ -215,12 +215,13 @@ public sealed partial class PluginConfigurationOperations
         _ => "/" + string.Join("/", keys.Select(key => key.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal))),
     };
 
-    // The user layer may define the target itself. Its inserts and unrelated patches are inheritance.
+    // Preserve real inserts and unrelated patches as inheritance. Falsey insert values
+    // are ordinary overrides, just as in EntryPatches.Apply.
     private static List<EntryOptions> WithoutConfigurationOverride(IEnumerable<EntryOptions> patches, string id)
         => patches.Select(patch =>
         {
             var copy = (EntryOptions)Data.Clone(patch)!;
-            if (copy.Id == id && !copy.ContainsKey("insert")) copy.Remove("config");
+            if (copy.Id == id && !Data.Truthy(copy.GetValueOrDefault("insert"))) copy.Remove("config");
             return copy;
         }).ToList();
 

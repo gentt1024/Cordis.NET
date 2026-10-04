@@ -35,6 +35,8 @@ HMR awaits candidate lifecycle settlement, which may leave a fiber Pending until
 
 Cooperative unload observer errors are exposed as text snapshots in `ClrUnloadObservation.UnloadError`, without retaining the exception instance or its collectible type. `UnloadRequested` records an attempt; `IsCollected` observes the managed load-context wrapper. An `Unloading` handler that throws can interrupt physical release even after that wrapper is collected, leaving shadow DLLs locked. The host must repair or remove the failing handler and explicitly request `Unload()` again while it still holds the actual context; the adapter does not retry automatically. Shadow deletion is a separate result and can remain blocked by retained references or interrupted release.
 
+Patch source loading, field editing and Settings attribution treat falsey `insert` values (including `null` and `false`) as ordinary overrides, following the pinned Include application rule. The pinned ConfigEditor instead uses undefined or field-presence checks; inheritance restoration here deliberately follows Include so returning to the inherited configuration removes the effective override and permits later base updates. Real inserts, unrelated fields and source comments retain the existing editing contract.
+
 ## Evidence
 
 The latest completed run is summarized in [validation](validation.md). `docs/upstream-tests.json` is the immutable candidate inventory; `docs/test-map.json` contains current dispositions; `docs/scenario-map.json` records differential scenarios. Upstream source execution, .NET tests, paired traces, and manual assertion review remain separate evidence categories.

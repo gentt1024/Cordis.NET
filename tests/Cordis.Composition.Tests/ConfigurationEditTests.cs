@@ -52,6 +52,53 @@ public sealed class ConfigurationEditTests
         Assert.Equal(1, fixture.Loader.Resolve("root:worker").Fiber!.ConfigurationValues["limit"]);
     }
 
+    [Theory]
+    [InlineData("null", false)]
+    [InlineData("false", false)]
+    [InlineData("null", true)]
+    [InlineData("false", true)]
+    public async Task Falsey_insert_override_can_return_to_inheritance(string insertion, bool flow)
+    {
+        var source = flow
+            ? $"# retained\n[{{ id: worker, insert: {insertion}, note: keep, config: {{ limit: 2, label: worker }} }},\n # unrelated documentation\n {{ id: absent, config: !!js throw new Error('must not run') }}]\n"
+            : $"# retained\n- id: worker\n  insert: {insertion}\n  note: keep\n  config: {{ limit: 2, label: worker }}\n# unrelated documentation\n- id: absent\n  config: !!js throw new Error('must not run')\n";
+        await using var fixture = await Fixture.StartAsync(source);
+        var policy = new SettingsPolicy(["limit"]);
+        var before = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
+        Assert.Equal(2, Convert.ToInt32(Assert.Single(before.Fields).Value));
+        Assert.True(Assert.Single(before.Fields).Overridden);
+        var fiber = fixture.Loader.Resolve("root:worker").Fiber;
+
+        var result = await fixture.Operations.EditConfigurationFieldAsync("root:worker", ["limit"], 1, before.Revision);
+        Assert.True(result.Saved && result.Applied, result.Diagnostic);
+        var view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
+        Assert.Equal(1, Convert.ToInt32(Assert.Single(view.Fields).Value));
+        var text = await File.ReadAllTextAsync(fixture.Patch);
+        Assert.False(Assert.Single(view.Fields).Overridden, text);
+        var rows = ConfigurationFile.ParseEntries(text);
+        var retained = Assert.Single(rows, row => row.Id == "worker");
+        Assert.False(retained.ContainsKey("config"));
+        Assert.Equal(ConfigurationFile.Parse(insertion), retained["insert"]);
+        Assert.Equal("keep", retained["note"]);
+        Assert.Equal(2, rows.Count);
+        Assert.Contains("# retained", text);
+        Assert.Contains("# unrelated documentation", text);
+        Assert.Contains("config: !!js throw new Error('must not run')", text);
+
+        await File.WriteAllTextAsync(fixture.Include.Filename,
+            "- id: worker\n  name: worker\n  config: { limit: 3, label: worker }\n");
+        await fixture.Loader.Context.RunAsync(async _ =>
+        {
+            await fixture.Include.RefreshAsync();
+            await fixture.Loader.WaitAsync();
+        });
+        view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
+        Assert.Equal(3, Convert.ToInt32(Assert.Single(view.Fields).Value));
+        Assert.False(Assert.Single(view.Fields).Overridden);
+        Assert.Same(fiber, fixture.Loader.Resolve("root:worker").Fiber);
+        Assert.Equal(text, await File.ReadAllTextAsync(fixture.Patch));
+    }
+
     [Fact]
     public async Task User_layer_insert_is_editable_and_unrelated_expression_remains_opaque()
     {
