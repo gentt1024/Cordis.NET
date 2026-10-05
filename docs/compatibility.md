@@ -46,6 +46,8 @@ For a DSH-enabled NuGet host, explicitly set `ProfileLaunch.CompatibilityPackage
 
 HTTP management authorizes the same endpoint-specific resource that it executes. Plugin/bundle enable uses `target`, removal and package inspection use `name`, active installation wait/cancel use `requestId`, and exemptions use the canonical `packageVersion`. Configuration/Settings use `entryId`; client artifacts use their package route. Extra fields cannot substitute another authorization target. Inventory and event streams require their operation-level permission with no individual resource.
 
+The native management `Changed` event isolates each synchronous observer's failure and logs it without replacing a completed operation's result or preventing later observers. It does not alter Core's event semantics. Enablement and bundle selection persist before reconciliation; a failed application result can leave those files saved. Field-edit recovery retains its separate contract.
+
 ## Evidence
 
 The latest completed run is summarized in [validation](validation.md). `docs/upstream-tests.json` is the immutable candidate inventory; `docs/test-map.json` contains current dispositions; `docs/scenario-map.json` records differential scenarios. Upstream source execution, .NET tests, paired traces, and manual assertion review remain separate evidence categories.

@@ -125,8 +125,10 @@ public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, 
     }
 
     /// <summary>
-    /// Performs the list plugins async operation.
+    /// List mounted entries with their current state and profile management addresses.
     /// </summary>
+    /// <remarks>Reads current profile sources without refreshing the runtime or evaluating configuration expressions.
+    /// Protected or ambiguous entries remain listed with a read-only reason. Profile manifest and user patch read or parse failures propagate.</remarks>
     public async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync()
     {
         var profile = await Profiles.LoadAsync(launch.Profile.Directory, launch.InstallationBundles, launch.LocalBundles, userLayer: false);
@@ -148,8 +150,10 @@ public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, 
     }
 
     /// <summary>
-    /// Performs the list bundles async operation.
+    /// List selected, profile-dependent and installation bundles with runtime mappings and management diagnostics.
     /// </summary>
+    /// <remarks>Does not install packages or refresh the runtime. Individual bundle failures are returned as diagnostics;
+    /// failures reading the profile manifest or obtaining runtime mappings propagate.</remarks>
     public async Task<IReadOnlyList<BundleConfigurationInfo>> ListBundlesAsync()
     {
         var manifest = PackageManifest.Read(ManifestPath);
@@ -197,8 +201,10 @@ public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, 
     }
 
     /// <summary>
-    /// Sets plugin enabled async.
+    /// Persist enablement for an addressable profile entry and reconcile through the host lifecycle queue.
     /// </summary>
+    /// <remarks>Protected or unaddressable entries are refused. Persistence precedes reconciliation; a failed result may
+    /// leave the requested patch saved. With no lifecycle queue, the change requires restart. Later overlays may override it.</remarks>
     public Task<ConfigurationChange> SetPluginEnabledAsync(string entryId, bool enabled, CancellationToken cancellationToken = default) => ChangeAsync(entryId, enabled, "plugin", async () =>
     {
         var row = (await ListPluginsAsync()).FirstOrDefault(row => row.EntryId == entryId) ?? throw new Refusal("unknown-plugin");
@@ -210,8 +216,10 @@ public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, 
         return (RunExclusiveAsync is not null && current?.Enabled != enabled ? "overridden" : null, warnings);
     }, cancellationToken);
     /// <summary>
-    /// Sets bundle enabled async.
+    /// Persist bundle selection and reconcile through the host lifecycle queue, retaining package dependencies.
     /// </summary>
+    /// <remarks>Bundles required by the management path cannot be deselected. Persistence precedes reconciliation;
+    /// failure does not automatically restore selection. With no lifecycle queue, the change requires restart.</remarks>
     public Task<ConfigurationChange> SetBundleEnabledAsync(string name, bool enabled, CancellationToken cancellationToken = default) => ChangeAsync(name, enabled, "bundle", async () =>
     {
         var manifest = PackageManifest.Read(ManifestPath);
