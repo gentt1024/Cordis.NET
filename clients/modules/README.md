@@ -30,6 +30,17 @@ The output is a single classic factory-registration script, `client.js`, and its
 
 The native Host's `ClientModuleCatalog` selects immutable bytes, dependency rows and revisioned URLs. Its graph contains `rev`, `entries` and `batches`. The browser rejects executable artifact URLs that are outside the page origin or do not identify their declared revision. Successful provider replacement refreshes consumers that imported its previous exports. A failed replacement download retains the active old fiber and exposes a synchronization failure; retry uses the latest desired graph. Disconnect immediately invalidates pending activation and withdraws the roster through the fixed entry mechanism.
 
+The page shell may supply additional module objects through `bootClientModules({ graph, staticModules, loadBundle })`.
+`staticModules` maps **exact requests** to shell-owned objects, including separately declared subpaths. Values keep their identity
+across plugin withdrawal and reload. SDK modules are supplied by default; explicit keys take precedence. Keep Cordis imports
+on the SDK's runtime instance when providing application services. The native Host declares the same additional names with
+`ClientModuleCatalog.CaptureAsync(..., platformModules: names)`; the existing capture entry remains available.
+The catalog records names, never serializes module objects, and rejects requests without a declared supplier. Authors list
+these requests in `dsh.client.external`. The author build externalizes only exact requests and bundles ordinary dependencies.
+An optional `loadBundle(url)` must execute the classic script registration before its promise resolves; omitting it uses
+the fixed upstream script-element transport. Artifact URLs still obey the same-origin revision boundary.
+See the matching [English](../../docs/development.md#shell-owned-client-modules) and [Chinese](../../docs/development.zh.md#外壳持有的客户端模块) integration examples.
+
 For a Host mapped at `/cordis`, a browser entry can use:
 
 ```js
@@ -46,3 +57,7 @@ The management client reads full state and graph on connection and reconnection.
 `SlotCore` is the fixed generic contribution registry, exported beside the module client. It does not bring a React runtime into the bundle. Its type declarations retain the upstream renderer contracts and ship their licensed React/CSS type dependencies. Import types and augment `SlotMap` through the public `@cordis-net/client-modules/slots` subpath. A host can declare root and child seats; a plugin registers a component and owns the returned disposer with `ctx.effect`. The examples demonstrate a provider declaring a list seat and a separate panel registering into it. Replacement clears the previous registry's entries, and withdrawal removes the panel's contribution. Application-specific renderer and session binding remain outside this package.
 
 `management.close()` closes recovery and withdraws modules; the page still owns `modules.dispose()`. Invoke both when disposing the page. The isolated `client-modules-browser-host.mjs` carrier exercises factory scripts in a browser, but does not prove native management, configuration or Host composition.
+
+Run `node scripts/verify-client-shared-modules.mjs` for an independent built-plugin check of the public bootstrap with an injected Node transport.
+For real browser transport checks, start `node scripts/client-modules-browser-host.mjs` and open its printed origin at `/shared`.
+The page checks default/custom loading, exact subpath refusal, and singleton identity after withdrawal/reload. Browser and Node results are separate evidence.

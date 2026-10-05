@@ -21,7 +21,13 @@ export function connection(client: ManagementClient) { return client.connection.
 export function readConfiguration(client: ManagementClient) { return client.readConfiguration('root:plugin') }
 export function compatibility(client: ManagementClient) { return client.readCompatibility() }
 `)
-const program = ts.createProgram([resolve(directory, 'client.ts'), resolve(directory, 'management.ts')], {
+await writeFile(resolve(directory, 'shell.ts'), `import { bootClientModules } from '@cordis-net/client-modules'
+const shared = { name: 'page-owned singleton' }
+export function boot(graph: unknown, loadBundle: (url: string) => Promise<void>) {
+  return bootClientModules({ graph, staticModules: { '@example/shell': shared, '@example/shell/tools': { part: shared } }, loadBundle })
+}
+`)
+const program = ts.createProgram(['client.ts', 'management.ts', 'shell.ts'].map(name => resolve(directory, name)), {
   noEmit: true, strict: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022,
   module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler,
   lib: ['lib.es2022.d.ts', 'lib.dom.d.ts', 'lib.dom.iterable.d.ts'], types: [],

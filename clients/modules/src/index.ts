@@ -3,7 +3,7 @@ import * as cosmokit from '@deepseek-ai/cosmokit'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { ClientModuleSystem } from '@cordis-net/modules/system'
 import { parseBootManifest, stripClientSuffix } from '@cordis-net/modules/manifest'
-import type { ClientModuleLoaderTarget, WebBootGraph } from '@cordis-net/modules/manifest'
+import type { ClientModuleCreateOptions, ClientModuleLoaderTarget, WebBootGraph } from '@cordis-net/modules/manifest'
 import type { ClientEntryState } from '@cordis-net/modules/entries'
 import * as management from './management.ts'
 import * as slots from '@cordis-net/modules/slots'
@@ -41,6 +41,12 @@ export interface ClientModules {
 /** Inputs for a page consumer; the Host graph selects immutable factory scripts. */
 export interface ClientModulesOptions {
   readonly graph: unknown
+  /** Exact module requests supplied by the page shell. Values retain their identity and shell ownership.
+   * SDK modules are available by default; supplied keys take precedence. A root key does not supply its subpaths.
+   */
+  readonly staticModules?: ClientModuleCreateOptions['staticModules']
+  /** Fetch and register a classic factory script before resolving. Uses the upstream script transport when omitted. */
+  readonly loadBundle?: ClientModuleCreateOptions['loadBundle']
   /** Install application-owned services through the same Context before entries activate. */
   readonly configure?: (context: cordis.Context) => void | Promise<void>
 }
@@ -108,15 +114,21 @@ export async function bootClientModules(options: ClientModulesOptions): Promise<
     load(registration) { this.pendingQueue.push(registration) },
     create() { throw new Error('client-modules: the package entry owns bootstrap') },
   }
-  globalThis.__ModuleLoader__ = facade
   const modules = new ClientModuleSystem({
     manifest: parseBootManifest(graph), registrationTarget: facade,
     bootstrapModule: { id: '@cordis-net/client-modules', exports: {
       ...management, SlotCore: slots.SlotCore, Context: cordis.Context, Service: cordis.Service, bootClientModules,
     } },
-    staticModules: { '@deepseek-ai/cordis': cordis, '@deepseek-ai/cosmokit': cosmokit, '@cordis-net/client-modules/slots': slots },
+    staticModules: {
+      '@deepseek-ai/cordis': cordis, '@deepseek-ai/cosmokit': cosmokit, '@cordis-net/client-modules/slots': slots,
+      ...options.staticModules,
+    },
+    ...(options.loadBundle === undefined ? {} : { loadBundle: options.loadBundle }),
   })
   const context = new cordis.Context()
+  // Publish only after shell inputs and local construction succeed. A rejected bootstrap
+  // must leave the page available for a retry; subsequent setup failures use the cleanup below.
+  globalThis.__ModuleLoader__ = facade
   try {
     await options.configure?.(context)
     await context.plugin(Loader)

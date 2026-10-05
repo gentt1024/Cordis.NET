@@ -282,6 +282,7 @@ def main():
         client_artifacts = ROOT / "artifacts/client-modules"
         run("client-modules-build", ["node", "scripts/build-client-modules.mjs", client_artifacts])
         run("client-modules-types", ["node", "scripts/verify-client-module-types.mjs", client_artifacts])
+        run("client-shared-modules", ["node", "scripts/verify-client-shared-modules.mjs", client_artifacts])
         run("client-author-watch", ["node", "scripts/verify-client-author-watch.mjs"])
         cli = ["dotnet", ROOT / "tools/Cordis.Cli/bin/Release/net10.0/Cordis.Cli.dll"]
         fixture = OUT / "cli-input.yml"

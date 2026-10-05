@@ -37,7 +37,7 @@ public sealed record ClientModuleGraph(
 /// </remarks>
 public sealed class ClientModuleCatalog
 {
-    private static readonly HashSet<string> PlatformModules = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> DefaultPlatformModules = new(StringComparer.Ordinal)
     {
         "@cordis-net/client-modules", "@cordis-net/client-modules/slots", "@deepseek-ai/cordis", "@deepseek-ai/cosmokit",
     };
@@ -61,13 +61,39 @@ public sealed class ClientModuleCatalog
     /// Import cycles fail before publication. Capture failure leaves the caller's
     /// previous catalog intact. A host must serialize selection and deployment changes through its existing owner.
     /// </remarks>
-    public static async Task<ClientModuleCatalog> CaptureAsync(DeploymentPackageResolver packages,
+    public static Task<ClientModuleCatalog> CaptureAsync(DeploymentPackageResolver packages,
         IEnumerable<string> packageNames, Uri parent, string artifactBasePath = "/client/artifacts",
         CancellationToken cancellationToken = default, bool withdrawUnavailableDependencies = false)
+        => CaptureAsync(packages, packageNames, parent, Array.Empty<string>(), artifactBasePath,
+            cancellationToken, withdrawUnavailableDependencies);
+
+    /// <summary>Capture a roster whose external requests may also be supplied by the page shell.</summary>
+    /// <param name="packages">The existing deployment resolver; capture does not change deployments.</param>
+    /// <param name="packageNames">Active client package names selected by the caller's Loader.</param>
+    /// <param name="parent">The resolution origin for selected packages.</param>
+    /// <param name="platformModules">Exact additional request names supplied through browser bootstrap's staticModules.
+    /// Declare subpaths separately. The catalog retains names only; the shell owns the module objects and must supply them.</param>
+    /// <param name="artifactBasePath">An absolute same-origin path serving the captured revisioned artifacts.</param>
+    /// <param name="cancellationToken">Cancellation of capture; an incomplete catalog is never returned.</param>
+    /// <param name="withdrawUnavailableDependencies">Project selection to a closed delivery roster instead of failing on missing dependencies.</param>
+    /// <remarks>SDK platform modules remain available. Additional names are not npm aliases or package resolution rules.
+    /// Capture failures leave the caller's previously published catalog intact; selection and publication use its existing owner.</remarks>
+    public static async Task<ClientModuleCatalog> CaptureAsync(DeploymentPackageResolver packages,
+        IEnumerable<string> packageNames, Uri parent, IEnumerable<string> platformModules,
+        string artifactBasePath = "/client/artifacts", CancellationToken cancellationToken = default,
+        bool withdrawUnavailableDependencies = false)
     {
         ArgumentNullException.ThrowIfNull(packages);
         ArgumentNullException.ThrowIfNull(packageNames);
         ArgumentNullException.ThrowIfNull(parent);
+        ArgumentNullException.ThrowIfNull(platformModules);
+        var suppliedModules = new HashSet<string>(DefaultPlatformModules, StringComparer.Ordinal);
+        foreach (var request in platformModules)
+        {
+            if (string.IsNullOrEmpty(request))
+                throw new ArgumentException("A platform module request must not be empty.", nameof(platformModules));
+            suppliedModules.Add(request);
+        }
         if (!artifactBasePath.StartsWith('/') || artifactBasePath.StartsWith("//", StringComparison.Ordinal)
             || artifactBasePath.Contains('?') || artifactBasePath.Contains('#') || artifactBasePath.Contains('\\'))
             throw new ArgumentException("An absolute same-origin artifact path is required.", nameof(artifactBasePath));
@@ -77,7 +103,7 @@ public sealed class ClientModuleCatalog
         foreach (var name in packageNames)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!IsPackageName(name) || PlatformModules.Contains(name))
+            if (!IsPackageName(name) || DefaultPlatformModules.Contains(name))
                 throw new ArgumentException("A client row must name a non-platform package.", nameof(packageNames));
             if (rows.ContainsKey(name)) throw new FormatException("Duplicate client package: " + name);
             var package = packages.PackageOf(name, parent) ?? throw new FileNotFoundException("No deployed client package: " + name);
@@ -109,7 +135,7 @@ public sealed class ClientModuleCatalog
             {
                 removed = false;
                 foreach (var row in rows.Values.ToArray())
-                    if (row.External.Any(request => !PlatformModules.Contains(request) && !rows.ContainsKey(StripClient(request)))
+                    if (row.External.Any(request => !suppliedModules.Contains(request) && !rows.ContainsKey(StripClient(request)))
                         || row.Inject.Any(dependency => !rows.ContainsKey(dependency)))
                     {
                         rows.Remove(row.Id);
@@ -123,7 +149,7 @@ public sealed class ClientModuleCatalog
             foreach (var request in row.External)
             {
                 var dependency = StripClient(request);
-                if (!PlatformModules.Contains(request) && !rows.ContainsKey(dependency))
+                if (!suppliedModules.Contains(request) && !rows.ContainsKey(dependency))
                     throw new FormatException($"Client module '{row.Id}' requests unavailable module '{request}'.");
             }
             foreach (var dependency in row.Inject)
@@ -139,7 +165,7 @@ public sealed class ClientModuleCatalog
             if (cycle >= 0) throw new FormatException("Client module graph cycle: " + string.Join(" -> ", open.Skip(cycle).Append(row.Id)));
             open.Add(row.Id);
             foreach (var request in row.External)
-                if (rows.TryGetValue(StripClient(request), out var dependency)) Visit(dependency);
+                if (!suppliedModules.Contains(request) && rows.TryGetValue(StripClient(request), out var dependency)) Visit(dependency);
             open.RemoveAt(open.Count - 1);
             placed.Add(row.Id);
             ordered.Add(row);
@@ -173,9 +199,9 @@ public sealed class ClientModuleCatalog
         if (values.ValueKind != JsonValueKind.Array || values.EnumerateArray().Any(value => value.ValueKind != JsonValueKind.String))
             throw new FormatException($"dsh.client.{field} must be a string array: {name}");
         var result = values.EnumerateArray().Select(value => value.GetString()!).ToArray();
-        if (result.Any(value => !(field == "external" && PlatformModules.Contains(value)) && !IsPackageName(StripClient(value))))
-            throw new FormatException($"dsh.client.{field} must contain package names or /client requests: {name}");
-        if (field == "inject" && result.Any(value => value != StripClient(value)))
+        // Upstream external declarations are literal string requests. Availability belongs
+        // to the dependency pass, so an absent shell subpath can be refused or withdrawn there.
+        if (field == "inject" && result.Any(value => !IsPackageName(value)))
             throw new FormatException("dsh.client.inject must contain package names: " + name);
         return Array.AsReadOnly(result);
     }
@@ -190,4 +216,3 @@ public sealed class ClientModuleCatalog
             && parts.All(part => part is not ("." or ".."));
     }
 }
-

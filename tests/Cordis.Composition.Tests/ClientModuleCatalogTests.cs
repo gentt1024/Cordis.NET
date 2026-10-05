@@ -6,6 +6,35 @@ namespace Cordis.Composition.Tests;
 public sealed class ClientModuleCatalogTests
 {
     [Fact]
+    public async Task Shell_requests_are_exact_and_do_not_require_dynamic_provider_rows()
+    {
+        var root = Directory.CreateTempSubdirectory("cordis-client-shell-").FullName;
+        try
+        {
+            await PackageAsync(root, "consumer", "[]", "[\"@example/shell\",\"@example/shell/tools\"]");
+            var packages = DeploymentPackageResolver.Native((name, _) => Path.Combine(root, name));
+            var parent = new Uri(root + Path.DirectorySeparatorChar);
+            await Assert.ThrowsAsync<FormatException>(() => ClientModuleCatalog.CaptureAsync(packages, ["consumer"], parent));
+            // Supplying the root does not imply supplying the subpath.
+            await Assert.ThrowsAsync<FormatException>(() => ClientModuleCatalog.CaptureAsync(packages,
+                ["consumer"], parent, ["@example/shell"]));
+            await PackageAsync(root, "independent", "[]", "[]");
+            var missing = await ClientModuleCatalog.CaptureAsync(packages, ["consumer", "independent"], parent,
+                ["@example/shell"], withdrawUnavailableDependencies: true);
+            Assert.Equal(new[] { "independent" }, missing.Graph.Entries.Select(row => row.Id));
+            var catalog = await ClientModuleCatalog.CaptureAsync(packages, ["consumer"], parent,
+                ["@example/shell", "@example/shell/tools"]);
+            var consumer = Assert.Single(catalog.Graph.Entries);
+            Assert.Equal(new[] { "@example/shell", "@example/shell/tools" }, consumer.External);
+            Assert.NotNull(catalog.FindArtifact(consumer.Id, consumer.Revision));
+            var closed = await ClientModuleCatalog.CaptureAsync(packages, ["consumer"], parent,
+                ["@example/shell", "@example/shell/tools"], withdrawUnavailableDependencies: true);
+            Assert.Equal(catalog.Graph.Revision, closed.Graph.Revision);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task Graph_orders_external_modules_and_metadata_changes_select_a_new_roster()
     {
         var root = Directory.CreateTempSubdirectory("cordis-client-graph-").FullName;

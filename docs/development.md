@@ -32,6 +32,26 @@ The full gate checks the locked SDK and dependencies, analyzers, tests, upstream
 
 Generated outputs and raw logs may contain local paths or user names. Keep them outside the public tree; commit only redacted summaries and stable machine-readable evidence.
 
+## Shell-owned client modules
+
+The optional [browser module package](../clients/modules/README.md) exposes the fixed DSH static module table and optional transport through its public bootstrap. The shell owns shared module objects; plugin effects remain owned by Cordis.
+
+```js
+import { bootClientModules } from '/client-runtime/client.mjs'
+const shell = { name: 'application shell' }
+const tools = { format: value => String(value) }
+const modules = await bootClientModules({
+  graph: await fetch('/client/graph').then(response => response.json()),
+  staticModules: { '@my-app/shell': shell, '@my-app/shell/tools': tools },
+})
+```
+
+On the native Host, pass those same names to the additional `ClientModuleCatalog.CaptureAsync` overload through `platformModules: ["@my-app/shell", "@my-app/shell/tools"]`. Host declaration and browser supply must agree. Plugin authors list their exact imports in `dsh.client.external`; a root request does not supply subpaths. The author build bundles undeclared ordinary dependencies instead of implicitly making their subpaths external. The shell supplies types and module values; neither catalog nor bootstrap discovers npm packages.
+
+`staticModules` extends the SDK defaults, with explicit keys taking precedence. Values are retained without cloning and survive plugin withdrawal/reload. Use the SDK's runtime instance for Cordis-related services. Optional `loadBundle(url)` must execute factory registration before resolving; the fixed script-element transport remains the default. Both transports receive the validated same-origin revisioned URL. Disposal releases plugin effects and the page facade, not shell objects.
+
+The existing verification flow runs `verify-client-shared-modules.mjs` through the built public package with an independent plugin and injected Node transport. The existing browser carrier's `/shared` page separately checks actual default/custom script transport and missing suppliers. These results do not replace native catalog tests, upstream assertions or hosted verification.
+
 ## Initial application infrastructure slices (historical acceptance)
 
 Work follows the completed application-scope matrix, using the fixed DSH revision in `upstream.lock.json`. Do not reopen a whole-repository review. Core remains domain-independent; management, authoring and platform integration reuse existing owners above it.

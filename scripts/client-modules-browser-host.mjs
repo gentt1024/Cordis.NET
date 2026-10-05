@@ -11,7 +11,7 @@ const output = resolve(process.argv[2] ?? resolve(root, 'artifacts/client-module
 const runtime = resolve(output, 'runtime')
 const build = resolve(root, 'scripts/build-client-modules.mjs')
 const modules = new Map()
-for (const directory of ['provider', 'provider-next', 'panel', 'panel-broken']) {
+for (const directory of ['provider', 'provider-next', 'panel', 'panel-broken', 'shared']) {
   const target = resolve(output, directory)
   execFileSync(process.execPath, [build, runtime, resolve(root, 'clients/modules/examples', directory), target], { stdio: 'inherit' })
   const manifest = JSON.parse(await readFile(resolve(target, 'package.json'), 'utf8'))
@@ -27,13 +27,13 @@ let roster = ['provider', 'panel']
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, 'http://localhost')
-    if (url.pathname === '/client/graph') {
+    if (url.pathname === '/client/graph' || url.pathname === '/client/shared-graph') {
       const action = url.searchParams.get('action')
       if (action === 'load' || action === 'reconnect') roster = ['provider', 'panel']
       else if (action === 'update') roster = ['provider-next', 'panel']
       else if (action === 'withdraw') roster = [roster[0]]
       else if (action === 'broken') roster = [roster[0], 'panel-broken']
-      const entries = roster.map(name => {
+      const entries = (url.pathname === '/client/shared-graph' ? ['shared'] : roster).map(name => {
         const { bytes, ...entry } = modules.get(name)
         return entry
       })
@@ -45,7 +45,7 @@ const server = createServer(async (request, response) => {
     }
     if (url.pathname.startsWith('/client/artifacts/')) {
       const id = decodeURIComponent(url.pathname.slice('/client/artifacts/'.length))
-      const artifact = roster.map(name => modules.get(name)).find(row => row.id === id && row.rev === url.searchParams.get('rev'))
+      const artifact = [...roster, 'shared'].map(name => modules.get(name)).find(row => row.id === id && row.rev === url.searchParams.get('rev'))
       if (artifact === undefined) { response.writeHead(404); response.end(); return }
       response.writeHead(200, { 'content-type': 'text/javascript', 'etag': '"' + artifact.rev + '"',
         'content-length': artifact.bytes.length, 'cache-control': 'public, max-age=31536000, immutable' })
@@ -53,9 +53,11 @@ const server = createServer(async (request, response) => {
       return
     }
     const file = url.pathname === '/' ? resolve(output, 'index.html')
+      : url.pathname === '/shared' ? resolve(root, 'clients/modules/examples/shared/index.html')
+      : url.pathname === '/shared-check.mjs' ? resolve(root, 'clients/modules/examples/shared/check.mjs')
       : url.pathname === '/client-runtime/client.mjs' ? resolve(runtime, 'client.mjs') : undefined
     if (file === undefined) { response.writeHead(404); response.end(); return }
-    response.writeHead(200, { 'content-type': url.pathname === '/' ? 'text/html' : 'text/javascript' })
+    response.writeHead(200, { 'content-type': ['/', '/shared'].includes(url.pathname) ? 'text/html' : 'text/javascript' })
     response.end(await readFile(file))
   } catch (error) { response.writeHead(500); response.end(String(error)) }
 })

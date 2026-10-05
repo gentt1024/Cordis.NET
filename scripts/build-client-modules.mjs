@@ -125,13 +125,19 @@ if (process.argv[3] !== undefined) {
     console.log(JSON.stringify({ kind: 'client-built', name: manifest.name, revision, directory }))
   }
   const reportFailure = error => console.log(JSON.stringify({ kind: 'build-error', name: manifest.name, diagnostic: String(error) }))
+  // DSH selects externals by the complete request. esbuild's external package patterns also
+  // match every subpath, which would silently ask the shell for undeclared module identities.
+  const requests = new Set(['@cordis-net/client-modules', '@cordis-net/client-modules/slots',
+    '@deepseek-ai/cordis', '@deepseek-ai/cosmokit', ...manifest.dsh.client.external])
   const settings = { entryPoints: [resolve(author, 'client.ts')], bundle: true, format: 'cjs', platform: 'browser',
-    write: false, external: ['@cordis-net/client-modules', '@cordis-net/client-modules/slots', '@deepseek-ai/cordis', '@deepseek-ai/cosmokit', ...manifest.dsh.client.external],
+    write: false, plugins: [{ name: 'exact-client-externals', setup(plugin) {
+      plugin.onResolve({ filter: /.*/ }, args => requests.has(args.path) ? { path: args.path, external: true } : undefined)
+    } }],
     define, legalComments: 'eof' }
   if (!watching) {
     try { await publish(await build(settings)) } catch (error) { reportFailure(error); process.exitCode = 1 }
   } else {
-    const compiler = await buildContext({ ...settings, plugins: [{ name: 'complete-client-artifact', setup(plugin) {
+    const compiler = await buildContext({ ...settings, plugins: [...settings.plugins, { name: 'complete-client-artifact', setup(plugin) {
       plugin.onStart(async () => {
         const next = await readManifest()
         if (next.name !== manifest.name) throw new Error('Package identity changed; restart the author watch')

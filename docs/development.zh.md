@@ -32,6 +32,26 @@ python scripts/verify-authoring.py --aot --packages artifacts/upgrade-packages
 
 生成输出和原始日志可能包含本地路径或用户名。应将其保存在公开树之外；只提交脱敏摘要与稳定的机器可读证据。
 
+## 外壳持有的客户端模块
+
+可选[浏览器模块包](../clients/modules/README.md)通过公开 bootstrap 提供固定 DSH 的静态模块表与可选 transport 接入。外壳持有共享模块对象，插件副作用仍由 Cordis 持有。
+
+```js
+import { bootClientModules } from '/client-runtime/client.mjs'
+const shell = { name: 'application shell' }
+const tools = { format: value => String(value) }
+const modules = await bootClientModules({
+  graph: await fetch('/client/graph').then(response => response.json()),
+  staticModules: { '@my-app/shell': shell, '@my-app/shell/tools': tools },
+})
+```
+
+原生 Host 使用新增 `ClientModuleCatalog.CaptureAsync` 重载，以 `platformModules: ["@my-app/shell", "@my-app/shell/tools"]` 传入相同名称。宿主声明和浏览器供应必须一致。插件作者在 `dsh.client.external` 列出精确导入；根请求不会自动供应子路径。作者构建将未声明 external 的普通依赖打包，不会隐式将其子路径 external 化。类型与模块值由外壳供应，目录和 bootstrap 不发现 npm 包。
+
+`staticModules` 扩展 SDK 默认模块，显式键优先。值不经克隆，插件撤销/重载后保持身份。提供 Cordis 相关服务时应使用 SDK 的运行时实例。可选 `loadBundle(url)` 必须先执行 factory 注册再完成 Promise；默认仍使用固定上游的 script 元素 transport。两种 transport 收到的都是经校验的同源、带 revision 的 URL。释放清理插件副作用与页面 facade，不清理外壳对象。
+
+既有验证流程运行 `verify-client-shared-modules.mjs`，由独立插件消费构建后的公开包，使用注入的 Node transport。既有浏览器验证载体的 `/shared` 页面另行验证真实默认/自定义 script transport 和缺失供应者。这些结果不替代原生目录测试、上游断言或托管验证。
+
 ## 初始应用基础设施实施片（历史验收）
 
 沿用已完成的应用范围矩阵，参照 `upstream.lock.json` 中固定的 DSH 提交，不重新开展全仓审查。Core 保持领域无关；管理、作者能力和平台接入复用其上既有所有者。
