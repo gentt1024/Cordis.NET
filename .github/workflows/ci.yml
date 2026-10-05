@@ -94,6 +94,13 @@ jobs:
           python scripts/check-docs.py
           python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/ci-packages
           python scripts/verify-authoring.py --aot --packages artifacts/ci-packages
+      - name: Preserve validated packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validated-packages-${{ matrix.os }}
+          path: artifacts/ci-packages
+          if-no-files-found: error
+          retention-days: 14
       - name: Preserve evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
