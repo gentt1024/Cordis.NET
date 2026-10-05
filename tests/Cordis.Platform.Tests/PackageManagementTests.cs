@@ -609,7 +609,7 @@ public sealed class PackageManagementTests : IAsyncLifetime
             Assert.Empty(PackageManifest.Read(Path.Combine(profile, "package.json")).Bundles);
             Assert.False(Directory.Exists(Path.Combine(profile, ".cordis", "packages", "independentplugin", "1.0.0")));
             var unknown = await Command("wait", endpoint, "missing-request", "--authorization-env", "CORDIS_TEST_AUTHORIZATION");
-            Assert.Equal(3, unknown.ExitCode);
+            Assert.True(unknown.ExitCode == 3, "Expected unknown installation exit 3; actual " + unknown.ExitCode + ": " + unknown.Output);
             host.Kill(entireProcessTree: true);
             await host.WaitForExitAsync();
             await remaining;
