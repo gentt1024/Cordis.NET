@@ -22,4 +22,5 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <IsPackable Condition="'$(IsPackable)' == ''">false</IsPackable>
   </PropertyGroup>
+  <Import Project="$(MSBuildThisFileDirectory)Cordis.SourceArchive.props" Condition="Exists('$(MSBuildThisFileDirectory)Cordis.SourceArchive.props') and !Exists('$(MSBuildThisFileDirectory).git')" />
 </Project>

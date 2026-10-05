@@ -38,7 +38,9 @@ def source_hashes():
     else:
         # Source ZIPs deliberately contain no .git directory. Their generated inventory
         # provides the same source boundary without including build caches.
-        files = list(archive_manifest()["files"])
+        manifest = archive_manifest()
+        recorded = manifest["files"] | manifest.get("generatedFiles", {})
+        files = list(recorded)
         for name in files:
             path = (ROOT / name).resolve()
             assert path.is_relative_to(ROOT) and path.is_file(), name
@@ -228,6 +230,11 @@ def main():
     status = "failed"
     initial_hashes = source_hashes()
     try:
+        if not git_checkout():
+            manifest = archive_manifest()
+            recorded = manifest["files"] | manifest.get("generatedFiles", {})
+            expected = {name: digest for name, digest in recorded.items() if not name.startswith("verification/")}
+            assert initial_hashes == expected, "Source archive bytes differ from the recorded checkpoint"
         run("sdk", ["dotnet", "--info"])
         run("restore", ["dotnet", "restore", "Cordis.slnx", "--locked-mode"])
         run("build", ["dotnet", "build", "Cordis.slnx", "-c", "Release", "--no-restore"])
@@ -338,7 +345,8 @@ def main():
         else:
             manifest = archive_manifest()
             commit = manifest["commit"]
-            dirty = "source archive; " + ("unchanged" if all(manifest["files"][name] == digest for name, digest in source_hashes().items()) else "modified")
+            recorded = manifest["files"] | manifest.get("generatedFiles", {})
+            dirty = "source archive; " + ("unchanged" if all(recorded[name] == digest for name, digest in source_hashes().items()) else "modified")
         hashes = source_hashes()
         (OUT / "verification.json").write_text(json.dumps({"status": status, "commit": commit, "workingTree": dirty,
             "platform": platform.platform(), "rid": rid, "upstreamInventoryClosure": "see docs/upstream-tests.json; passing gates do not imply inventory closure",
