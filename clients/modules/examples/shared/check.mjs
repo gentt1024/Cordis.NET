@@ -7,18 +7,23 @@ export async function verifySharedModules(bootClientModules, graph, loadBundle, 
   const shell = { root: { name: 'page-owned singleton' }, tools: { part: {} }, starts: 0, stops: 0 }
   const staticModules = { '@example/shell': shell.root }
   if (!missing) staticModules['@example/shell/tools'] = shell.tools
-  const client = await bootClientModules({
+  const boot = () => bootClientModules({
     graph, staticModules,
     ...(loadBundle === undefined ? {} : { loadBundle }),
     configure(context) { context.provide('shell', shell) },
   })
+  if (missing) {
+    try { await boot() } catch (error) {
+      check(String(error).includes('@example/shell/tools') && shell.starts === 0,
+        'Missing subpath supplier was not diagnosed without activation')
+      check(globalThis.__ModuleLoader__ === undefined, 'Rejected bootstrap retained the facade')
+      return 'PASS missing exact supplier refused at startup'
+    }
+    throw new Error('Missing supplier did not reject startup')
+  }
+  const client = await boot()
   try {
     const failures = client.state.getSnapshot().failures
-    if (missing) {
-      check(failures.some(failure => failure.message.includes('@example/shell/tools')) && shell.starts === 0,
-        'Missing subpath supplier was not diagnosed without activation')
-      return 'PASS missing exact supplier refused'
-    }
     check(failures.length === 0, 'Plugin activation failed: ' + JSON.stringify(failures))
     const initial = client.context.get('shared-result')
     check(initial.root === shell.root && initial.part === shell.tools.part, 'Plugin did not receive shell objects')

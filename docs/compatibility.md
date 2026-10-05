@@ -17,6 +17,8 @@ The immutable historical inventory targets DSH `ddefc45fbc7f8e46dd73185e68295696
 
 The optional browser module bootstrap forwards shell-owned `staticModules` and optional `loadBundle` to the fixed DSH module system. Native catalog capture accepts the same additional exact request names; SDK defaults remain available. A package root does not supply arbitrary subpaths. The shell owns objects and types, while Cordis owns plugin effects. Default and custom transports retain the existing same-origin revision boundary. This restores the upstream bootstrap seam without adding a module registry or npm resolver; see [development](development.md#shell-owned-client-modules).
 
+Browser startup reuses the fixed web activation audit; later sync retains diagnostic/retry semantics. HTTP/SSE recovery reuses the fixed connection controller with a numeric timing adapter instead of the Schemastery runtime. Transient connection loss preserves plugins; explicit close withdraws them. CLI arguments, readiness and bounded exit reuse Composition, ProfileSession and Generic Host. These restore upstream assembly responsibilities without changing Core Pending semantics.
+
 | Path | Supported behavior | Boundary |
 |---|---|---|
 | Static Core and Composition | JIT and Native AOT; static module registration, lifecycle, configuration, profiles and selected extensions | New plugin code requires republishing the application |

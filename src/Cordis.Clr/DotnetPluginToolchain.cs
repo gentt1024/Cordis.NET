@@ -27,6 +27,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     private readonly string[] sources;
 
     /// <summary>Initialize explicit routes for installed packages recorded in the profile, without loading their code.</summary>
+    /// <remarks>An empty source whitelist permits installed applications to run offline; acquisition still requires an explicitly selected source.</remarks>
     public DotnetPluginToolchain(string profileDirectory, ClrModuleResolver resolver, IEnumerable<string> sources, string dotnetCommand = "dotnet")
     {
         this.profileDirectory = Path.GetFullPath(profileDirectory);
@@ -35,7 +36,6 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         this.resolver = resolver;
         dotnet = dotnetCommand;
         this.sources = sources.Select(NormalizeSource).Distinct(StringComparer.Ordinal).ToArray();
-        if (this.sources.Length == 0) throw new ArgumentException("At least one explicitly selected NuGet source is required.", nameof(sources));
         Bundles = new ReadOnlyDictionary<string, string>(bundles);
         if (PackageManifest.Read(Path.Combine(this.profileDirectory, "package.json")).Raw.GetValueOrDefault("dependencies") is IDictionary<string, object?> dependencies)
             foreach (var (name, version) in dependencies)

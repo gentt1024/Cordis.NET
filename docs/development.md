@@ -52,6 +52,22 @@ On the native Host, pass those same names to the additional `ClientModuleCatalog
 
 The existing verification flow runs `verify-client-shared-modules.mjs` through the built public package with an independent plugin and injected Node transport. The existing browser carrier's `/shared` page separately checks actual default/custom script transport and missing suppliers. These results do not replace native catalog tests, upstream assertions or hosted verification.
 
+
+Initial browser startup calls the fixed web activation audit; failed imports, activation and missing-service Pending entries reject and clean up. Transient management disconnects preserve plugins and drafts. The public client accepts `transport.fetch`, `transport.openEvents`, `recovery` and manual `reconnect()`. The fixed connection controller owns handshake deadlines, retry/backoff and offline/online handling over the native HTTP/SSE carrier. Closing the owner rejects new writes, cancels reads and awaits withdrawal. Recovery never replays uncertain mutations.
+
+## Application invocation
+
+```console
+cordis run ./profile --resume abc --source app-owned-value
+cordis run ./profile --source ./feed --url http://127.0.0.1:5080 --authorization-env CORDIS_TOKEN -- --help
+```
+
+The launcher parses its own options until `--` or the first unrecognized token; the remaining arguments are copied verbatim into `CommandLineArguments` under `cmdlineArgs`. The application owns parsing, help and errors. The first command's `--source` belongs to the application. The second selects a package feed before the separator. Without `--url`, Generic Host opens no HTTP listener. An empty feed whitelist can run installed packages; acquisition still requires an explicitly selected source.
+
+Before entries mount, the CLI also provides `IApplicationReady` as `appReady` and `ApplicationExit` as `appExit`. Register readiness subscriptions with a Context effect. Readiness commits after tree and host startup; late subscribers run immediately. The application may request exit during activation (for help) or after readiness. The first request starts the fixed upstream five-second grace, including during startup; the CLI awaits orderly tree disposal and forces process exit with that code if grace expires. Ordinary startup has no five-second deadline. Startup/readiness exceptions return failure. Cordis reports effect cleanup errors without rewriting the requested code. Existing HMR uses the same readiness result. Process signal handling remains the .NET Host's responsibility.
+
+Library hosts can provide these Composition contracts through `ProfileSession.StartAsync(prepare: ...)` and own their exit policy; they do not need the CLI or another runtime. The verification flow compiles an independent CLR application and runs the real CLI for argument boundaries, help/error, readiness and cleanup. Controlled carrier checks, browser execution and native management tests are separate evidence.
+
 ## Initial application infrastructure slices (historical acceptance)
 
 Work follows the completed application-scope matrix, using the fixed DSH revision in `upstream.lock.json`. Do not reopen a whole-repository review. Core remains domain-independent; management, authoring and platform integration reuse existing owners above it.

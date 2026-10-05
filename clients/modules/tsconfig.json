@@ -8,6 +8,8 @@
       "@deepseek-ai/cordis": ["./.types/vendor/cordis/src/index.d.ts"],
       "@deepseek-ai/cosmokit": ["./.types/vendor/cosmokit/src/index.d.ts"],
       "@deepseek-ai/cordis-plugin-loader": ["./.types/vendor/loader/src/index.d.ts"],
+      "@cordis-net/web/*": ["./.types/vendor/web/*.d.ts"],
+      "@cordis-net/connection": ["./.types/vendor/connection/client/connection.d.ts"],
       "@cordis-net/modules/*": ["./.types/vendor/modules/*.d.ts"]
       ,"@cordis-net/modules/slots": ["./.types/vendor/slots/index.d.ts"]
     }

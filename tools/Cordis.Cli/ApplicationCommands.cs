@@ -5,24 +5,40 @@ using Cordis.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 internal static class ApplicationCommands
 {
     internal static async Task<int> RunAsync(string[] arguments)
     {
+        using var shutdownRequest = new ApplicationShutdown();
         try
         {
-            if (arguments.Length == 0) throw new ArgumentException("Usage: cordis run <profile> --source <feed> [--url http://127.0.0.1:port --authorization-env NAME] [--allow-build Name@Version]");
+            if (arguments.Length == 0) throw new ArgumentException("Usage: cordis run <profile> [--source <feed>] [--url http://127.0.0.1:port --authorization-env NAME] [--allow-build Name@Version] [-- application arguments]");
             var profile = Path.GetFullPath(arguments[0]);
             var sources = new List<string>();
+            var applicationArguments = new List<string>();
             var builds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var settings = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             string? address = null;
             string? authorization = null;
             for (var index = 1; index < arguments.Length; index++)
             {
-                if (++index >= arguments.Length) throw new ArgumentException("An option value is missing.");
-                switch (arguments[index - 1])
+                var option = arguments[index];
+                if (option == "--")
+                {
+                    applicationArguments.AddRange(arguments[(index + 1)..]);
+                    break;
+                }
+                if (option is not ("--source" or "--url" or "--authorization-env" or "--allow-build" or "--settings"))
+                {
+                    // The first application token starts an opaque remainder, just as
+                    // the fixed launcher does; later flags belong to the application.
+                    applicationArguments.AddRange(arguments[index..]);
+                    break;
+                }
+                if (++index >= arguments.Length) throw new ArgumentException("An option value is missing: " + option);
+                switch (option)
                 {
                     case "--source": sources.Add(arguments[index]); break;
                     case "--url": address = arguments[index]; break;
@@ -33,10 +49,8 @@ internal static class ApplicationCommands
                         if (selection.Length != 2) throw new ArgumentException("--settings expects entryId=field,field.");
                         settings[selection[0]] = selection[1].Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
                         break;
-                    default: throw new ArgumentException("Unknown run option: " + arguments[index - 1]);
                 }
             }
-            if (sources.Count == 0) throw new ArgumentException("At least one explicit --source is required.");
             if (address is not null && string.IsNullOrWhiteSpace(authorization))
                 throw new ArgumentException("Management requires a nonempty authorization value from the named environment variable.");
             Directory.CreateDirectory(profile);
@@ -51,26 +65,70 @@ internal static class ApplicationCommands
             var launch = new ProfileLaunch(await Profiles.LoadAsync(profile, new Dictionary<string, string>(), toolchain.Bundles),
                 Path.Combine(profile, ".cordis", "home"), [], new Dictionary<string, string>(), toolchain.Bundles)
             { CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName, ManifestLocator = toolchain.LocateManifest };
-            await using var session = await ProfileSession.StartAsync(configuration, launch, resolver, enableHmr: true);
-            var builder = WebApplication.CreateSlimBuilder();
-            builder.WebHost.UseUrls(address ?? "http://127.0.0.1:0");
-            await using var host = builder.Build();
-            if (address is not null)
-                new CordisManagement(session, (http, permission) => Task.FromResult(
-                    http.Request.Headers.Authorization == authorization
-                    && (permission.Operation != "build" || permission.Package is { } package
-                        && builds.Contains(package.Request.Name + "@" + package.Request.Version))),
-                    entryId => new SettingsPolicy(settings.GetValueOrDefault(entryId) ?? []), toolchain).Map(host);
-            await host.StartAsync();
-            Console.WriteLine("Profile running: " + profile);
-            if (address is not null) Console.WriteLine("Management: " + host.Urls.Single() + "/cordis");
-            await host.WaitForShutdownAsync();
-            return 0;
+            // The ordinary .NET host supplies process lifetime; only an explicitly requested
+            // management endpoint creates a web server. Neither host parses application arguments.
+            using var host = CreateHost(address);
+            var exit = shutdownRequest.Requested;
+            var ready = new ApplicationReadiness();
+            var readiness = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using var session = await ProfileSession.StartAsync(configuration, launch, resolver, enableHmr: true,
+                prepare: context =>
+                {
+                    CommandLineArguments.Provide(context, applicationArguments);
+                    context.Provide("appExit", (ApplicationExit)shutdownRequest.Request);
+                    context.Provide("appReady", (IApplicationReady)ready);
+                    return Task.CompletedTask;
+                }, diagnostic: error => Console.Error.WriteLine(error), applicationReady: readiness.Task);
+            try
+            {
+                if (address is not null)
+                    new CordisManagement(session, (http, permission) => Task.FromResult(
+                        http.Request.Headers.Authorization == authorization
+                        && (permission.Operation != "build" || permission.Package is { } package
+                            && builds.Contains(package.Request.Name + "@" + package.Request.Version))),
+                        entryId => new SettingsPolicy(settings.GetValueOrDefault(entryId) ?? []), toolchain).Map((WebApplication)host);
+                // Help and one-shot commands may request exit during activation. Still await
+                // startup above so a real boot failure wins, then dispose the tree normally.
+                if (exit.IsCompleted) return await exit;
+                await host.StartAsync();
+                Console.WriteLine("Profile running: " + profile);
+                if (host is WebApplication web) Console.WriteLine("Management: " + web.Urls.Single() + "/cordis");
+                var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+                if (!exit.IsCompleted && !lifetime.ApplicationStopping.IsCancellationRequested)
+                {
+                    ready.Commit();
+                    readiness.TrySetResult(true);
+                }
+                var shutdown = host.WaitForShutdownAsync();
+                if (await Task.WhenAny(shutdown, exit) == exit)
+                    host.Services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
+                await shutdown;
+                return exit.IsCompletedSuccessfully ? await exit : 0;
+            }
+            catch
+            {
+                shutdownRequest.Fail();
+                throw;
+            }
+            finally
+            {
+                // HMR's existing readiness gate also settles when startup exits or fails.
+                readiness.TrySetResult(false);
+            }
         }
         catch (Exception error)
         {
+            shutdownRequest.Fail();
             Console.Error.WriteLine(error.Message);
             return 1;
         }
+    }
+
+    private static IHost CreateHost(string? address)
+    {
+        if (address is null) return Host.CreateApplicationBuilder().Build();
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseUrls(address);
+        return builder.Build();
     }
 }

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Client recovery contract</title>
+<button id="run">Run recovery checks</button><pre id="result">Ready</pre>
+<script type="module">
+import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
+const result = document.querySelector('#result')
+const button = document.querySelector('#run')
+const check = (condition, message) => { if (!condition) throw new Error(message) }
+async function until(predicate, message) {
+  const end = Date.now() + 10000
+  while (!predicate()) {
+    check(Date.now() < end, message)
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+}
+button.onclick = async () => {
+  button.disabled = true
+  let modules, management
+  try {
+    await fetch('/test/reset', { method: 'POST' })
+    const shell = { root: {}, tools: { part: {} }, starts: 0, stops: 0 }
+    const graph = await fetch('/client/shared-graph').then(response => response.json())
+    modules = await bootClientModules({ graph,
+      staticModules: { '@example/shell': shell.root, '@example/shell/tools': shell.tools },
+      configure(context) { context.provide('shell', shell) },
+    })
+    const instance = modules.context.get('shared-result')
+    instance.draft = 'unsaved text'
+    management = createManagementClient({ modules, recovery: { backoffBaseMs: 20, backoffMaxMs: 50 } })
+    const phases = []
+    management.connection.subscribe(() => phases.push(management.connection.getSnapshot().phase))
+    await until(() => management.connection.getSnapshot().phase === 'connected', 'Initial SSE handshake')
+    phases.length = 0
+    await fetch('/test/loss', { method: 'POST' })
+    await until(() => phases.includes('disconnected') && management.connection.getSnapshot().phase === 'connected', 'Transport recovery')
+    check(modules.context.get('shared-result') === instance && instance.draft === 'unsaved text', 'Disconnect replaced page state')
+    check(shell.starts === 1 && shell.stops === 0, 'Disconnect remounted the plugin')
+    phases.length = 0
+    await fetch('/test/fail-state', { method: 'POST' })
+    management.reconnect()
+    await until(() => phases.includes('disconnected') && management.connection.getSnapshot().phase === 'connected', 'Failed state handshake recovery')
+    check(modules.context.get('shared-result') === instance, 'Handshake retry replaced the plugin')
+    await fetch('/test/withdraw', { method: 'POST' })
+    await until(() => shell.stops === 1, 'Real graph withdrawal')
+    await management.close()
+    await modules.dispose()
+    result.textContent = 'PASS real script + HTTP/SSE: disconnect retains instance/draft; failed handshake recovers; actual withdrawal disposes'
+  } catch (error) { result.textContent = 'FAIL ' + error.stack }
+  finally {
+    await management?.close()
+    await modules?.dispose()
+    button.disabled = false
+  }
+}
+</script></html>

@@ -169,6 +169,21 @@
       "upstreamPath": "packages/client/ui-slots/src/renderer.ts",
       "sha256": "ee834aafc19367922c139d41f677233fbdfcc042b4deff9f616aa43220ee09ee",
       "file": "slots/renderer.ts"
+    },
+    {
+      "upstreamPath": "packages/client/web/src/boot-client.ts",
+      "sha256": "b37cd77c5d51f6bf8503e5fa3e2ebae5c367e096a97b2fc350cc6e4c2b1c6f43",
+      "file": "web/boot-client.ts"
+    },
+    {
+      "upstreamPath": "packages/client/web/src/loader-status.ts",
+      "sha256": "030f657975cefa65ad44a735170c2894a9d1a8f545a867e84af22eb8cf442a8c",
+      "file": "web/loader-status.ts"
+    },
+    {
+      "upstreamPath": "packages/client/connection/src/client/connection.ts",
+      "sha256": "efe3168500645825630af073428bf88f21e7b92e15d73d12fb849ba4e480bd41",
+      "file": "connection/client/connection.ts"
     }
   ],
   "commit": "639ed015397290b3745d163aafe02ffee4aa3f84"

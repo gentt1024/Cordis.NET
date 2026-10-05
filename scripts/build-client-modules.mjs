@@ -17,6 +17,8 @@ const alias = {
   '@deepseek-ai/cordis': resolve(source, 'vendor/cordis/src/index.ts'),
   '@deepseek-ai/cosmokit': resolve(source, 'vendor/cosmokit/src/index.ts'),
   '@deepseek-ai/cordis-plugin-loader': resolve(source, 'vendor/loader/src/index.ts'),
+  '@cordis-net/connection': resolve(source, 'vendor/connection/client/connection.ts'),
+  '@cordis-net/web/boot-client': resolve(source, 'vendor/web/boot-client.ts'),
   '@cordis-net/modules/system': resolve(source, 'vendor/modules/system.ts'),
   '@cordis-net/modules/manifest': resolve(source, 'vendor/modules/manifest.ts'),
   '@cordis-net/modules/entries': resolve(source, 'vendor/modules/entries.ts'),
@@ -32,7 +34,7 @@ await mkdir(output, { recursive: true })
 await build({ entryPoints: [resolve(source, 'src/index.ts')], bundle: true, format: 'esm', platform: 'browser',
   outfile: resolve(output, 'client.mjs'), alias, define, legalComments: 'eof' })
 // A normal deployment can copy this directory; it does not require the author sources or Node.
-const licenses = await Promise.all(['cordis', 'cosmokit', 'loader', 'modules', 'slots'].map(async name =>
+const licenses = await Promise.all(['cordis', 'cosmokit', 'loader', 'modules', 'slots', 'web', 'connection'].map(async name =>
   `${name}\n${await readFile(resolve(source, 'vendor', name, 'LICENSE'), 'utf8')}`))
 const standardSchema = dirname(dirname(requireTools.resolve('@standard-schema/spec')))
 licenses.push(`@standard-schema/spec 1.0.0\n${await readFile(resolve(standardSchema, 'LICENSE'), 'utf8')}`)
@@ -56,6 +58,9 @@ const typeAliases = {
   '@deepseek-ai/cosmokit': 'vendor/cosmokit/src/index.d.ts',
   '@deepseek-ai/cordis-plugin-loader': 'vendor/loader/src/index.d.ts',
   '@deepseek-ai/dsh-client-store': 'vendor/contracts/store.d.ts',
+  '@deepseek-ai/dsh-client-modules/client': 'vendor/modules/manifest.d.ts',
+  '@cordis-net/web/boot-client': 'vendor/web/boot-client.d.ts',
+  '@cordis-net/connection': 'vendor/connection/client/connection.d.ts',
   '@deepseek-ai/dsh-package-manifest': 'vendor/contracts/package-manifest.d.ts',
   '@cordis-net/modules/system': 'vendor/modules/system.d.ts',
   '@cordis-net/modules/manifest': 'vendor/modules/manifest.d.ts',

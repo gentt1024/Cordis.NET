@@ -1,3 +1,4 @@
+import { ConnectionController, type ConnectionRecoveryConfig, type ConnectionGenerationSource } from '@cordis-net/connection'
 import type { ClientModules } from './index.ts'
 
 export interface ManagementState {
@@ -92,6 +93,8 @@ export interface ManagementClient {
   readonly connection: { getSnapshot(): ManagementConnection; subscribe(listener: () => void): () => void }
   /** Subscribe to progress/invalidation. A sequence gap triggers a full refresh instead of treating missed events as applied. */
   subscribe(listener: (event: ManagementEvent) => void): () => void
+  /** Cancel the current read/stream generation and immediately open a fresh one. Never replays mutations. */
+  reconnect(): void
   readState(): Promise<ManagementState>
   readPlugins(): Promise<readonly PluginView[]>
   readBundles(): Promise<unknown>
@@ -116,12 +119,41 @@ export interface ManagementClient {
   close(): Promise<void>
 }
 
+/** Physical HTTP/SSE carriers supplied by a shell. They do not own plugin lifetimes or recovery. */
+export interface ManagementTransport {
+  /** Native management HTTP requests. Honor read cancellation; writes have no automatic retry. */
+  fetch?: (url: string, init: RequestInit) => Promise<Response>
+  /** Attach SSE data/error delivery. Release listeners/resources on abort and when the returned disposer runs.
+   * A replacement starts only after this attempt ends. Late callbacks are ignored by the client.
+   */
+  openEvents?: (url: string, callbacks: { message(data: string): void; error(error: unknown): void }, signal: AbortSignal) => () => void
+}
+export interface ManagementClientOptions {
+  readonly baseUrl?: string
+  readonly modules?: ClientModules
+  readonly transport?: ManagementTransport
+  readonly recovery?: ConnectionRecoveryConfig
+}
+export type { ConnectionRecoveryConfig } from '@cordis-net/connection'
+
+function openBrowserEvents(url: string, callbacks: { message(data: string): void; error(error: unknown): void }, signal: AbortSignal): () => void {
+  const source = new EventSource(url, { withCredentials: true })
+  source.onmessage = message => { callbacks.message(message.data) }
+  source.onerror = () => { callbacks.error(new Error('Event connection lost')) }
+  const close = (): void => { source.close() }
+  signal.addEventListener('abort', close, { once: true })
+  return () => {
+    signal.removeEventListener('abort', close)
+    source.close()
+  }
+}
+
 /**
  * Attach to native CordisManagement HTTP/SSE. Every mutation carries the current Host generation.
- * Connection loss withdraws the module roster. Reconnection reads full state and graph before becoming ready;
+ * Connection loss invalidates remote readiness while preserving page plugins. Reconnection reads full state and graph before becoming ready;
  * it never replays a mutation. Authentication is the host's same-origin policy, not a product account flow.
  */
-export function createManagementClient(options: { baseUrl?: string; modules?: ClientModules } = {}): ManagementClient {
+export function createManagementClient(options: ManagementClientOptions = {}): ManagementClient {
   const base = new URL(options.baseUrl ?? '/cordis', location.href)
   if (base.origin !== location.origin || base.search || base.hash) throw new Error('Management requires a same-origin base URL')
   base.pathname = base.pathname.replace(/\/$/, '')
@@ -129,19 +161,23 @@ export function createManagementClient(options: { baseUrl?: string; modules?: Cl
   const listeners = new Set<() => void>()
   const events = new Set<(event: ManagementEvent) => void>()
   let closed = false
+  let closing: Promise<void> | undefined
   let epoch = 0
-  let sequence = 0
   let eventGeneration: string | undefined
   let refresh = Promise.resolve()
   let readController = new AbortController()
+  const modules = options.modules
+  const request = options.transport?.fetch ?? fetch
+  const openEvents = options.transport?.openEvents ?? openBrowserEvents
   const publish = (next: ManagementConnection): void => {
     snapshot = next
     for (const listener of [...listeners]) { try { listener() } catch (error) { console.error('management: state subscriber failed', error) } }
   }
   const urlOf = (path: string): string => base.href + path
   const read = async (path: string): Promise<unknown> => {
+    if (closed) throw new Error('Management is closed')
     const headers: Record<string, string> = eventGeneration === undefined ? {} : { 'If-Cordis-Generation': eventGeneration }
-    const response = await fetch(urlOf(path), { signal: readController.signal, credentials: 'same-origin', cache: 'no-store', headers })
+    const response = await request(urlOf(path), { signal: readController.signal, credentials: 'same-origin', cache: 'no-store', headers })
     if (!response.ok) throw new ManagementHttpError(response.status, await response.text())
     return response.json()
   }
@@ -152,10 +188,10 @@ export function createManagementClient(options: { baseUrl?: string; modules?: Cl
       selectedBundles: texts(row.selectedBundles), loadedBundles: texts(row.loadedBundles) }
   }
   const mutation = async (path: string, body: object): Promise<unknown> => {
-    if (snapshot.phase !== 'connected') throw new Error('Management is not connected; refresh before mutating')
+    if (closed || snapshot.phase !== 'connected') throw new Error('Management is not connected; refresh before mutating')
     let response: Response
     try {
-      response = await fetch(urlOf(path), { method: 'POST', credentials: 'same-origin',
+      response = await request(urlOf(path), { method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'If-Cordis-Generation': snapshot.state.generation }, body: JSON.stringify(body) })
     } catch (error) { throw new ManagementOutcomeUnknown(path, error) }
     if (!response.ok) throw new ManagementHttpError(response.status, await response.text())
@@ -165,51 +201,98 @@ export function createManagementClient(options: { baseUrl?: string; modules?: Cl
     const wire = await mutation(path, body)
     try { return decode(wire) } catch (error) { throw new ManagementOutcomeUnknown(path, error) }
   }
-  const withdraw = (diagnostic?: string): void => {
-    epoch++
-    readController.abort()
+  // The fixed controller owns retries/deadlines; this source owns one HTTP/SSE generation.
+  // Losing that generation invalidates remote writes without withdrawing page-owned plugins.
+  const connect: ConnectionGenerationSource = async (signal, ready) => {
+    if (signal.aborted || closed) return
     readController = new AbortController()
-    publish(diagnostic === undefined ? { phase: 'disconnected' } : { phase: 'disconnected', diagnostic })
-    const withdrawal = options.modules?.disconnect() ?? Promise.resolve()
-    refresh = Promise.all([refresh.catch(() => {}), withdrawal]).then(() => {})
-  }
-  const synchronize = (generation: string, reconnect: boolean): void => {
-    const token = ++epoch
-    const withdrawal = reconnect ? options.modules?.disconnect() ?? Promise.resolve() : Promise.resolve()
-    if (reconnect) publish({ phase: 'connecting' })
-    refresh = refresh.catch(() => {}).then(async () => {
-      if (closed || token !== epoch) return
-      await withdrawal
-      const state = await readState()
-      if (closed || token !== epoch) return
-      if (state.generation !== generation) throw new Error('Host generation changed while reading state')
-      if (options.modules !== undefined) {
-        const graph = await read('/client/graph')
-        if (closed || token !== epoch) return
-        await options.modules.sync(graph)
+    eventGeneration = undefined
+    let sequence = 0
+    let release: (() => void) | undefined
+    let ended = false
+    let settle!: () => void
+    const lifetime = new Promise<void>(resolve => { settle = resolve })
+    const finish = (error?: unknown): void => {
+      if (ended) return
+      ended = true
+      epoch++
+      readController.abort()
+      try { release?.() } catch (cleanupError) {
+        console.error('management: carrier cleanup failed', cleanupError)
+        error ??= cleanupError
       }
-      if (!closed && token === epoch) publish({ phase: 'connected', state })
-    }).catch(error => {
-      if (!closed && token === epoch) withdraw(error instanceof Error ? error.message : String(error))
-    })
-  }
-  const source = new EventSource(urlOf('/events'), { withCredentials: true })
-  source.onerror = () => { if (!closed) withdraw('Event connection lost') }
-  source.onmessage = (message) => {
-    if (closed) return
+      signal.removeEventListener('abort', abort)
+      if (!closed && !signal.aborted) {
+        publish({ phase: 'disconnected', diagnostic: error instanceof Error ? error.message : String(error ?? 'Event connection ended') })
+      }
+      settle()
+    }
+    const abort = (): void => { finish() }
+    signal.addEventListener('abort', abort, { once: true })
+    const synchronize = (generation: string, reconnect: boolean): void => {
+      const token = ++epoch
+      if (reconnect) publish({ phase: 'connecting' })
+      refresh = refresh.catch(() => {}).then(async () => {
+        if (ended || closed || token !== epoch) return
+        const state = await readState()
+        if (ended || closed || token !== epoch) return
+        if (state.generation !== generation) throw new Error('Host generation changed while reading state')
+        if (modules !== undefined) {
+          const graph = await read('/client/graph')
+          if (ended || closed || token !== epoch) return
+          await modules.sync(graph)
+        }
+        if (ended || closed || token !== epoch) return
+        ready({ home: '' }) // Native management has no account-home fact; it is not used by recovery.
+        publish({ phase: 'connected', state })
+      }).catch(error => {
+        if (!ended && !closed && token === epoch) finish(error)
+      })
+    }
     try {
-      const event = eventOf(JSON.parse(message.data))
-      const reconnect = event.kind === 'connected' || eventGeneration !== event.generation || event.sequence !== sequence + 1
-      eventGeneration = event.generation
-      sequence = event.sequence
-      if (reconnect) synchronize(event.generation, true)
-      else if (event.kind === 'configuration' || event.kind === 'refresh' || event.kind === 'client-modules') synchronize(event.generation, false)
-      for (const listener of [...events]) { try { listener(event) } catch (error) { console.error('management: event subscriber failed', error) } }
-    } catch (error) { withdraw(error instanceof Error ? error.message : String(error)) }
+      release = openEvents(urlOf('/events'), {
+        error(error) { if (!ended) finish(error) },
+        message(data) {
+          if (ended || closed) return
+          try {
+            const event = eventOf(JSON.parse(data))
+            const reconnect = event.kind === 'connected' || eventGeneration !== event.generation || event.sequence !== sequence + 1
+            eventGeneration = event.generation
+            sequence = event.sequence
+            if (reconnect) synchronize(event.generation, true)
+            else if (event.kind === 'configuration' || event.kind === 'refresh' || event.kind === 'client-modules') synchronize(event.generation, false)
+            for (const listener of [...events]) {
+              try { listener(event) } catch (error) { console.error('management: event subscriber failed', error) }
+            }
+          } catch (error) { finish(error) }
+        },
+      }, signal)
+      // Injected carriers may synchronously report failure before returning their disposer.
+      if (ended) {
+        try { release() } catch (error) { console.error('management: carrier cleanup failed', error) }
+      }
+      await lifetime
+    } catch (error) { finish(error) }
   }
+  const controller = new ConnectionController(connect, {
+    onStateChange(phase) {
+      if (!closed && phase !== 'connected') publish({ phase })
+    },
+  }, options.recovery)
+  // Match the upstream browser owner: offline suspends automatic attempts and
+  // returning online resets backoff. Custom non-browser carriers need no watcher.
+  const browser = typeof window === 'undefined' ? undefined : window
+  const online = (): void => { controller.setNetworkAvailable(true) }
+  const offline = (): void => { controller.setNetworkAvailable(false) }
+  if (browser?.navigator.onLine !== undefined) controller.setNetworkAvailable(browser.navigator.onLine)
+  browser?.addEventListener('online', online)
+  browser?.addEventListener('offline', offline)
+  controller.start()
+
   return {
     connection: { getSnapshot: () => snapshot, subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener) } } },
     subscribe(listener) { events.add(listener); return () => { events.delete(listener) } },
+    reconnect() { if (!closed) controller.reconnect() },
     readState,
     async readPlugins() {
       const rows = await read('/plugins')
@@ -277,17 +360,24 @@ export function createManagementClient(options: { baseUrl?: string; modules?: Cl
     remove: name => mutate('/remove', { name }, packageChange),
     compatibility: (packageVersion, runtimeVersion, enabled, acceptRisk) => mutate('/compatibility',
       { packageVersion, runtimeVersion, enabled, acceptRisk }, managementChange),
-    async close() {
-      if (closed) return refresh
+    close() {
+      if (closing !== undefined) return closing
       closed = true
       epoch++
-      source.close()
+      controller.stop()
+      browser?.removeEventListener('online', online)
+      browser?.removeEventListener('offline', offline)
       readController.abort()
-      const withdrawal = options.modules?.disconnect() ?? Promise.resolve()
-      await refresh.catch(() => {})
-      await withdrawal
+      closing = Promise.resolve().then(async () => {
+        try {
+          await Promise.all([refresh.catch(() => {}), modules?.disconnect()])
+        } finally {
+          listeners.clear()
+          events.clear()
+        }
+      })
       publish({ phase: 'closed' })
-      listeners.clear(); events.clear()
+      return closing
     },
   }
 }

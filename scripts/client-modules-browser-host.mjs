@@ -24,9 +24,49 @@ for (const directory of ['provider', 'provider-next', 'panel', 'panel-broken', '
 await mkdir(output, { recursive: true })
 await copyFile(resolve(root, 'clients/modules/examples/index.html'), resolve(output, 'index.html'))
 let roster = ['provider', 'panel']
+let managementWithdrawn = false
+let stateFailures = 0
+let sequence = 0
+const streams = new Set()
+function sharedGraph() {
+  const { bytes, ...entry } = modules.get('shared')
+  return managementWithdrawn ? { rev: 'empty', entries: [], batches: [] }
+    : { rev: entry.rev, entries: [entry], batches: [{ phase: 'application', url: entry.url, rev: entry.rev, entries: [entry.id] }] }
+}
+function send(response, kind) {
+  response.write('data: ' + JSON.stringify({ generation: 'browser-host', sequence: ++sequence, kind, value: null }) + '\n\n')
+}
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, 'http://localhost')
+    if (url.pathname === '/cordis/events') {
+      response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store' })
+      streams.add(response)
+      send(response, 'connected')
+      request.on('close', () => streams.delete(response))
+      return
+    }
+    if (url.pathname === '/cordis/state') {
+      if (stateFailures > 0) { stateFailures--; response.writeHead(503); response.end('temporary unavailable'); return }
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ protocol: 1, generation: 'browser-host', restartRequired: false,
+        selectedBundles: [], loadedBundles: [] }))
+      return
+    }
+    if (url.pathname === '/cordis/client/graph') {
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify(sharedGraph()))
+      return
+    }
+    if (url.pathname.startsWith('/test/') && request.method === 'POST') {
+      if (url.pathname === '/test/loss') for (const stream of streams) stream.end()
+      else if (url.pathname === '/test/fail-state') stateFailures = 1
+      else if (url.pathname === '/test/withdraw') { managementWithdrawn = true; for (const stream of streams) send(stream, 'client-modules') }
+      else if (url.pathname === '/test/reset') { managementWithdrawn = false; stateFailures = 0 }
+      else { response.writeHead(404); response.end(); return }
+      response.end('ok')
+      return
+    }
     if (url.pathname === '/client/graph' || url.pathname === '/client/shared-graph') {
       const action = url.searchParams.get('action')
       if (action === 'load' || action === 'reconnect') roster = ['provider', 'panel']
@@ -53,11 +93,12 @@ const server = createServer(async (request, response) => {
       return
     }
     const file = url.pathname === '/' ? resolve(output, 'index.html')
+      : url.pathname === '/recovery' ? resolve(root, 'clients/modules/examples/recovery.html')
       : url.pathname === '/shared' ? resolve(root, 'clients/modules/examples/shared/index.html')
       : url.pathname === '/shared-check.mjs' ? resolve(root, 'clients/modules/examples/shared/check.mjs')
       : url.pathname === '/client-runtime/client.mjs' ? resolve(runtime, 'client.mjs') : undefined
     if (file === undefined) { response.writeHead(404); response.end(); return }
-    response.writeHead(200, { 'content-type': ['/', '/shared'].includes(url.pathname) ? 'text/html' : 'text/javascript' })
+    response.writeHead(200, { 'content-type': ['/', '/shared', '/recovery'].includes(url.pathname) ? 'text/html' : 'text/javascript' })
     response.end(await readFile(file))
   } catch (error) { response.writeHead(500); response.end(String(error)) }
 })

@@ -282,6 +282,7 @@ def main():
         client_artifacts = ROOT / "artifacts/client-modules"
         run("client-modules-build", ["node", "scripts/build-client-modules.mjs", client_artifacts])
         run("client-modules-types", ["node", "scripts/verify-client-module-types.mjs", client_artifacts])
+        run("client-lifecycle", ["node", "scripts/verify-client-lifecycle.mjs", client_artifacts])
         run("client-shared-modules", ["node", "scripts/verify-client-shared-modules.mjs", client_artifacts])
         run("client-author-watch", ["node", "scripts/verify-client-author-watch.mjs"])
         cli = ["dotnet", ROOT / "tools/Cordis.Cli/bin/Release/net10.0/Cordis.Cli.dll"]
@@ -307,6 +308,7 @@ def main():
                 "values": [None, 1.25, "unchanged", None],
             },
         }]
+        run("cli-invocation", [sys.executable, "scripts/verify-cli-invocation.py"])
         run("cli-usage", cli, expected_exit=2)
         run("cli-invalid-option", [*cli, "validate", fixture, "--unknown"], expected_exit=1)
         run("api", ["dotnet", "run", "--project", "tools/Cordis.ApiCheck", "-c", "Release", "--no-build", "--", "--check"])

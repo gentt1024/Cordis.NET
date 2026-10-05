@@ -1,6 +1,6 @@
 import * as cordis from '@deepseek-ai/cordis'
 import * as cosmokit from '@deepseek-ai/cosmokit'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
+import { bootClient } from '@cordis-net/web/boot-client'
 import { ClientModuleSystem } from '@cordis-net/modules/system'
 import { parseBootManifest, stripClientSuffix } from '@cordis-net/modules/manifest'
 import type { ClientModuleCreateOptions, ClientModuleLoaderTarget, WebBootGraph } from '@cordis-net/modules/manifest'
@@ -19,7 +19,7 @@ declare global {
   var __ModuleLoader__: ClientModuleLoaderTarget | undefined
 }
 
-/** One page's Cordis-owned plugins. Connection owners withdraw contributions on disconnect. */
+/** One page's Cordis-owned plugins. Transient transport loss preserves plugin instances; roster changes own withdrawal. */
 export interface ClientModules {
   /** Existing Cordis Context, also used for application-owned services and effects. */
   readonly context: cordis.Context
@@ -131,11 +131,7 @@ export async function bootClientModules(options: ClientModulesOptions): Promise<
   globalThis.__ModuleLoader__ = facade
   try {
     await options.configure?.(context)
-    await context.plugin(Loader)
-    // Fixed Loader's internal seam is declared as Node-only; the upstream browser boot fills this same slot.
-    Object.assign(context.loader, { internal: modules })
-    await modules.entries.start(context.loader, parseBootManifest(graph))
-    await modules.entries.sync(graph)
+    await bootClient({ ctx: context, modules, manifest: parseBootManifest(graph) })
   } catch (error) {
     await context.fiber.dispose()
     if (globalThis.__ModuleLoader__ === facade) delete globalThis.__ModuleLoader__

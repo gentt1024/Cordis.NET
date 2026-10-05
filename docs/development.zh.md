@@ -52,6 +52,22 @@ const modules = await bootClientModules({
 
 既有验证流程运行 `verify-client-shared-modules.mjs`，由独立插件消费构建后的公开包，使用注入的 Node transport。既有浏览器验证载体的 `/shared` 页面另行验证真实默认/自定义 script transport 和缺失供应者。这些结果不替代原生目录测试、上游断言或托管验证。
 
+
+浏览器首次启动调用固定 web 激活审计；导入失败、激活失败和等待缺失服务的 Pending 条目会拒绝启动并清理。暂时断线保留插件和草稿。公开客户端接受 `transport.fetch`、`transport.openEvents`、`recovery` 及手动 `reconnect()`。固定连接控制器在原生 HTTP/SSE carrier 上负责握手截止、重试/退避和离线/上线处理。关闭所有者会拒绝新写入、取消读取并等待撤销。恢复不重放结果未知的写操作。
+
+## 应用调用
+
+```console
+cordis run ./profile --resume abc --source app-owned-value
+cordis run ./profile --source ./feed --url http://127.0.0.1:5080 --authorization-env CORDIS_TOKEN -- --help
+```
+
+启动器只解析 `--` 或首个不认识的 token 之前的自身选项；其余参数原样复制到 `cmdlineArgs` 的 `CommandLineArguments`。解析、帮助和错误属于应用。第一条命令的 `--source` 属于应用，第二条命令在分隔符之前选择包源。不传 `--url` 时 Generic Host 不打开 HTTP 监听。空来源白名单可以运行已安装包；获取新包仍须显式选择来源。
+
+挂载条目前，CLI 还提供 `appReady` 的 `IApplicationReady` 与 `appExit` 的 `ApplicationExit`。就绪订阅应注册为 Context effect。插件树和宿主启动成功后提交就绪，晚订阅者立即回调。应用可在激活中（例如帮助）或就绪后请求退出。首个请求启动固定上游的五秒宽限，包括启动期间的请求；CLI 等待插件树有序释放，超过宽限则以该码强制退出进程。普通启动没有五秒时限。启动/就绪异常返回失败；Cordis 报告 effect 清理错误，不改写请求的退出码。既有 HMR 使用同一就绪结果。进程信号仍由 .NET Host 处理。
+
+库宿主可通过 `ProfileSession.StartAsync(prepare: ...)` 提供这些 Composition 合同并决定自己的退出策略，不必使用 CLI 或另一套运行时。验证流程会编译独立 CLR 应用并执行真实 CLI，覆盖参数边界、帮助/错误、就绪与清理。受控 carrier、浏览器执行和原生管理测试分别记录。
+
 ## 初始应用基础设施实施片（历史验收）
 
 沿用已完成的应用范围矩阵，参照 `upstream.lock.json` 中固定的 DSH 提交，不重新开展全仓审查。Core 保持领域无关；管理、作者能力和平台接入复用其上既有所有者。
