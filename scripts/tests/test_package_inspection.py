@@ -40,6 +40,7 @@ class PackageInspectionTests(unittest.TestCase):
             "Cordis.NET.Extensions",
             "Cordis.NET.Clr",
             "Cordis.NET.Hosting",
+            "Cordis.NET.AspNetCore",
             "Cordis.NET.JavaScript",
             "Cordis.NET.Tool",
         ))
@@ -47,8 +48,9 @@ class PackageInspectionTests(unittest.TestCase):
         self.assertEqual(PACKAGE_LAYOUTS["Cordis.NET.Extensions"][3], {"Cordis.NET.Core", "Cordis.NET.Composition"})
         self.assertEqual(PACKAGE_LAYOUTS["Cordis.NET.Clr"][3], {"Cordis.NET.Composition"})
         self.assertEqual(PACKAGE_LAYOUTS["Cordis.NET.Hosting"][3], {"Cordis.NET.Core"})
+        self.assertEqual(PACKAGE_LAYOUTS["Cordis.NET.AspNetCore"][3], {"Cordis.NET.Extensions"})
         self.assertEqual(PACKAGE_LAYOUTS["Cordis.NET.JavaScript"][3], {"Cordis.NET.Composition"})
-        # PackAsTool bundles Composition and Core assemblies instead of declaring NuGet dependencies.
+        # PackAsTool carries its managed dependencies instead of declaring package dependencies.
         self.assertEqual(PACKAGE_LAYOUTS["Cordis.NET.Tool"][3], set())
 
     @unittest.skipUnless(shutil.which("dotnet") or os.environ.get("CORDIS_TEST_DOTNET"), "Symbol fixture requires the .NET SDK")

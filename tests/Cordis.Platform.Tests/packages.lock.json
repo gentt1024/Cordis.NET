@@ -150,6 +150,12 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "Cordis.NET.AspNetCore": {
+        "type": "Project",
+        "dependencies": {
+          "Cordis.NET.Extensions": "[0.2.0-alpha.1, )"
+        }
+      },
       "Cordis.NET.Clr": {
         "type": "Project",
         "dependencies": {

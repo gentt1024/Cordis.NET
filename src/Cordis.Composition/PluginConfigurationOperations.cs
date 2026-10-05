@@ -45,10 +45,11 @@ public sealed record BundleConfigurationInfo(string Name, string? Version, strin
 /// <param name="Diagnostic">The diagnostic value.</param>
 /// <param name="Warnings">The warnings value.</param>
 public sealed record ConfigurationChange(bool Changed, string Application, string Target, bool Enabled, string? Error = null, string? Diagnostic = null, IReadOnlyList<EntryDiagnostic>? Warnings = null);
-/// <summary>Persistent profile configuration operations. Package installation and remote UI transport belong to the host.</summary>
+/// <summary>Profile configuration and package coordination. Platform toolchains and transports reuse this owner above Core.</summary>
 public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, Include include, string? ownerEntryId = null)
 {
     private readonly SemaphoreSlim mutation = new(1, 1);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> managementBundles = new(StringComparer.Ordinal);
     private string ManifestPath => Path.Combine(launch.Profile.Directory, "package.json");
     private string PatchPath => launch.Profile.UserLayer.Source;
     /// <summary>Set to the active host HMR coordinator's RunExclusiveAsync. Null means startup-only configuration.</summary>
@@ -179,13 +180,15 @@ public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, 
                 var (metadata, patches) = info.Value;
                 var declared = Flatten(Profiles.Compose([new("bundle", patches.Where(p => p.ContainsKey("insert")).ToList())])).Where(p => p.Id.Length > 0 && p.Name.Length > 0).ToArray();
                 var ids = declared.Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-                var reason = ProtectsManager(patches) ? "management-required" : null;
+                if (ProtectsManager(patches)) managementBundles.TryAdd(name, 0);
+                var reason = managementBundles.ContainsKey(name) ? "management-required" : null;
                 result.Add(new(name, metadata.Raw.GetValueOrDefault("version") as string, metadata.Raw.GetValueOrDefault("description") as string, enabled, installed, OptionalBundles.Contains(name), removable && reason is null, reason, null, declared.Select(row => new BundleConfigurationRow(row.Id, row.Name, live.GetValueOrDefault(row.Id))).ToArray(), patches.Where(p => !p.ContainsKey("insert") && p.Id.Length > 0 && !ids.Contains(p.Id)).Select(p => p.Id).Distinct(StringComparer.Ordinal).ToArray()));
             }
             catch (Exception error)
             {
                 if (enabled || installed)
-                    result.Add(new(name, null, null, enabled, installed, OptionalBundles.Contains(name), removable, null, error.Message, [], []));
+                    result.Add(new(name, null, null, enabled, installed, OptionalBundles.Contains(name), removable && !managementBundles.ContainsKey(name),
+                        managementBundles.ContainsKey(name) ? "management-required" : null, error.Message, [], []));
             }
         }
 

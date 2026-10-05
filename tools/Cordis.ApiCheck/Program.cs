@@ -2,7 +2,7 @@ using System.Reflection;
 
 var root = Environment.CurrentDirectory;
 var baseline = Path.Combine(root, "docs", "public-api.txt");
-var names = new[] { "Cordis.Core", "Cordis.Composition", "Cordis.Extensions", "Cordis.Clr", "Cordis.Hosting", "Cordis.JavaScript" };
+var names = new[] { "Cordis.Core", "Cordis.Composition", "Cordis.Extensions", "Cordis.Clr", "Cordis.Hosting", "Cordis.AspNetCore", "Cordis.JavaScript" };
 var lines = new List<string>();
 foreach (var name in names)
 {

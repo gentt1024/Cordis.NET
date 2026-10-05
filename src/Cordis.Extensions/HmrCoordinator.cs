@@ -17,6 +17,7 @@ public sealed class HmrCoordinator : IAsyncDisposable
     }
     private readonly object _gate = new();
     private readonly AsyncLocal<bool> _executing = new();
+    internal bool IsExecuting => _executing.Value;
     private Task _tail = Task.CompletedTask;
     private bool _closing;
     private readonly CancellationTokenSource _stopReadiness = new();

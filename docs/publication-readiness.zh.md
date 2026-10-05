@@ -4,7 +4,7 @@
 
 当前源码树是可供审查的公开源码快照，包含文档、包元数据、每包 README、社区模板、公开验证摘要、许可材料和本地发布检查。
 
-仓库及包元数据固定为 `gentt1024/Cordis.NET`。下一包版本为 `0.2.0-alpha.1`，预期发行 tag 为 `v0.2.0-alpha.1`。这是 Cordis.NET 的版本，独立于固定的 DSH tag。`Directory.Build.props`、包元数据和所选发行 tag 必须一致。本次准备尚未发布包或 tag。
+仓库及包元数据固定为 `gentt1024/Cordis.NET`。已发布的 `0.2.0-alpha.1` 批次保持不变，之后的应用基础设施新增能力仅存在于源码。获准发行前必须选择新版本；使用源码版本号生成本地验证包，不授权替换已发布包。Cordis.NET 版本独立于固定 DSH tag。最终提交、版本、tag 和选定包哈希必须对应。
 
 选择发行批次前，应在最终源码上执行既有原生验证、固定源码对照、JIT/Native AOT 和隔离包消费者检查。还须检查实际 nupkg/snupkg 批次并运行其离线调试消费者：
 
@@ -18,7 +18,7 @@ python scripts/package_inspection.py --directory artifacts/release-packages --ve
 
 参考工具固定使用 `js-yaml` 4.3.2，定向修复已记录的公告，包括[空 merge source 绕过 CPU 预算](https://github.com/nodeca/js-yaml/security/advisories/GHSA-2883-xcg3-v3hh)。所选批次须重新执行 `npm ci --prefix reference --ignore-scripts`、`npm audit --prefix reference` 和相关固定源码参考场景。它不是运行时 NuGet 依赖。
 
-尚需维护者完成以下外部步骤：
+之后每次发行均须完成下列单独授权的外部检查；本地准备不证明远端当前状态：
 
 1. 在公开远端运行已提交的 GitHub Actions workflow，并要求 `main` 的两平台检查通过。
 2. 启用 GitHub 私密漏洞报告，使 `SECURITY.md` 中的链接可接收报告。

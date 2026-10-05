@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Cordis client modules</title>
+<h1>Cordis client modules</h1>
+<p>Two independently built plugins. The panel imports its provider and owns its DOM contribution through Cordis.</p>
+<button id="load">Load modules</button> <button id="update">Update provider</button>
+<button id="withdraw">Withdraw panel</button> <button id="broken">Broken panel</button>
+<button id="disconnect">Disconnect</button> <button id="reconnect">Reconnect</button>
+<pre id="status" role="status">Ready</pre><div id="contributions"></div>
+<script type="module">
+import { bootClientModules } from '/client-runtime/client.mjs'
+let client
+const status = document.querySelector('#status')
+const show = () => {
+  const state = client?.state.getSnapshot()
+  status.textContent = state?.failures.length ? state.failures.map(row => row.id + ': ' + row.message).join('\n') : 'Modules settled'
+}
+async function graph(action) {
+  const response = await fetch('/client/graph' + (action ? '?action=' + action : ''))
+  if (!response.ok) throw new Error('Graph request failed: ' + response.status)
+  return response.json()
+}
+async function run(action) {
+  status.textContent = 'Working'
+  try {
+    if (action === 'disconnect') { await client?.disconnect(); status.textContent = 'Disconnected'; return }
+    const next = await graph(action)
+    if (client === undefined) {
+      client = await bootClientModules({ graph: next })
+      client.state.subscribe(show)
+    } else await client.sync(next)
+    show()
+  } catch (error) { status.textContent = error.message }
+}
+for (const action of ['load', 'update', 'withdraw', 'broken', 'disconnect', 'reconnect']) {
+  document.querySelector('#' + action).addEventListener('click', () => run(action))
+}
+window.addEventListener('pagehide', () => { void client?.dispose() })
+</script></html>

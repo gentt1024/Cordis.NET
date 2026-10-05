@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace Cordis.Composition;
 
 /// <summary>A captured precompiled web entry selected through the existing deployment package resolver.</summary>
-/// <remarks>Self-contained ESM is a host/platform contract. This class does not resolve browser imports, build code or emulate the DSH module graph.</remarks>
+/// <remarks>This class captures bytes only. The consumer defines their format, such as independent ESM or factory registration. It does not resolve browser imports, build code or own a module graph.</remarks>
 public sealed class ClientArtifact
 {
     private readonly byte[] content;

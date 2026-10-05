@@ -4,7 +4,7 @@
 
 Cordis.NET implements the DSH-maintained Cordis at a fixed revision. Its scope includes a domain-independent runtime and generic infrastructure for building, running, configuring, managing, and shipping modular applications. Core remains domain-independent; application libraries and platform adapters sit above it.
 
-Available components include lifecycle and injection, profile/bundle/patch composition, running-session coordination, configuration references, plugin enablement and deployment reconciliation, and optional CLR, Generic Host and JavaScript adapters. Current source also offers typed field composition, revision-fenced field editing, a primitive live settings subset and captured web client artifacts. The Probes example demonstrates their HTTP/TypeScript integration. Full settings/UI protocols, client module graphs, CLI application invocation and package-tool adapters remain in-scope gaps. Agent/LLM business logic, RSI goals and FSM domain logic belong to products. These new source capabilities are not in the published `0.2.0-alpha.1` batch.
+Available components include lifecycle and injection, profile/bundle/patch composition, running-session coordination, configuration references, plugin enablement and deployment reconciliation, and optional CLR, Generic Host and JavaScript adapters. Current source adds typed field composition, ordered configuration edits and resets, explicit declaration exports, a NuGet/SDK package toolchain, ASP.NET Core management endpoints, application CLI commands and reusable TypeScript client modules. Their combined delivery is still under verification; see the development and compatibility records for remaining work. Agent/LLM business logic, RSI goals and FSM domain logic belong to products. These new source capabilities are not in the published `0.2.0-alpha.1` batch.
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
 
@@ -19,6 +19,8 @@ dotnet run --project examples/Composition/Composition.csproj
 ```
 
 The example registers a static plugin, applies configuration, observes its service, and updates it.
+
+The [managed application example](examples/ManagedApplication/README.md) combines real package installation, configuration and browser modules through the same profile session. Its optional frontend build requires Node; ordinary C# plugin development does not.
 
 ## Install the prerelease
 
@@ -37,7 +39,7 @@ The package IDs use the `Cordis.NET.*` prefix. CLR namespaces and assembly names
 - **CLR modules:** add `Cordis.NET.Clr` to load managed plugin assemblies in an ordinary .NET runtime. This path is not Native AOT compatible.
 - **JavaScript expressions:** add `Cordis.NET.JavaScript` for `!!js` evaluation through Jint. Trusted configuration only; this is not a sandbox and no Native AOT support is claimed.
 
-`Cordis.NET.Hosting` integrates the runtime with Generic Host. `Cordis.NET.Tool` provides configuration validation and preview commands.
+`Cordis.NET.Hosting` integrates the runtime with Generic Host. Current source adds optional `Cordis.NET.AspNetCore` for explicitly authorized management/service endpoints. The source CLI retains validation/preview and adds `run` plus remote management commands; those commands are not in the published tool yet.
 
 ## Documentation
 

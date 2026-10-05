@@ -32,7 +32,7 @@ The full gate checks the locked SDK and dependencies, analyzers, tests, upstream
 
 Generated outputs and raw logs may contain local paths or user names. Keep them outside the public tree; commit only redacted summaries and stable machine-readable evidence.
 
-## Application infrastructure slices
+## Initial application infrastructure slices (historical acceptance)
 
 Work follows the completed application-scope matrix, using the fixed DSH revision in `upstream.lock.json`. Do not reopen a whole-repository review. Core remains domain-independent; management, authoring and platform integration reuse existing owners above it.
 
@@ -50,3 +50,7 @@ Each slice requires implementation, an independent read-only review citing rules
 B preserves source ownership, raw opacity and the existing session queue. Independent review corrected flow-row deletion, user-insert inheritance, ancestor live admission, restart outcomes and caller-owned maps. YAML round-trip checks refuse non-persistable candidates before writing. C restricts both reads and submissions with host policy, keeps draft revisions tied to their original host hash and refuses unsupported reset/multi-edit. D captures immutable bytes through deployment package routing; both lexical and linked escape paths are rejected. These rules were calibrated before the final batch, without changing the formal lock. The existing authoring verifier includes compiled production/client mutations and unchanged end-to-end controls for these contracts; correct source and isolated packages run the actual native host and TypeScript client.
 
 The final batch exposed truncated Node data-URL error output. The consumer now reports the original error message and a nonzero exit code; independent review confirmed that assertions and the verifier's designated-rejection checks are unchanged. Both platforms reran the authoring gate successfully. The source-ZIP build also exposed a separate symbol-packaging limitation: without Git metadata, the SDK emitted no SourceLink record and the strict inspector rejected the packages. Full symbol/package checks passed from Git checkouts; the no-Git export path remains open. See the current validation record, rather than treating archive creation as acceptance.
+
+The no-Git export limitation described above was subsequently repaired by binding exported sources to their real commit. The isolated no-Git `verify.py --aot --package` run passed for that build change, including strict symbols and independent consumers. This result does not validate later application-infrastructure changes or remote SourceLink availability.
+
+Current source extends those initial slices with ordered configuration edits/reset, nested Settings and independent declaration exports, NuGet/SDK package operations, HTTP/SSE management, CLI operations and browser module delivery. The initial restrictions above describe the earlier acceptance batch. Each new path requires independent review and combined validation; its presence does not reuse the earlier batch as proof.

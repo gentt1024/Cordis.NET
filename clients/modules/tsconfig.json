@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], "strict": true, "skipLibCheck": true,
+    "allowImportingTsExtensions": true, "declaration": true, "emitDeclarationOnly": true,
+    "rootDir": ".", "outDir": "lib/types",
+    "paths": {
+      "@deepseek-ai/cordis": ["./.types/vendor/cordis/src/index.d.ts"],
+      "@deepseek-ai/cosmokit": ["./.types/vendor/cosmokit/src/index.d.ts"],
+      "@deepseek-ai/cordis-plugin-loader": ["./.types/vendor/loader/src/index.d.ts"],
+      "@cordis-net/modules/*": ["./.types/vendor/modules/*.d.ts"]
+      ,"@cordis-net/modules/slots": ["./.types/vendor/slots/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

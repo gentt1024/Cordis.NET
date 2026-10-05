@@ -139,6 +139,11 @@ public sealed class ProfileSession : IAsyncDisposable
                     return await ApplicationBoot.AuditAsync(session.Loader, session.required);
                 },
             };
+            await session.Context.RunAsync(ctx =>
+            {
+                ctx.Effect(() => new PackageShutdown(session), "profile package operations");
+                return Task.CompletedTask;
+            });
             await session.WarnInactiveAsync(await ApplicationBoot.AuditAsync(session.Loader, required));
             session.successfulProfileInputs = inputs;
             await session.SynchronizeWatchesAsync();
@@ -326,11 +331,38 @@ public sealed class ProfileSession : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         if (disposed) return;
+        // Package preparation runs outside the HMR queue. Stop its children before closing
+        // that queue or the borrowed resolver; admitted publication must be allowed to settle.
+        await StopPackagesAsync();
         disposed = true;
         // HmrCoordinator avoids waiting on its current operation when disposal originates there.
         await queue.DisposeAsync();
         watches.Clear();
         await Context.DisposeAsync();
-        Error = null; Warning = null; Refreshed = null; RestartRequired = null;
+        Error = null;
+        Warning = null;
+        Refreshed = null;
+        RestartRequired = null;
+    }
+
+    private sealed class PackageShutdown(ProfileSession session) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync() => new(session.StopPackagesAsync());
+    }
+
+    private async Task StopPackagesAsync()
+    {
+        if (ConfigurationOperations is null) return;
+        var stopped = ConfigurationOperations.StopPackageOperationsAsync();
+        if (!queue.IsExecuting) await stopped;
+        else _ = ObservePackageShutdownAsync(stopped);
+    }
+
+    private async Task ObservePackageShutdownAsync(Task stopped)
+    {
+        // Disposal from an applying operation cannot await itself. Admission is already
+        // closed synchronously; report any eventual cleanup error without retaining it globally.
+        try { await stopped; }
+        catch (Exception error) { Report(error); }
     }
 }

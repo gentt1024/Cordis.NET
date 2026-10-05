@@ -1,0 +1,175 @@
+{
+  "files": [
+    {
+      "upstreamPath": "vendor/cordis/src/context.ts",
+      "sha256": "96b388162d6013c1898de61e35f28917abb93809de24174980f2a1a348d0b115",
+      "file": "cordis/src/context.ts"
+    },
+    {
+      "upstreamPath": "vendor/cordis/src/events.ts",
+      "sha256": "9aff93dcfcad98aebb692c19c36d3bf034a96f9085bc66900a997cda3f79e6fe",
+      "file": "cordis/src/events.ts"
+    },
+    {
+      "upstreamPath": "vendor/cordis/src/fiber.ts",
+      "sha256": "b7661d6c19be76cef6b97d88719a8112c0f8b5abe65bd9e7d5947773fd4b96d4",
+      "file": "cordis/src/fiber.ts"
+    },
+    {
+      "upstreamPath": "vendor/cordis/src/index.ts",
+      "sha256": "071fb226e9a21556625e4391b28e6641b9b34b1cd402155246e0437993d8b740",
+      "file": "cordis/src/index.ts"
+    },
+    {
+      "upstreamPath": "vendor/cordis/src/logger.ts",
+      "sha256": "05cb6be3e4cf8d078185b5d10c87e536c7d2b2b3ad43c270a0dbafaa28f41fef",
+      "file": "cordis/src/logger.ts"
+    },
+    {
+      "upstreamPath": "vendor/cordis/src/reflect.ts",
+      "sha256": "6847b9781044023d65aebb5896a873b9f0a3d777eaf7fa0dd2a7a408eb6b74a6",
+      "file": "cordis/src/reflect.ts"
+    },
+    {
+      "upstreamPath": "vendor/cordis/src/registry.ts",
+      "sha256": "34bbd60ae502b4f85201c204afb52a9acabde6878d9278493478c1b2183debd3",
+      "file": "cordis/src/registry.ts"
+    },
+    {
+      "upstreamPath": "vendor/cordis/src/service.ts",
+      "sha256": "614205c6ce7cf1a057b8b352e96aa4fcd734c967a3d2283a126c9c61f268e3be",
+      "file": "cordis/src/service.ts"
+    },
+    {
+      "upstreamPath": "vendor/cordis/src/utils.ts",
+      "sha256": "8fe273424583d21267ef13f248840e97454d09d836a0ac08323a9482c2069263",
+      "file": "cordis/src/utils.ts"
+    },
+    {
+      "upstreamPath": "vendor/cosmokit/src/array.ts",
+      "sha256": "cf4de899ecffd66a90d8cef6f4c7d127d31f77f776d8e173d41c30d2d7632cf7",
+      "file": "cosmokit/src/array.ts"
+    },
+    {
+      "upstreamPath": "vendor/cosmokit/src/index.ts",
+      "sha256": "1087da74b9c461984e547d524ee766eebcf329a78e4720bff5b60a004ccf6e8c",
+      "file": "cosmokit/src/index.ts"
+    },
+    {
+      "upstreamPath": "vendor/cosmokit/src/misc.ts",
+      "sha256": "117617943074ea57c15f216905dacd2f6d1c4c2ff16586f97a7a7a87dbf2141f",
+      "file": "cosmokit/src/misc.ts"
+    },
+    {
+      "upstreamPath": "vendor/cosmokit/src/string.ts",
+      "sha256": "5564272b3e15e49235cbe3a8b453f27306baf282d23a893982841670f65d3c04",
+      "file": "cosmokit/src/string.ts"
+    },
+    {
+      "upstreamPath": "vendor/cosmokit/src/time.ts",
+      "sha256": "49957c4608465a1fbd738186a92c47fffcd1fc4ba59dbf89524f8a773fe16fe2",
+      "file": "cosmokit/src/time.ts"
+    },
+    {
+      "upstreamPath": "vendor/cosmokit/src/types.ts",
+      "sha256": "cc49c12e4a637f7b0754ff78a8299e9c42fa40ee8c678550af0c538a80146a92",
+      "file": "cosmokit/src/types.ts"
+    },
+    {
+      "upstreamPath": "vendor/cosmokit/src/volatile.ts",
+      "sha256": "937433215595f89da249ec7cabb89e331ff4135a40c6686a95666d2095315e55",
+      "file": "cosmokit/src/volatile.ts"
+    },
+    {
+      "upstreamPath": "vendor/loader/src/index.ts",
+      "sha256": "a135e2189a0feb0af08ff79de761698fb8ce7b41c96fefda1d4a299e5982fef3",
+      "file": "loader/src/index.ts"
+    },
+    {
+      "upstreamPath": "vendor/loader/src/internal.ts",
+      "sha256": "35a50d597fed58656a11e3c5294fdf99524ed8c106739b4fab522a288eefa877",
+      "file": "loader/src/internal.ts"
+    },
+    {
+      "upstreamPath": "vendor/loader/src/config/diff.ts",
+      "sha256": "6025a6b9798a0a16af017bb7d8d6394bbe345685b2ace56b15975add5843edb3",
+      "file": "loader/src/config/diff.ts"
+    },
+    {
+      "upstreamPath": "vendor/loader/src/config/entry.ts",
+      "sha256": "4e4f3be8678e74fcb9c5c6566469a26e151c8b43ff477956a5518472cc7edf73",
+      "file": "loader/src/config/entry.ts"
+    },
+    {
+      "upstreamPath": "vendor/loader/src/config/group.ts",
+      "sha256": "5e138e8a8fad22e21d031859345797c445efbc380559fc32d35b03c835e60ccc",
+      "file": "loader/src/config/group.ts"
+    },
+    {
+      "upstreamPath": "vendor/loader/src/config/isolate.ts",
+      "sha256": "dfc9e961f61fe5f7701b5593f98902aa971884fb242e208fc0d5207794117094",
+      "file": "loader/src/config/isolate.ts"
+    },
+    {
+      "upstreamPath": "vendor/loader/src/config/tree.ts",
+      "sha256": "761889adfb6b8a164fb12a0cec49a6ef439598b9267e85073000cfa9b7d682c8",
+      "file": "loader/src/config/tree.ts"
+    },
+    {
+      "upstreamPath": "vendor/loader/src/config/utils.ts",
+      "sha256": "d85b8ac1693af4667e9c0395cd1d6b15ec28387073a81f0d00bd38d909a05f8e",
+      "file": "loader/src/config/utils.ts"
+    },
+    {
+      "upstreamPath": "packages/client/modules/src/client/system.ts",
+      "sha256": "01ae8f4cac487eecfd5133aaaa045fd531cb21616638f3c694f1ab43c7fba8bf",
+      "file": "modules/system.ts"
+    },
+    {
+      "upstreamPath": "packages/client/modules/src/client/manifest.ts",
+      "sha256": "2e44bce01dc004fcb6a21b68445dfd3a8cb05fb2b715b1df8e75ed642609686e",
+      "file": "modules/manifest.ts"
+    },
+    {
+      "upstreamPath": "packages/client/modules/src/client/entries.ts",
+      "sha256": "52b438c9541a470b63e41b8880fd608909117168bfcd76cbe65be6dbff651edc",
+      "file": "modules/entries.ts"
+    },
+    {
+      "upstreamPath": "packages/client/modules/src/client/entry-lifecycle.ts",
+      "sha256": "1b6f54b4fbebf5c440e753b9c104d4741e632b744b496a6a23af6f8fc20cc198",
+      "file": "modules/entry-lifecycle.ts"
+    },
+    {
+      "upstreamPath": "packages/client/store/src/contract.ts",
+      "sha256": "d4ba75c2559f22713f1f3659d03fce6cf17b6f1c1fe82a9615b71f6a504e9e81",
+      "file": "contracts/store.ts"
+    },
+    {
+      "upstreamPath": "packages/util/package-manifest/src/types.ts",
+      "sha256": "10568c7c456b82b0cb0f932794217bb7860f59a9e2996ec312e9ad5622a436b6",
+      "file": "contracts/package-manifest.ts"
+    },
+    {
+      "upstreamPath": "apps/web/src/node-module-stub.ts",
+      "sha256": "cf0eac2a050ca8392fab190a648f5b0c359a3b2aa5b819ec26e901900c4a532e",
+      "file": "contracts/node-module-stub.ts"
+    },
+    {
+      "upstreamPath": "packages/client/ui-slots/src/index.ts",
+      "sha256": "27a453937cdcc28923c37ad90cd01489e458e205dc03032629183087b5b585d0",
+      "file": "slots/index.ts"
+    },
+    {
+      "upstreamPath": "packages/client/ui-slots/src/store.ts",
+      "sha256": "4233ae32911848aa771910286e5f41b4c683e8c5b16da190935082ac4249cca0",
+      "file": "slots/store.ts"
+    },
+    {
+      "upstreamPath": "packages/client/ui-slots/src/renderer.ts",
+      "sha256": "ee834aafc19367922c139d41f677233fbdfcc042b4deff9f616aa43220ee09ee",
+      "file": "slots/renderer.ts"
+    }
+  ],
+  "commit": "639ed015397290b3745d163aafe02ffee4aa3f84"
+}

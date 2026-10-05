@@ -20,7 +20,7 @@ PAIRS = [
 ]
 PACKAGES = [
     "src/Cordis.Core", "src/Cordis.Composition", "src/Cordis.Extensions",
-    "src/Cordis.Clr", "src/Cordis.JavaScript", "src/Cordis.Hosting",
+    "src/Cordis.Clr", "src/Cordis.JavaScript", "src/Cordis.Hosting", "src/Cordis.AspNetCore",
     "tools/Cordis.Cli", "examples/Greeting.Plugin",
 ]
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")

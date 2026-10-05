@@ -1,0 +1,19 @@
+{
+  "name": "example-panel",
+  "version": "2.0.0",
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "example-provider"
+      ],
+      "external": [
+        "example-provider/client",
+        "@deepseek-ai/cordis"
+      ]
+    },
+    "bundle": {
+      "patch": []
+    }
+  }
+}

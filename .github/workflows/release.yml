@@ -63,7 +63,9 @@ jobs:
         with:
           node-version: 24.12.0
           cache: npm
-          cache-dependency-path: reference/package-lock.json
+          cache-dependency-path: |
+            reference/package-lock.json
+            clients/modules/package-lock.json
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.13'
@@ -104,6 +106,7 @@ jobs:
           git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
           git -C ../upstream-cordis checkout --detach FETCH_HEAD
           npm ci --prefix reference --ignore-scripts
+          npm ci --prefix clients/modules --ignore-scripts
       - run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
       - name: Full verification and exact package batch
         shell: bash
@@ -225,6 +228,6 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           version="${RELEASE_TAG#v}"
-          for package in Cordis.NET.Core Cordis.NET.Composition Cordis.NET.Extensions Cordis.NET.Clr Cordis.NET.Hosting Cordis.NET.JavaScript Cordis.NET.Tool; do
+          for package in Cordis.NET.Core Cordis.NET.Composition Cordis.NET.Extensions Cordis.NET.Clr Cordis.NET.Hosting Cordis.NET.AspNetCore Cordis.NET.JavaScript Cordis.NET.Tool; do
             dotnet nuget push "artifacts/publish/${package}.${version}.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
           done

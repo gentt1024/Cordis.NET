@@ -58,10 +58,8 @@ does not exclude them. Scope does not imply that an unimplemented adapter is ava
 `ConfigObject<T>` belongs to Composition and builds the existing `ConfigSchema<T>` contract.
 It shares explicit field projections across reference binding, ordinary comparison, description
 data and complete persistence without changing Core validation or update paths. Transparent
-plugin wrappers forward `IConfigurationPlugin` as well as `IPlugin`; dropping the optional
-declaration is a wrapper wiring defect, not a reason for runtime inference. No Maker source is
-changed here. Read-only inspection confirmed that the inspected Maker wrappers forward only
-the old interface; no Maker runtime validation is claimed.
+plugin wrappers forward `IConfigurationPlugin` as well as `IPlugin`. The wrapper owns forwarding
+that optional declaration; the runtime does not infer missing declarations from the wrapped object.
 
 Field edits use `ProfileSession.ConfigurationOperations`, its existing exclusive queue and
 normal Loader validation/reconciliation. A content/activation hash fences stale writes;
@@ -70,16 +68,22 @@ normal reconciliation, without promising an atomic rollback of the entire live t
 `Fiber.ConfigurationValues` exports only detached published reference snapshots; it does
 not export or retain the plugin configuration object.
 
-`SettingsPolicy` is host selection/redaction above Core. The current view supports top-level
-primitive live fields and one SET; it does not export schema callbacks, defaults or ordinary
-raw values. The unchanged fixed DSH form model/store remain TypeScript in the example.
-The adapter maps draft tokens to their original host hashes, and rejects unsupported atomic
-multi-edit/reset requests. HTTP authentication and authorization belong to deployed hosts.
+`SettingsPolicy` selects fields above Core. Ordered edits create one complete raw candidate,
+validate through the existing Loader, and perform one source commit. Explicit descriptor annotations
+carry detached data; Composition interprets form metadata and redacts settings. They do not add a
+second validator. Schemastery and JSON Schema are separate projections with explicit limitations.
 
-`ClientArtifact` captures a deployed package's explicit web export and immutable bytes.
-SHA-256/ETag and self-contained ESM are explicit platform adaptations. The example polls
-content identities and returns 404 for retired URLs after acceptance; it does not emulate
-DSH's complete module graph, dependency bundler or notification protocol.
+`DotnetPluginToolchain` owns NuGet acquisition and SDK preparation in Clr. Profile operations hold
+the existing file/mutation lock, then enter the session queue for publication and reconciliation.
+Build execution approval is independent of DSH version grants. The ASP.NET Core adapter and CLI
+call these same operations. HTTP generations and content revisions fence stale requests; active
+installation waiting supplies no durable receipt and never authorizes replay after an unknown response.
+
+`ClientArtifact` still captures immutable bytes. `ClientModuleCatalog` adds selected dependencies
+and graph identities; the TypeScript package reuses the fixed Cordis/Loader and client module
+mechanisms. Compiled factory registrations are an optional browser authoring path; backend C#
+authors do not need Node. Completed catalogs are published by the host, and failed builds must
+retain their preceding complete catalog. Product pages and identities remain application-owned.
 
 ## Platform evidence
 

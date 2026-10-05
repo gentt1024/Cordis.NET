@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <PackageId>Example.ManagedPlugin</PackageId>
+    <Version>1.0.0-alpha.1</Version>
+    <Description>Independent configurable plugin for the managed application example.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Cordis.Clr/Cordis.Clr.csproj" />
+    <None Include="cordis.plugin.json" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>

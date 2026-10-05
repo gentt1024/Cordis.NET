@@ -4,7 +4,7 @@
 
 The current tree is prepared as a reviewable public source snapshot. Documentation, package metadata, package-specific readmes, community templates, public validation evidence, license material, and local release checks are present.
 
-The repository identity and package metadata are fixed to `gentt1024/Cordis.NET`. The next package version is `0.2.0-alpha.1`; its prospective release tag is `v0.2.0-alpha.1`. This is Cordis.NET's version, independent of the pinned DSH tag. The version in `Directory.Build.props`, package metadata and selected release tag must agree. No package or tag has been published by this preparation.
+The repository identity and package metadata are fixed to `gentt1024/Cordis.NET`. The published `0.2.0-alpha.1` batch remains unchanged. Later application-infrastructure additions are source-only. A new version must be chosen before an authorized release; local verification packages using the source version do not authorize replacing published packages. Cordis.NET versions are independent of the pinned DSH tag. The final commit, version, tag and selected package hashes must agree.
 
 Before selecting a release batch, run the existing native, fixed-source, JIT/Native AOT and isolated package-consumer checks on the final source. Also inspect the actual nupkg/snupkg batch and execute its offline debug consumer:
 
@@ -18,7 +18,7 @@ The isolated debug consumer installs Core from the exact local batch into a priv
 
 Reference tooling pins `js-yaml` 4.3.2. This is a targeted fix for the recorded advisories, including [empty merge-source CPU budget bypass](https://github.com/nodeca/js-yaml/security/advisories/GHSA-2883-xcg3-v3hh). Rerun `npm ci --prefix reference --ignore-scripts`, `npm audit --prefix reference` and the relevant fixed-source reference scenarios for the selected batch. It is not a runtime NuGet dependency.
 
-The remaining external gates are:
+Each future release requires these separately authorized external checks; local preparation does not establish their current remote status:
 
 1. Run the checked-in GitHub Actions workflow on the public remote and require both platform checks on `main`.
 2. Enable GitHub private vulnerability reporting so the verified link in `SECURITY.md` accepts reports.

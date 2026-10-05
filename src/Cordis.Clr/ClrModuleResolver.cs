@@ -249,6 +249,26 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         }
     }
 
+    /// <summary>Remove an explicit module mapping after its owner has stopped all fibers and released application references.</summary>
+    /// <remarks>Requests cooperative unload; it does not force collection or remove source files. Serialized with replacement and disposal.</remarks>
+    public async ValueTask<ClrUnloadObservation?> RemoveAsync(string specifier, CancellationToken cancellationToken = default)
+    {
+        if (replacementScope.Value is { Active: true }) throw new InvalidOperationException("Cannot remove a module inside its replacement callback.");
+        await mutation.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                ObjectDisposedException.ThrowIf(disposed, this);
+                definitions.Remove(specifier);
+                return loaded.Remove(specifier, out var lease) ? Retire(lease) : null;
+            }
+            finally { gate.Release(); }
+        }
+        finally { mutation.Release(); }
+    }
+
     private ClrUnloadObservation Retire(Lease lease)
     {
         lease.Plugin = null;
