@@ -4,11 +4,20 @@ from collections import Counter
 import json
 from pathlib import Path
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPLETE = {"adapted-test-passed", "adapted-passed", "adapted-assertions-verified"}
 UNRESOLVED = {"unmapped", "unimplemented", "adapted-scenario-needs-assertion-audit"}
+WINDOWS_PROCESS_CLASS = "Cordis.Platform.Tests.PackageProcessTests"
+WINDOWS_PROCESS_METHODS = (
+    "Exited_sdk_cannot_report_prepared_output_while_its_child_still_writes",
+    "Cancelled_preparation_stops_child_with_independent_output_pipes_before_returning",
+    "Host_exit_terminates_owned_package_children_without_waiting_for_sdk_exit",
+)
+WINDOWS_PROCESS_NAMES = {WINDOWS_PROCESS_CLASS + "." + method for method in WINDOWS_PROCESS_METHODS}
+WINDOWS_PROCESS_REASON = "Windows package process ownership regression."
 
 
 def merged():
@@ -76,10 +85,11 @@ def normalized_case(name):
     return re.sub(r",\s*", ",", name)
 
 
-def verify_results(mapping, directory):
+def audit_native_results(directory):
+    """Require actual passes except the three defined Windows-only cases on Linux."""
     results = []
     counts_by_assembly = Counter()
-    for file in directory.glob("*.trx"):
+    for file in sorted(directory.glob("*.trx")):
         tree = ET.parse(file)
         assemblies = {
             Path(method.attrib["codeBase"]).stem
@@ -88,10 +98,47 @@ def verify_results(mapping, directory):
         }
         assert len(assemblies) == 1, (file, assemblies)
         assembly = assemblies.pop()
+        definitions = {}
+        for definition in tree.findall(".//{*}TestDefinitions/{*}UnitTest"):
+            identity = definition.attrib["id"]
+            assert identity not in definitions, (file, identity, "duplicate test definition")
+            definitions[identity] = definition
         for result in tree.findall(".//{*}UnitTestResult"):
-            results.append({"name": result.attrib["testName"], "outcome": result.attrib["outcome"], "trx": file.name})
+            definition = definitions.get(result.attrib.get("testId"))
+            method = definition.find("{*}TestMethod") if definition is not None else None
+            code_base = method.attrib.get("codeBase", "") if method is not None else ""
+            results.append({"name": result.attrib["testName"], "outcome": result.attrib["outcome"], "trx": file.name,
+                            "class": method.attrib.get("className") if method is not None else None,
+                            "method": method.attrib.get("name") if method is not None else None,
+                            "assembly": code_base.replace("\\", "/").rsplit("/", 1)[-1],
+                            "reason": result.findtext("{*}Output/{*}ErrorInfo/{*}Message")})
             counts_by_assembly[assembly] += 1
-    assert results and all(r["outcome"] == "Passed" for r in results), "All discovered tests must pass; no skipped cases"
+    assert results, "No native test results were discovered"
+    platform_cases = [result for result in results if result["name"] in WINDOWS_PROCESS_NAMES]
+    assert Counter(result["name"] for result in platform_cases) == Counter(WINDOWS_PROCESS_NAMES), \
+        "Each Windows process ownership test must occur exactly once"
+    for result in platform_cases:
+        assert (result["class"] == WINDOWS_PROCESS_CLASS
+                and result["method"] == result["name"].rsplit(".", 1)[-1]
+                and result["assembly"] == "Cordis.Platform.Tests.dll"), (result, "incorrect platform test definition")
+    exceptions = []
+    for result in results:
+        if result["outcome"] == "Passed":
+            continue
+        assert (sys.platform == "linux" and result["name"] in WINDOWS_PROCESS_NAMES
+                and result["outcome"] == "NotExecuted" and result["reason"] == WINDOWS_PROCESS_REASON), \
+            (result, "Native tests must pass except the exact Linux Windows-only cases")
+        exceptions.append(result)
+    # xUnit's TRX summary can report notExecuted=0 for these skips; count Results, never the counter.
+    return {"testCount": len(results), "passedCount": sum(result["outcome"] == "Passed" for result in results),
+            "skippedCount": len(exceptions), "platform": sys.platform, "platformExceptions": exceptions,
+            "countsByAssembly": dict(sorted(counts_by_assembly.items())), "trxDirectory": directory.name,
+            "results": results}
+
+
+def verify_results(mapping, directory):
+    audit = audit_native_results(directory)
+    results = audit["results"]
     for method, expected in mapping["nativeTheoryInstanceCounts"].items():
         actual = sum(r["name"].startswith(method + "(") for r in results)
         assert actual == expected, (method, expected, actual)
@@ -108,29 +155,36 @@ def verify_results(mapping, directory):
             else:
                 actual = [r for r in results if r["name"] == name or r["name"].startswith(name + "(")]
             assert actual, (test["id"], location, "not found in current run")
+            assert all(result["outcome"] == "Passed" for result in actual), \
+                (test["id"], location, "mapped assertions must actually pass")
             matches.extend(actual)
         if test["dotnetOriginalAssertionSetClaim"] is True:
             assert matches, (test["id"], "complete adaptation has no executed test")
         if matches:
             evidence.append({"id": test["id"], "disposition": test["status"], "results": matches})
-    return {"format": "cordis-test-map-run/v1", "testCount": len(results),
-            "countsByAssembly": dict(sorted(counts_by_assembly.items())), "trxDirectory": directory.name,
-            "meaning": "All named method instances passed in this run. Semantic assertion correspondence is reviewed in component maps; platform-only assertions are not passes.", "tests": evidence}
+    return {"format": "cordis-test-map-run/v1", **{key: value for key, value in audit.items() if key != "results"},
+            "meaning": "All mapped method instances passed in this run. Exact Windows-only cases on Linux remain reported as unexecuted, never as assertion passes. Semantic assertion correspondence is reviewed in component maps.", "tests": evidence}
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--write", action="store_true")
-parser.add_argument("--results", type=Path)
-parser.add_argument("--output", type=Path)
-options = parser.parse_args()
-mapping = merged()
-serialized = json.dumps(mapping, indent=2, ensure_ascii=False) + "\n"
-path = ROOT / "docs/test-map.json"
-if options.write:
-    path.write_text(serialized, encoding="utf-8")
-else:
-    assert path.read_text(encoding="utf-8") == serialized, "Run python scripts/test-map.py --write after reviewing map changes"
-if options.results:
-    assert options.output
-    options.output.write_text(json.dumps(verify_results(mapping, options.results), indent=2) + "\n", encoding="utf-8")
-print(json.dumps(mapping["countsByDisposition"], indent=2))
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--write", action="store_true")
+    parser.add_argument("--results", type=Path)
+    parser.add_argument("--output", type=Path)
+    options = parser.parse_args()
+    mapping = merged()
+    serialized = json.dumps(mapping, indent=2, ensure_ascii=False) + "\n"
+    path = ROOT / "docs/test-map.json"
+    if options.write:
+        path.write_text(serialized, encoding="utf-8")
+    else:
+        assert path.read_text(encoding="utf-8") == serialized, "Run python scripts/test-map.py --write after reviewing map changes"
+    if options.results:
+        assert options.output
+        options.output.write_text(json.dumps(verify_results(mapping, options.results), indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(mapping["countsByDisposition"], indent=2))
+
+
+if __name__ == "__main__":
+    main()

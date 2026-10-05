@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import runpy
 import shutil
 import subprocess
 import socket
@@ -241,6 +242,8 @@ def compilation_contracts(gate: Gate):
 
 
 def verify_test_suites(gate: Gate, directory: Path):
+    audit = runpy.run_path(str(ROOT / "scripts/test-map.py"))["audit_native_results"](directory)
+    gate.record("native-platform-results", **{key: value for key, value in audit.items() if key != "results"})
     suites: dict[str, list[dict]] = {name: [] for name in REQUIRED_SUITES}
     reports = list(directory.glob("*.trx"))
     if not reports:
@@ -510,7 +513,7 @@ def application_contracts(gate: Gate):
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--aot", action="store_true", help="Publish and run the actual probe scenario with Native AOT too")
-    parser.add_argument("--packages", type=Path, help="Consume an existing local eight-package batch from verify.py --package; never publishes packages")
+    parser.add_argument("--packages", type=Path, help="Consume an existing local package batch from verify.py --package; never publishes packages")
     options = parser.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix="run-", dir=OUT))
