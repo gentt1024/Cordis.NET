@@ -6,6 +6,7 @@
     <ProjectReference Include="../../src/Cordis.Extensions/Cordis.Extensions.csproj"/>
     <ProjectReference Include="../../src/Cordis.Clr/Cordis.Clr.csproj"/>
     <ProjectReference Include="../../src/Cordis.Hosting/Cordis.Hosting.csproj"/>
+    <ProjectReference Include="../../src/Cordis.AspNetCore/Cordis.AspNetCore.csproj"/>
     <ProjectReference Include="../../src/Cordis.JavaScript/Cordis.JavaScript.csproj"/>
   </ItemGroup>
 </Project>

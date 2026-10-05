@@ -78,6 +78,8 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 返回的 binder 持有元数据和 validator。可卸载插件应让委托随插件存活，并释放外部保存的 binder、converter 和错误对象。没有全局元数据缓存。非数据配置仍适合直接使用 `Plugin<T>.Config`。
 
+具有 live 字段的完整 typed 数据对象推荐使用 Composition 的 `ConfigObject<T>.Create(validator).Field(...).Build()`。它将显式键、描述和投影组合为既有配置合同，不推断 POCO 成员，不改变校验或默认值。生成元数据适用时，可将 `ConfigBinding.FromJsonTypeInfo` 作为该 validator，并保持其命名/默认规则与字段声明一致。全部普通字段和保存字段都须声明。参见[配置示例](configuration-description.zh.md)及[实际手写/组合消费者](../examples/Probes/ConfigurationScenario.cs)。特殊转换和嵌套 live 路径继续使用 `ConfigSchema<T>`。此推荐用法可从当前源码使用，尚未包含在已发布的 `0.2.0-alpha.1` 包批次中。
+
 ## 外部回调与所有权
 
 [`SubscribeExternal`](../src/Cordis.Extensions/ExternalCallbacks.cs) 适配接受 `Action<T>` 并返回 `IDisposable` 的来源；应在 Cordis 回调或 `RunAsync` 内调用。它先登记 effect 所有权，再订阅，因此覆盖订阅期间的同步通知和重入释放。每次注册都有独立的有效标记。清理先关闭准入再退订，进入 `RunAsync` 后执行时再次检查标记。同一 Fiber 重新激活不会使旧的排队回调重新有效。
@@ -95,6 +97,28 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 向 `PatchResources.Read` 传入显式程序集与 manifest 资源名称，并在项目中用 `EmbeddedResource LogicalName` 固定该名称。每次调用都打开部署程序集中的资源、关闭流并通过 `ConfigurationFile` 解析。它不搜索源码、包缓存或程序集清单，不缓存程序集或解析结果。资源缺失会标明程序集和名称，格式错误保留原始 parser 异常。把条目传给 `EntryPatches.Apply`、boot 或既有 reconciliation 路径即可。读取资源不重定向模块名称，也不隐式激活；patch 应用保留既有替换/合并规则。
 
 `AuditAsync` 报告模块解析失败、缺失依赖和激活错误。`Fiber.FailurePhase` 根据实际失败操作区分配置与 Apply，不通过异常类型猜测。disabled 表达式诊断保留自己的阶段。原始异常继续用于短期调试。长期保存报告前，对各项 `EntryDiagnostic` 调用 `ToSnapshot()`：快照只包含名称、状态、复制的依赖名称和错误文本。不能因为已经有快照，就继续永久保存原 `StartupException`、日志参数对象或其他插件引用。回调错误使用回调出口，CLR 卸载状态使用 `ClrUnloadObservation`。
+
+## 应用配置与客户端消费
+
+完整插件生命周期从 [ManagedPlugin](../examples/ManagedPlugin/README.md) 开始，再按 [ManagedApplication](../examples/ManagedApplication/README.md) 构建本地 feed、安装插件、编辑配置并移除。[CLI 指南](../tools/Cordis.Cli/README.md) 使用同一套宿主操作。下面的 Probes 示例演示较小的客户端消费边界。
+
+复用 Session 既有的 `ConfigurationOperations`。读取新 revision 后，通过 `MutateConfigurationAsync` 或选中字段的 `MutateSettingsAsync` 提交有序 SET/unset。库验证完整最终候选并写入一次；对象 unset 恢复继承，数组 unset 删除元素。普通字段保持原有重启行为；`liveOnly` 另要求已捕获 live 边界及兼容的普通 effective 值。分别处理 `Saved`、`Applied` 与恢复诊断。旧 Config delegate 与高级 `ConfigSchema<T>` 作者入口继续保留。
+
+通过 `descriptor.WithMetadata(new ConfigurationMetadata { ... })` 显式声明应用元数据。renderer role、本地化 description、badges、hidden/disabled/collapse、link/comment、extra plain 数据，以及 min/max/step/pattern/loose 提示由不可变 Core annotations 承载；它们描述既有 validator，不增加验证行为。嵌套固定 live 路径使用 `ConfigSchema<T>.WithVolatile(path, projection)`。Settings 省略普通兄弟字段，把 secret 值脱敏为仅表示存在性的 sidecar。每项编辑检查可见的声明路径；含不可读 secret/hidden 后代的祖先替换会被拒绝。参见[完整声明、Settings 与发现示例](configuration-description.zh.md)。
+
+两条导出是独立合同：`ToSchemastery` 生成浏览器表单的 uid/refs envelope，`ToJsonSchema` 生成 JSON Schema 2020-12 声明并明确标注 runtime 限制。`ReadSettingsSchemasAsync` 选择 live 字段，移除 hidden 属性与默认值；完整配置导出需要宿主独立授权。激活前的 `ConfigurationSchemaDiscovery.DiscoverAsync` 接收显式 resolver，读取原生 group/include 源，无须启动 Context，也不写入 include fallback 文件。import/capture 属于受信作者代码；validator、Apply、raw 表达式和 lazy builder 不执行。
+
+示例的 primitive live 视图要求宿主显式选择字段并指定隐藏字段。不要直接把 raw 配置读取暴露成浏览器 Settings 响应。传输只演示 loopback；部署宿主负责认证、授权、请求限制及自身政策。保留的 DSH 表单模型暂存草稿，通过真实宿主保存。SET-only 不支持继承 reset，也不把多字段保存拆成连续写入。在仓库根目录构建运行：
+
+```console
+npm ci --prefix reference --ignore-scripts
+node reference/node_modules/typescript/bin/tsc -p examples/Probes/client/tsconfig.json
+node scripts/build-application-client.mjs artifacts/application-client
+dotnet run --project examples/Probes/Probes.csproj -c Release -- --application-host http://127.0.0.1:17639/ artifacts/application-client
+node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/application-client
+```
+
+最后一条命令在另一终端运行，只修改生成的示例制品，以验证新的内容代。向 `/stop` 发送 POST 可结束示例宿主。制品布局复用上游 web/client 声明，不可变 ESM 交付是原生适配。示例客户端仍是有界消费示例；声明导出和发现是上述独立库 API。既有作者门禁在源码与独立包消费中重复这条真实客户端链，指定时包含 Native AOT。
 
 ## 部署与验证边界
 

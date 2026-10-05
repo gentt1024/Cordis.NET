@@ -1,0 +1,36 @@
+{
+  "name": "@cordis-net/client-modules",
+  "version": "0.2.0-alpha.1",
+  "private": true,
+  "type": "module",
+  "description": "Fixed DSH browser module loading over Cordis, with a native Host artifact protocol",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./lib/types/src/index.d.ts",
+      "default": "./lib/client.mjs"
+    },
+    "./slots": {
+      "types": "./lib/types/vendor/slots/index.d.ts",
+      "default": "./lib/client.mjs"
+    }
+  },
+  "files": [
+    "lib",
+    "vendor/provenance.json",
+    "vendor/*/LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-client-modules.mjs",
+    "typecheck": "tsc -p tsconfig.vendor.json && tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@standard-schema/spec": "1.0.0",
+    "@types/node": "22.19.0",
+    "@types/prop-types": "15.7.12",
+    "@types/react": "18.3.1",
+    "csstype": "3.1.3",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
+  }
+}

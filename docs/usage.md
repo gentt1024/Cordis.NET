@@ -38,10 +38,11 @@ callbacks, expression evaluator and application readiness are explicit optional 
 
 Layers apply in bundle order, then profile patch, home patch and immutable launch overrides.
 `ProfileComposition.PreviewAsync` labels source runs. `PluginConfigurationOperations` provides
-inventory and persisted switches. Set its `RunExclusiveAsync` callback to
-`session.Hmr.RunExclusiveAsync` when integrating a management surface; the operations then
-reconcile their owned Include inside that queue. Leave it absent for startup-only changes.
-See `PluginManagerOriginalTests` for complete wiring and failure behavior.
+inventory and persisted switches. Use `session.ConfigurationOperations` for a running
+session; it already reconciles the session-owned Include inside the lifecycle queue, even
+when automatic watching is disabled. Standalone, startup-only operations may omit
+`RunExclusiveAsync`. Hosts composing an independent Include must supply their own exclusive
+queue and reconciliation callback. See the [authoring guide](authoring.md) for the managed path.
 
 Code HMR is separate from file/config changes. With the ordinary CLR, register a
 `ClrModuleDefinition(bundleDirectory, relativeAssemblyPath, entryType)` on a

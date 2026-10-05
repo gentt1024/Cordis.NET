@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "sha256": "2dcd07c849abcd0b26d9c1855c9870a1dd1231ce58ef9a6d767ba092608ee81b",
+      "upstreamPath": "packages/client/ui-primitives/src/settings-form/form-model.ts",
+      "file": "vendor/form-model.ts"
+    },
+    {
+      "sha256": "d4ba75c2559f22713f1f3659d03fce6cf17b6f1c1fe82a9615b71f6a504e9e81",
+      "upstreamPath": "packages/client/store/src/contract.ts",
+      "file": "vendor/store/contract.ts"
+    },
+    {
+      "sha256": "6969ed123830868c44d90b664cd40d81d4f6a8fd18245a695fdc3cca38c9da08",
+      "upstreamPath": "packages/client/store/src/index.ts",
+      "file": "vendor/store/index.ts"
+    }
+  ],
+  "commit": "639ed015397290b3745d163aafe02ffee4aa3f84"
+}

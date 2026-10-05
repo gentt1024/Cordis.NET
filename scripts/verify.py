@@ -38,7 +38,9 @@ def source_hashes():
     else:
         # Source ZIPs deliberately contain no .git directory. Their generated inventory
         # provides the same source boundary without including build caches.
-        files = list(archive_manifest()["files"])
+        manifest = archive_manifest()
+        recorded = manifest["files"] | manifest.get("generatedFiles", {})
+        files = list(recorded)
         for name in files:
             path = (ROOT / name).resolve()
             assert path.is_relative_to(ROOT) and path.is_file(), name
@@ -212,7 +214,40 @@ Console.WriteLine("independent optional adapter packages passed");
                          "--tool-path", directory / "tools", "--configfile", directory / "NuGet.Config"], directory, env)
     run("tool-package-preview", [directory / "tools" / ("cordis.exe" if os.name == "nt" else "cordis"),
                                 "preview", OUT / "cli-input.yml", "--json"], directory, env)
+    consume_http_package(directory, rid, version, aot, env)
     steps.append({"name": "independent-consumer-location", "path": str(directory), "exitCode": 0})
+
+
+def consume_http_package(directory, rid, version, aot, env):
+    """Exercise the shipped HTTP adapter from an isolated Web SDK PackageReference consumer."""
+    consumer = directory / "http"
+    consumer.mkdir()
+    (consumer / "HttpConsumer.csproj").write_text(f'''<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors><JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault></PropertyGroup>
+  <ItemGroup><PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/></ItemGroup>
+</Project>''', encoding="utf-8")
+    source = (ROOT / "scripts/package_http_consumer.cs").read_text(encoding="utf-8")
+    (consumer / "Program.cs").write_text(source, encoding="utf-8")
+    run("http-consumer-restore", ["dotnet", "restore", "HttpConsumer.csproj", "--packages", directory / "cache"], consumer, env)
+    executable = "HttpConsumer.exe" if os.name == "nt" else "HttpConsumer"
+    modes = [("jit", consumer / "publish", [])]
+    if aot:
+        modes.append(("aot", consumer / "native", ["-p:PublishAot=true"]))
+    for mode, output, arguments in modes:
+        run(f"http-consumer-{mode}-publish", ["dotnet", "publish", "HttpConsumer.csproj", "-c", "Release", "-r", rid,
+            "--self-contained", "true", *arguments, "-o", output], consumer, env)
+        run(f"http-consumer-{mode}-run", [output / executable, "one"], output, env)
+    # Editing author code cannot change a deployed static binary. Verify the retained
+    # artifacts still serve v1, then publish and run v2 through the same contract.
+    updated = source.replace('const string implementation = "one";', 'const string implementation = "two";')
+    assert updated != source
+    (consumer / "Program.cs").write_text(updated, encoding="utf-8")
+    for mode, output, arguments in modes:
+        run(f"http-consumer-{mode}-retained-run", [output / executable, "one"], output, env)
+        replacement = consumer / ("republished-" + mode)
+        run(f"http-consumer-{mode}-republish", ["dotnet", "publish", "HttpConsumer.csproj", "-c", "Release", "-r", rid,
+            "--self-contained", "true", *arguments, "-o", replacement], consumer, env)
+        run(f"http-consumer-{mode}-republished-run", [replacement / executable, "two"], replacement, env)
 
 
 def main():
@@ -228,6 +263,11 @@ def main():
     status = "failed"
     initial_hashes = source_hashes()
     try:
+        if not git_checkout():
+            manifest = archive_manifest()
+            recorded = manifest["files"] | manifest.get("generatedFiles", {})
+            expected = {name: digest for name, digest in recorded.items() if not name.startswith("verification/")}
+            assert initial_hashes == expected, "Source archive bytes differ from the recorded checkpoint"
         run("sdk", ["dotnet", "--info"])
         run("restore", ["dotnet", "restore", "Cordis.slnx", "--locked-mode"])
         run("build", ["dotnet", "build", "Cordis.slnx", "-c", "Release", "--no-restore"])
@@ -239,6 +279,12 @@ def main():
         for index in (2, 3): compare(f"jit-repeat-{index}", jit, run(f"jit-{index}", command))
         upgrade_jit = run("upgrade-jit", [*command, "--upgrade"])
         run("example", ["dotnet", ROOT / "examples/Composition/bin/Release/net10.0/Composition.dll"])
+        client_artifacts = ROOT / "artifacts/client-modules"
+        run("client-modules-build", ["node", "scripts/build-client-modules.mjs", client_artifacts])
+        run("client-modules-types", ["node", "scripts/verify-client-module-types.mjs", client_artifacts])
+        run("client-lifecycle", ["node", "scripts/verify-client-lifecycle.mjs", client_artifacts])
+        run("client-shared-modules", ["node", "scripts/verify-client-shared-modules.mjs", client_artifacts])
+        run("client-author-watch", ["node", "scripts/verify-client-author-watch.mjs"])
         cli = ["dotnet", ROOT / "tools/Cordis.Cli/bin/Release/net10.0/Cordis.Cli.dll"]
         fixture = OUT / "cli-input.yml"
         fixture.write_text(
@@ -262,6 +308,7 @@ def main():
                 "values": [None, 1.25, "unchanged", None],
             },
         }]
+        run("cli-invocation", [sys.executable, "scripts/verify-cli-invocation.py"])
         run("cli-usage", cli, expected_exit=2)
         run("cli-invalid-option", [*cli, "validate", fixture, "--unknown"], expected_exit=1)
         run("api", ["dotnet", "run", "--project", "tools/Cordis.ApiCheck", "-c", "Release", "--no-build", "--", "--check"])
@@ -338,7 +385,8 @@ def main():
         else:
             manifest = archive_manifest()
             commit = manifest["commit"]
-            dirty = "source archive; " + ("unchanged" if all(manifest["files"][name] == digest for name, digest in source_hashes().items()) else "modified")
+            recorded = manifest["files"] | manifest.get("generatedFiles", {})
+            dirty = "source archive; " + ("unchanged" if all(recorded[name] == digest for name, digest in source_hashes().items()) else "modified")
         hashes = source_hashes()
         (OUT / "verification.json").write_text(json.dumps({"status": status, "commit": commit, "workingTree": dirty,
             "platform": platform.platform(), "rid": rid, "upstreamInventoryClosure": "see docs/upstream-tests.json; passing gates do not imply inventory closure",

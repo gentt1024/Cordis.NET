@@ -220,7 +220,7 @@ public static class Profiles
             if (Path.IsPathRooted(entry.Name) || entry.Name.StartsWith("./", StringComparison.Ordinal) || entry.Name.StartsWith("../", StringComparison.Ordinal)) entry.Name = new Uri(Path.GetFullPath(entry.Name, baseDirectory)).AbsoluteUri;
             if (entry.Group && entry.Config is IEnumerable<object?>) foreach (var child in Data.Entries(entry.Config)) Anchor(child);
         }
-        foreach (var patch in patches) if (patch.TryGetValue("insert", out var insertion) && insertion is not null) foreach (var entry in Data.Entries(insertion)) Anchor(entry);
+        foreach (var patch in patches) if (patch.TryGetValue("insert", out var insertion) && Data.Truthy(insertion)) foreach (var entry in Data.Entries(insertion)) Anchor(entry);
         return patches;
     }
     /// <summary>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Shared shell module verification</title>
+<h1>Shared shell module verification</h1>
+<p>Independent factory plugin through the public bootClientModules entry.</p>
+<button id="default">Default script transport</button>
+<button id="custom">Custom script transport</button>
+<button id="missing">Missing subpath supplier</button>
+<pre id="result">Ready</pre>
+<script type="module">
+import { bootClientModules } from '/client-runtime/client.mjs'
+import { verifySharedModules } from '/shared-check.mjs'
+const result = document.querySelector('#result')
+let busy = false
+for (const mode of ['default', 'custom', 'missing']) {
+  document.querySelector('#' + mode).onclick = async () => {
+    if (busy) return
+    busy = true
+    result.textContent = 'Running ' + mode
+    let calls = 0
+    const loadBundle = url => new Promise((resolve, reject) => {
+      calls++
+      const script = document.createElement('script')
+      script.src = url
+      script.onload = () => { script.remove(); resolve() }
+      script.onerror = () => { script.remove(); reject(new Error('Custom transport failed: ' + url)) }
+      document.head.appendChild(script)
+    })
+    try {
+      const graph = await fetch('/client/shared-graph').then(response => response.json())
+      const message = await verifySharedModules(bootClientModules, graph,
+        mode === 'custom' ? loadBundle : undefined, mode === 'missing')
+      if (mode === 'custom' && calls === 0) throw new Error('Custom transport was ignored')
+      result.textContent = mode + ': ' + message + '; custom transport calls=' + calls
+    } catch (error) {
+      result.textContent = mode + ': FAIL ' + error.message + '; custom transport calls=' + calls
+    } finally { busy = false }
+  }
+}
+</script>
+</html>

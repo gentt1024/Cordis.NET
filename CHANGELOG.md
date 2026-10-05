@@ -2,9 +2,14 @@
 
 ## [Unreleased]
 
-No changes beyond the unpublished `0.2.0-alpha.1` candidate below.
+- Added reusable typed configuration fields, ordered SET/unset editing, Settings selection, declaration export and discovery over the existing runtime contracts.
+- Added application-level package coordination, explicit NuGet feeds and build authorization, ASP.NET Core management endpoints, CLI management commands and maintained client modules. These are optional layers above Core.
+- Added independent managed plugin and application examples, including package installation, configuration, removal and development build/restart integration.
+- Fixed nested Settings validation, raw expression preservation and falsey insert inheritance. Configuration notification failures no longer replace a completed operation's result.
+- Aligned authorization with the resolved installation target, rejected known invalid declarations before package builds, and mapped NuGet package/version identities to exact DSH compatibility grants.
+- Strengthened release sealing to require all eight product packages and their symbols; examples remain excluded from publication.
 
-## [0.2.0-alpha.1] - Unpublished
+## [0.2.0-alpha.1] - 2026-10-03
 
 - Fixed scalar configuration references retaining collectible effective objects and parent expression markers being compared as volatile child fields. Added declared host-framework manifests for self-contained ASP.NET CLR hosts, and run the deployment matrix through isolated NuGet consumers in the existing package gate.
 - Updated the pinned DSH behavior baseline to `639ed015397290b3745d163aafe02ffee4aa3f84` (`dsh-v0.2.0-rc.2`). Cordis.NET keeps its own prerelease version.
@@ -17,7 +22,7 @@ No changes beyond the unpublished `0.2.0-alpha.1` candidate below.
 - Prepared bilingual public documentation, package readmes, community templates, and documentation checks.
 - Replaced private handoff material and machine-specific raw logs with public summaries.
 
-This prerelease has not been published to NuGet. Release verification and remote publication are separate steps.
+This prerelease was published as seven `Cordis.NET.*` packages. The application-management additions above are not part of that released version.
 
 ## [0.1.0-alpha.3] - 2026-09-22
 

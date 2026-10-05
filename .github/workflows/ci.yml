@@ -2,6 +2,7 @@ name: verify
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -53,7 +54,9 @@ jobs:
         with:
           node-version: 24.12.0
           cache: npm
-          cache-dependency-path: reference/package-lock.json
+          cache-dependency-path: |
+            reference/package-lock.json
+            clients/modules/package-lock.json
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.13'
@@ -83,6 +86,7 @@ jobs:
           git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
           git -C ../upstream-cordis checkout --detach FETCH_HEAD
           npm ci --prefix reference --ignore-scripts
+          npm ci --prefix clients/modules --ignore-scripts
       - name: Verify package inspector regression
         run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
       - name: Verify
@@ -91,6 +95,13 @@ jobs:
           python scripts/check-docs.py
           python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/ci-packages
           python scripts/verify-authoring.py --aot --packages artifacts/ci-packages
+      - name: Preserve validated packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validated-packages-${{ matrix.os }}
+          path: artifacts/ci-packages
+          if-no-files-found: error
+          retention-days: 14
       - name: Preserve evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

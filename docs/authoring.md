@@ -78,6 +78,8 @@ Missing root configuration (`Undefined.Value`) and explicit root null are reject
 
 The returned binder retains its metadata and validator. For collectible plugins, keep that delegate with the plugin and release externally retained binders, converters and errors. There is no global metadata cache. Direct `Plugin<T>.Config` remains appropriate for non-data configuration.
 
+For a complete typed data object with live fields, prefer `ConfigObject<T>.Create(validator).Field(...).Build()` from Composition. It combines explicit keys, descriptions and projections into the existing configuration contract; it does not infer POCO members or change validation/defaults. Supply `ConfigBinding.FromJsonTypeInfo` as that validator when generated metadata is suitable, and keep its naming/default rules aligned with the field declarations. Every ordinary and persisted field must be declared. See the [configuration example](configuration-description.md) and [actual manual/composed consumer](../examples/Probes/ConfigurationScenario.cs). Special conversions and nested live paths continue to use `ConfigSchema<T>` directly. This recommendation is available from current source, not the published `0.2.0-alpha.1` package batch.
+
 ## External callbacks and ownership
 
 [`SubscribeExternal`](../src/Cordis.Extensions/ExternalCallbacks.cs) adapts a source that accepts `Action<T>` and returns `IDisposable`; call it inside a Cordis callback or `RunAsync`. It registers effect ownership before subscribing, so synchronous notification and reentrant disposal during subscription are covered. Each registration has its own validity flag. Teardown closes admission before unsubscribing, and execution checks the flag again after entering `RunAsync`. An old queued callback cannot become valid when the same Fiber activates again.
@@ -95,6 +97,28 @@ Execution-domain entry, stopping new calls, requesting cancellation and draining
 Use an explicit assembly and manifest resource name with `PatchResources.Read`; fix that name with `EmbeddedResource LogicalName` in the project. It opens the deployed assembly resource on every call, closes the stream and parses through `ConfigurationFile`. It never searches a source checkout, package cache or assembly inventory, and caches neither assemblies nor parsed rows. Missing resources identify the assembly/name; malformed resources preserve the parser exception. Pass rows to `EntryPatches.Apply`, boot or the existing reconciliation path. Resource reading performs no module-name rebasing or implicit activation; patch application retains the existing replacement/merge rules.
 
 `AuditAsync` reports module-resolution failures, missing dependencies and activation errors. `Fiber.FailurePhase` distinguishes configuration from Apply by the operation that actually failed, rather than guessing from exception type. Disabled-expression diagnostics retain their own phase. Original exceptions remain available for short-lived debugging. Convert each `EntryDiagnostic` with `ToSnapshot()` before retaining a report long term: the snapshot contains names, state, copied dependency names and error text. Do not retain the original `StartupException`, log argument objects or other plugin references merely because a snapshot also exists. Callback errors use the callback sink; CLR unload status uses `ClrUnloadObservation`.
+
+## Application configuration and client consumption
+
+For the complete plugin lifecycle, start with [ManagedPlugin](../examples/ManagedPlugin/README.md), then follow [ManagedApplication](../examples/ManagedApplication/README.md) to build a local feed, install the plugin, edit its configuration and remove it. The [CLI guide](../tools/Cordis.Cli/README.md) uses the same host operations. The Probes example below demonstrates a smaller client consumption boundary.
+
+Use the session's existing `ConfigurationOperations`. Read a fresh configuration revision, then submit ordered SET/unset paths through `MutateConfigurationAsync` or the selected `MutateSettingsAsync`. The library validates the complete final candidate and saves once; object unset restores inheritance, while array unset removes an element. Ordinary fields keep normal restart behavior; `liveOnly` additionally requires a captured live boundary and compatible ordinary effective values. Handle `Saved`, `Applied` and recovery diagnostics separately. The original Config delegate and advanced `ConfigSchema<T>` authoring remain available.
+
+Declare application metadata with `descriptor.WithMetadata(new ConfigurationMetadata { ... })`. Renderer roles, localized descriptions, badges, hidden/disabled/collapse, links/comments, extra plain data and explicit min/max/step/pattern/loose hints travel through immutable Core annotations. They describe the existing validator and do not add validation behavior. Nested fixed live paths use `ConfigSchema<T>.WithVolatile(path, projection)`; Settings omits ordinary siblings and redacts secret values into presence-only sidecars. Every edit checks its visible declared path; replacing an ancestor containing unreadable secret/hidden fields is refused. See the [complete declaration, settings and discovery examples](configuration-description.md).
+
+The two exports are separate contracts: `ToSchemastery` produces the browser form's uid/refs envelope, while `ToJsonSchema` produces a JSON Schema 2020-12 declaration with explicit runtime limitations. `ReadSettingsSchemasAsync` selects live fields and removes hidden properties and defaults; the full configuration export requires separate host authorization. For discovery before activation, `ConfigurationSchemaDiscovery.DiscoverAsync` uses an explicit resolver and reads native group/include sources without starting a Context or writing fallback include files. Import/capture are trusted code; validators, Apply, raw expressions and lazy builders remain unexecuted.
+
+The example's primitive live view requires explicit host selection and hidden fields. Do not expose a raw configuration read as a browser settings response. Its transport is loopback-only demonstration code; deployed hosts provide authentication, authorization, request limits and their policy. The retained DSH form model stages drafts and saves through the real host. SET-only does not support inherited reset or splitting multi-field saves into sequential writes. Build and run from the repository root:
+
+```console
+npm ci --prefix reference --ignore-scripts
+node reference/node_modules/typescript/bin/tsc -p examples/Probes/client/tsconfig.json
+node scripts/build-application-client.mjs artifacts/application-client
+dotnet run --project examples/Probes/Probes.csproj -c Release -- --application-host http://127.0.0.1:17639/ artifacts/application-client
+node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/application-client
+```
+
+The final command runs in another terminal and mutates only the generated example artifact to verify a new content generation. Stop the demonstration host with POST `/stop`. The artifact layout uses the upstream web/client declaration, while immutable ESM delivery is a native adaptation. The example client remains a bounded consumption example; declaration export and discovery are separate library APIs described above. The existing authoring gate repeats this real client chain under source and independently consumed packages, including Native AOT when requested.
 
 ## Deployment and verification boundaries
 

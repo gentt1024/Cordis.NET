@@ -13,6 +13,11 @@ public static partial class DshProfilePolicy
     /// <summary>Checks all own peer values before selecting the DSH package family. Cordis peers are not DSH peers.</summary>
     public static DshPluginCompatibility? EvaluateCompatibility(PackageManifest manifest, DshRuntimeIdentity runtime,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? exactGrants = null)
+        => EvaluateCompatibility(manifest, runtime, exactGrants, null);
+
+    /// <summary>Evaluate exact grants with a host-selected package-name adapter; versions remain exact and case-sensitive.</summary>
+    public static DshPluginCompatibility? EvaluateCompatibility(PackageManifest manifest, DshRuntimeIdentity runtime,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? exactGrants, Func<string, string>? compatibilityPackageName)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(runtime);
@@ -32,7 +37,8 @@ public static partial class DshProfilePolicy
         if (manifest.Raw.GetValueOrDefault("name") is not string packageName || packageName.Length == 0 ||
             manifest.Raw.GetValueOrDefault("version") is not string version || version.Length == 0)
             throw new FormatException("An incompatible plugin manifest must have a nonempty name and version.");
-        var exempted = exactGrants?.TryGetValue(packageName + "@" + version, out var grants) == true && grants.Contains(runtime.Version, StringComparer.Ordinal);
+        var grantName = compatibilityPackageName?.Invoke(packageName) ?? packageName;
+        var exempted = exactGrants?.TryGetValue(grantName + "@" + version, out var grants) == true && grants.Contains(runtime.Version, StringComparer.Ordinal);
         return new(packageName, version, runtime.Version, new ReadOnlyDictionary<string, string>(mismatches), exempted);
     }
 
@@ -88,13 +94,18 @@ public static partial class DshProfilePolicy
 
     /// <summary>Creates an admission callback for DSH profiles and pre-import manifest checks, without changing generic loaders.</summary>
     public static Action<PackageManifest> CreateAdmission(string directory, DshRuntimeIdentity runtime, Action<string>? warning = null)
+        => CreateAdmission(directory, runtime, warning, null);
+
+    /// <summary>Create DSH admission using an explicit platform name adapter without changing generic or npm defaults.</summary>
+    public static Action<PackageManifest> CreateAdmission(string directory, DshRuntimeIdentity runtime, Action<string>? warning,
+        Func<string, string>? compatibilityPackageName)
     {
         warning ??= Console.Error.WriteLine;
         var read = ReadCompatibility(directory);
         foreach (var message in read.Warnings) warning?.Invoke(message);
         return manifest =>
         {
-            var issue = EvaluateCompatibility(manifest, runtime, read.Exemptions);
+            var issue = EvaluateCompatibility(manifest, runtime, read.Exemptions, compatibilityPackageName);
             if (issue is null) return;
             var message = $"Plugin {issue.Name}@{issue.Version} requires incompatible DSH peers ({string.Join(", ", issue.Peers.Select(pair => pair.Key + ": " + pair.Value))}); running DSH {runtime.Version}.";
             if (!issue.Exempted) throw new InvalidOperationException(message + " Upgrade the plugin or explicitly acknowledge an exact-version exemption.");
@@ -131,15 +142,21 @@ public static partial class DshProfilePolicy
     /// <summary>Auto-initialize shipped names only, normalize the exact retired headless tuple, then load current files.</summary>
     public static async Task<Profile> LoadNamedAsync(string home, string name, IReadOnlyDictionary<string, string> installationBundles,
         IReadOnlyDictionary<string, string>? profileBundles = null, bool userLayer = true)
-        => await LoadNamedCoreAsync(home, name, installationBundles, profileBundles, userLayer, null, null);
+        => await LoadNamedCoreAsync(home, name, installationBundles, profileBundles, userLayer, null, null, null);
 
     /// <summary>Loads a named DSH profile with explicitly supplied runtime admission and exact-version grants.</summary>
     public static Task<Profile> LoadNamedAsync(string home, string name, IReadOnlyDictionary<string, string> installationBundles,
         IReadOnlyDictionary<string, string>? profileBundles, bool userLayer, DshRuntimeIdentity runtime, Action<string>? warning = null)
-        => LoadNamedCoreAsync(home, name, installationBundles, profileBundles, userLayer, runtime, warning);
+        => LoadNamedCoreAsync(home, name, installationBundles, profileBundles, userLayer, runtime, warning, null);
+
+    /// <summary>Load a named DSH profile using a host-selected platform package-name adapter for exact grants.</summary>
+    public static Task<Profile> LoadNamedAsync(string home, string name, IReadOnlyDictionary<string, string> installationBundles,
+        IReadOnlyDictionary<string, string>? profileBundles, bool userLayer, DshRuntimeIdentity runtime, Action<string>? warning,
+        Func<string, string>? compatibilityPackageName)
+        => LoadNamedCoreAsync(home, name, installationBundles, profileBundles, userLayer, runtime, warning, compatibilityPackageName);
 
     private static async Task<Profile> LoadNamedCoreAsync(string home, string name, IReadOnlyDictionary<string, string> installationBundles,
-        IReadOnlyDictionary<string, string>? profileBundles, bool userLayer, DshRuntimeIdentity? runtime, Action<string>? warning)
+        IReadOnlyDictionary<string, string>? profileBundles, bool userLayer, DshRuntimeIdentity? runtime, Action<string>? warning, Func<string, string>? compatibilityPackageName)
     {
         var directory = Profiles.ResolveDirectory(home, name);
         var path = Path.Combine(directory, "package.json");
@@ -157,7 +174,7 @@ public static partial class DshProfilePolicy
             manifest.Write(path);
         }
         return await Profiles.LoadAsync(directory, installationBundles, profileBundles, userLayer,
-            runtime is null ? null : CreateAdmission(directory, runtime, warning));
+            runtime is null ? null : CreateAdmission(directory, runtime, warning, compatibilityPackageName));
     }
 }
 

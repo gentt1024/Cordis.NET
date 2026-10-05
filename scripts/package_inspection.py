@@ -18,6 +18,7 @@ PACKAGE_LAYOUTS = {
     "Cordis.NET.Extensions": ("lib/net10.0", "Cordis.Extensions", "T:Cordis.Extensions.TimerService", {"Cordis.NET.Core", "Cordis.NET.Composition"}),
     "Cordis.NET.Clr": ("lib/net10.0", "Cordis.Clr", "T:Cordis.Clr.ClrModuleResolver", {"Cordis.NET.Composition"}),
     "Cordis.NET.Hosting": ("lib/net10.0", "Cordis.Hosting", "T:Cordis.Hosting.CordisHostExtensions", {"Cordis.NET.Core"}),
+    "Cordis.NET.AspNetCore": ("lib/net10.0", "Cordis.AspNetCore", "T:Cordis.AspNetCore.CordisManagement", {"Cordis.NET.Extensions"}),
     "Cordis.NET.JavaScript": ("lib/net10.0", "Cordis.JavaScript", "T:Cordis.JavaScript.JintExpressionEvaluator", {"Cordis.NET.Composition"}),
     "Cordis.NET.Tool": ("tools/net10.0/any", "Cordis.Cli", None, set()),
     "Cordis.Example.Greeting": ("lib/net10.0", "Greeting.Plugin", "T:Cordis.Example.Greeting.GreetingModule", {"Cordis.NET.Composition"}),

@@ -3,6 +3,12 @@ using Cordis.Composition;
 using Cordis.Example.Probes;
 using Cordis.Extensions;
 
+if (args is ["--application-host", var prefix, var clientDirectory])
+{
+    await ApplicationHost.RunAsync(prefix, clientDirectory);
+    return;
+}
+
 await using var root = new Context();
 await root.RunAsync(async ctx =>
 {
@@ -59,6 +65,8 @@ await root.RunAsync(async ctx =>
     feed.Publish(new("external", "late"));
     Check(events.SequenceEqual(["connected", "online"]), "external callback ownership");
 });
+await ConfigurationScenario.RunAsync();
+await ConfigurationManagementScenario.RunAsync();
 Console.WriteLine("probe authoring scenario passed");
 
 static void Check(bool condition, string message)

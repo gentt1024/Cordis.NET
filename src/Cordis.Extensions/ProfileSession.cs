@@ -2,7 +2,8 @@ using Cordis.Composition;
 
 namespace Cordis.Extensions;
 
-/// <summary>A running profile with explicit module resolution and optional configuration HMR.</summary>
+/// <summary>A running profile owning its context, loader and watchers, with explicit module resolution and optional configuration HMR.</summary>
+/// <remarks>The caller retains ownership of the resolver and must keep it available until session disposal finishes.</remarks>
 public sealed class ProfileSession : IAsyncDisposable
 {
     private readonly HmrCoordinator queue = new();
@@ -40,7 +41,9 @@ public sealed class ProfileSession : IAsyncDisposable
         if (refreshDeployment is not null && packages is null)
             throw new ArgumentException("A deployment refresh requires a DeploymentModuleResolver.", nameof(refreshDeployment));
         profilePaths = [Path.Combine(launch.Profile.Directory, "package.json"),
-            launch.Profile.UserLayer.Source, Path.Combine(launch.Home, "cordis.patch.yml")];
+            launch.Profile.UserLayer.Source, Path.Combine(launch.Home, "cordis.patch.yml"),
+            .. launch.RuntimeIdentity is null ? Array.Empty<string>()
+                : [Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename)]];
         Context = new Context(Report);
         Hmr = enableHmr ? queue : null;
         queue.Error += Report;
@@ -48,41 +51,43 @@ public sealed class ProfileSession : IAsyncDisposable
     }
 
     /// <summary>
-    /// Gets the context value.
+    /// The session-owned application context. Disposing it also stops session background work.
     /// </summary>
     public Context Context { get; }
     /// <summary>
-    /// Gets the loader value.
+    /// The session-owned loader using the caller's resolver.
     /// </summary>
     public Loader Loader { get; private set; } = null!;
     /// <summary>
-    /// Gets the include value.
+    /// The mounted root include reconciled by this session.
     /// </summary>
     public Include Include { get; private set; } = null!;
+    /// <summary>Profile mutations sharing this session's lifecycle queue and refresh ownership.</summary>
+    public PluginConfigurationOperations ConfigurationOperations { get; private set; } = null!;
     /// <summary>Null when automatic watching was not requested. Manual refresh remains available.</summary>
     public HmrCoordinator? Hmr { get; }
     /// <summary>
-    /// Gets the requires restart value.
+    /// Whether the latest refresh requires a host restart. A successful subsequent refresh clears this flag.
     /// </summary>
     public bool RequiresRestart { get; private set; }
     /// <summary>
-    /// Gets the last error value.
+    /// The most recently reported failure, cleared by a successful refresh. Retaining plugin exceptions can delay CLR unload.
     /// </summary>
     public Exception? LastError { get; private set; }
     /// <summary>
-    /// Gets the last successful refresh value.
+    /// UTC time of successful startup or the latest successful refresh.
     /// </summary>
     public DateTimeOffset? LastSuccessfulRefresh { get; private set; }
     /// <summary>
-    /// Gets the refreshed value.
+    /// Runs synchronously after a successful refresh inside the lifecycle queue. Handlers must not synchronously re-enter that queue.
     /// </summary>
     public event Action? Refreshed;
     /// <summary>
-    /// Gets the restart required value.
+    /// Runs synchronously when reconciliation requires restart, inside the lifecycle queue.
     /// </summary>
     public event Action? RestartRequired;
     /// <summary>
-    /// Gets the error value.
+    /// Reports failures synchronously on the emitting operation. Handler exceptions are ignored to preserve the primary failure.
     /// </summary>
     public event Action<Exception>? Error;
     /// <summary>The latest manifest selection, including skipped bundles.</summary>
@@ -92,7 +97,7 @@ public sealed class ProfileSession : IAsyncDisposable
     /// <summary>Current bundle failures, in manifest order.</summary>
     public IReadOnlyList<SkippedBundle> SkippedBundles { get; private set; } = [];
     /// <summary>
-    /// Gets the warning value.
+    /// Reports warnings synchronously on the emitting operation. Handler exceptions are ignored.
     /// </summary>
     public event Action<string>? Warning;
 
@@ -124,9 +129,24 @@ public sealed class ProfileSession : IAsyncDisposable
             });
             session.Include = session.launch.RuntimeIdentity is { } runtime
                 ? await DshProfilePolicy.MountAsync(session.Loader, configurationPath, session.launch.Profile.Directory, runtime,
-                    ProfileComposition.Flatten(refresh.Layers), session.packages, session.launch.CompatibilityWarning, session.launch.ManifestLocator)
+                    ProfileComposition.Flatten(refresh.Layers), session.packages, session.launch.CompatibilityWarning, session.launch.ManifestLocator, session.launch.CompatibilityPackageName)
                 : await ApplicationBoot.MountAsync(session.Loader, configurationPath, ProfileComposition.Flatten(refresh.Layers));
             await session.AcceptBundlesAsync(refresh);
+            session.ConfigurationOperations = new(session.launch, session.Include)
+            {
+                RunExclusiveAsync = session.queue.RunExclusiveAsync,
+                ReconcileAsync = async requiredEntries =>
+                {
+                    await session.RefreshCoreAsync(requiredEntries);
+                    if (session.RequiresRestart) throw new DeploymentRestartRequiredException("The profile deployment requires a host restart before configuration can be reconciled.");
+                    return await ApplicationBoot.AuditAsync(session.Loader, session.required);
+                },
+            };
+            await session.Context.RunAsync(ctx =>
+            {
+                ctx.Effect(() => new PackageShutdown(session), "profile package operations");
+                return Task.CompletedTask;
+            });
             await session.WarnInactiveAsync(await ApplicationBoot.AuditAsync(session.Loader, required));
             session.successfulProfileInputs = inputs;
             await session.SynchronizeWatchesAsync();
@@ -146,9 +166,9 @@ public sealed class ProfileSession : IAsyncDisposable
         => await boot.ConfigureAwait(false) && (application is null || await application.ConfigureAwait(false));
 
     /// <summary>Serialize an explicit refresh with automatic configuration and code reloads.</summary>
-    public Task RefreshAsync() => queue.RunExclusiveAsync(RefreshCoreAsync);
+    public Task RefreshAsync() => queue.RunExclusiveAsync(() => RefreshCoreAsync());
 
-    private async Task RefreshCoreAsync()
+    private async Task RefreshCoreAsync(IReadOnlySet<string>? editedEntries = null)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         try
@@ -167,7 +187,9 @@ public sealed class ProfileSession : IAsyncDisposable
                 // Bundle selection only changes composition. An additive resolver generation
                 // can make its new code available without restarting the existing modules.
                 var refresh = await ProfileComposition.RefreshAsync(launch);
-                await WarnInactiveAsync(await ApplicationBoot.ReconcileAsync(Include, ProfileComposition.Flatten(refresh.Layers), required));
+                var requiredEntries = editedEntries is null ? required
+                    : new HashSet<string>((required ?? new HashSet<string>()).Concat(editedEntries), StringComparer.Ordinal);
+                await WarnInactiveAsync(await ApplicationBoot.ReconcileAsync(Include, ProfileComposition.Flatten(refresh.Layers), requiredEntries));
                 await AcceptBundlesAsync(refresh);
                 successfulProfileInputs = inputs;
                 successfulMappings = mappings;
@@ -221,7 +243,7 @@ public sealed class ProfileSession : IAsyncDisposable
             watches.Remove(path);
         }
         foreach (var path in paths)
-            if (!watches.ContainsKey(path)) watches.Add(path, queue.WatchConfig(path, RefreshCoreAsync));
+            if (!watches.ContainsKey(path)) watches.Add(path, queue.WatchConfig(path, () => RefreshCoreAsync()));
     }
 
     private async Task<string> ProfileInputSnapshotAsync()
@@ -244,6 +266,13 @@ public sealed class ProfileSession : IAsyncDisposable
                 else values.Add(text);
             }
             catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { values.Add(null); }
+            catch (Exception error) when (path == Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename)
+                && error is IOException or UnauthorizedAccessException)
+            {
+                // Bad grant data must remain non-authorizing and non-rewritable, not prevent boot.
+                // Admission emits the diagnostic; this marker makes unreadable/readable transitions refreshable.
+                values.Add(new EntryOptions { ["unreadableCompatibility"] = error.GetType().Name });
+            }
         }
         return ConfigurationFile.Write(values, true);
     }
@@ -307,16 +336,43 @@ public sealed class ProfileSession : IAsyncDisposable
     }
 
     /// <summary>
-    /// Releases resources used by this instance.
+    /// Stops package preparation and the lifecycle queue, then disposes the owned context and releases watcher references. The caller's resolver is not disposed.
     /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (disposed) return;
+        // Package preparation runs outside the HMR queue. Stop its children before closing
+        // that queue or the borrowed resolver; admitted publication must be allowed to settle.
+        await StopPackagesAsync();
         disposed = true;
         // HmrCoordinator avoids waiting on its current operation when disposal originates there.
         await queue.DisposeAsync();
         watches.Clear();
         await Context.DisposeAsync();
-        Error = null; Warning = null; Refreshed = null; RestartRequired = null;
+        Error = null;
+        Warning = null;
+        Refreshed = null;
+        RestartRequired = null;
+    }
+
+    private sealed class PackageShutdown(ProfileSession session) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync() => new(session.StopPackagesAsync());
+    }
+
+    private async Task StopPackagesAsync()
+    {
+        if (ConfigurationOperations is null) return;
+        var stopped = ConfigurationOperations.StopPackageOperationsAsync();
+        if (!queue.IsExecuting) await stopped;
+        else _ = ObservePackageShutdownAsync(stopped);
+    }
+
+    private async Task ObservePackageShutdownAsync(Task stopped)
+    {
+        // Disposal from an applying operation cannot await itself. Admission is already
+        // closed synchronously; report any eventual cleanup error without retaining it globally.
+        try { await stopped; }
+        catch (Exception error) { Report(error); }
     }
 }

@@ -2,7 +2,9 @@
 
 [English](README.md)
 
-Cordis.NET 是 DeepSeek Harness 所锁定插件运行时与组合行为的原生 .NET 实现，提供基于上下文的插件模型、依赖注入、生命周期 effect、配置组合，以及可选的 CLR 模块、Generic Host 和 JavaScript 表达式适配器。
+Cordis.NET 忠实实现固定提交中 DSH 维护的 Cordis。仓库范围包含领域无关的运行时，以及构建、运行、配置、管理和交付模块化应用的通用基础设施。Core 保持领域无关；应用库和平台适配位于 Core 之上。
+
+当前提供生命周期与注入、Profile/Bundle/Patch 合成、运行会话协调、配置引用、插件启停与部署协调，以及可选的 CLR、Generic Host 和 JavaScript 适配。最新源码增加 typed 字段组合、有序配置编辑与 reset、显式声明导出、NuGet/SDK 包工具链、ASP.NET Core 管理接口、应用 CLI 命令和可复用 TypeScript 客户端模块。本地验收与尚未执行的发布检查见[验证记录](docs/validation.zh.md)，平台边界见[兼容性说明](docs/compatibility.zh.md)。Agent/LLM 业务、RSI 目标和 FSM 领域逻辑由产品承担。这些源码新增能力尚未包含在已发布的 `0.2.0-alpha.1` 批次中。
 
 Cordis.NET 由独立社区维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。
 
@@ -17,6 +19,8 @@ dotnet run --project examples/Composition/Composition.csproj
 ```
 
 该示例注册静态插件、应用配置、读取服务并更新配置。
+
+[管理应用示例](examples/ManagedApplication/README.md) 将真实包安装、配置与浏览器模块接入同一 Profile 会话。其可选前端构建需要 Node，普通 C# 插件开发不需要。
 
 ## 安装预发行版
 
@@ -35,7 +39,7 @@ NuGet 包 ID 使用 `Cordis.NET.*` 前缀；CLR 命名空间与程序集名称�
 - **CLR 模块：** 添加 `Cordis.NET.Clr`，在普通 .NET 运行时加载托管插件程序集。此路径不兼容 Native AOT。
 - **JavaScript 表达式：** 添加 `Cordis.NET.JavaScript`，通过 Jint 求值 `!!js`。只应处理受信任配置；它不是沙箱，也不承诺 Native AOT 支持。
 
-`Cordis.NET.Hosting` 提供 Generic Host 集成。`Cordis.NET.Tool` 提供配置验证与预览命令。
+`Cordis.NET.Hosting` 提供 Generic Host 集成。当前源码新增可选 `Cordis.NET.AspNetCore`，用于显式授权的管理与服务接口。源码 CLI 保留验证／预览，并增加 `run` 与远程管理命令；已发布工具尚不包含这些命令。
 
 ## 文档
 

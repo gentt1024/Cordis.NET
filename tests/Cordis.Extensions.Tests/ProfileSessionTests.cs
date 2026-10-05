@@ -7,6 +7,24 @@ namespace Cordis.Extensions.Tests;
 public sealed class ProfileSessionTests
 {
     [Fact]
+    public async Task Unreadable_compatibility_data_does_not_abort_startup_or_become_rewritable()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var path = Path.Combine(scenario.Launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename);
+        System.IO.Directory.CreateDirectory(path);
+        var warnings = new List<string>();
+        var launch = scenario.Launch with { RuntimeIdentity = new("0.2.0-rc.2"), CompatibilityWarning = warnings.Add };
+        await using var session = await ProfileSession.StartAsync(scenario.Config, launch, scenario.Resolver, enableHmr: true);
+        await scenario.ExpectAsync("initial");
+        Assert.NotEmpty(warnings);
+        Assert.False(session.ConfigurationOperations.ReadVersionCompatibility().Rewritable);
+        var result = await session.ConfigurationOperations.SetVersionExemptionAsync("test@1.0.0", "0.2.0-rc.2", true, true);
+        Assert.NotNull(result.Error);
+        Assert.True(System.IO.Directory.Exists(path));
+        await session.RefreshAsync();
+    }
+
+    [Fact]
     public async Task ExplicitDshAdmissionSurvivesCorruptGrantsAndRemainsInstalledAcrossRefresh()
     {
         await using var scenario = await Scenario.CreateAsync();

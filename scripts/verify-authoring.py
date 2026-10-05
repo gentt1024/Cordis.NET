@@ -15,12 +15,15 @@ import os
 from pathlib import Path
 import platform
 import re
+import runpy
 import shutil
 import subprocess
+import socket
 import sys
 import tempfile
 import time
 import traceback
+import urllib.request
 import xml.etree.ElementTree as ET
 
 from package_inspection import inspect_packages
@@ -37,6 +40,9 @@ REQUIRED_SUITES = (
     "Cordis.Composition.Tests.AuthoringBootTests",
     "Cordis.Platform.Tests.BootCollectionTests",
     "Cordis.Platform.Tests.ProbeDeploymentTests",
+    "Cordis.Composition.Tests.ConfigurationEditTests",
+    "Cordis.Composition.Tests.ClientArtifactTests",
+    "Cordis.Extensions.Tests.ConfigurationSessionTests",
 )
 PACKAGE_IDS = ("Cordis.NET.Core", "Cordis.NET.Composition", "Cordis.NET.Extensions")
 SUCCESS_MESSAGE = b"probe authoring scenario passed"
@@ -47,12 +53,13 @@ class Gate:
         self.directory = directory
         self.steps: list[dict] = []
         self.env = dict(os.environ, DOTNET_CLI_UI_LANGUAGE="en", VSLANG="1033")
+        self.env.setdefault("DOTNET_ROOT", str(Path(shutil.which("dotnet")).resolve().parent))
 
     def record(self, label: str, **detail):
         self.steps.append({"name": label, "status": "passed", **detail})
         print(f"PASS {label}", flush=True)
 
-    def run(self, label: str, command, cwd=ROOT, env=None, diagnostic_failure=False):
+    def run(self, label: str, command, cwd=ROOT, env=None, diagnostic_failure=False, runtime_failure=None):
         command = [str(argument) for argument in command]
         started = time.monotonic()
         stdout_path = self.directory / f"{label}.stdout.log"
@@ -61,7 +68,8 @@ class Gate:
             "name": label, "command": command, "cwd": str(cwd),
             "stdout": stdout_path.relative_to(OUT).as_posix(),
             "stderr": stderr_path.relative_to(OUT).as_posix(),
-            "expected": "compiler CS0411/CS1503 rejection" if diagnostic_failure else "exit 0",
+            "expected": "compiler CS0411/CS1503 rejection" if diagnostic_failure else
+                f"runtime rejection containing {runtime_failure}" if runtime_failure else "exit 0",
             "status": "failed",
         }
         self.steps.append(step)
@@ -79,6 +87,9 @@ class Gate:
                 # A restore failure cannot count as a successful negative compilation check.
                 if re.search(rb"\berror (?:NU|MSB)\d+\b", stdout + stderr):
                     raise RuntimeError(f"{label}: restore/MSBuild failed before the intended compile check")
+            elif runtime_failure:
+                if process.returncode == 0 or runtime_failure.encode() not in stdout + stderr:
+                    raise RuntimeError(f"{label}: did not reject the targeted runtime defect")
             elif process.returncode != 0:
                 raise RuntimeError(f"{label}: command exited {process.returncode}")
             step["status"] = "passed"
@@ -231,6 +242,8 @@ def compilation_contracts(gate: Gate):
 
 
 def verify_test_suites(gate: Gate, directory: Path):
+    audit = runpy.run_path(str(ROOT / "scripts/test-map.py"))["audit_native_results"](directory)
+    gate.record("native-platform-results", **{key: value for key, value in audit.items() if key != "results"})
     suites: dict[str, list[dict]] = {name: [] for name in REQUIRED_SUITES}
     reports = list(directory.glob("*.trx"))
     if not reports:
@@ -345,17 +358,162 @@ def package_consumer(gate: Gate, package_dir: Path, version: str, rid: str, aot:
             raise RuntimeError(f"The package consumer did not resolve {name} {version}")
     gate.record("package-consumer-isolation", packageFolders=list(assets["packageFolders"]), projectDependencies=0)
     jit = publish_and_run(gate, "package-jit", csproj, "AuthoringConsumer", rid, cwd=directory, env=env)
+    application_client(gate, "package-jit", gate.directory / "package-jit" / ("AuthoringConsumer.exe" if os.name == "nt" else "AuthoringConsumer"))
     if aot:
         native = publish_and_run(gate, "package-aot", csproj, "AuthoringConsumer", rid, aot=True, cwd=directory, env=env)
+        application_client(gate, "package-aot", gate.directory / "package-aot" / ("AuthoringConsumer.exe" if os.name == "nt" else "AuthoringConsumer"))
         if jit != native:
             raise RuntimeError("Package JIT and AOT scenario output differs")
         gate.record("package-jit-aot-output-parity")
 
 
+def configuration_mutations(gate: Gate):
+    # Run the unchanged public consumer against deliberately broken production helpers.
+    # Each copy is outside the checkout; the original source and contract assertions stay frozen.
+    mutations = (
+        ("live-binding", "ConfigObject.cs", "descriptor.IsVolatile ? schema.WithVolatile(name, project) : schema", "schema", "requires an explicit typed projection"),
+        ("ordinary-equality", "ConfigObject.cs", "!field.Descriptor.IsVolatile && !ConfigDescriptor.StrictEquals(field.Project(left), field.Project(right))", "field.Name.Length < 0", "ordinary effective change refuses live commit"),
+        ("persistence", "ConfigObject.cs", "result.Add(field.Name, field.Project(value));", "if (field.Name != \"category\") result.Add(field.Name, field.Project(value));", "complete persistence"),
+        ("revision-fence", "PluginConfigurationOperations.Edit.cs", "if (revision != expectedRevision) throw new Refusal(\"conflict\");", "if (revision.Length < 0) throw new Refusal(\"conflict\");", "profile field edit fences stale revisions"),
+        ("field-validation", "PluginConfigurationOperations.Edit.cs", "else entry.Fiber!.ValidateConfiguration(next);", "else { }", "profile field edit validates before persistence"),
+    )
+    files = source_hashes()
+    for name, production_file, before, after, expected in mutations:
+        directory = standalone_directory("cordis-configuration-mutant-")
+        for relative in files:
+            # Only copy the production libraries, actual consumer, and their build inputs.
+            if not (relative.startswith(("src/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/"))
+                    or "/" not in relative):
+                continue
+            source = ROOT / relative
+            target = directory / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        path = directory / "src/Cordis.Composition" / production_file
+        text = path.read_text(encoding="utf-8")
+        if text.count(before) != 1:
+            raise RuntimeError(f"Mutation {name} no longer identifies exactly one production expression")
+        path.write_text(text.replace(before, after), encoding="utf-8")
+        consumer = directory / "examples/Probes/Probes.csproj"
+        gate.run(f"configuration-mutant-{name}-restore", ["dotnet", "restore", consumer, "--locked-mode"], directory)
+        gate.run(f"configuration-mutant-{name}-build", ["dotnet", "build", consumer, "-c", "Release", "--no-restore"], directory)
+        gate.run(f"configuration-mutant-{name}-rejected", ["dotnet", "run", "--project", consumer, "-c", "Release", "--no-build", "--no-restore"],
+                 directory, runtime_failure=expected)
+        gate.record(f"configuration-mutant-{name}", sourceExpression=before, replacement=after,
+                    expectedRejection=expected, consumerAssertionsChanged=False)
+
+
+def application_client(gate: Gate, label: str, executable: Path, *, expected_failure=None, client_source=None):
+    package = standalone_directory("cordis-client-package-")
+    gate.run(label + "-client-build", ["node", "scripts/build-application-client.mjs", package,
+                                      client_source or ROOT / "examples/Probes/client"])
+    with socket.socket() as endpoint:
+        endpoint.bind(("127.0.0.1", 0))
+        port = endpoint.getsockname()[1]
+    origin = f"http://127.0.0.1:{port}"
+    stdout = gate.directory / (label + "-host.stdout.log")
+    stderr = gate.directory / (label + "-host.stderr.log")
+    with stdout.open("wb") as out, stderr.open("wb") as err:
+        host = subprocess.Popen([str(executable), "--application-host", origin + "/", str(package)],
+                                cwd=ROOT, env=gate.env, stdout=out, stderr=err)
+        try:
+            deadline = time.monotonic() + 30
+            while True:
+                if host.poll() is not None:
+                    raise RuntimeError(f"{label}: host exited before ready; inspect {stderr}")
+                try:
+                    with urllib.request.urlopen(origin + "/client", timeout=1) as response:
+                        json.load(response)
+                    break
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError(f"{label}: native HTTP host did not become ready")
+                    time.sleep(0.1)
+            gate.run(label + "-real-client", ["node", "scripts/application-client-consumer.mjs", origin, package],
+                     runtime_failure=expected_failure)
+            gate.record(label + "-delivery", executableSha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
+                        hostStdout=stdout.relative_to(OUT).as_posix(), hostStderr=stderr.relative_to(OUT).as_posix(),
+                        protocol="explicit primitive live SET and immutable self-contained ESM subset",
+                        execution="actual Node ESM client; browser UI rendering not asserted")
+        finally:
+            try:
+                with urllib.request.urlopen(urllib.request.Request(origin + "/stop", data=b"", method="POST"), timeout=3):
+                    pass
+                host.wait(timeout=10)
+            except (OSError, subprocess.TimeoutExpired):
+                host.kill()
+                host.wait(timeout=10)
+
+
+def application_contracts(gate: Gate):
+    provenance = json.loads((ROOT / "examples/Probes/client/vendor/provenance.json").read_text(encoding="utf-8-sig"))
+    lock = json.loads((ROOT / "upstream.lock.json").read_text(encoding="utf-8-sig"))
+    # The retained reference source is pinned independently of the build tools.
+    if provenance["commit"] not in json.dumps(lock):
+        raise RuntimeError("Client provenance does not match the formal fixed DSH commit")
+    for source in provenance["files"]:
+        path = ROOT / "examples/Probes/client" / source["file"]
+        if hashlib.sha256(path.read_bytes()).hexdigest() != source["sha256"]:
+            raise RuntimeError(f"Fixed client source identity changed: {source['file']}")
+    gate.record("fixed-client-source-identity", **provenance)
+    gate.run("client-types", ["node", "reference/node_modules/typescript/bin/tsc", "-p", "examples/Probes/client/tsconfig.json"])
+    files = source_hashes()
+    for name, production, before, after, expected in (
+        ("redaction", "PluginConfigurationOperations.Settings.cs", "if (!policy.Allows(name))", "if (name.Length < 0)", "live view excludes ordinary and secret values"),
+        ("artifact-identity", "ClientArtifact.cs", "Revision = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();", "Revision = \"fixed\";", "client content hash binds captured bytes"),
+    ):
+        directory = standalone_directory("cordis-application-mutant-")
+        for relative in files:
+            if not (relative.startswith(("src/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/")) or "/" not in relative):
+                continue
+            target = directory / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / relative, target)
+        path = directory / "src/Cordis.Composition" / production
+        text = path.read_text(encoding="utf-8")
+        if text.count(before) != 1:
+            raise RuntimeError(f"Application mutation {name} no longer identifies one production expression")
+        path.write_text(text.replace(before, after), encoding="utf-8")
+        output = directory / "published"
+        gate.run(name + "-mutant-publish", ["dotnet", "publish", directory / "examples/Probes/Probes.csproj", "-c", "Release", "-o", output], directory)
+        application_client(gate, name + "-mutant", output / ("Probes.exe" if os.name == "nt" else "Probes"), expected_failure=expected)
+    # Corrupt the actual adapter while retaining the independently written end-to-end consumer.
+    directory = standalone_directory("cordis-client-fence-mutant-")
+    shutil.copytree(ROOT / "examples/Probes/client", directory / "client")
+    path = directory / "client/application.ts"
+    text = path.read_text(encoding="utf-8")
+    before = "this.revisions.get(expectedRevision)"
+    if text.count(before) != 1:
+        raise RuntimeError("Client fence mutation no longer identifies one lookup")
+    path.write_text(text.replace(before, "this.revisions.get(this.nextRevision)"), encoding="utf-8")
+    executable = ROOT / "examples/Probes/bin/Release/net10.0" / ("Probes.exe" if os.name == "nt" else "Probes")
+    application_client(gate, "client-fence-mutant", executable, client_source=directory / "client",
+                       expected_failure="draft keeps original revision fence after refresh")
+
+    directory = standalone_directory("cordis-client-boundary-mutant-")
+    for relative in files:
+        if not (relative.startswith(("src/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/", "tests/Cordis.Composition.Tests/")) or "/" not in relative):
+            continue
+        target = directory / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, target)
+    path = directory / "src/Cordis.Composition/ClientArtifact.cs"
+    text = path.read_text(encoding="utf-8")
+    before = "if (!Within(lexical, root) || !Within(canonical, root))"
+    if text.count(before) != 1:
+        raise RuntimeError("Client boundary mutation no longer identifies one guard")
+    path.write_text(text.replace(before, "if (lexical.Length < 0)"), encoding="utf-8")
+    project = directory / "tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj"
+    gate.run("client-boundary-mutant-build", ["dotnet", "build", project, "-c", "Release"], directory)
+    gate.run("client-boundary-mutant-rejected", ["dotnet", "test", project, "-c", "Release", "--no-build", "--no-restore",
+                                               "--filter", "FullyQualifiedName~Declared_artifact_cannot_escape"], directory,
+             runtime_failure="No exception was thrown")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--aot", action="store_true", help="Publish and run the actual probe scenario with Native AOT too")
-    parser.add_argument("--packages", type=Path, help="Consume an existing local eight-package batch from verify.py --package; never publishes packages")
+    parser.add_argument("--packages", type=Path, help="Consume an existing local package batch from verify.py --package; never publishes packages")
     options = parser.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix="run-", dir=OUT))
@@ -373,10 +531,14 @@ def main() -> int:
                                     "--logger", "trx", "--results-directory", results])
         verify_test_suites(gate, results)
         compilation_contracts(gate)
+        configuration_mutations(gate)
+        application_contracts(gate)
         clr_example(gate, rid)
         jit = publish_and_run(gate, "example-jit", ROOT / "examples/Probes/Probes.csproj", "Probes", rid)
+        application_client(gate, "example-jit", gate.directory / "example-jit" / ("Probes.exe" if os.name == "nt" else "Probes"))
         if options.aot:
             native = publish_and_run(gate, "example-aot", ROOT / "examples/Probes/Probes.csproj", "Probes", rid, aot=True)
+            application_client(gate, "example-aot", gate.directory / "example-aot" / ("Probes.exe" if os.name == "nt" else "Probes"))
             if jit != native:
                 raise RuntimeError("Example JIT and AOT scenario output differs")
             gate.record("example-jit-aot-output-parity")

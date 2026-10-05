@@ -14,6 +14,10 @@ public sealed record ProfileLaunch(Profile Profile, string Home, IReadOnlyList<C
 {
     /// <summary>Explicit running DSH identity. Null retains generic composition without DSH version policy.</summary>
     public DshRuntimeIdentity? RuntimeIdentity { get; init; }
+    /// <summary>Optional platform mapping of package names used only for exact compatibility grant keys.</summary>
+    /// <remarks>The mapping must be deterministic. Package/version metadata, dependency and selection spelling stay unchanged.
+    /// Null preserves the fixed npm identity rules. Hosts using NuGet may select its explicit name adapter.</remarks>
+    public Func<string, string>? CompatibilityPackageName { get; init; }
     /// <summary>Optional sink for corrupt grant data and explicitly exempted compatibility warnings.</summary>
     public Action<string>? CompatibilityWarning { get; init; }
     /// <summary>Host-owned manifest lookup for static or CLR identifiers when DSH admission is enabled.</summary>
@@ -41,7 +45,7 @@ public static class ProfileComposition
     public static async Task<ProfileRefresh> RefreshAsync(ProfileLaunch launch)
     {
         var admission = launch.RuntimeIdentity is { } runtime
-            ? DshProfilePolicy.CreateAdmission(launch.Profile.Directory, runtime, launch.CompatibilityWarning) : null;
+            ? DshProfilePolicy.CreateAdmission(launch.Profile.Directory, runtime, launch.CompatibilityWarning, launch.CompatibilityPackageName) : null;
         var current = await Profiles.LoadAsync(launch.Profile.Directory, launch.InstallationBundles, launch.LocalBundles, false, admission);
         var homePath = Path.Combine(launch.Home, "cordis.patch.yml");
         var layers = current.Bundles.SelectMany(bundle => bundle.PatchLayers)

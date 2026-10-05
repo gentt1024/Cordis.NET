@@ -92,11 +92,15 @@ public sealed class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         await f.Start();
+        var notifications = new List<string>();
+        f.Manager.Changed += _ => throw new InvalidOperationException("observer rejected");
+        f.Manager.Changed += notifications.Add;
         AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", false), true, "applied");
         Assert.False((await f.Manager.ListPluginsAsync()).Single(p => p.PatchId == "managed").Enabled);
         AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", false), false, "applied");
         AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", true), true, "applied");
         Assert.Single((await Profiles.ReadPatchesAsync(f.Patch)), row => row.Id == "managed");
+        Assert.Equal(new[] { "plugin", "plugin", "plugin" }, notifications);
     }
 
     [Fact]

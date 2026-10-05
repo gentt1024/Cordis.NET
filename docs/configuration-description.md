@@ -2,11 +2,13 @@
 
 [中文](configuration-description.zh.md)
 
-These APIs belong to the `0.2.0-alpha.1` source release. A source version does not establish availability on NuGet. See the [release notes](../CHANGELOG.md).
+The existing description/reference APIs are available from `0.2.0-alpha.1`. The recommended `ConfigObject<T>` helper is a current source addition. See the [release notes](../CHANGELOG.md); a source version does not establish package availability.
 
 `Plugin<T>.Config` remains the validation authority. A plugin can optionally supply `Configuration = new ConfigSchema<T>(validator, descriptor)`. If both properties are supplied, they must refer to the same delegate. Registration captures the validator, description, and explicit field projections together. Existing `IPlugin` implementations need no new members; adapters can opt into `IConfigurationPlugin.CaptureConfiguration()` and forward the captured bundle.
 
 The author supplies the validation rules and keeps the descriptor's raw keys, shape and defaults consistent with them. Every marked fixed field needs one projection of its effective value. For a POCO, `WithOrdinaryEquality` must compare every ordinary field and exclude live fields; `WithSimplify` must return complete raw data the validator can read again. Structural maps can use the descriptor's ordinary comparison and simplification. Test typed adapters together, including ordinary changes and save round trips.
+
+For complete data objects, prefer Composition's `ConfigObject<T>` below. A field combines its raw key, descriptor and pure plain-value projection. The helper supplies live bindings, compares every declared ordinary field with existing strict equality, and saves all declared fields including defaults. Authors must declare the complete field set and keep the validator's keys/defaults consistent. Share default constants when useful. Nested live bindings, opaque values, custom conversion or equality use `ConfigSchema<T>` directly. The old `Config` delegate remains supported. This helper is currently a source addition, not part of the published `0.2.0-alpha.1` packages.
 
 The library captures these declarations together, rejects missing, extra or blocked projections, and publishes immutable snapshots atomically. It does not infer POCO fields, verify that a custom validator implements the declared defaults, or run another validation engine. A false ordinary comparison sends an update through the ordinary lifecycle.
 
@@ -36,16 +38,10 @@ static ConfigResult<Settings> Validate(object? raw)
     }
 }
 
-var schema = new ConfigSchema<Settings>(Validate,
-    ConfigDescriptor.Object(
-        ("limit", ConfigDescriptor.Number().Default(1).Volatile()),
-        ("label", ConfigDescriptor.String().Default("worker"))))
-    .WithVolatile("limit", value => value.Limit)
-    .WithOrdinaryEquality((left, right) => left.Label == right.Label)
-    .WithSimplify(value => new EntryOptions
-    {
-        ["limit"] = value.Limit, ["label"] = value.Label
-    });
+var schema = ConfigObject<Settings>.Create(Validate)
+    .Field("limit", ConfigDescriptor.Number().Default(1).Volatile(), value => value.Limit)
+    .Field("label", ConfigDescriptor.String().Default("worker"), value => value.Label)
+    .Build();
 
 var references = new List<ConfigReference<int>>();
 Plugin<Settings> CreatePlugin(string implementation) => new()
@@ -145,3 +141,57 @@ var selectedUnion = ConfigDescriptor.Union(
     raw => raw is IReadOnlyDictionary<string, object?> ? 0 : 1,
     ConfigDescriptor.Lazy(Tree), ConfigDescriptor.String());
 ```
+
+## Explicit application metadata and independent exports
+
+Composition's `WithMetadata` adds renderer and declared-constraint data alongside the same validator. It supports role, extra plain data, plain or localized descriptions, hidden/disabled/collapse, badges, link/comment, min/max/step, ECMAScript pattern source/flags and loose acceptance. Required/optional, defaults and volatile boundaries remain the existing Core declarations. No metadata helper installs a validator: the author must implement the declared rules, defaults and normalization in the original validator.
+
+```csharp
+var limitDeclaration = ConfigDescriptor.Number().Default(2).Volatile()
+    .WithMetadata(new ConfigurationMetadata
+    {
+        Min = 0, Max = 10, Step = 2, Role = "slider",
+        Descriptions = new Dictionary<string, string> { ["en"] = "Even count", ["zh"] = "偶数数量" },
+        Badges = [new ConfigurationBadge("preview", "warning")]
+    });
+var passwordDeclaration = ConfigDescriptor.String().Optional()
+    .WithMetadata(new ConfigurationMetadata { Role = "secret" });
+```
+
+Core carries these as `ConfigDescriptor.Annotations`, an immutable acyclic plain-data snapshot. `WithAnnotations` replaces that snapshot; caller collections are copied and opaque objects/delegates are rejected. Copies, capture and graph serialization retain annotations without retaining caller containers. Composition recognizes the documented metadata keys; unknown annotations produce export diagnostics and cannot override required/default/volatile declarations. A descriptor can still carry an unresolved lazy callback, whose execution remains owned by normal configuration resolution.
+
+`ConfigurationSchemaExporter.ToSchemastery` emits the callable Schemastery `{uid, refs}` envelope. `ToJsonSchema` independently emits a JSON Schema 2020-12 document with `$defs` and `x-cordis` metadata. Both preserve shared graph identities and export authored data without calling validators or lazy builders. Empty tuple/union/intersection declarations have consumable envelopes and valid JSON Schema applicators. Tuples keep the fixed source's non-strict open tail. Numeric bounds project directly; step relative to a nonzero minimum, UTF-16 length behavior and ECMAScript pattern syntax/flags have explicit projection limitations. JSON Schema retains pattern hints in `x-cordis`. Loose recovery widens acceptance while keeping metadata. Arbitrary transforms, getters, branch decisions and native normalization still require runtime validation; `Complete` reports that distinction and does not replace the supported declaration data.
+
+## Nested settings and source edits
+
+Use the session's existing `PluginConfigurationOperations`. `MutateConfigurationAsync` takes ordered `ConfigurationSet`/`ConfigurationUnset` operations and a fresh revision. It builds one complete candidate, validates that final candidate and writes/reconciles one source update. Intermediate candidates may be invalid. Object unset restores source inheritance; array unset removes the addressed element, and a terminal set at the current length appends. Array indexes must be canonical non-negative decimal strings. Root configuration edits are available through the full authorized configuration endpoint. `Saved`, `Applied` and recovery failures remain separate results.
+
+Settings add a mandatory host `SettingsPolicy`, selecting top-level form sections while recursively keeping only declared live boundaries. Nested fixed live fields need the same explicit `WithVolatile(path, projection)` bindings as runtime updates. Ordinary siblings are omitted. Under a live object, array or dictionary boundary, selected data stays editable through concrete paths. Every operation checks its ancestors and target: hidden paths, ordinary paths and root bypasses are refused. A write-only secret leaf can be set or reset; replacing an ancestor containing secret or hidden descendants is refused because that would implicitly erase unreadable values.
+
+```csharp
+var policy = new SettingsPolicy(["network"]);
+var view = await operations.ReadSettingsAsync("root:worker", policy);
+var result = await operations.MutateSettingsAsync("root:worker",
+    [new ConfigurationSet(["network", "timeout"], 30),
+     new ConfigurationUnset(["network", "password"])], view.Revision, policy);
+var form = await operations.ReadSettingsSchemasAsync("root:worker", policy);
+```
+
+`ReadSettingsAsync` returns detached selected values and `SettingsView.Secrets`, whose concrete paths and `Set` flags reveal presence only. Secret values are removed from objects and dictionaries; array positions remain as null placeholders. Secret slots are gathered conservatively across all union/intersection branches. Hidden values are removed and unknown object members are not exposed through the selected object form. The settings schema exports remove all defaults, omit hidden properties, remove secret required flags and retain write-only roles. Full `ReadConfigurationSchemasAsync` can include defaults and requires separate host authorization. Both active-entry reads synchronize through the normal lifecycle before projection; synchronization can execute plugin code.
+
+Resolved recursive descriptions follow only present value descendants; missing and null containers terminate traversal. A lazy/union cycle that makes no progress omits the affected value and records a redaction diagnostic, so an unresolved walk cannot return unredacted data.
+
+## Discovery without plugin activation
+
+`PluginConfiguration.Descriptor` exposes the existing captured declaration independently of runtime validation. `ConfigurationSchemaDiscovery.DiscoverAsync(filename, resolver, layers)` reads literal entry lists, applies the supplied ordered layers and returns per-entry independent exports. It traverses native `cordis:group` and `cordis:include`, resolves relative include paths, uses an include's literal initial data for a missing file without creating that file, and reports include cycles/import failures while preserving surviving siblings. Disabled entries still contribute declarations. Entries lacking ids use source positions; the returned source filename disambiguates them.
+
+```csharp
+var catalog = await ConfigurationSchemaDiscovery.DiscoverAsync(
+    configurationPath, new StaticModuleResolver().Register("worker", plugin), layers);
+foreach (var entry in catalog.Entries)
+    Console.WriteLine($"{entry.Source}: {entry.EntryId}: {entry.Diagnostic ?? entry.JsonSchema?.Format}");
+```
+
+Discovery creates no Context or Loader and invokes no `Apply`, `ResolveConfig`, expression evaluator or lazy builder. Module imports and optional `CaptureConfiguration` are trusted author code and can execute; callers supply the authorized resolver. Custom tree carriers receive an explicit static-traversal diagnostic rather than guessed child semantics. Catalog documents remain declarations, not an alternative runtime schema engine. These additions are available from this source checkout; package availability follows the release notes.
+
+A native group/include config containing `__jsExpr` remains opaque as a whole, including any sibling `path` property. Discovery records the expression limitation and continues with surviving sibling entries.

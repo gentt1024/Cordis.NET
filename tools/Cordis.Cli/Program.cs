@@ -1,5 +1,10 @@
 using Cordis.Composition;
 
+if (args.Length > 0 && args[0] == "run") return await ApplicationCommands.RunAsync(args[1..]);
+if (args.Length > 0 && args[0] is "state" or "plugins" or "bundles" or "inspect" or "install" or "remove" or "enable"
+    or "wait" or "cancel" or "settings" or "configuration" or "schema" or "edit" or "sources" or "versions" or "compatibility" or "grant")
+    return await ManagementCommands.RunAsync(args);
+
 if (args.Length < 2 || args[0] is not ("validate" or "preview"))
 {
     Console.Error.WriteLine("Usage: cordis validate|preview <cordis.yml> [--patch <file>] [--json]");

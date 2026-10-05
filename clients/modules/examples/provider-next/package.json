@@ -1,0 +1,15 @@
+{
+  "name": "example-provider",
+  "version": "2.0.0",
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "external": [
+        "@cordis-net/client-modules"
+      ]
+    },
+    "bundle": {
+      "patch": []
+    }
+  }
+}

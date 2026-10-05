@@ -706,7 +706,7 @@ public sealed class DeploymentResolutionTests
         }
     }
 
-    private static void CreateDirectoryAlias(string alias, string target)
+    internal static void CreateDirectoryAlias(string alias, string target)
     {
         if (!OperatingSystem.IsWindows())
         {

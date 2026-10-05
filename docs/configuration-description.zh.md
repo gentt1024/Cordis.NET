@@ -2,11 +2,13 @@
 
 [English](configuration-description.md)
 
+完整的数据对象推荐使用下方 Composition 的 `ConfigObject<T>`。每个字段组合 raw 键、描述和纯 plain 值投影。辅助器生成 live 绑定，以既有严格等值比较全部已声明普通字段，并保存包含默认值的全部字段。作者须声明完整字段集，保证 validator 的键和默认值一致；需要时共享默认值常量。嵌套 live 绑定、opaque 值、特殊转换或等值规则继续使用 `ConfigSchema<T>`。旧 `Config` 委托仍受支持。此辅助器当前为源码新增能力，尚未包含在已发布的 `0.2.0-alpha.1` 包中。
+
 引用状态只保存脱离原配置的投影快照。完整有效配置和验证委托由 Fiber 持有；退役的 `ConfigReference<string>` 不会额外保留配置 POCO 的可收集类型。故意持有泛型实参属于插件的引用仍可能保留程序集。所有字段快照一次发布，但分别读取多个字段不构成事务。
 
 原始 `__jsExpr` 传输节点对对象描述保持不透明。同名子字段不能掩盖父级表达式源文本变化。同源文本无需求值即可等价，文本变化走普通生命周期；明确声明整个节点为 volatile 时仍支持兼容的原地更新。
 
-这些 API 属于 `0.2.0-alpha.1` 源码版本。源码版本不代表 NuGet 已发布这些能力。参见[发行说明](../CHANGELOG.md)。
+既有描述/引用 API 自 `0.2.0-alpha.1` 提供，推荐的 `ConfigObject<T>` 辅助器为当前源码新增能力。参见[发行说明](../CHANGELOG.md)；源码版本不代表包已发布。
 
 `Plugin<T>.Config` 仍是验证权威。插件可以额外提供 `Configuration = new ConfigSchema<T>(validator, descriptor)`。同时提供两项时，必须使用同一委托。注册时一并捕获验证器、描述和显式字段投影。现有 `IPlugin` 实现无需新增成员；适配器可以转发 `IConfigurationPlugin.CaptureConfiguration()` 的捕获结果。
 
@@ -40,16 +42,10 @@ static ConfigResult<Settings> Validate(object? raw)
     }
 }
 
-var schema = new ConfigSchema<Settings>(Validate,
-    ConfigDescriptor.Object(
-        ("limit", ConfigDescriptor.Number().Default(1).Volatile()),
-        ("label", ConfigDescriptor.String().Default("worker"))))
-    .WithVolatile("limit", value => value.Limit)
-    .WithOrdinaryEquality((left, right) => left.Label == right.Label)
-    .WithSimplify(value => new EntryOptions
-    {
-        ["limit"] = value.Limit, ["label"] = value.Label
-    });
+var schema = ConfigObject<Settings>.Create(Validate)
+    .Field("limit", ConfigDescriptor.Number().Default(1).Volatile(), value => value.Limit)
+    .Field("label", ConfigDescriptor.String().Default("worker"), value => value.Label)
+    .Build();
 
 var references = new List<ConfigReference<int>>();
 Plugin<Settings> CreatePlugin(string implementation) => new()
@@ -145,3 +141,57 @@ var selectedUnion = ConfigDescriptor.Union(
     raw => raw is IReadOnlyDictionary<string, object?> ? 0 : 1,
     ConfigDescriptor.Lazy(Tree), ConfigDescriptor.String());
 ```
+
+## 显式应用元数据与两条独立导出
+
+Composition 的 `WithMetadata` 在同一 validator 旁添加 renderer 与约束声明数据，支持 role、extra plain 数据、普通或本地化 description、hidden/disabled/collapse、badges、link/comment、min/max/step、ECMAScript pattern 源文本/flags 和 loose。required/optional、默认值和 volatile 边界仍使用既有 Core 声明。元数据辅助器不安装验证器；作者须在原 validator 中实现声明的规则、默认值与规范化行为。
+
+```csharp
+var limitDeclaration = ConfigDescriptor.Number().Default(2).Volatile()
+    .WithMetadata(new ConfigurationMetadata
+    {
+        Min = 0, Max = 10, Step = 2, Role = "slider",
+        Descriptions = new Dictionary<string, string> { ["en"] = "Even count", ["zh"] = "偶数数量" },
+        Badges = [new ConfigurationBadge("preview", "warning")]
+    });
+var passwordDeclaration = ConfigDescriptor.String().Optional()
+    .WithMetadata(new ConfigurationMetadata { Role = "secret" });
+```
+
+Core 通过 `ConfigDescriptor.Annotations` 承载不可变、无环的 plain 数据快照。`WithAnnotations` 替换该快照，复制调用方容器并拒绝 opaque 对象/委托；copy、capture 和图序列化保留注解，不保留调用方集合。Composition 识别上述元数据键；未知注解产生导出诊断，不能覆盖 required/default/volatile 声明。描述仍可能含未解析的 lazy callback，其执行继续由正常配置解析负责。
+
+`ConfigurationSchemaExporter.ToSchemastery` 输出可供 Schemastery 调用的 `{uid, refs}` envelope；`ToJsonSchema` 独立输出 JSON Schema 2020-12 文档，使用 `$defs` 和 `x-cordis` 元数据。两者保留共享图节点，无须执行 validator 或 lazy builder。空 tuple/union/intersection 有可消费的 envelope 与合法 JSON Schema applicator；tuple 保持固定源非 strict 的开放尾部。数值边界直接投影；非零 min 起点的 step、UTF-16 长度行为和 ECMAScript pattern 语法/flags 明确报告投影限制，pattern 提示保留在 `x-cordis`。loose 恢复会宽化验收并保留元数据。任意 transform/getter、分支选择与原生规范化仍须运行时验证；`Complete` 区分这项事实，不替代已经支持的声明数据。
+
+## 嵌套 Settings 与源编辑
+
+复用 session 既有的 `PluginConfigurationOperations`。`MutateConfigurationAsync` 接收有序 `ConfigurationSet`/`ConfigurationUnset` 与新 revision，组装完整候选后验证最终值，再写入和协调一次源更新；中间候选可以不合法。对象 unset 恢复源继承，数组 unset 删除元素，终端 set 的 index 等于当前长度时追加。数组 index 必须是规范的非负十进制字符串。完整授权的配置端点可编辑根对象；`Saved`、`Applied` 与恢复失败仍是独立结果。
+
+Settings 另要求宿主 `SettingsPolicy`，选择顶层表单 section，再递归保留已声明 live 边界。嵌套固定 live 字段仍需 runtime 所用的显式 `WithVolatile(path, projection)`；普通兄弟字段被省略。live object/array/dict 边界下的数据使用具体路径编辑。每项操作检查祖先和目标，拒绝 hidden、普通路径及根绕过。write-only secret 叶子可以 set/reset；含 secret 或 hidden 后代的祖先替换被拒绝，避免隐式擦除客户端读不到的值。
+
+```csharp
+var policy = new SettingsPolicy(["network"]);
+var view = await operations.ReadSettingsAsync("root:worker", policy);
+var result = await operations.MutateSettingsAsync("root:worker",
+    [new ConfigurationSet(["network", "timeout"], 30),
+     new ConfigurationUnset(["network", "password"])], view.Revision, policy);
+var form = await operations.ReadSettingsSchemasAsync("root:worker", policy);
+```
+
+`ReadSettingsAsync` 返回脱离 runtime 的选中值，以及仅包含具体路径与 `Set` 存在标记的 `SettingsView.Secrets`。object/dict secret 值被移除，数组位置保留 null 占位。union/intersection 各分支的 secret 保守合并。hidden 值被移除，选中 object 表单不公开未知成员。Settings schema 移除全部默认值和 hidden 属性，移除 secret 的 required 标记，保留 write-only role。完整 `ReadConfigurationSchemasAsync` 可含默认值，宿主须另行授权。两个 active-entry 读取先通过正常生命周期同步；同步可能执行插件代码，随后才做数据投影。
+
+已解析的递归描述只沿实际存在的值后代遍历，缺失或 null 容器终止遍历。lazy/union 无进展环会省略受影响值并记录脱敏诊断，不把未完成遍历的原值返回给客户端。
+
+## 无需激活插件的声明发现
+
+`PluginConfiguration.Descriptor` 从既有捕获合同公开描述，无须运行 validator。`ConfigurationSchemaDiscovery.DiscoverAsync(filename, resolver, layers)` 读取 literal entry list，应用有序 layers，返回每项的两条独立导出。它遍历原生 `cordis:group`/`cordis:include`，解析相对 include 路径；文件缺失时使用 literal initial 数据但不创建文件。include 循环和 import 失败会被报告，成功兄弟继续保留。disabled entry 仍贡献声明；无 id 的 entry 使用源位置，返回的源文件名帮助区分。
+
+```csharp
+var catalog = await ConfigurationSchemaDiscovery.DiscoverAsync(
+    configurationPath, new StaticModuleResolver().Register("worker", plugin), layers);
+foreach (var entry in catalog.Entries)
+    Console.WriteLine($"{entry.Source}: {entry.EntryId}: {entry.Diagnostic ?? entry.JsonSchema?.Format}");
+```
+
+发现流程不创建 Context/Loader，不调用 `Apply`、`ResolveConfig`、表达式 evaluator 或 lazy builder。模块 import 与可选 `CaptureConfiguration` 是受信作者代码，可能执行；调用方提供已授权 resolver。自定义 tree carrier 获得明确的静态遍历诊断，不猜测子配置语义。catalog 仍是声明，不是替代运行时的 schema engine。新增能力可从当前源码使用；包可用性以发行说明为准。
+
+原生 group/include config 只要包含 `__jsExpr`，整个父节点就保持不透明，包括同级 `path` 属性。发现流程记录表达式限制，继续处理成功的兄弟条目。

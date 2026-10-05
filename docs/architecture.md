@@ -46,6 +46,45 @@ HMR serializes config and code mutations, rejects nested transactions, and avoid
 on its own callback during teardown. A framework change invokes an explicit host restart
 hook. File/config changes and code replacement remain separate operations.
 
+## Application infrastructure ownership
+
+Repository scope includes generic application infrastructure above Cordis, not only Core.
+`PluginConfigurationOperations` owns profile management mutations; `ProfileSession` owns the
+running Context, Loader, Include and HMR coordination. Host, client, transport and package
+adapters reuse these owners. Products choose domain services, pages, identities and policies.
+Reusable TypeScript client mechanisms can remain TypeScript; their location in a UI directory
+does not exclude them. Scope does not imply that an unimplemented adapter is available.
+
+`ConfigObject<T>` belongs to Composition and builds the existing `ConfigSchema<T>` contract.
+It shares explicit field projections across reference binding, ordinary comparison, description
+data and complete persistence without changing Core validation or update paths. Transparent
+plugin wrappers forward `IConfigurationPlugin` as well as `IPlugin`. The wrapper owns forwarding
+that optional declaration; the runtime does not infer missing declarations from the wrapped object.
+
+Field edits use `ProfileSession.ConfigurationOperations`, its existing exclusive queue and
+normal Loader validation/reconciliation. A content/activation hash fences stale writes;
+`Saved` and `Applied` describe separate outcomes. Recovery restores source and attempts
+normal reconciliation, without promising an atomic rollback of the entire live tree.
+`Fiber.ConfigurationValues` exports only detached published reference snapshots; it does
+not export or retain the plugin configuration object.
+
+`SettingsPolicy` selects fields above Core. Ordered edits create one complete raw candidate,
+validate through the existing Loader, and perform one source commit. Explicit descriptor annotations
+carry detached data; Composition interprets form metadata and redacts settings. They do not add a
+second validator. Schemastery and JSON Schema are separate projections with explicit limitations.
+
+`DotnetPluginToolchain` owns NuGet acquisition and SDK preparation in Clr. Profile operations hold
+the existing file/mutation lock, then enter the session queue for publication and reconciliation.
+Build execution approval is independent of DSH version grants. The ASP.NET Core adapter and CLI
+call these same operations. HTTP generations and content revisions fence stale requests; active
+installation waiting supplies no durable receipt and never authorizes replay after an unknown response.
+
+`ClientArtifact` still captures immutable bytes. `ClientModuleCatalog` adds selected dependencies
+and graph identities; the TypeScript package reuses the fixed Cordis/Loader and client module
+mechanisms. Compiled factory registrations are an optional browser authoring path; backend C#
+authors do not need Node. Completed catalogs are published by the host, and failed builds must
+retain their preceding complete catalog. Product pages and identities remain application-owned.
+
 ## Platform evidence
 
 The same scenario executable is published and executed under Native AOT, with

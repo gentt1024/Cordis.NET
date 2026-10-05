@@ -2,6 +2,54 @@
 
 [中文](validation.zh.md)
 
+## Application management and delivery, 2026-10-05
+
+Implementation checkpoint `ed2b63d657e5405a79f08308451b385f7cf0969c` passed local Windows x64 and Ubuntu 24.04 x64 verification with SDK 10.0.111. This extends the earlier slices with package execution, ordered configuration edits/reset, declaration exports, HTTP/SSE management, CLI commands and browser modules. Documentation-only updates are bound separately to the unchanged implementation. The fixed upstream lock and published alpha.1 remain unchanged.
+
+| Evidence category | Actual result |
+|---|---|
+| Native tests | Windows: 732 passed. Linux: 729 passed; three exact Windows Job cases were not executed and are reported separately |
+| Existing semantics | Established and upgrade traces match the fixed DSH implementation; JIT and static Native AOT agree |
+| Original upstream tests | 178 selected configuration/Profile/HMR cases and 98 original Core/Loader cases passed on both platforms. Another bounded Linux run passed 265 unique official management/Settings cases |
+| Consumers and deployment | Both platforms passed source and isolated-package authoring, actual TypeScript consumers, compiler rejection controls, designated mutations, static JIT/AOT, CLR isolation and ASP.NET folder/single-file deployment |
+| Package contents and source | Nine local test packages and their symbol packages passed strict inspection; an isolated Core consumer resolved an actual source frame offline. A separate Windows no-Git source export passed the complete AOT/package gate using exact committed source bytes |
+| Browser and application | The maintained application exercised two dependent modules, SlotCore withdrawal, watch success/failure, connection recovery, configuration editing, and one independent plugin author's install/remove/restart chain, including alpha.1 removal and alpha.2 installation with a fresh resolver |
+
+The three Linux platform exceptions require exact test names, definitions and reasons. They cannot satisfy mapped assertion claims; any other skip or failure is rejected. Linux abrupt host death was separately checked with the final CLR DLL: a surviving process group blocks takeover until explicitly stopped. Windows Job cleanup remains a separate contract.
+
+Original failures are retained: a running example locked Windows build outputs, mixed working-tree line endings broke package inspection, the old test gate rejected the Linux platform exceptions, and C-drive exhaustion interrupted independent consumers. After independent rule review, exports now read Git blobs directly and platform reporting preserves unexecuted cases. Moving completed private artifacts and using a separate temporary directory resolved the disk failure without changing source or assertions. The completed upstream steps from that same frozen Windows source remain separate evidence; the remaining local gate was rerun successfully.
+
+The default broad upstream resolution run was stopped after 530 seconds and is not counted as passed. Final checks used the previously selected configuration/Profile cases plus the related HMR files. A first management run lacked the pinned pnpm executable; installing that exact tool made the failed file pass unchanged. These records do not claim an entire DSH audit or complete native assertion parity.
+
+Use the commands in [development](development.md), selecting the five configuration/Profile files recorded below plus `--upstream-test packages/boot/hmr/tests/`. Also install dependencies with `npm ci --prefix clients/modules --ignore-scripts`. Raw commands, per-step results, source/package hashes and prior failures are retained outside the public tree.
+
+Hosted Windows/Linux CI, remote SourceLink retrieval and publication were not executed. Local packages are validation artifacts; they must not replace the published version. A future release still needs a new authorized version and its own final commit, tag and package binding.
+
+## Application infrastructure slices, 2026-10-04
+
+Implementation checkpoint `06966e49bb287220c56d1a7e326d10f9800cbfb2` passed the existing full gate on Windows x64 and actual Ubuntu 24.04 x64 under WSL2, using SDK 10.0.111. A final consumer-diagnostic correction at `9e6af99bcf248c316f1c4db3f42bba99e11daa07` changed no production code, assertions or verifier conditions; independent read-only review and both-platform authoring reruns passed. Final delivery documentation is bound separately to these unchanged validated sources. The formal upstream lock and published alpha.1 are unchanged.
+
+| Check | Actual result on both platforms |
+|---|---|
+| Release build / native tests | Zero warnings; 672 passed, zero failed/skipped: Core 148, Composition 395, Extensions 100, Platform 29 |
+| Existing semantics | 35 established and 3 upgrade paired traces match fixed DSH under JIT and actual static Native AOT; JIT repeated three times |
+| Relevant upstream execution | 109 cases in five named application/volatile files, plus 98 origin Core/Loader cases; reference execution, not native assertion closure |
+| New consumer acceptance | Manual/composed typed configuration, field edits, and actual HTTP/unchanged DSH form-model/store consumption; source and isolated NuGet consumers under JIT/AOT |
+| Designated rejection | Nine compiled production/client mutations rejected for their designated runtime reasons, without relaxing assertions |
+| Deployment and artifacts | CLR private-dependency and collectible boundaries; framework-dependent and self-contained ASP.NET folder/single-file JIT deployments; eight-package inspection, symbols/checksums and offline consumer source frames; optional adapters and installed CLI |
+
+```console
+npm ci --prefix reference --ignore-scripts
+python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --upstream-test scripts/volatile-config.spec.ts --upstream-test scripts/loader-config-diff.spec.ts --upstream-test scripts/loader-volatile-update.spec.ts --upstream-test packages/boot/app-boot/tests/profile.spec.ts --upstream-test packages/boot/app-boot/tests/user-patches.spec.ts --aot --package --package-output artifacts/application-infrastructure-packages
+python scripts/verify-authoring.py --aot --packages artifacts/application-infrastructure-packages
+python -m unittest discover -s scripts/tests -p "test_*.py" -v
+python scripts/check-docs.py
+```
+
+Both-platform verifier self-tests passed. Raw reports, source inventories, package hashes, independent review and actual commands are held in the delivery evidence. Linux's successful Git checkout had all 324 raw source hashes equal to the frozen ZIP; two initial checkout newline differences were replaced with the frozen bytes, with no semantic Git diff. No whole-repository S0 or unrelated DSH suites were added.
+
+Failures remain visible: the old Linux SDK first refused restore; the no-Git export then passed runtime/AOT checks but failed symbol packaging because no SourceLink record was generated. The export symbol path is still open; source ZIP build/run and successful Git-checkout symbol checks do not close it. A truncated Node data-URL error failed the designated-rejection check, prompting the independently reviewed diagnostic correction and reruns. Hosted CI, remote SourceLink retrieval, browser UI rendering, other RIDs and Maker product execution were not run. Settings remains top-level primitive/live SET-only; full schema export, reset/multi-edit, module graphs, remote protocols and install tooling remain separate gaps.
+
 The fixed upstream locale-file test calls `context.skip()` when its filesystem cannot store both `en.json` and `EN.json`. The verifier records that exact assertion and reason as skipped, not passed; it still rejects failures, unknown skips and inconsistent report totals. Linux executes the assertion on its case-sensitive filesystem. This reference-side capability outcome is separate from .NET test results and does not remove any upstream test.
 
 ## Public-review repair candidate, 2026-10-02

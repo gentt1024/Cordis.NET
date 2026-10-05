@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PackageId>Cordis.NET.AspNetCore</PackageId>
+    <Description>ASP.NET Core management and explicitly exported Cordis services.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../Cordis.Extensions/Cordis.Extensions.csproj" />
+  </ItemGroup>
+</Project>

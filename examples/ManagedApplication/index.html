@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Cordis managed application</title>
+<h1>Cordis managed application</h1>
+<p>A loopback development host. Package builds execute code with the host user's permissions.</p>
+<p id="connection" role="status">Connecting</p>
+<form id="install"><label>Package <input name="name" required></label>
+<label>Version <input name="version" value="1.0.0-alpha.1" required></label>
+<label><input name="approved" type="checkbox" required>Allow this inspected package build</label><button>Inspect and install</button></form>
+<form id="remove"><label>Package to remove <input name="name" required></label><button>Remove</button></form>
+<button id="inventory">Refresh inventory</button><pre id="plugins"></pre><ul id="plugin-actions"></ul>
+<form id="enable"><label>Bundle <input name="target" value="example-provider" required></label><label><input name="enabled" type="checkbox" checked>Enabled</label><button>Apply selection</button></form>
+<form id="settings"><label>Entry <input name="entry" value="root:example.managedplugin" required></label><label>View <select name="scope"><option value="settings">Settings</option><option value="configuration">Configuration</option></select></label><button>Read settings or configuration</button></form>
+<pre id="schema"></pre><pre id="current"></pre>
+<form id="edit"><label>Ordered operations <textarea name="operations" rows="4" cols="70">[{"op":"set","path":["limit"],"value":2}]</textarea></label><button>Apply</button></form>
+<button id="disconnect">Disconnect</button><button id="reconnect">Reconnect</button>
+<button id="development">Read development builds</button><pre id="builds"></pre>
+<form id="stop-build"><label>Development package <input name="name" value="example-provider" required></label><button>Stop compiler</button></form>
+<button id="compatibility">Read compatibility</button>
+<form id="compatibility-grant"><label>Package version <input name="packageVersion" required></label><label>Runtime version <input name="runtimeVersion" required></label><label><input name="enabled" type="checkbox" checked>Grant</label><label><input name="acceptRisk" type="checkbox" required>Accept version compatibility risk</label><button>Apply grant</button></form>
+<pre id="result" role="status"></pre><pre id="client-diagnostics"></pre><pre id="slot-status"></pre><div id="contributions"></div>
+<script type="module">
+import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
+const modules = await bootClientModules({graph:{rev:'initial',entries:[],batches:[]}})
+function showModules() {
+  document.querySelector('#client-diagnostics').textContent = JSON.stringify(modules.state.getSnapshot(),null,2)
+  const slots = modules.context.get('slots')
+  document.querySelector('#slot-status').textContent = JSON.stringify({panelContributions:slots?.entries('example.panel').length ?? 0})
+}
+const unsubscribeModules = modules.state.subscribe(showModules)
+showModules()
+let client, view, entry, mode
+let subscriptions = [], ownerQueue = Promise.resolve(), disposed = false
+const show = value => { document.querySelector('#result').textContent = JSON.stringify(value, null, 2) }
+async function closeOwner() {
+  for (const unsubscribe of subscriptions.splice(0)) unsubscribe()
+  const previous = client
+  client = undefined
+  await previous?.close()
+}
+function connect() {
+  ownerQueue = ownerQueue.then(async () => {
+    await closeOwner()
+    if (disposed) return
+    const owner = createManagementClient({baseUrl:'/cordis',modules})
+    client = owner
+    const update = () => { document.querySelector('#connection').textContent = owner.connection.getSnapshot().phase }
+    subscriptions.push(owner.connection.subscribe(update), owner.subscribe(event => { if(event.kind==='package') show(event.value) }))
+    update()
+  }).catch(error => show({error:error.message}))
+  return ownerQueue
+}
+async function settings() {
+  entry = document.querySelector('#settings').elements.entry.value
+  mode = document.querySelector('#settings').elements.scope.value
+  view = mode === 'settings' ? await client.readSettings(entry) : await client.readConfiguration(entry)
+  document.querySelector('#current').textContent = JSON.stringify(view,null,2)
+  document.querySelector('#schema').textContent = JSON.stringify(mode === 'settings' ? await client.readSettingsSchema(entry) : await client.readConfigurationSchema(entry),null,2)
+}
+function form(id, action) { document.querySelector(id).addEventListener('submit', async event => {
+  event.preventDefault(); try { await action(event.target) } catch(error) { show({error:error.message}) }
+}) }
+form('#install', async form => {
+  const [source] = await client.readSources()
+  const request={name:form.elements.name.value,version:form.elements.version.value,source}
+  const inspected=await client.inspect(request)
+  show(await client.install(request,{inspectedHash:inspected.hash,requestId:crypto.randomUUID()}))
+})
+form('#remove', async form => show(await client.remove(form.elements.name.value)))
+form('#enable', async form => show(await client.enable('bundle',form.elements.target.value,form.elements.enabled.checked)))
+form('#settings', settings)
+form('#edit', async form => {
+  if (!view) throw new Error('Read settings first')
+  const operations=JSON.parse(form.elements.operations.value)
+  show(mode === 'settings' ? await client.mutateSettings(entry,operations,view.revision) : await client.mutateConfiguration(entry,operations,view.revision))
+  await settings()
+})
+async function inventory(owner = client) {
+  try {
+    const rows = await owner.readPlugins()
+    if (owner !== client || disposed) return
+    document.querySelector('#plugins').textContent=JSON.stringify(rows,null,2)
+    const actions = document.querySelector('#plugin-actions')
+    actions.replaceChildren()
+    for (const row of rows) {
+      const item = document.createElement('li'), button = document.createElement('button')
+      button.textContent = `${row.enabled ? 'Disable' : 'Enable'} ${row.module}`
+      button.disabled = row.readOnlyReason !== null
+      item.append(`${row.entryId}: ${row.state ?? 'inactive'} `,button,row.readOnlyReason ?? '')
+      button.onclick = async () => {
+        try { show(await owner.enable('plugin',row.entryId,!row.enabled)); await inventory(owner) }
+        catch(error){show({error:error.message})}
+      }
+      actions.append(item)
+    }
+  }
+  catch(error){show({error:error.message})}
+}
+document.querySelector('#inventory').onclick = () => inventory()
+document.querySelector('#disconnect').onclick = () => {
+  ownerQueue = ownerQueue.then(async () => { await closeOwner(); document.querySelector('#connection').textContent='closed' })
+    .catch(error => show({error:error.message}))
+}
+document.querySelector('#reconnect').onclick = connect
+document.querySelector('#development').onclick = async () => {
+  try { const response=await fetch('/development'); if(!response.ok) throw new Error('Development read failed'); document.querySelector('#builds').textContent=JSON.stringify(await response.json(),null,2) }
+  catch(error){show({error:error.message})}
+}
+form('#stop-build', async form => {
+  const response=await fetch('/development/stop?'+new URLSearchParams({name:form.elements.name.value}),{method:'POST'})
+  if(!response.ok) throw new Error('Development stop failed: '+response.status)
+  show({compiler:'stopped'})
+})
+document.querySelector('#compatibility').onclick = async () => {
+  try { show(await client.readCompatibility()) } catch(error){show({error:error.message})}
+}
+form('#compatibility-grant', async form => show(await client.compatibility(form.elements.packageVersion.value,
+  form.elements.runtimeVersion.value,form.elements.enabled.checked,form.elements.acceptRisk.checked)))
+window.addEventListener('pagehide',()=>{
+  disposed = true
+  unsubscribeModules()
+  const closing = closeOwner()
+  void Promise.all([ownerQueue,closing]).then(()=>modules.dispose())
+})
+connect()
+</script></html>

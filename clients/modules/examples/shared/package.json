@@ -1,0 +1,10 @@
+{
+  "name": "example-shared-consumer",
+  "private": true,
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "external": ["@example/shell", "@example/shell/tools"]
+    }
+  }
+}

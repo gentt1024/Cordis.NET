@@ -110,6 +110,17 @@ public sealed class Fiber : IAsyncDisposable
     public ConfigDescriptor? ConfigDescription => Definition?.Configuration?.Descriptor;
     /// <summary>Whether this activation has captured live configuration projections.</summary>
     public bool HasConfigReferences => Definition?.Configuration?.Bindings.Count > 0;
+    /// <summary>Read one immutable published reference snapshot without retaining the effective configuration.</summary>
+    public IReadOnlyDictionary<string, object?> ConfigurationValues => _configurationCell?.State.Values
+        ?? System.Collections.ObjectModel.ReadOnlyDictionary<string, object?>.Empty;
+    /// <summary>Run the active plugin's normal configuration hooks and validator without publishing or saving.</summary>
+    /// <remarks>Call within the owning execution domain. Validation callbacks may have their own effects.</remarks>
+    public object? ValidateConfiguration(object? raw)
+    {
+        Context.VerifyAccess();
+        if (State != FiberState.Active) throw new InvalidOperationException("Configuration validation requires an active plugin.");
+        return ResolveConfig(raw);
+    }
     /// <summary>Obtain an identity-stable readonly reference to an explicitly projected volatile field.</summary>
     public ConfigReference<T> GetConfigReference<T>(string path)
     {
