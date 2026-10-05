@@ -148,6 +148,77 @@ public sealed class ManagementTransportTests
     }
 
     [Theory]
+    [InlineData("enable", "target", "root:blocked", false)]
+    [InlineData("remove", "name", "blocked", false)]
+    [InlineData("compatibility", "packageVersion", "blocked@1.0.0", false)]
+    [InlineData("install/cancel", "requestId", "blocked-task", false)]
+    [InlineData("install/wait", "requestId", "blocked-task", true)]
+    [InlineData("versions", "name", "blocked", true)]
+    [InlineData("inspect", "name", "blocked", false)]
+    [InlineData("install", "name", "blocked", false)]
+    public async Task Authorization_uses_the_executed_resource_despite_unrelated_fields(
+        string endpoint, string identityField, string blocked, bool read)
+    {
+        var root = Directory.CreateTempSubdirectory("cordis-http-resource-").FullName;
+        try
+        {
+            var profile = Path.Combine(root, "profile");
+            Profiles.Initialize(profile, []);
+            var config = Path.Combine(root, "cordis.yml");
+            await File.WriteAllTextAsync(config, "[]\n");
+            await File.WriteAllTextAsync(Path.Combine(profile, "cordis.patch.yml"),
+                "- insert:\n    - id: allowed\n      name: worker\n    - id: blocked\n      name: worker\n");
+            var resolver = new StaticModuleResolver().Register("worker", new Plugin<object?> { Apply = (_, _) => { } });
+            var launch = new ProfileLaunch(await Profiles.LoadAsync(profile, new Dictionary<string, string>()), root, [], new Dictionary<string, string>());
+            await using var session = await ProfileSession.StartAsync(config, launch, resolver);
+            var plugins = (await session.ConfigurationOperations.ListPluginsAsync()).Where(plugin => plugin.ModuleName == "worker").ToArray();
+            Assert.Equal(2, plugins.Length);
+            Assert.All(plugins, plugin => Assert.Null(plugin.ReadOnlyReason));
+            var allowed = plugins.Single(plugin => plugin.EntryId.EndsWith(":allowed", StringComparison.Ordinal)).EntryId;
+            if (endpoint == "enable") blocked = plugins.Single(plugin => plugin.EntryId.EndsWith(":blocked", StringComparison.Ordinal)).EntryId;
+            await using var server = CreateServer();
+            var permissions = new List<ManagementPermission>();
+            new CordisManagement(session, (_, permission) =>
+            {
+                permissions.Add(permission);
+                return Task.FromResult(permission.Operation == "read" || permission.Target == allowed);
+            }, _ => new SettingsPolicy([])).Map(server);
+            await server.StartAsync();
+            using var client = new HttpClient { BaseAddress = new Uri(server.Urls.Single()) };
+            using var state = JsonDocument.Parse(await client.GetStringAsync("/cordis/state"));
+            client.DefaultRequestHeaders.Add("If-Cordis-Generation", state.RootElement.GetProperty("generation").GetString());
+            var before = Directory.GetFiles(profile).ToDictionary(path => Path.GetFileName(path), File.ReadAllText);
+            var body = new Dictionary<string, object?>
+            {
+                ["entryId"] = allowed, [identityField] = blocked,
+                ["kind"] = "plugin", ["enabled"] = false, ["runtimeVersion"] = "0.2.0-rc.2", ["acceptRisk"] = true,
+            };
+            using var response = read
+                ? await client.GetAsync($"/cordis/{endpoint}?entryId={Uri.EscapeDataString(allowed)}&{identityField}={Uri.EscapeDataString(blocked)}")
+                : await client.PostAsJsonAsync("/cordis/" + endpoint + "?entryId=" + Uri.EscapeDataString(allowed), body);
+            // Check state as well as HTTP refusal: a successful enable request used
+            // to authorize allowed while actually disabling blocked.
+            Assert.All(await session.ConfigurationOperations.ListPluginsAsync(), plugin => Assert.True(plugin.Enabled));
+            Assert.Equal(before.OrderBy(pair => pair.Key), Directory.GetFiles(profile)
+                .ToDictionary(path => Path.GetFileName(path), File.ReadAllText).OrderBy(pair => pair.Key));
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(blocked, permissions.Last().Target);
+            if (endpoint == "enable")
+            {
+                body["target"] = allowed;
+                body["entryId"] = blocked;
+                using var accepted = await client.PostAsJsonAsync("/cordis/enable?name=" + Uri.EscapeDataString(blocked), body);
+                Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+                var after = await session.ConfigurationOperations.ListPluginsAsync();
+                Assert.False(after.Single(plugin => plugin.EntryId == allowed).Enabled);
+                Assert.True(after.Single(plugin => plugin.EntryId == blocked).Enabled);
+                Assert.Equal(allowed, permissions.Last().Target);
+            }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
     [InlineData(400)]
     [InlineData(403)]
     [InlineData(409)]

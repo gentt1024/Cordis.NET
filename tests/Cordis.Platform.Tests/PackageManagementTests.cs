@@ -68,6 +68,160 @@ public sealed class PackageManagementTests : IAsyncLifetime
         await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", Feed, "-p:Version=3.0.0");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Known_incompatible_peers_are_refused_before_build_even_when_not_selected(bool enabled)
+    {
+        var marker = await PackIncompatibleAsync();
+        await using var host = await StartAsync(runtime: new DshRuntimeIdentity("0.2.0-rc.2"));
+        var manifest = await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json"));
+        var phases = new List<string>();
+        host.Session.ConfigurationOperations.PackageProgressed += progress => phases.Add(progress.Phase);
+        var result = await host.Session.ConfigurationOperations.InstallPackageAsync(host.Toolchain,
+            new("IndependentPlugin", "5.0.0", Feed), "incompatible", buildApproved: true, enabled: enabled);
+        Assert.False(result.Installed, result.Diagnostic);
+        Assert.Contains("incompatible DSH peers", result.Diagnostic);
+        Assert.False(File.Exists(marker), "An incompatible package executed its MSBuild target before admission.");
+        Assert.DoesNotContain("prepare", phases);
+        Assert.False(Directory.Exists(Path.Combine(host.Profile, ".cordis", "work")));
+        Assert.Equal(manifest, await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json")));
+        Assert.Empty(host.Session.SelectedBundles);
+    }
+
+    [Theory]
+    [InlineData("IndependentPlugin")]
+    [InlineData("independentplugin")]
+    public async Task Nuget_compatibility_grants_use_one_exact_identity_across_http_install_and_restart(string spelling)
+    {
+        var marker = await PackIncompatibleAsync();
+        var runtime = new DshRuntimeIdentity("0.2.0-rc.2");
+        string profile;
+        string deployedManifest;
+        string manifestText;
+        var cli = Path.Combine(AppContext.BaseDirectory, "fixtures", "cli", "Cordis.Cli.dll");
+        await using (var host = await StartAsync(runtime: runtime))
+        {
+            profile = host.Profile;
+            var operations = host.Session.ConfigurationOperations;
+            var request = new PackageRequest("IndependentPlugin", "5.0.0", Feed);
+            var neither = await operations.InstallPackageAsync(host.Toolchain, request, "neither", buildApproved: false);
+            Assert.Contains("incompatible DSH peers", neither.Diagnostic);
+            Assert.False(File.Exists(marker));
+            var builder = WebApplication.CreateSlimBuilder();
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+            await using var server = builder.Build();
+            var permissions = new List<ManagementPermission>();
+            new CordisManagement(host.Session, (_, permission) =>
+            {
+                permissions.Add(permission);
+                return Task.FromResult(true);
+            }, _ => new SettingsPolicy([]), host.Toolchain).Map(server);
+            await server.StartAsync();
+            using var client = new HttpClient { BaseAddress = new Uri(server.Urls.Single()) };
+            using var state = JsonDocument.Parse(await client.GetStringAsync("/cordis/state"));
+            client.DefaultRequestHeaders.Add("If-Cordis-Generation", state.RootElement.GetProperty("generation").GetString());
+            using var grant = await client.PostAsync("/cordis/compatibility", new StringContent(JsonSerializer.Serialize(new
+            {
+                packageVersion = spelling + "@5.0.0", runtimeVersion = runtime.Version, enabled = true, acceptRisk = true,
+            }), Encoding.UTF8, "application/json"));
+            Assert.Equal(HttpStatusCode.OK, grant.StatusCode);
+            using var saved = JsonDocument.Parse(await grant.Content.ReadAsStringAsync());
+            Assert.True(saved.RootElement.GetProperty("error").ValueKind == JsonValueKind.Null, saved.RootElement.ToString());
+            Assert.Equal("independentplugin@5.0.0", permissions.Last().Target);
+            Assert.Contains("independentplugin@5.0.0", await File.ReadAllTextAsync(Path.Combine(profile, DshProfilePolicy.CompatibilityFilename)));
+            var otherVersion = await operations.InstallPackageAsync(host.Toolchain, request with { Version = "5.0.1" }, "other-version", buildApproved: true);
+            Assert.Contains("incompatible DSH peers", otherVersion.Diagnostic);
+            Assert.False(File.Exists(marker));
+            var notApproved = await operations.InstallPackageAsync(host.Toolchain, request, "no-build", buildApproved: false);
+            Assert.Contains("build-execution approval", notApproved.Diagnostic);
+            Assert.False(File.Exists(marker));
+            var endpoint = server.Urls.Single() + "/cordis";
+            await RunAsync(directory, cli, "install", endpoint, request.Name, request.Version, "--source", Feed, "--approve-build");
+            Assert.True(File.Exists(marker));
+            await host.Session.Context.RunAsync(ctx =>
+            {
+                Assert.Equal(1, ctx.Get<ConfigReference<int>>("installed-limit")!.Value);
+                return Task.CompletedTask;
+            });
+            var alias = await operations.InstallPackageAsync(host.Toolchain, request with { Name = "INDEPENDENTPLUGIN" }, "alias", true);
+            Assert.Equal("already-installed", alias.Error);
+            Assert.Single(PackageManifest.Read(Path.Combine(profile, "package.json")).Bundles);
+            deployedManifest = Path.Combine(host.Toolchain.Bundles[request.Name], "package.json");
+            manifestText = await File.ReadAllTextAsync(deployedManifest);
+            Assert.Equal("IndependentPlugin", PackageManifest.Read(deployedManifest).Raw["name"]);
+            // Grant aliases converge to one exact key through the real CLI as well.
+            await RunAsync(directory, cli, "grant", endpoint, "INDEPENDENTPLUGIN@5.0.0", runtime.Version, "true", "true");
+            Assert.Single(operations.ReadVersionCompatibility().Exemptions);
+        }
+        // Reopening the actual mixed-spelling deployment must not rewrite its manifest.
+        await using (var restarted = await StartAsync(runtime: runtime, profileDirectory: profile))
+        {
+            Assert.Equal(["IndependentPlugin"], restarted.Session.LoadedBundles);
+            Assert.Equal(manifestText, await File.ReadAllTextAsync(deployedManifest));
+            var manifest = PackageManifest.Read(deployedManifest);
+            var grants = restarted.Session.ConfigurationOperations.ReadVersionCompatibility().Exemptions;
+            Assert.False(DshProfilePolicy.EvaluateCompatibility(manifest, runtime, grants)!.Exempted);
+            var changed = new EntryOptions(manifest.Raw) { ["version"] = "5.0.0-RC" };
+            var prereleaseGrants = new Dictionary<string, IReadOnlyList<string>> { ["independentplugin@5.0.0-rc"] = [runtime.Version] };
+            Assert.False(DshProfilePolicy.EvaluateCompatibility(new(changed), runtime, prereleaseGrants,
+                DotnetPluginToolchain.NormalizeCompatibilityPackageName)!.Exempted);
+        }
+        var directConfiguration = Path.Combine(Path.GetDirectoryName(profile)!, "cordis.yml");
+        await File.WriteAllTextAsync(directConfiguration, "- id: direct\n  name: nuget:independentplugin\n");
+        await using (var changedRuntime = await StartAsync(runtime: new("0.2.0-rc.3"), profileDirectory: profile))
+        {
+            Assert.Empty(changedRuntime.Session.LoadedBundles);
+            Assert.Contains(changedRuntime.Session.SkippedBundles, item => item.Name == "IndependentPlugin");
+            Assert.True(changedRuntime.Session.Loader.Resolve("root:direct").Disabled);
+            Assert.Contains("nuget:independentplugin", await File.ReadAllTextAsync(directConfiguration));
+        }
+        await using (var restarted = await StartAsync(runtime: runtime, profileDirectory: profile))
+        {
+            var builder = WebApplication.CreateSlimBuilder();
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+            await using var server = builder.Build();
+            new CordisManagement(restarted.Session, (_, _) => Task.FromResult(true), _ => new SettingsPolicy([]), restarted.Toolchain).Map(server);
+            await server.StartAsync();
+            await RunAsync(directory, cli, "grant", server.Urls.Single() + "/cordis", spelling + "@5.0.0", runtime.Version, "false", "false");
+            Assert.Empty(restarted.Session.ConfigurationOperations.ReadVersionCompatibility().Exemptions);
+            Assert.Empty(restarted.Session.LoadedBundles);
+            Assert.True(restarted.Session.Loader.Resolve("root:direct").Disabled);
+        }
+        await using var revoked = await StartAsync(runtime: runtime, profileDirectory: profile);
+        Assert.Empty(revoked.Session.LoadedBundles);
+        Assert.Equal(manifestText, await File.ReadAllTextAsync(deployedManifest));
+    }
+
+    [Fact]
+    public async Task Generic_nuget_profile_does_not_apply_dsh_peer_policy()
+    {
+        var marker = await PackIncompatibleAsync();
+        await using var host = await StartAsync();
+        var result = await host.Session.ConfigurationOperations.InstallPackageAsync(host.Toolchain,
+            new("IndependentPlugin", "5.0.0", Feed), "generic", buildApproved: true);
+        Assert.Equal("applied", result.Application);
+        Assert.True(result.Installed, result.Diagnostic);
+        Assert.True(File.Exists(marker));
+        Assert.False(File.Exists(Path.Combine(host.Profile, DshProfilePolicy.CompatibilityFilename)));
+    }
+
+    private async Task<string> PackIncompatibleAsync()
+    {
+        var author = Path.Combine(directory, "author");
+        var marker = Path.Combine(directory, "incompatible-build-marker.txt");
+        await File.WriteAllTextAsync(Path.Combine(author, "cordis.plugin.json"), """
+            {"assembly":"IndependentPlugin.dll","entryType":"Entry","peerDependencies":{"@deepseek-ai/dsh":"^9.0.0"}}
+            """);
+        await File.WriteAllTextAsync(Path.Combine(author, "Reject.targets"), $$"""
+            <Project><Target Name="ObservePackageBuild" BeforeTargets="Build"><WriteLinesToFile File="{{SecurityElement.Escape(marker)}}" Lines="SDK executed" Overwrite="true" /></Target></Project>
+            """);
+        await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", Feed, "-p:Version=5.0.0");
+        await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", Feed, "-p:Version=5.0.1");
+        Assert.False(File.Exists(marker));
+        return marker;
+    }
+
     [Fact]
     public async Task Independent_nuget_plugin_installs_updates_configuration_and_removes_through_session()
     {
@@ -468,17 +622,22 @@ public sealed class PackageManagementTests : IAsyncLifetime
         }
     }
 
-    private async Task<Host> StartAsync(IEnumerable<string>? sources = null)
+    private async Task<Host> StartAsync(IEnumerable<string>? sources = null, DshRuntimeIdentity? runtime = null, string? profileDirectory = null)
     {
-        var root = Directory.CreateDirectory(Path.Combine(directory, Guid.NewGuid().ToString("N"))).FullName;
-        var profile = Path.Combine(root, "profile");
-        Profiles.Initialize(profile, []);
+        var root = profileDirectory is null ? Directory.CreateDirectory(Path.Combine(directory, Guid.NewGuid().ToString("N"))).FullName
+            : Path.GetDirectoryName(profileDirectory)!;
+        var profile = profileDirectory ?? Path.Combine(root, "profile");
+        if (!File.Exists(Path.Combine(profile, "package.json"))) Profiles.Initialize(profile, []);
         var config = Path.Combine(root, "cordis.yml");
-        await File.WriteAllTextAsync(config, "[]\n");
+        if (!File.Exists(config)) await File.WriteAllTextAsync(config, "[]\n");
         var resolver = new ClrModuleResolver(Path.Combine(root, "shadow"), [typeof(ConfigObject<>).Assembly]);
         var toolchain = new DotnetPluginToolchain(profile, resolver, sources ?? [Feed]);
         var launch = new ProfileLaunch(await Profiles.LoadAsync(profile, new Dictionary<string, string>(), toolchain.Bundles),
-            root, [], new Dictionary<string, string>(), toolchain.Bundles);
+            root, [], new Dictionary<string, string>(), toolchain.Bundles) {
+            RuntimeIdentity = runtime,
+            CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName,
+            ManifestLocator = toolchain.LocateManifest,
+        };
         var session = await ProfileSession.StartAsync(config, launch, resolver);
         return new(profile, resolver, toolchain, session);
     }

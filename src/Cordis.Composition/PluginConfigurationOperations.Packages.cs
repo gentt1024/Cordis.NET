@@ -5,7 +5,21 @@ public sealed partial class PluginConfigurationOperations
     /// <summary>Read exact DSH version grants and corruption diagnostics without rewriting the authorization file.</summary>
     public DshCompatibilityRead ReadVersionCompatibility() => DshProfilePolicy.ReadCompatibility(launch.Profile.Directory);
 
-    /// <summary>Change a DSH grant under existing profile coordination. Generic profiles have no DSH policy to grant.</summary>
+    /// <summary>Resolve and validate a platform package/version for authorization and an exact grant operation.</summary>
+    /// <remarks>Only the name is adapted. Pass this result unchanged to SetVersionExemptionAsync; that method never
+    /// invokes the host mapping a second time. Versions and the persisted npm grant format remain exact.</remarks>
+    public string ResolveVersionExemptionIdentity(string packageVersion)
+    {
+        var separator = packageVersion.LastIndexOf('@');
+        if (separator <= 0) throw new FormatException("An exact package/version identity is required.");
+        var name = packageVersion[..separator];
+        var identity = (launch.CompatibilityPackageName?.Invoke(name) ?? name) + packageVersion[separator..];
+        DshProfilePolicy.ValidatePackageVersion(identity);
+        return identity;
+    }
+
+    /// <summary>Change a canonical DSH grant under existing profile coordination. Generic profiles have no DSH policy to grant.</summary>
+    /// <remarks>Platform callers resolve the identity before authorization, then pass the same value here without remapping it.</remarks>
     public Task<ConfigurationChange> SetVersionExemptionAsync(string packageVersion, string runtimeVersion, bool enabled,
         bool acceptRisk = false, CancellationToken cancellationToken = default)
         => ChangeAsync(packageVersion, enabled, "compatibility", async () =>
@@ -131,6 +145,14 @@ public sealed partial class PluginConfigurationOperations
             ReportPackageProgress(requestId, stage);
             var inspection = await toolchain.InspectAsync(request, token);
             if (request.ExpectedHash is { } expected && expected != inspection.ContentHash) throw new Refusal("inspection-changed");
+            // Known metadata is admitted before any SDK execution, even for disabled installs.
+            // Build approval and exact-version compatibility grants remain separate decisions.
+            if (launch.RuntimeIdentity is { } inspectedRuntime && inspection.ManifestJson is { } manifestJson)
+            {
+                var inspectedManifest = ConfigurationFile.Parse(manifestJson, true) as EntryOptions
+                    ?? throw new FormatException("Inspected package metadata must be an object.");
+                DshProfilePolicy.CreateAdmission(launch.Profile.Directory, inspectedRuntime, launch.CompatibilityWarning, launch.CompatibilityPackageName)(new(inspectedManifest));
+            }
             stage = "prepare";
             ReportPackageProgress(requestId, stage);
             prepared = await toolchain.PrepareAsync(inspection, buildApproved, text => ReportPackageProgress(requestId, stage, text), token);
@@ -139,7 +161,7 @@ public sealed partial class PluginConfigurationOperations
                 throw new Refusal("invalid-prepared-package");
             var bundle = await Profiles.ReadBundleAsync(prepared.Name, prepared.Directory, metadata);
             if (launch.RuntimeIdentity is { } runtime)
-                DshProfilePolicy.CreateAdmission(launch.Profile.Directory, runtime, launch.CompatibilityWarning)(metadata);
+                DshProfilePolicy.CreateAdmission(launch.Profile.Directory, runtime, launch.CompatibilityWarning, launch.CompatibilityPackageName)(metadata);
             lock (installsGate)
             {
                 token.ThrowIfCancellationRequested();

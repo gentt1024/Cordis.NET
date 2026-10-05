@@ -28,7 +28,11 @@ if (!File.Exists(configuration)) await File.WriteAllTextAsync(configuration, "[]
 await using var resolver = new ClrModuleResolver(Path.Combine(profile, ".cordis", "shadow"), [typeof(ConfigObject<>).Assembly]);
 using var packages = new DotnetPluginToolchain(profile, resolver, [feed]);
 var launch = new ProfileLaunch(await Profiles.LoadAsync(profile, clientPackages, packages.Bundles),
-    Path.Combine(profile, ".cordis", "home"), [], clientPackages, packages.Bundles);
+    Path.Combine(profile, ".cordis", "home"), [], clientPackages, packages.Bundles)
+{
+    CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName,
+    ManifestLocator = packages.LocateManifest,
+};
 await using var session = await ProfileSession.StartAsync(configuration, launch, resolver, enableHmr: true);
 
 // This sample opts into local development authority. A deployed application supplies its own identity/policy.

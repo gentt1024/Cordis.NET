@@ -40,7 +40,9 @@ public sealed class ProfileSession : IAsyncDisposable
         if (refreshDeployment is not null && packages is null)
             throw new ArgumentException("A deployment refresh requires a DeploymentModuleResolver.", nameof(refreshDeployment));
         profilePaths = [Path.Combine(launch.Profile.Directory, "package.json"),
-            launch.Profile.UserLayer.Source, Path.Combine(launch.Home, "cordis.patch.yml")];
+            launch.Profile.UserLayer.Source, Path.Combine(launch.Home, "cordis.patch.yml"),
+            .. launch.RuntimeIdentity is null ? Array.Empty<string>()
+                : [Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename)]];
         Context = new Context(Report);
         Hmr = enableHmr ? queue : null;
         queue.Error += Report;
@@ -126,7 +128,7 @@ public sealed class ProfileSession : IAsyncDisposable
             });
             session.Include = session.launch.RuntimeIdentity is { } runtime
                 ? await DshProfilePolicy.MountAsync(session.Loader, configurationPath, session.launch.Profile.Directory, runtime,
-                    ProfileComposition.Flatten(refresh.Layers), session.packages, session.launch.CompatibilityWarning, session.launch.ManifestLocator)
+                    ProfileComposition.Flatten(refresh.Layers), session.packages, session.launch.CompatibilityWarning, session.launch.ManifestLocator, session.launch.CompatibilityPackageName)
                 : await ApplicationBoot.MountAsync(session.Loader, configurationPath, ProfileComposition.Flatten(refresh.Layers));
             await session.AcceptBundlesAsync(refresh);
             session.ConfigurationOperations = new(session.launch, session.Include)
@@ -263,6 +265,13 @@ public sealed class ProfileSession : IAsyncDisposable
                 else values.Add(text);
             }
             catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { values.Add(null); }
+            catch (Exception error) when (path == Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename)
+                && error is IOException or UnauthorizedAccessException)
+            {
+                // Bad grant data must remain non-authorizing and non-rewritable, not prevent boot.
+                // Admission emits the diagnostic; this marker makes unreadable/readable transitions refreshable.
+                values.Add(new EntryOptions { ["unreadableCompatibility"] = error.GetType().Name });
+            }
         }
         return ConfigurationFile.Write(values, true);
     }

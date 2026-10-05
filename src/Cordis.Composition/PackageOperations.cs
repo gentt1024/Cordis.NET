@@ -9,7 +9,13 @@ public sealed record PackageRequest(string Name, string Version, string Source)
 
 /// <summary>Metadata inspected without importing plugin code or executing its build targets.</summary>
 /// <remarks>ContentHash identifies the requested package archive. It does not describe or lock its transitive dependency closure.</remarks>
-public sealed record PackageInspection(PackageRequest Request, string ContentHash, string Description, bool RequiresBuildApproval);
+public sealed record PackageInspection(PackageRequest Request, string ContentHash, string Description, bool RequiresBuildApproval)
+{
+    /// <summary>Optional immutable manifest snapshot read from the archive identified by ContentHash, before executing tools.</summary>
+    /// <remarks>Contains package identity and declared peers. Null means metadata cannot be known before preparation;
+    /// the prepared manifest is still admitted separately. Serialization prevents callers from mutating captured peers.</remarks>
+    public string? ManifestJson { get; init; }
+}
 
 /// <summary>A complete prepared directory. Preparing it does not select the bundle or activate code.</summary>
 public sealed record PreparedPackage(string Name, string Version, string Directory);

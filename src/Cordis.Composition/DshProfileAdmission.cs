@@ -7,12 +7,18 @@ public static partial class DshProfilePolicy
     /// <summary>Prepares detached effective DSH profile rows before importing modules. Missing manifests preserve Loader's own errors.</summary>
     public static List<EntryOptions> PrepareEntries(string profileDirectory, DshRuntimeIdentity runtime,
         IEnumerable<EntryOptions> entries, Uri baseUri, Func<string, Uri, PackageManifest?> manifestOf, Action<string>? warning = null)
+        => PrepareEntries(profileDirectory, runtime, entries, baseUri, manifestOf, warning, null);
+
+    /// <summary>Prepare effective entries with the same explicit package-name mapping as bundle admission.</summary>
+    public static List<EntryOptions> PrepareEntries(string profileDirectory, DshRuntimeIdentity runtime,
+        IEnumerable<EntryOptions> entries, Uri baseUri, Func<string, Uri, PackageManifest?> manifestOf, Action<string>? warning,
+        Func<string, string>? compatibilityPackageName)
     {
         ArgumentNullException.ThrowIfNull(baseUri);
         ArgumentNullException.ThrowIfNull(manifestOf);
         warning ??= Console.Error.WriteLine;
         var rows = Data.Entries(Data.Clone(entries.ToList()));
-        var admission = CreateAdmission(profileDirectory, runtime, warning);
+        var admission = CreateAdmission(profileDirectory, runtime, warning, compatibilityPackageName);
         var includes = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         bool Check(List<EntryOptions> candidates, Uri parent)
         {
@@ -72,8 +78,13 @@ public static partial class DshProfilePolicy
     /// <summary>Prepares a complete patch composition over an empty profile root. Nonempty roots must use effective-entry preparation.</summary>
     public static List<EntryOptions> PreparePatches(string profileDirectory, DshRuntimeIdentity runtime, List<EntryOptions> patches,
         Uri baseUri, Func<string, Uri, PackageManifest?> manifestOf, Action<string>? warning = null)
+        => PreparePatches(profileDirectory, runtime, patches, baseUri, manifestOf, warning, null);
+
+    /// <summary>Prepare a complete patch composition with explicit platform compatibility names.</summary>
+    public static List<EntryOptions> PreparePatches(string profileDirectory, DshRuntimeIdentity runtime, List<EntryOptions> patches,
+        Uri baseUri, Func<string, Uri, PackageManifest?> manifestOf, Action<string>? warning, Func<string, string>? compatibilityPackageName)
     {
-        var rows = PrepareEntries(profileDirectory, runtime, EntryPatches.Apply([], patches, warning), baseUri, manifestOf, warning);
+        var rows = PrepareEntries(profileDirectory, runtime, EntryPatches.Apply([], patches, warning), baseUri, manifestOf, warning, compatibilityPackageName);
         return rows.Count == 0 ? [] : [new EntryOptions { ["insert"] = rows }];
     }
 
@@ -101,12 +112,18 @@ public static partial class DshProfilePolicy
         => MountAsync(loader, configurationPath, profileDirectory, runtime, patches, packages, warning, null);
 
     /// <summary>Mounts with a host-owned metadata locator for explicit CLR or static module registrations, before executing their resolver.</summary>
-    public static async Task<Include> MountAsync(Loader loader, string configurationPath, string profileDirectory, DshRuntimeIdentity runtime,
+    public static Task<Include> MountAsync(Loader loader, string configurationPath, string profileDirectory, DshRuntimeIdentity runtime,
         List<EntryOptions>? patches, DeploymentPackageResolver? packages, Action<string>? warning, Func<string, Uri, PackageManifest?>? manifestOf)
+        => MountAsync(loader, configurationPath, profileDirectory, runtime, patches, packages, warning, manifestOf, null);
+
+    /// <summary>Mount explicit module metadata with a host-selected compatibility name adapter, without rewriting manifests.</summary>
+    public static async Task<Include> MountAsync(Loader loader, string configurationPath, string profileDirectory, DshRuntimeIdentity runtime,
+        List<EntryOptions>? patches, DeploymentPackageResolver? packages, Action<string>? warning,
+        Func<string, Uri, PackageManifest?>? manifestOf, Func<string, string>? compatibilityPackageName)
     {
         var config = new IncludeOptions(new Uri(Path.GetFullPath(configurationPath)).AbsoluteUri, Patches: patches)
         {
-            PrepareEntries = (rows, parent) => PrepareEntries(profileDirectory, runtime, rows, parent, manifestOf ?? ((name, uri) => LocateManifest(name, uri, packages)), warning)
+            PrepareEntries = (rows, parent) => PrepareEntries(profileDirectory, runtime, rows, parent, manifestOf ?? ((name, uri) => LocateManifest(name, uri, packages)), warning, compatibilityPackageName)
         };
         await loader.CreateAsync(new EntryOptions { Id = "root", Name = "cordis:include", Config = config });
         await loader.WaitAsync();

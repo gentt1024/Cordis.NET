@@ -58,7 +58,27 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     public string ResolvePackageName(string name)
     {
         ValidateIdentity(name, "0.0.0");
-        return bundles.Keys.FirstOrDefault(existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase)) ?? name;
+        var dependencies = PackageManifest.Read(Path.Combine(profileDirectory, "package.json")).Raw
+            .GetValueOrDefault("dependencies") as IDictionary<string, object?>;
+        return bundles.Keys.Concat(dependencies?.Keys ?? []).FirstOrDefault(
+            existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase)) ?? name;
+    }
+
+    /// <summary>Map a NuGet package name to its stable compatibility key, preserving exact version text elsewhere.</summary>
+    /// <remarks>Assign explicitly to ProfileLaunch.CompatibilityPackageName for a NuGet host. Scoped npm names
+    /// and other non-NuGet names are unchanged; the default DSH policy never uses this adapter implicitly.</remarks>
+    public static string NormalizeCompatibilityPackageName(string name)
+        => ValidIdentity(name, "0.0.0") ? name.ToLowerInvariant() : name;
+
+    /// <summary>Read metadata for this adapter's registered NuGet modules before importing their code.</summary>
+    /// <remarks>Supply as ProfileLaunch.ManifestLocator when enabling DSH admission. It reads deployed manifests,
+    /// including their original package-name spelling; it does not load assemblies or rewrite metadata.</remarks>
+    public PackageManifest? LocateManifest(string specifier, Uri parent)
+    {
+        if (specifier.StartsWith("nuget:", StringComparison.Ordinal)
+            && bundles.TryGetValue(specifier["nuget:".Length..], out var directory))
+            return PackageManifest.Read(Path.Combine(directory, "package.json"));
+        return DshProfilePolicy.LocateManifest(specifier, parent);
     }
 
     /// <inheritdoc />
@@ -68,7 +88,12 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         var bytes = await AcquireAsync(request, cancellationToken);
         using var archive = new ZipArchive(new MemoryStream(bytes));
         var metadata = ReadMetadata(archive, request);
-        return new(request, Convert.ToHexString(SHA256.HashData(bytes)), metadata.GetValueOrDefault("description") as string ?? "", true);
+        var manifest = new EntryOptions { ["name"] = request.Name, ["version"] = request.Version };
+        if (metadata.TryGetValue("peerDependencies", out var peers)) manifest["peerDependencies"] = peers;
+        return new(request, Convert.ToHexString(SHA256.HashData(bytes)), metadata.GetValueOrDefault("description") as string ?? "", true)
+        {
+            ManifestJson = ConfigurationFile.Write(manifest, true),
+        };
     }
 
     /// <summary>Query available exact versions from the selected feed without executing package targets.</summary>

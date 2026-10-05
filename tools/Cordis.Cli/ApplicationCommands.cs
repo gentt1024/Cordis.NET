@@ -49,7 +49,8 @@ internal static class ApplicationCommands
             await using var resolver = new ClrModuleResolver(Path.Combine(profile, ".cordis", "shadow"), [typeof(ConfigObject<>).Assembly]);
             using var toolchain = new DotnetPluginToolchain(profile, resolver, sources);
             var launch = new ProfileLaunch(await Profiles.LoadAsync(profile, new Dictionary<string, string>(), toolchain.Bundles),
-                Path.Combine(profile, ".cordis", "home"), [], new Dictionary<string, string>(), toolchain.Bundles);
+                Path.Combine(profile, ".cordis", "home"), [], new Dictionary<string, string>(), toolchain.Bundles)
+            { CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName, ManifestLocator = toolchain.LocateManifest };
             await using var session = await ProfileSession.StartAsync(configuration, launch, resolver, enableHmr: true);
             var builder = WebApplication.CreateSlimBuilder();
             builder.WebHost.UseUrls(address ?? "http://127.0.0.1:0");
