@@ -100,7 +100,11 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 ## 应用配置与客户端消费
 
-使用 Session 既有的 `ConfigurationOperations`，不另建 manager。读取新配置 revision 后编辑一个固定路径。普通字段保持原有重启行为；`liveOnly` 另要求已捕获的 live 边界及兼容的普通 effective 值。分别处理 `Saved`、`Applied` 与恢复诊断。旧 Config delegate 与高级 `ConfigSchema<T>` 作者入口继续保留。
+复用 Session 既有的 `ConfigurationOperations`。读取新 revision 后，通过 `MutateConfigurationAsync` 或选中字段的 `MutateSettingsAsync` 提交有序 SET/unset。库验证完整最终候选并写入一次；对象 unset 恢复继承，数组 unset 删除元素。普通字段保持原有重启行为；`liveOnly` 另要求已捕获 live 边界及兼容的普通 effective 值。分别处理 `Saved`、`Applied` 与恢复诊断。旧 Config delegate 与高级 `ConfigSchema<T>` 作者入口继续保留。
+
+通过 `descriptor.WithMetadata(new ConfigurationMetadata { ... })` 显式声明应用元数据。renderer role、本地化 description、badges、hidden/disabled/collapse、link/comment、extra plain 数据，以及 min/max/step/pattern/loose 提示由不可变 Core annotations 承载；它们描述既有 validator，不增加验证行为。嵌套固定 live 路径使用 `ConfigSchema<T>.WithVolatile(path, projection)`。Settings 省略普通兄弟字段，把 secret 值脱敏为仅表示存在性的 sidecar。每项编辑检查可见的声明路径；含不可读 secret/hidden 后代的祖先替换会被拒绝。参见[完整声明、Settings 与发现示例](configuration-description.zh.md)。
+
+两条导出是独立合同：`ToSchemastery` 生成浏览器表单的 uid/refs envelope，`ToJsonSchema` 生成 JSON Schema 2020-12 声明并明确标注 runtime 限制。`ReadSettingsSchemasAsync` 选择 live 字段，移除 hidden 属性与默认值；完整配置导出需要宿主独立授权。激活前的 `ConfigurationSchemaDiscovery.DiscoverAsync` 接收显式 resolver，读取原生 group/include 源，无须启动 Context，也不写入 include fallback 文件。import/capture 属于受信作者代码；validator、Apply、raw 表达式和 lazy builder 不执行。
 
 示例的 primitive live 视图要求宿主显式选择字段并指定隐藏字段。不要直接把 raw 配置读取暴露成浏览器 Settings 响应。传输只演示 loopback；部署宿主负责认证、授权、请求限制及自身政策。保留的 DSH 表单模型暂存草稿，通过真实宿主保存。SET-only 不支持继承 reset，也不把多字段保存拆成连续写入。在仓库根目录构建运行：
 
@@ -112,7 +116,7 @@ dotnet run --project examples/Probes/Probes.csproj -c Release -- --application-h
 node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/application-client
 ```
 
-最后一条命令在另一终端运行，只修改生成的示例制品，以验证新的内容代。向 `/stop` 发送 POST 可结束示例宿主。制品布局复用上游 web/client 声明，不可变 ESM 交付是原生适配。完整 UI、模块依赖、JSON Schema 导出和安装工具仍是后续独立工作。既有作者门禁在源码与独立包消费中重复这条真实客户端链，指定时包含 Native AOT。
+最后一条命令在另一终端运行，只修改生成的示例制品，以验证新的内容代。向 `/stop` 发送 POST 可结束示例宿主。制品布局复用上游 web/client 声明，不可变 ESM 交付是原生适配。示例客户端仍是有界消费示例；声明导出和发现是上述独立库 API。既有作者门禁在源码与独立包消费中重复这条真实客户端链，指定时包含 Native AOT。
 
 ## 部署与验证边界
 

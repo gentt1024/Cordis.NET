@@ -32,6 +32,7 @@ public sealed partial class ConfigDescriptor
                 writer.WriteBoolean("optional", node.IsOptional); writer.WriteBoolean("volatile", node.IsVolatile);
                 writer.WriteBoolean("hasDefault", node.HasDefault);
                 if (node.HasDefault) { writer.WritePropertyName("default"); WriteValue(writer, node.DefaultValue); }
+                if (node.Annotations.Count > 0) { writer.WritePropertyName("annotations"); WriteValue(writer, node.Annotations); }
                 if (node.Inner is not null) writer.WriteNumber("inner", Id(node.Inner));
                 if (node.Key is not null) writer.WriteNumber("key", Id(node.Key));
                 writer.WriteStartArray("children"); foreach (var child in node.Children) writer.WriteNumberValue(Id(child)); writer.WriteEndArray();
@@ -61,7 +62,10 @@ public sealed partial class ConfigDescriptor
                 throw new ArgumentException("Unknown configuration description kind.", nameof(serialized));
             var hasDefault = record.GetProperty("hasDefault").GetBoolean();
             nodes[index] = new(kind, optional: record.GetProperty("optional").GetBoolean(), volatileValue: record.GetProperty("volatile").GetBoolean(),
-                hasDefault: hasDefault, defaultValue: hasDefault ? ConfigSnapshots.Create(ReadValue(record.GetProperty("default"))) : null);
+                hasDefault: hasDefault, defaultValue: hasDefault ? ConfigSnapshots.Create(ReadValue(record.GetProperty("default"))) : null,
+                annotations: record.TryGetProperty("annotations", out var annotations)
+                    ? ConfigSnapshots.Create(ReadValue(annotations)) as IReadOnlyDictionary<string, object?>
+                        ?? throw new ArgumentException("Description annotations must be a plain object.", nameof(serialized)) : null);
         }
         ConfigDescriptor Node(JsonElement id)
         {

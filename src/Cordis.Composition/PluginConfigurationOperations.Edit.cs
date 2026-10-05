@@ -22,6 +22,17 @@ public sealed record ConfigurationSnapshot(string EntryId, string Revision, IRea
 public sealed record ConfigurationEditResult(string EntryId, bool Saved, bool Applied, string? Revision,
     string? Error = null, string? Diagnostic = null, IReadOnlyList<string>? RecoveryErrors = null);
 
+/// <summary>One ordered raw configuration edit; an empty path addresses the complete object.</summary>
+/// <param name="Path">Object keys or canonical non-negative array indexes.</param>
+public abstract record ConfigurationPathOperation(IReadOnlyList<string> Path);
+/// <summary>Set a value, including an explicit null. Inputs are copied before waiting for management ownership.</summary>
+/// <param name="Path">The value's path.</param>
+/// <param name="Value">Detached, persistable source data.</param>
+public sealed record ConfigurationSet(IReadOnlyList<string> Path, object? Value) : ConfigurationPathOperation(Path);
+/// <summary>Restore an object field's inherited raw value, or remove an array element.</summary>
+/// <param name="Path">The value's path; an empty path restores the complete inherited object.</param>
+public sealed record ConfigurationUnset(IReadOnlyList<string> Path) : ConfigurationPathOperation(Path);
+
 public sealed partial class PluginConfigurationOperations
 {
     /// <summary>Refresh and read a detached data-object configuration inside the existing management queue.</summary>
@@ -46,19 +57,35 @@ public sealed partial class PluginConfigurationOperations
     /// <remarks>Requires a fresh revision. Live-only requests also require an existing live binding and compatible effective ordinary values.</remarks>
     public Task<ConfigurationEditResult> EditConfigurationFieldAsync(string entryId, IReadOnlyList<string> path,
         object? value, string expectedRevision, bool liveOnly = false, CancellationToken cancellationToken = default)
-        => EditFieldCoreAsync(entryId, path, value, expectedRevision, liveOnly, cancellationToken);
+        => MutateConfigurationAsync(entryId, [new ConfigurationSet(path, value)], expectedRevision, liveOnly, cancellationToken);
 
-    private async Task<ConfigurationEditResult> EditFieldCoreAsync(string entryId, IReadOnlyList<string> path,
-        object? value, string expectedRevision, bool liveOnly, CancellationToken cancellationToken, SettingsPolicy? settings = null)
+    /// <summary>Apply ordered edits to one detached candidate, validate the final candidate, then save and reconcile once.</summary>
+    /// <remarks>Intermediate candidates need not be valid. This is one source commit with cooperative recovery, not a transaction over the entire runtime tree.</remarks>
+    public Task<ConfigurationEditResult> MutateConfigurationAsync(string entryId, IReadOnlyList<ConfigurationPathOperation> operations,
+        string expectedRevision, bool liveOnly = false, CancellationToken cancellationToken = default)
+        => MutateConfigurationCoreAsync(entryId, operations, expectedRevision, liveOnly, cancellationToken);
+
+    private async Task<ConfigurationEditResult> MutateConfigurationCoreAsync(string entryId, IReadOnlyList<ConfigurationPathOperation> operations,
+        string expectedRevision, bool liveOnly, CancellationToken cancellationToken, SettingsPolicy? settings = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedRevision);
-        ArgumentNullException.ThrowIfNull(path);
-        if (path.Count == 0 || path.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("A fixed object-key path is required.", nameof(path));
-        var keys = path.ToArray();
-        // Validate the data boundary before cloning; no caller-owned mutable input enters the transaction.
-        _ = RawFingerprint(value);
-        var incoming = DetachData(value);
+        ArgumentNullException.ThrowIfNull(operations);
+        if (operations.Count == 0) throw new ArgumentException("At least one edit is required.", nameof(operations));
+        var edits = operations.Select(operation =>
+        {
+            ArgumentNullException.ThrowIfNull(operation);
+            ArgumentNullException.ThrowIfNull(operation.Path);
+            if (operation.Path.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Path keys cannot be blank.", nameof(operations));
+            var path = operation.Path.ToArray();
+            if (operation is ConfigurationSet set)
+            {
+                _ = RawFingerprint(set.Value);
+                return (ConfigurationPathOperation)new ConfigurationSet(path, DetachData(set.Value));
+            }
+            if (operation is ConfigurationUnset) return new ConfigurationUnset(path);
+            throw new ArgumentException("Unknown configuration operation.", nameof(operations));
+        }).ToArray();
         ConfigurationEditResult result = null!;
         await ConfigurationTransactionAsync(async () =>
         {
@@ -69,15 +96,29 @@ public sealed partial class PluginConfigurationOperations
                 var refresh = await ProfileComposition.RefreshAsync(launch);
                 Entry entry = null!;
                 EntryOptions next = null!;
+                var before = await ReadPatchSourceAsync();
+                var baseRows = ConfigurationFile.ParseEntries(await File.ReadAllTextAsync(include.Filename), Path.GetExtension(include.Filename) == ".json");
+                object? inherited = null;
                 await include.Context.RunAsync(context =>
                 {
                     entry = EditableEntry(entryId, refresh.Layers);
                     revision = Revision(entry, refresh.Layers);
                     if (revision != expectedRevision) throw new Refusal("conflict");
-                    if (settings is not null && (!settings.Allows(keys[0]) || !TrySettingsValue(entry, keys[0], out _, out _)))
-                        throw new Refusal("field-not-offered");
+                    var inheritedLayers = refresh.Layers.Where(layer => layer.Source != Path.Combine(launch.Home, "cordis.patch.yml")
+                        && !launch.Overlays.Contains(layer)).Select(layer => layer.Source == PatchPath
+                            ? layer with { Patches = WithoutConfigurationOverride(layer.Patches, entry.Options.Id) } : layer).ToArray();
+                    inherited = Flatten(EntryPatches.Apply(baseRows, ProfileComposition.Flatten(inheritedLayers)))
+                        .Single(row => row.Id == entry.Options.Id).Config;
                     next = RawObject(entry.Options.Config);
-                    SetField(next, keys, incoming);
+                    foreach (var edit in edits)
+                    {
+                        var keys = edit.Path;
+                        if (settings is not null && !AllowsSettingsPath(entry, settings, keys))
+                            throw new Refusal("field-not-offered");
+                        if (settings is not null && edit is ConfigurationSet set && !SettingsData(set.Value))
+                            throw new Refusal("non-json-settings-data");
+                        next = ApplyOperation(next, inherited, edit, entry.Fiber!.ConfigDescription);
+                    }
                     // A successful SET must persist the same data, including null, expressions and non-finite numbers.
                     // Undefined has runtime meaning but cannot round-trip through this source format.
                     if (RawFingerprint(next) != RawFingerprint(ConfigurationFile.Parse(ConfigurationFile.WriteFlow(next))))
@@ -85,22 +126,14 @@ public sealed partial class PluginConfigurationOperations
                     if (liveOnly)
                     {
                         var fiber = entry.Fiber!;
-                        var bound = Enumerable.Range(0, keys.Length + 1).Any(count =>
-                            fiber.ConfigurationValues.ContainsKey(DisplayPath(keys.Take(count).ToArray())));
+                        var bound = edits.All(edit => Enumerable.Range(0, edit.Path.Count + 1).Any(count =>
+                            fiber.ConfigurationValues.ContainsKey(DisplayPath(edit.Path.Take(count).ToArray()))));
                         if (!bound || !fiber.TryPrepareConfigurationUpdate(next, out _)) throw new Refusal("not-live-update");
                     }
                     else entry.Fiber!.ValidateConfiguration(next);
                     return Task.CompletedTask;
                 });
 
-                var before = await ReadPatchSourceAsync();
-                var inheritedLayers = refresh.Layers.Where(layer => layer.Source != Path.Combine(launch.Home, "cordis.patch.yml")
-                    && !launch.Overlays.Contains(layer)).Select(layer => layer.Source == PatchPath
-                        ? layer with { Patches = WithoutConfigurationOverride(layer.Patches, entry.Options.Id) } : layer).ToArray();
-                // Inheritance starts from source data, never the already-patched live tree.
-                var baseRows = ConfigurationFile.ParseEntries(await File.ReadAllTextAsync(include.Filename), Path.GetExtension(include.Filename) == ".json");
-                var inheritedRows = EntryPatches.Apply(baseRows, ProfileComposition.Flatten(inheritedLayers));
-                var inherited = Flatten(inheritedRows).Single(row => row.Id == entry.Options.Id).Config;
                 var edited = ProfileMaintenance.WithConfiguration(before, entry.Options.Id, entry.Options.Name, next,
                     RawFingerprint(next) == RawFingerprint(inherited));
                 var layers = refresh.Layers.Select(layer => layer.Source == PatchPath
@@ -195,18 +228,62 @@ public sealed partial class PluginConfigurationOperations
         _ => value,
     };
 
-    private static void SetField(EntryOptions root, string[] path, object? value)
+    private static EntryOptions ApplyOperation(EntryOptions root, object? inherited, ConfigurationPathOperation operation, ConfigDescriptor? descriptor)
     {
-        IDictionary<string, object?> current = root;
-        for (var index = 0; index < path.Length - 1; index++)
+        var path = operation.Path;
+        if (path.Count == 0) return RawObject(operation is ConfigurationSet setRoot ? setRoot.Value : inherited);
+        object? Edit(object? input, ConfigDescriptor? node, int depth)
         {
-            if (current.ContainsKey("__jsExpr")) throw new Refusal("opaque-configuration");
-            if (!current.TryGetValue(path[index], out var child)) current[path[index]] = child = new EntryOptions();
-            if (child is not IDictionary<string, object?> map || map.ContainsKey("__jsExpr")) throw new Refusal("opaque-configuration");
-            current = map;
+            var key = path[depth];
+            var last = depth == path.Count - 1;
+            if (input is Undefined && node?.HasDefault == true) input = DetachData(node.DefaultValue);
+            if (input is IList<object?> list)
+            {
+                if (!int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out var index)
+                    || index.ToString(CultureInfo.InvariantCulture) != key || index > list.Count
+                    || index == list.Count && (!last || operation is ConfigurationUnset)) throw new Refusal("invalid-array-index");
+                if (last && operation is ConfigurationUnset) list.RemoveAt(index);
+                else
+                {
+                    var value = last ? ((ConfigurationSet)operation).Value : Edit(list[index], ChildDescriptor(node, key), depth + 1);
+                    if (index == list.Count) list.Add(value); else list[index] = value;
+                }
+                return list;
+            }
+            if (input is null or Undefined) input = new EntryOptions();
+            if (input is not IDictionary<string, object?> map || map.ContainsKey("__jsExpr")) throw new Refusal("opaque-configuration");
+            if (!last)
+                map[key] = Edit(map.TryGetValue(key, out var child) ? child : Undefined.Value, ChildDescriptor(node, key), depth + 1);
+            else if (operation is ConfigurationSet set) map[key] = set.Value;
+            else if (TryPath(inherited, path, out var fallback)) map[key] = DetachData(fallback);
+            else map.Remove(key);
+            return map;
         }
-        if (current.ContainsKey("__jsExpr")) throw new Refusal("opaque-configuration");
-        current[path[^1]] = value;
+        return (EntryOptions)Edit(root, descriptor, 0)!;
+    }
+
+    private static ConfigDescriptor? ChildDescriptor(ConfigDescriptor? node, string key)
+    {
+        var seen = new HashSet<ConfigDescriptor>(ReferenceEqualityComparer.Instance);
+        while (node?.Kind is "lazy" or "transform" && seen.Add(node)) node = node.Inner;
+        if (node?.Kind == "object") return node.Properties.GetValueOrDefault(key);
+        if (node?.Kind is "array" or "dict") return node.Inner;
+        if (node?.Kind == "tuple" && int.TryParse(key, out var index) && index >= 0 && index < node.Children.Count) return node.Children[index];
+        return null;
+    }
+
+    private static bool TryPath(object? value, IReadOnlyList<string> path, out object? result)
+    {
+        result = value;
+        foreach (var key in path)
+        {
+            if (result is IReadOnlyDictionary<string, object?> map && !map.ContainsKey("__jsExpr") && map.TryGetValue(key, out result)) continue;
+            if (result is IReadOnlyList<object?> list && int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out var index)
+                && index >= 0 && index < list.Count) { result = list[index]; continue; }
+            result = null;
+            return false;
+        }
+        return true;
     }
 
     internal static string DisplayPath(IReadOnlyList<string> keys) => keys.Count switch

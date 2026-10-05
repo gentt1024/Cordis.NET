@@ -10,12 +10,13 @@ public sealed partial class ConfigDescriptor
     private ConfigDescriptor(string kind, IReadOnlyDictionary<string, ConfigDescriptor>? properties = null, ConfigDescriptor? inner = null,
         bool optional = false, bool volatileValue = false, bool hasDefault = false, object? defaultValue = null,
         Func<ConfigDescriptor>? lazy = null, IReadOnlyList<ConfigDescriptor>? children = null, ConfigDescriptor? key = null, object? lazyIdentity = null,
-        Func<object?, int>? selectBranch = null)
+        Func<object?, int>? selectBranch = null, IReadOnlyDictionary<string, object?>? annotations = null)
     {
         Kind = kind; Properties = properties ?? EmptyProperties; Inner = inner; IsOptional = optional;
         IsVolatile = volatileValue; HasDefault = hasDefault; DefaultValue = defaultValue;
         Children = children ?? System.Array.Empty<ConfigDescriptor>(); Key = key; _lazy = lazy; _lazyIdentity = lazy is null ? null : lazyIdentity ?? new object();
         _selectBranch = selectBranch;
+        Annotations = annotations ?? EmptyAnnotations;
     }
     private static readonly IReadOnlyDictionary<string, ConfigDescriptor> EmptyProperties = new ReadOnlyDictionary<string, ConfigDescriptor>(new Dictionary<string, ConfigDescriptor>());
     private readonly Func<ConfigDescriptor>? _lazy;
@@ -91,7 +92,7 @@ public sealed partial class ConfigDescriptor
     public static ConfigDescriptor Lazy(Func<ConfigDescriptor> builder) { ArgumentNullException.ThrowIfNull(builder); return new("lazy", lazy: builder); }
     private ConfigDescriptor Copy(bool? optional = null, bool? volatileValue = null, bool? hasDefault = null, object? defaultValue = null) =>
         new(Kind, Properties, Inner, optional ?? IsOptional, volatileValue ?? IsVolatile, hasDefault ?? HasDefault,
-            hasDefault == true ? defaultValue : DefaultValue, _lazy, Children, Key, _lazyIdentity, _selectBranch);
+            hasDefault == true ? defaultValue : DefaultValue, _lazy, Children, Key, _lazyIdentity, _selectBranch, Annotations);
     /// <summary>Mark omission as admitted, preserving the underlying declaration.</summary>
     public ConfigDescriptor Optional() => Copy(optional: true);
     /// <summary>Describe a required value; the bundled validator owns missing-value rejection.</summary>
@@ -117,7 +118,7 @@ public sealed partial class ConfigDescriptor
                     if (lazyTargets.TryGetValue(source._lazyIdentity!, out var known)) return known;
                     var target = Visit(source._lazy() ?? throw new InvalidOperationException("A configuration lazy builder returned null."));
                     lazyTargets.Add(source._lazyIdentity!, target); return target;
-                }, selectBranch: source._selectBranch);
+                }, selectBranch: source._selectBranch, annotations: source.Annotations);
             seen.Add(source, result);
             result.Properties = new ReadOnlyDictionary<string, ConfigDescriptor>(source.Properties.ToDictionary(pair => pair.Key, pair => Visit(pair.Value), StringComparer.Ordinal));
             result.Children = System.Array.AsReadOnly(source.Children.Select(Visit).ToArray());
@@ -399,6 +400,8 @@ public sealed class PluginConfiguration
     internal PluginConfiguration(CapturedConfigSchema schema, Func<object?, object?> validate) => (Schema, Validate) = (schema, validate);
     internal CapturedConfigSchema Schema { get; }
     internal Func<object?, object?> Validate { get; }
+    /// <summary>The captured data declaration, accessible without executing validation or activating a plugin.</summary>
+    public ConfigDescriptor Descriptor => Schema.Descriptor;
 }
 
 internal static class ConfigSnapshots
