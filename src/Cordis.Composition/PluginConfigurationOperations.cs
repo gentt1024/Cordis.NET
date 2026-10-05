@@ -3,47 +3,47 @@ using Cordis;
 namespace Cordis.Composition;
 
 /// <summary>
-/// Represents the plugin configuration info component.
+/// A profile entry's configured enablement, runtime state and management address.
 /// </summary>
-/// <param name="EntryId">The entry id value.</param>
-/// <param name="ModuleName">The module name value.</param>
-/// <param name="Enabled">The enabled value.</param>
-/// <param name="PatchId">The patch id value.</param>
-/// <param name="ReadOnlyReason">The read only reason value.</param>
-/// <param name="State">The state value.</param>
+/// <param name="EntryId">The mounted entry's runtime address.</param>
+/// <param name="ModuleName">The module selected by the entry.</param>
+/// <param name="Enabled">Configured enablement; this does not guarantee activation.</param>
+/// <param name="PatchId">The unambiguous profile patch address, or null when the entry cannot be managed.</param>
+/// <param name="ReadOnlyReason">The reason mutations are refused, or null for a manageable entry.</param>
+/// <param name="State">Current fiber state, or null when no fiber is mounted.</param>
 public sealed record PluginConfigurationInfo(string EntryId, string ModuleName, bool Enabled, string? PatchId, string? ReadOnlyReason, FiberState? State);
 /// <summary>
-/// Represents the bundle configuration row component.
+/// An inserted bundle row and its mounted entry, if one can be identified.
 /// </summary>
-/// <param name="RowId">The row id value.</param>
-/// <param name="ModuleName">The module name value.</param>
-/// <param name="EntryId">The entry id value.</param>
+/// <param name="RowId">The row's patch address.</param>
+/// <param name="ModuleName">The module declared by the row.</param>
+/// <param name="EntryId">The current mounted entry mapping, or null when unavailable.</param>
 public sealed record BundleConfigurationRow(string RowId, string ModuleName, string? EntryId);
 /// <summary>
-/// Represents the bundle configuration info component.
+/// Bundle selection, installation and management diagnostics for the current profile.
 /// </summary>
-/// <param name="Name">The name value.</param>
-/// <param name="Version">The version value.</param>
-/// <param name="Description">The description value.</param>
-/// <param name="Enabled">The enabled value.</param>
-/// <param name="Installed">The installed value.</param>
-/// <param name="Optional">The optional value.</param>
-/// <param name="Removable">The removable value.</param>
-/// <param name="ReadOnlyReason">The read only reason value.</param>
-/// <param name="Error">The error value.</param>
-/// <param name="Rows">The rows value.</param>
-/// <param name="Overrides">The overrides value.</param>
+/// <param name="Name">The bundle package name.</param>
+/// <param name="Version">Declared package version, when available.</param>
+/// <param name="Description">Package description, when available.</param>
+/// <param name="Enabled">Whether the profile selects the bundle.</param>
+/// <param name="Installed">Whether the profile declares the package dependency.</param>
+/// <param name="Optional">Whether the host marks this bundle as optional in inventory.</param>
+/// <param name="Removable">Whether this profile owns the dependency and permits its removal.</param>
+/// <param name="ReadOnlyReason">The reason management is refused, or null.</param>
+/// <param name="Error">Bundle loading failure text, or null.</param>
+/// <param name="Rows">Inserted rows and their runtime mappings.</param>
+/// <param name="Overrides">Patch addresses overridden by this bundle.</param>
 public sealed record BundleConfigurationInfo(string Name, string? Version, string? Description, bool Enabled, bool Installed, bool Optional, bool Removable, string? ReadOnlyReason, string? Error, IReadOnlyList<BundleConfigurationRow> Rows, IReadOnlyList<string> Overrides);
 /// <summary>
-/// Represents the configuration change component.
+/// The persistence and application outcomes of one management operation.
 /// </summary>
-/// <param name="Changed">The changed value.</param>
-/// <param name="Application">The application value.</param>
-/// <param name="Target">The target value.</param>
-/// <param name="Enabled">The enabled value.</param>
-/// <param name="Error">The error value.</param>
-/// <param name="Diagnostic">The diagnostic value.</param>
-/// <param name="Warnings">The warnings value.</param>
+/// <param name="Changed">Whether profile manifest or patch bytes changed; this is separate from runtime application.</param>
+/// <param name="Application">Application outcome: applied, restart-required, overridden or failed.</param>
+/// <param name="Target">The affected entry, bundle or exact compatibility package/version identity.</param>
+/// <param name="Enabled">The requested enablement state.</param>
+/// <param name="Error">Stable failure code, if any.</param>
+/// <param name="Diagnostic">Primary failure text, if available.</param>
+/// <param name="Warnings">Entry diagnostics produced by auditing the operation.</param>
 public sealed record ConfigurationChange(bool Changed, string Application, string Target, bool Enabled, string? Error = null, string? Diagnostic = null, IReadOnlyList<EntryDiagnostic>? Warnings = null);
 /// <summary>Profile configuration and package coordination. Platform toolchains and transports reuse this owner above Core.</summary>
 public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, Include include, string? ownerEntryId = null)
@@ -52,20 +52,21 @@ public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> managementBundles = new(StringComparer.Ordinal);
     private string ManifestPath => Path.Combine(launch.Profile.Directory, "package.json");
     private string PatchPath => launch.Profile.UserLayer.Source;
-    /// <summary>Set to the active host HMR coordinator's RunExclusiveAsync. Null means startup-only configuration.</summary>
+    /// <summary>Host lifecycle queue for mutations. ProfileSession supplies its queue even without automatic watching; null means startup-only configuration.</summary>
     public Func<Func<Task>, Task>? RunExclusiveAsync { get; set; }
     /// <summary>Optional session-owned reconciliation called inside the existing exclusive queue, without re-entering it.</summary>
     public Func<IReadOnlySet<string>?, Task<IReadOnlyList<EntryDiagnostic>>>? ReconcileAsync { get; set; }
     /// <summary>Modules needed to retain the management path. Hosts may extend this set for their own control plane.</summary>
     public ISet<string> ProtectedModules { get; } = new HashSet<string>(["cordis:manager", "cordis:include", "cordis:loader", "cordis:timer", "@deepseek-ai/dsh-plugin-manager", "@deepseek-ai/cordis-plugin-loader", "@deepseek-ai/cordis-plugin-include", "@deepseek-ai/dsh-api-gateway", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-client-modules", "@deepseek-ai/dsh-client-ui-settings-plugin-inventory", "@deepseek-ai/dsh-client-ui-plugin-manager", "@deepseek-ai/dsh-host-plugin-inventory", "@deepseek-ai/dsh-typert-registry", "@deepseek-ai/dsh-api-remotes", "@deepseek-ai/cordis-plugin-timer", "@deepseek-ai/dsh-client-connection", "@deepseek-ai/dsh-host-frontend-static", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-hmr"], StringComparer.Ordinal);
     /// <summary>
-    /// Gets the optional bundles value.
+    /// Host-selected optional bundle inventory labels. This set does not authorize mutations.
     /// </summary>
     public ISet<string> OptionalBundles { get; } = new HashSet<string>(StringComparer.Ordinal);
 
     /// <summary>
-    /// Gets the changed value.
+    /// Reports completed configuration, plugin or bundle operations synchronously. Observer failures are logged and isolated from the operation result and other observers.
     /// </summary>
+    /// <remarks>Some notification paths run inside mutation coordination; handlers must not synchronously re-enter management mutations.</remarks>
     public event Action<string>? Changed;
     /// <summary>Reconcile a completed external deployment without reactivating retained dependencies. The host owns deployment success and exclusion of concurrent writes.</summary>
     public static async Task<ProfileReconciliation> ReconcileDeployedPackagesAsync(string directory, PackageManifest before, IReadOnlyDictionary<string, string> installedPackages, IReadOnlyDictionary<string, string> installationBundles)
@@ -271,7 +272,7 @@ public sealed partial class PluginConfigurationOperations(ProfileLaunch launch, 
             }
 
             var changed = before != await DiskStateAsync();
-            Changed?.Invoke(reason);
+            NotifyConfigurationChanged(reason);
             return new(changed, application, target, enabled, code, diagnostic, warnings);
         }
         finally

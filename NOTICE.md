@@ -24,3 +24,9 @@ the unmodified MIT-licensed DSH form model and snapshot-store source at the same
 revision. `client/vendor/provenance.json` records the exact source identities. Their
 browser build uses Zustand and Immer under their respective MIT licenses. This is
 a bounded client example, not a translation of the DSH frontend or its wire protocol.
+
+The reusable browser modules in `clients/modules/vendor/` retain DSH's module loader,
+contracts, snapshot stores and SlotCore at the same fixed revision. Their provenance
+manifest records source hashes; the original MIT licenses are retained in
+the corresponding `clients/modules/vendor/*/LICENSE` files. The .NET management transport is an explicit adapter,
+not a claim of DSH wire-protocol compatibility.

@@ -6,6 +6,8 @@
 
 仓库及包元数据固定为 `gentt1024/Cordis.NET`。已发布的 `0.2.0-alpha.1` 批次保持不变，之后的应用基础设施新增能力仅存在于源码。获准发行前必须选择新版本；使用源码版本号生成本地验证包，不授权替换已发布包。Cordis.NET 版本独立于固定 DSH tag。最终提交、版本、tag 和选定包哈希必须对应。
 
+发布白名单包含 `Cordis.NET.*` 下的 Core、Composition、Extensions、Clr、Hosting、AspNetCore、JavaScript 和 Tool，以及对应符号包。`Cordis.Example.Greeting` 参与验证，但不进入发布集合。
+
 选择发行批次前，应在最终源码上执行既有原生验证、固定源码对照、JIT/Native AOT 和隔离包消费者检查。还须检查实际 nupkg/snupkg 批次并运行其离线调试消费者：
 
 ```sh
@@ -21,7 +23,7 @@ python scripts/package_inspection.py --directory artifacts/release-packages --ve
 之后每次发行均须完成下列单独授权的外部检查；本地准备不证明远端当前状态：
 
 1. 在公开远端运行已提交的 GitHub Actions workflow，并要求 `main` 的两平台检查通过。
-2. 启用 GitHub 私密漏洞报告，使 `SECURITY.md` 中的链接可接收报告。
+2. 核实 GitHub 私密漏洞报告已启用，且 `SECURITY.md` 中的仓库链接可接收报告。
 3. 保护 `nuget-production` environment，并配置 NuGet Trusted Publishing policy：owner 为 `gentt1024`，repository 为 `Cordis.NET`，workflow 为 `release.yml`，environment 为 `nuget-production`，包范围为 `Cordis.NET.*`。
 4. 以上步骤通过后，创建已审查的预发布 tag，并发布 release workflow 生成且有哈希记录的准确包批次。
 

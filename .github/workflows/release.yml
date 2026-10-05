@@ -122,6 +122,8 @@ jobs:
           path: |
             artifacts/verification
             artifacts/authoring
+            artifacts/clr-deployment-*/results.json
+            artifacts/clr-deployment-*/*.log
           if-no-files-found: warn
           retention-days: 30
       - name: Preserve the validated package batch

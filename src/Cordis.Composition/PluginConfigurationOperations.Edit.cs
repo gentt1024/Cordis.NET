@@ -45,7 +45,7 @@ public sealed partial class PluginConfigurationOperations
             var layers = (await ProfileComposition.RefreshAsync(launch)).Layers;
             await include.Context.RunAsync(_ =>
             {
-                var entry = EditableEntry(entryId, layers);
+                var entry = EditableEntry(entryId);
                 result = new(entryId, Revision(entry, layers), RawObject(entry.Options.Config));
                 return Task.CompletedTask;
             });
@@ -101,7 +101,7 @@ public sealed partial class PluginConfigurationOperations
                 object? inherited = null;
                 await include.Context.RunAsync(context =>
                 {
-                    entry = EditableEntry(entryId, refresh.Layers);
+                    entry = EditableEntry(entryId);
                     revision = Revision(entry, refresh.Layers);
                     if (revision != expectedRevision) throw new Refusal("conflict");
                     var inheritedLayers = refresh.Layers.Where(layer => layer.Source != Path.Combine(launch.Home, "cordis.patch.yml")
@@ -175,12 +175,12 @@ public sealed partial class PluginConfigurationOperations
         return result;
     }
 
-    private void NotifyConfigurationChanged()
+    private void NotifyConfigurationChanged(string reason = "configuration")
     {
         if (Changed is not { } changed) return;
         foreach (Action<string> observer in changed.GetInvocationList())
         {
-            try { observer("configuration"); }
+            try { observer(reason); }
             catch (Exception error)
             {
                 // A secondary observer cannot replace a durable result or a primary recovery failure.
@@ -202,7 +202,7 @@ public sealed partial class PluginConfigurationOperations
         finally { mutation.Release(); }
     }
 
-    private Entry EditableEntry(string id, IReadOnlyList<ConfigurationLayer> layers)
+    private Entry EditableEntry(string id)
     {
         var entry = include.Loader.Entries().SingleOrDefault(row => row.Id == id) ?? throw new Refusal("unknown-plugin");
         var candidates = Flatten(include.Root.Data).Where(row => row.Id == entry.Options.Id).ToArray();
@@ -312,7 +312,7 @@ public sealed partial class PluginConfigurationOperations
         {
             var layers = (await ProfileComposition.RefreshAsync(launch)).Layers;
             string? revision = null;
-            await include.Context.RunAsync(_ => { revision = Revision(EditableEntry(entryId, layers), layers); return Task.CompletedTask; });
+            await include.Context.RunAsync(_ => { revision = Revision(EditableEntry(entryId), layers); return Task.CompletedTask; });
             return revision;
         }
         catch { return null; }

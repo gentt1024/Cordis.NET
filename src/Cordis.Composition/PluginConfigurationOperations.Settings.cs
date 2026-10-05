@@ -54,7 +54,7 @@ public sealed partial class PluginConfigurationOperations
             var layers = (await ProfileComposition.RefreshAsync(launch)).Layers;
             await include.Context.RunAsync(_ =>
             {
-                var entry = EditableEntry(entryId, layers);
+                var entry = EditableEntry(entryId);
                 var patches = layers.Single(layer => layer.Source == PatchPath).Patches;
                 var overridden = patches.LastOrDefault(patch => patch.Id == entry.Options.Id && !Data.Truthy(patch.GetValueOrDefault("insert"))
                     && (patch.Name.Length == 0 || patch.Name == entry.Options.Name) && patch.ContainsKey("config"));

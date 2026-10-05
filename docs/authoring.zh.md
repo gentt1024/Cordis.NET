@@ -100,6 +100,8 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 ## 应用配置与客户端消费
 
+完整插件生命周期从 [ManagedPlugin](../examples/ManagedPlugin/README.md) 开始，再按 [ManagedApplication](../examples/ManagedApplication/README.md) 构建本地 feed、安装插件、编辑配置并移除。[CLI 指南](../tools/Cordis.Cli/README.md) 使用同一套宿主操作。下面的 Probes 示例演示较小的客户端消费边界。
+
 复用 Session 既有的 `ConfigurationOperations`。读取新 revision 后，通过 `MutateConfigurationAsync` 或选中字段的 `MutateSettingsAsync` 提交有序 SET/unset。库验证完整最终候选并写入一次；对象 unset 恢复继承，数组 unset 删除元素。普通字段保持原有重启行为；`liveOnly` 另要求已捕获 live 边界及兼容的普通 effective 值。分别处理 `Saved`、`Applied` 与恢复诊断。旧 Config delegate 与高级 `ConfigSchema<T>` 作者入口继续保留。
 
 通过 `descriptor.WithMetadata(new ConfigurationMetadata { ... })` 显式声明应用元数据。renderer role、本地化 description、badges、hidden/disabled/collapse、link/comment、extra plain 数据，以及 min/max/step/pattern/loose 提示由不可变 Core annotations 承载；它们描述既有 validator，不增加验证行为。嵌套固定 live 路径使用 `ConfigSchema<T>.WithVolatile(path, projection)`。Settings 省略普通兄弟字段，把 secret 值脱敏为仅表示存在性的 sidecar。每项编辑检查可见的声明路径；含不可读 secret/hidden 后代的祖先替换会被拒绝。参见[完整声明、Settings 与发现示例](configuration-description.zh.md)。

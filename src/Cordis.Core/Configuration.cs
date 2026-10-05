@@ -323,8 +323,14 @@ public sealed class ConfigSchema<T>
     public ConfigSchema(Func<object?, ConfigResult<T>> validator, ConfigDescriptor descriptor) : this(validator, descriptor, []) { }
     private ConfigSchema(Func<object?, ConfigResult<T>> validator, ConfigDescriptor descriptor, IReadOnlyList<ConfigBinding> bindings, Func<T, T, bool>? ordinaryEquality = null, Func<T, object?>? simplify = null, Func<T, object?>? descriptionData = null)
     {
-        ArgumentNullException.ThrowIfNull(validator); ArgumentNullException.ThrowIfNull(descriptor);
-        Validator = validator; Descriptor = descriptor; _bindings = bindings; _ordinaryEquality = ordinaryEquality; _simplify = simplify; _descriptionData = descriptionData;
+        ArgumentNullException.ThrowIfNull(validator);
+        ArgumentNullException.ThrowIfNull(descriptor);
+        Validator = validator;
+        Descriptor = descriptor;
+        _bindings = bindings;
+        _ordinaryEquality = ordinaryEquality;
+        _simplify = simplify;
+        _descriptionData = descriptionData;
     }
     /// <summary>The synchronous validator; ordinary opaque CLR values are permitted.</summary>
     public Func<object?, ConfigResult<T>> Validator { get; }

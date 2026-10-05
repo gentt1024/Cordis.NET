@@ -44,15 +44,30 @@ public static class DevelopmentBuildProcess
                 var buffer = buffers[standardError ? 1 : 0];
                 foreach (var character in chunk)
                 {
-                    if (character == '\n') { Emit(buffer.ToString().TrimEnd('\r'), standardError); buffer.Clear(); }
-                    else buffer.Append(character);
-                    if (buffer.Length > 65536) { Fail(new IOException("Development output line exceeded 64 KiB.")); return; }
+                    if (character == '\n')
+                    {
+                        Emit(buffer.ToString().TrimEnd('\r'), standardError);
+                        buffer.Clear();
+                    }
+                    else
+                    {
+                        buffer.Append(character);
+                    }
+                    if (buffer.Length > 65536)
+                    {
+                        Fail(new IOException("Development output line exceeded 64 KiB."));
+                        return;
+                    }
                 }
             }
         }
         async Task ConsumeAsync()
         {
-            try { await foreach (var line in lines.Reader.ReadAllAsync()) await consume(line); }
+            try
+            {
+                await foreach (var line in lines.Reader.ReadAllAsync())
+                    await consume(line);
+            }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { stop.Cancel(); }
             catch (Exception error) { Fail(error); }
         }
@@ -78,4 +93,3 @@ public static class DevelopmentBuildProcess
         cancellationToken.ThrowIfCancellationRequested();
     }
 }
-

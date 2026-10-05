@@ -6,6 +6,8 @@ The current tree is prepared as a reviewable public source snapshot. Documentati
 
 The repository identity and package metadata are fixed to `gentt1024/Cordis.NET`. The published `0.2.0-alpha.1` batch remains unchanged. Later application-infrastructure additions are source-only. A new version must be chosen before an authorized release; local verification packages using the source version do not authorize replacing published packages. Cordis.NET versions are independent of the pinned DSH tag. The final commit, version, tag and selected package hashes must agree.
 
+The release whitelist contains Core, Composition, Extensions, Clr, Hosting, AspNetCore, JavaScript and Tool under `Cordis.NET.*`, with matching symbol packages. `Cordis.Example.Greeting` is validated but never selected for publication.
+
 Before selecting a release batch, run the existing native, fixed-source, JIT/Native AOT and isolated package-consumer checks on the final source. Also inspect the actual nupkg/snupkg batch and execute its offline debug consumer:
 
 ```sh
@@ -21,7 +23,7 @@ Reference tooling pins `js-yaml` 4.3.2. This is a targeted fix for the recorded 
 Each future release requires these separately authorized external checks; local preparation does not establish their current remote status:
 
 1. Run the checked-in GitHub Actions workflow on the public remote and require both platform checks on `main`.
-2. Enable GitHub private vulnerability reporting so the verified link in `SECURITY.md` accepts reports.
+2. Verify that GitHub private vulnerability reporting is enabled and the repository link in `SECURITY.md` accepts reports.
 3. Protect the `nuget-production` environment and configure a NuGet Trusted Publishing policy for owner `gentt1024`, repository `Cordis.NET`, workflow `release.yml`, environment `nuget-production`, and package scope `Cordis.NET.*`.
 4. After those gates pass, create the reviewed prerelease tag and publish the exact hashed package artifact produced by the release workflow.
 

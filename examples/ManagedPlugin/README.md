@@ -2,7 +2,7 @@
 
 An independently packed CLR plugin with live settings and an ordinary label. Its validator owns defaults and accepted values; metadata describes that same contract. `cordis.plugin.json` identifies the public CLR entry point. No npm manifest or Node installation is needed to build the C# package.
 
-From the repository root, first pack the Cordis libraries into a local feed using the documented verification command. Then build this example separately:
+Follow the [managed application setup](../ManagedApplication/README.md) to prepare a complete local feed, including the Cordis libraries and locked YamlDotNet dependency. Then build this example separately from the repository root:
 
 ```console
 dotnet pack examples/ManagedPlugin -c Release -p:IsPackable=true -o artifacts/example-feed

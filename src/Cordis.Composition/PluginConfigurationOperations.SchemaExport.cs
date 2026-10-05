@@ -32,7 +32,7 @@ public sealed partial class PluginConfigurationOperations
             var layers = (await ProfileComposition.RefreshAsync(launch)).Layers;
             await include.Context.RunAsync(context =>
             {
-                var entry = EditableEntry(entryId, layers);
+                var entry = EditableEntry(entryId);
                 var descriptor = entry.Fiber!.ConfigDescription ?? throw new Refusal("no-configuration-description");
                 if (policy is not null)
                 {

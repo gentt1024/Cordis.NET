@@ -2,7 +2,8 @@ using Cordis.Composition;
 
 namespace Cordis.Extensions;
 
-/// <summary>A running profile with explicit module resolution and optional configuration HMR.</summary>
+/// <summary>A running profile owning its context, loader and watchers, with explicit module resolution and optional configuration HMR.</summary>
+/// <remarks>The caller retains ownership of the resolver and must keep it available until session disposal finishes.</remarks>
 public sealed class ProfileSession : IAsyncDisposable
 {
     private readonly HmrCoordinator queue = new();
@@ -50,15 +51,15 @@ public sealed class ProfileSession : IAsyncDisposable
     }
 
     /// <summary>
-    /// Gets the context value.
+    /// The session-owned application context. Disposing it also stops session background work.
     /// </summary>
     public Context Context { get; }
     /// <summary>
-    /// Gets the loader value.
+    /// The session-owned loader using the caller's resolver.
     /// </summary>
     public Loader Loader { get; private set; } = null!;
     /// <summary>
-    /// Gets the include value.
+    /// The mounted root include reconciled by this session.
     /// </summary>
     public Include Include { get; private set; } = null!;
     /// <summary>Profile mutations sharing this session's lifecycle queue and refresh ownership.</summary>
@@ -66,27 +67,27 @@ public sealed class ProfileSession : IAsyncDisposable
     /// <summary>Null when automatic watching was not requested. Manual refresh remains available.</summary>
     public HmrCoordinator? Hmr { get; }
     /// <summary>
-    /// Gets the requires restart value.
+    /// Whether the latest refresh requires a host restart. A successful subsequent refresh clears this flag.
     /// </summary>
     public bool RequiresRestart { get; private set; }
     /// <summary>
-    /// Gets the last error value.
+    /// The most recently reported failure, cleared by a successful refresh. Retaining plugin exceptions can delay CLR unload.
     /// </summary>
     public Exception? LastError { get; private set; }
     /// <summary>
-    /// Gets the last successful refresh value.
+    /// UTC time of successful startup or the latest successful refresh.
     /// </summary>
     public DateTimeOffset? LastSuccessfulRefresh { get; private set; }
     /// <summary>
-    /// Gets the refreshed value.
+    /// Runs synchronously after a successful refresh inside the lifecycle queue. Handlers must not synchronously re-enter that queue.
     /// </summary>
     public event Action? Refreshed;
     /// <summary>
-    /// Gets the restart required value.
+    /// Runs synchronously when reconciliation requires restart, inside the lifecycle queue.
     /// </summary>
     public event Action? RestartRequired;
     /// <summary>
-    /// Gets the error value.
+    /// Reports failures synchronously on the emitting operation. Handler exceptions are ignored to preserve the primary failure.
     /// </summary>
     public event Action<Exception>? Error;
     /// <summary>The latest manifest selection, including skipped bundles.</summary>
@@ -96,7 +97,7 @@ public sealed class ProfileSession : IAsyncDisposable
     /// <summary>Current bundle failures, in manifest order.</summary>
     public IReadOnlyList<SkippedBundle> SkippedBundles { get; private set; } = [];
     /// <summary>
-    /// Gets the warning value.
+    /// Reports warnings synchronously on the emitting operation. Handler exceptions are ignored.
     /// </summary>
     public event Action<string>? Warning;
 
@@ -335,7 +336,7 @@ public sealed class ProfileSession : IAsyncDisposable
     }
 
     /// <summary>
-    /// Releases resources used by this instance.
+    /// Stops package preparation and the lifecycle queue, then disposes the owned context and releases watcher references. The caller's resolver is not disposed.
     /// </summary>
     public async ValueTask DisposeAsync()
     {

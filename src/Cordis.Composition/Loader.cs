@@ -249,7 +249,12 @@ public sealed class Entry
                 foreach (var pair in isolates)
                 {
                     if (!Data.Truthy(pair.Value)) continue;
-                    if (pair.Value is true) { if (!localRealms.TryGetValue(pair.Key, out var realm)) localRealms[pair.Key] = realm = new object(); realms[pair.Key] = realm; }
+                    if (pair.Value is true)
+                    {
+                        if (!localRealms.TryGetValue(pair.Key, out var realm))
+                            localRealms[pair.Key] = realm = new object();
+                        realms[pair.Key] = realm;
+                    }
                     else realms[pair.Key] = Loader.NamedRealm(pair.Key, Convert.ToString(pair.Value, System.Globalization.CultureInfo.InvariantCulture)!);
                 }
             Context.SetIsolations(realms);
@@ -458,9 +463,14 @@ public sealed class Loader : EntryTree
     {
         var fibers = Context.Registry.Get(previous)?.Fibers.ToArray() ?? [];
         var rows = fibers.Select(f => (Fiber: f, Entry: roots.GetValueOrDefault(f), Parent: f.Parent, Raw: roots.TryGetValue(f, out var entry) ? entry.Options.RawConfig : f.RawConfig)).ToArray();
-        foreach (var row in rows) if (row.Entry is not null) row.Entry.Removing = true;
         foreach (var row in rows)
-            try { await row.Fiber.DisposeAsync(); } catch (Exception error) { ReportReplacementFailure(error); }
+            if (row.Entry is not null)
+                row.Entry.Removing = true;
+        foreach (var row in rows)
+        {
+            try { await row.Fiber.DisposeAsync(); }
+            catch (Exception error) { ReportReplacementFailure(error); }
+        }
         var activated = new List<(Fiber Fiber, Entry? Entry)>();
         try
         {
@@ -476,22 +486,35 @@ public sealed class Loader : EntryTree
         catch
         {
             foreach (var row in activated)
-                try { await row.Fiber.DisposeAsync(); } catch (Exception error) { ReportReplacementFailure(error); }
+            {
+                try { await row.Fiber.DisposeAsync(); }
+                catch (Exception error) { ReportReplacementFailure(error); }
+            }
             var restored = new List<Fiber>();
             foreach (var row in rows)
             {
                 if (row.Parent.Fiber.Uid is null) continue;
                 try
                 {
-                    var fiber = row.Parent.Plugin(previous, row.Raw); restored.Add(fiber);
+                    var fiber = row.Parent.Plugin(previous, row.Raw);
+                    restored.Add(fiber);
                     if (row.Entry is not null) row.Entry.Fiber = fiber;
                 }
                 catch (Exception error) { ReportReplacementFailure(error); }
             }
-            foreach (var fiber in restored) try { await fiber.WaitAsync(); } catch (Exception error) { ReportReplacementFailure(error); }
+            foreach (var fiber in restored)
+            {
+                try { await fiber.WaitAsync(); }
+                catch (Exception error) { ReportReplacementFailure(error); }
+            }
             throw;
         }
-        finally { foreach (var row in rows) if (row.Entry is not null) row.Entry.Removing = false; }
+        finally
+        {
+            foreach (var row in rows)
+                if (row.Entry is not null)
+                    row.Entry.Removing = false;
+        }
     });
     private void ReportReplacementFailure(Exception error)
     {

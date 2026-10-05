@@ -15,6 +15,7 @@ PUBLISH_PACKAGES = (
     "Cordis.NET.Extensions",
     "Cordis.NET.Clr",
     "Cordis.NET.Hosting",
+    "Cordis.NET.AspNetCore",
     "Cordis.NET.JavaScript",
     "Cordis.NET.Tool",
 )
@@ -29,6 +30,7 @@ def sha256(path: Path) -> str:
 
 
 def prepare(source: Path, output: Path, version: str, tag: str, commit: str) -> None:
+    assert tag == "v" + version, (tag, version)
     output.mkdir(parents=True, exist_ok=True)
     assert not any(output.iterdir()), f"Release artifact output must be empty: {output}"
     expected_validation = {f"{name}.{version}.nupkg" for name in (*PUBLISH_PACKAGES, "Cordis.Example.Greeting")}
@@ -56,9 +58,16 @@ def prepare(source: Path, output: Path, version: str, tag: str, commit: str) -> 
 
 def verify(directory: Path, tag: str, commit: str) -> None:
     manifest = json.loads((directory / "release-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schemaVersion"] == 1
     assert manifest["tag"] == tag, (manifest["tag"], tag)
     assert manifest["commit"] == commit, (manifest["commit"], commit)
-    expected_names = {item["name"] for item in manifest["packages"]} | {"release-manifest.json"}
+    version = manifest["version"]
+    assert tag == "v" + version, (tag, version)
+    package_names = {f"{name}.{version}.{suffix}" for name in PUBLISH_PACKAGES
+                     for suffix in ("nupkg", "snupkg")}
+    recorded_names = [item["name"] for item in manifest["packages"]]
+    assert len(recorded_names) == len(package_names) and set(recorded_names) == package_names, recorded_names
+    expected_names = package_names | {"release-manifest.json"}
     actual_names = {path.name for path in directory.iterdir() if path.is_file()}
     assert actual_names == expected_names, (actual_names, expected_names)
     for item in manifest["packages"]:
