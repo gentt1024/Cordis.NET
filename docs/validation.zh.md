@@ -2,6 +2,16 @@
 
 [English](validation.md)
 
+## 已合并的应用基础设施，2026-10-05
+
+PR [#5](https://github.com/gentt1024/Cordis.NET/pull/5) 已 squash 合并为 `f8deed1b1a654314773ecfa8403ee7ca5d827be9`，源码树与已审查 HEAD `4d57f65dad65611c4e8924b8f3764697b2f46ae5` 相同。[workflow #34](https://github.com/gentt1024/Cordis.NET/actions/runs/37328839303) 在真实 PR checkout `3d4afbbf0ede45d18f34d9b9ff881455918aa3e7` 上通过 Windows/Linux 验证，涵盖固定上游对照、JIT/AOT、CLR 部署、打包与独立消费。两平台实际下载的包批次分别通过载荷/XML、提交元数据、DLL/PDB 身份与 checksum，以及真实远端 SourceLink 取源检查。
+
+真实浏览器检查覆盖外壳模块单例和子路径、默认/自定义 bundle 加载、缺失供应者启动拒绝、断线时插件与草稿保留、握手恢复和实际 graph 撤销。已构建客户端及独立 CLR/CLI 消费者覆盖取消、旧代回调、关闭所有权、启动激活审计、应用参数原样转发、就绪和有界退出。
+
+此前 Windows 的未知安装查询失败（预期退出码 3，实际为 1）仍保留。后续只增加诊断输出，保留原断言；新矩阵通过不代表已查明根因。正常 CLI 关闭仍可能报告 HMR `ObjectDisposedException`，该诊断没有被压制。这些观察与已通过的检查分别记录。
+
+`0.2.0-alpha.2` 当前为发布候选。上述结果验证已合并实现，不代表最终版本 tag 或已发布包批次。main 与 release tag 验证、最终产物绑定和发布属于后续独立阶段；此前 alpha.1 验证包不能作为 alpha.2 上传。
+
 ## 应用管理与交付，2026-10-05
 
 实现检查点 `ed2b63d657e5405a79f08308451b385f7cf0969c` 使用 SDK 10.0.111，通过 Windows x64 和 Ubuntu 24.04 x64 本地验证。在先前实施片之上，新增包执行、有序配置编辑/reset、声明导出、HTTP/SSE 管理、CLI 命令与浏览器模块。仅文档更新另行绑定到未改变的实现。固定 upstream lock 与已发布 alpha.1 均未改变。

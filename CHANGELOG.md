@@ -2,11 +2,16 @@
 
 ## [Unreleased]
 
+## [0.2.0-alpha.2] - Unreleased
+
 - Added reusable typed configuration fields, ordered SET/unset editing, Settings selection, declaration export and discovery over the existing runtime contracts.
 - Added application-level package coordination, explicit NuGet feeds and build authorization, ASP.NET Core management endpoints, CLI management commands and maintained client modules. These are optional layers above Core.
 - Added independent managed plugin and application examples, including package installation, configuration, removal and development build/restart integration.
 - Fixed nested Settings validation, raw expression preservation and falsey insert inheritance. Configuration notification failures no longer replace a completed operation's result.
 - Aligned authorization with the resolved installation target, rejected known invalid declarations before package builds, and mapped NuGet package/version identities to exact DSH compatibility grants.
+- Exposed shell-owned exact module requests and custom bundle loading through the public client bootstrap, catalog and build external selection.
+- Preserved client plugin instances and drafts across transient disconnects; restored the fixed upstream startup activation audit, injectable management carriers and automatic/manual connection recovery without replaying uncertain writes.
+- Connected application arguments, readiness and exit to the CLI using the existing Composition and .NET Host lifecycle. Application exit retains the upstream five-second cleanup grace.
 - Strengthened release sealing to require all eight product packages and their symbols; examples remain excluded from publication.
 
 ## [0.2.0-alpha.1] - 2026-10-03
