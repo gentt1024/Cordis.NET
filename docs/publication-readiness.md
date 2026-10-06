@@ -4,14 +4,14 @@
 
 The current tree is prepared as a reviewable public source snapshot. Documentation, package metadata, package-specific readmes, community templates, public validation evidence, license material, and local release checks are present.
 
-The repository identity and package metadata are fixed to `gentt1024/Cordis.NET`. The published `0.2.0-alpha.1` batch remains unchanged. Later application-infrastructure additions are source-only. A new version must be chosen before an authorized release; local verification packages using the source version do not authorize replacing published packages. Cordis.NET versions are independent of the pinned DSH tag. The final commit, version, tag and selected package hashes must agree.
+The repository identity and package metadata are fixed to `gentt1024/Cordis.NET`. The published `0.2.0-alpha.1` batch remains unchanged. Application-infrastructure additions are prepared for `0.2.0-alpha.2`. The candidate version does not establish publication; local verification packages do not authorize replacing published packages. Cordis.NET versions are independent of the pinned DSH tag. The final commit, version, tag and selected package hashes must agree.
 
 The release whitelist contains Core, Composition, Extensions, Clr, Hosting, AspNetCore, JavaScript and Tool under `Cordis.NET.*`, with matching symbol packages. `Cordis.Example.Greeting` is validated but never selected for publication.
 
 Before selecting a release batch, run the existing native, fixed-source, JIT/Native AOT and isolated package-consumer checks on the final source. Also inspect the actual nupkg/snupkg batch and execute its offline debug consumer:
 
 ```sh
-python scripts/package_inspection.py --directory artifacts/release-packages --version 0.2.0-alpha.1 --symbols --debug-consumer
+python scripts/package_inspection.py --directory artifacts/release-packages --version 0.2.0-alpha.2 --symbols --debug-consumer
 ```
 
 The optional `--dotnet` selects the SDK executable and `--source-root` selects the source checkout or source ZIP. The symbol check binds each DLL to its portable PDB, checks SourceLink's repository and commit against package metadata, and verifies document checksums against that Git commit. A source ZIP uses its matching `SOURCE_SHA256.json` commit and source hashes. Generated `obj` documents must have matching embedded source. Tracked source cannot bypass the commit check merely because it is embedded. Pack only after committing final source; a dirty source build can carry an old SourceLink commit and fail this check.

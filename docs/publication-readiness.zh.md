@@ -4,14 +4,14 @@
 
 当前源码树是可供审查的公开源码快照，包含文档、包元数据、每包 README、社区模板、公开验证摘要、许可材料和本地发布检查。
 
-仓库及包元数据固定为 `gentt1024/Cordis.NET`。已发布的 `0.2.0-alpha.1` 批次保持不变，之后的应用基础设施新增能力仅存在于源码。获准发行前必须选择新版本；使用源码版本号生成本地验证包，不授权替换已发布包。Cordis.NET 版本独立于固定 DSH tag。最终提交、版本、tag 和选定包哈希必须对应。
+仓库及包元数据固定为 `gentt1024/Cordis.NET`。已发布的 `0.2.0-alpha.1` 批次保持不变，之后的应用基础设施新增能力按 `0.2.0-alpha.2` 准备。候选版本号不代表已发布；本地验证包不授权替换已发布包。Cordis.NET 版本独立于固定 DSH tag。最终提交、版本、tag 和选定包哈希必须对应。
 
 发布白名单包含 `Cordis.NET.*` 下的 Core、Composition、Extensions、Clr、Hosting、AspNetCore、JavaScript 和 Tool，以及对应符号包。`Cordis.Example.Greeting` 参与验证，但不进入发布集合。
 
 选择发行批次前，应在最终源码上执行既有原生验证、固定源码对照、JIT/Native AOT 和隔离包消费者检查。还须检查实际 nupkg/snupkg 批次并运行其离线调试消费者：
 
 ```sh
-python scripts/package_inspection.py --directory artifacts/release-packages --version 0.2.0-alpha.1 --symbols --debug-consumer
+python scripts/package_inspection.py --directory artifacts/release-packages --version 0.2.0-alpha.2 --symbols --debug-consumer
 ```
 
 可通过 `--dotnet` 指定 SDK 可执行文件，通过 `--source-root` 指定源码 checkout 或 ZIP。符号检查将每个 DLL 绑定至对应 portable PDB，核对 SourceLink 的仓库、提交与包元数据一致，并将文档校验和与该 Git 提交的源码比较。源码 ZIP 使用匹配的 `SOURCE_SHA256.json` 提交和文件哈希。生成的 `obj` 文档必须包含校验和匹配的嵌入源码。跟踪源码不能仅因已嵌入而绕过提交检查。最终源码提交后再打包；脏源码构建可能携带旧 SourceLink 提交并在此处失败。

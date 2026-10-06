@@ -2,13 +2,13 @@
 
 [English](configuration-description.md)
 
-完整的数据对象推荐使用下方 Composition 的 `ConfigObject<T>`。每个字段组合 raw 键、描述和纯 plain 值投影。辅助器生成 live 绑定，以既有严格等值比较全部已声明普通字段，并保存包含默认值的全部字段。作者须声明完整字段集，保证 validator 的键和默认值一致；需要时共享默认值常量。嵌套 live 绑定、opaque 值、特殊转换或等值规则继续使用 `ConfigSchema<T>`。旧 `Config` 委托仍受支持。此辅助器当前为源码新增能力，尚未包含在已发布的 `0.2.0-alpha.1` 包中。
+完整的数据对象推荐使用下方 Composition 的 `ConfigObject<T>`。每个字段组合 raw 键、描述和纯 plain 值投影。辅助器生成 live 绑定，以既有严格等值比较全部已声明普通字段，并保存包含默认值的全部字段。作者须声明完整字段集，保证 validator 的键和默认值一致；需要时共享默认值常量。嵌套 live 绑定、opaque 值、特殊转换或等值规则继续使用 `ConfigSchema<T>`。旧 `Config` 委托仍受支持。此辅助器已纳入 `0.2.0-alpha.2` 发布候选，未包含在已发布的 `0.2.0-alpha.1` 包中。
 
 引用状态只保存脱离原配置的投影快照。完整有效配置和验证委托由 Fiber 持有；退役的 `ConfigReference<string>` 不会额外保留配置 POCO 的可收集类型。故意持有泛型实参属于插件的引用仍可能保留程序集。所有字段快照一次发布，但分别读取多个字段不构成事务。
 
 原始 `__jsExpr` 传输节点对对象描述保持不透明。同名子字段不能掩盖父级表达式源文本变化。同源文本无需求值即可等价，文本变化走普通生命周期；明确声明整个节点为 volatile 时仍支持兼容的原地更新。
 
-既有描述/引用 API 自 `0.2.0-alpha.1` 提供，推荐的 `ConfigObject<T>` 辅助器为当前源码新增能力。参见[发行说明](../CHANGELOG.md)；源码版本不代表包已发布。
+既有描述/引用 API 自 `0.2.0-alpha.1` 提供，推荐的 `ConfigObject<T>` 辅助器需要 `0.2.0-alpha.2`（当前为发布候选）或更高版本。参见[发行说明](../CHANGELOG.md)；源码版本不代表包已发布。
 
 `Plugin<T>.Config` 仍是验证权威。插件可以额外提供 `Configuration = new ConfigSchema<T>(validator, descriptor)`。同时提供两项时，必须使用同一委托。注册时一并捕获验证器、描述和显式字段投影。现有 `IPlugin` 实现无需新增成员；适配器可以转发 `IConfigurationPlugin.CaptureConfiguration()` 的捕获结果。
 

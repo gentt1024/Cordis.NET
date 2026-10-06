@@ -2,6 +2,16 @@
 
 [中文](validation.zh.md)
 
+## Merged application infrastructure, 2026-10-05
+
+PR [#5](https://github.com/gentt1024/Cordis.NET/pull/5) was squash-merged as `f8deed1b1a654314773ecfa8403ee7ca5d827be9`. Its source tree is identical to the reviewed head `4d57f65dad65611c4e8924b8f3764697b2f46ae5`. [Workflow #34](https://github.com/gentt1024/Cordis.NET/actions/runs/37328839303) passed on Windows and Linux at the actual PR checkout `3d4afbbf0ede45d18f34d9b9ff881455918aa3e7`, including fixed upstream comparisons, JIT/AOT, CLR deployment, packaging and independent consumers. Each platform's downloaded package batch separately passed payload/XML, commit metadata, DLL/PDB identity and checksum checks, and actual remote SourceLink retrieval.
+
+Real browser checks covered shell-owned module identity and subpaths, default/custom bundle loading, missing-supplier startup rejection, plugin/draft retention across connection loss, handshake recovery and actual graph withdrawal. Targeted built-client and independent CLR/CLI consumers covered cancellation, obsolete callbacks, close ownership, startup activation auditing, opaque application arguments, readiness and bounded exit.
+
+The earlier Windows unknown-installation lookup failure (expected exit 3, actual 1) remains recorded. The diagnostic-only follow-up retained that assertion; a later passing matrix does not establish its root cause. Normal CLI shutdown can still report an HMR `ObjectDisposedException`; the diagnostic is not suppressed. These observations remain separate from the passed checks.
+
+`0.2.0-alpha.2` is a release candidate. Results above establish the merged implementation, not the final versioned tag or published package batch. Main and release-tag verification, final artifact binding and publication are separate stages; the earlier alpha.1 validation packages must not be uploaded as alpha.2.
+
 ## Application management and delivery, 2026-10-05
 
 Implementation checkpoint `ed2b63d657e5405a79f08308451b385f7cf0969c` passed local Windows x64 and Ubuntu 24.04 x64 verification with SDK 10.0.111. This extends the earlier slices with package execution, ordered configuration edits/reset, declaration exports, HTTP/SSE management, CLI commands and browser modules. Documentation-only updates are bound separately to the unchanged implementation. The fixed upstream lock and published alpha.1 remain unchanged.
