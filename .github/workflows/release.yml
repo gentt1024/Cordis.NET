@@ -113,7 +113,7 @@ jobs:
         run: |
           python scripts/check-docs.py
           python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/release-packages
-          python scripts/verify-authoring.py --aot --packages artifacts/release-packages
+          python scripts/verify-authoring.py --verification artifacts/verification/verification.json --aot --packages artifacts/release-packages
       - name: Preserve evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

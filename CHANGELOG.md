@@ -2,7 +2,10 @@
 
 ## [Unreleased]
 
-## [0.2.0-alpha.2] - Unreleased
+## [0.2.0-alpha.3] - Unreleased
+
+- Corrected the Windows host-death regression to wait for asynchronous child termination while retaining its bounded lifetime and no-further-writes checks. Runtime process ownership is unchanged.
+- Reused the preceding solution test results within each verification job, binding them to the checkout, source hashes, SDK, RID and TRX bytes. Authoring contract checks remain required; standalone authoring verification still runs the solution tests.
 
 - Added reusable typed configuration fields, ordered SET/unset editing, Settings selection, declaration export and discovery over the existing runtime contracts.
 - Added application-level package coordination, explicit NuGet feeds and build authorization, ASP.NET Core management endpoints, CLI management commands and maintained client modules. These are optional layers above Core.
@@ -13,6 +16,10 @@
 - Preserved client plugin instances and drafts across transient disconnects; restored the fixed upstream startup activation audit, injectable management carriers and automatic/manual connection recovery without replaying uncertain writes.
 - Connected application arguments, readiness and exit to the CLI using the existing Composition and .NET Host lifecycle. Application exit retains the upstream five-second cleanup grace.
 - Strengthened release sealing to require all eight product packages and their symbols; examples remain excluded from publication.
+
+## [0.2.0-alpha.2] - Not published
+
+- Tagged release candidate, superseded by `0.2.0-alpha.3` before NuGet publication.
 
 ## [0.2.0-alpha.1] - 2026-10-03
 

@@ -162,9 +162,17 @@ public sealed class PackageProcessTests : IAsyncLifetime
         var error = host.StandardError.ReadToEndAsync();
         try
         {
-            await WaitForWriterAsync(profile);
+            var file = await WaitForWriterAsync(profile);
+            var pid = int.Parse(await File.ReadAllTextAsync(file), System.Globalization.CultureInfo.InvariantCulture);
+            using var writer = Process.GetProcessById(pid);
+            // Capture the child identity before killing its owner. Closing the last job
+            // handle initiates termination; the host's exit signal does not join its children.
+            _ = writer.SafeHandle;
             host.Kill(entireProcessTree: false);
             await host.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            // The writer runs for 30 seconds naturally. A bounded wait still rejects an
+            // orphan, without requiring Windows to signal parent and child in order.
+            await writer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
             await AssertWriterStoppedAsync(profile);
         }
         finally

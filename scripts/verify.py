@@ -262,6 +262,8 @@ def main():
     rid = ("win" if os.name == "nt" else "linux" if sys.platform.startswith("linux") else "osx") + ("-arm64" if platform.machine().lower() in ("aarch64", "arm64") else "-x64")
     status = "failed"
     initial_hashes = source_hashes()
+    sdk_version = None
+    test_results = None
     try:
         if not git_checkout():
             manifest = archive_manifest()
@@ -269,6 +271,7 @@ def main():
             expected = {name: digest for name, digest in recorded.items() if not name.startswith("verification/")}
             assert initial_hashes == expected, "Source archive bytes differ from the recorded checkpoint"
         run("sdk", ["dotnet", "--info"])
+        sdk_version = run("sdk-version", ["dotnet", "--version"]).decode().strip()
         run("restore", ["dotnet", "restore", "Cordis.slnx", "--locked-mode"])
         run("build", ["dotnet", "build", "Cordis.slnx", "-c", "Release", "--no-restore"])
         test_results = Path(tempfile.mkdtemp(prefix="tests-", dir=OUT))
@@ -389,7 +392,12 @@ def main():
             dirty = "source archive; " + ("unchanged" if all(recorded[name] == digest for name, digest in source_hashes().items()) else "modified")
         hashes = source_hashes()
         (OUT / "verification.json").write_text(json.dumps({"status": status, "commit": commit, "workingTree": dirty,
-            "platform": platform.platform(), "rid": rid, "upstreamInventoryClosure": "see docs/upstream-tests.json; passing gates do not imply inventory closure",
+            "platform": platform.platform(), "rid": rid, "sdkVersion": sdk_version,
+            "checkoutRoot": str(ROOT.resolve()),
+            "testResults": {"directory": str(test_results.resolve()), "sha256": {
+                path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(test_results.glob("*.trx"))
+            }} if test_results is not None else None,
+            "upstreamInventoryClosure": "see docs/upstream-tests.json; passing gates do not imply inventory closure",
             "steps": steps, "sourceUnchanged": initial_hashes == hashes, "initialSourceSha256": initial_hashes,
             "sourceSha256": hashes}, indent=2) + "\n", encoding="utf-8")
     print(status)
