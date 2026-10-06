@@ -10,7 +10,7 @@ PR [#5](https://github.com/gentt1024/Cordis.NET/pull/5) 已 squash 合并为 `f8
 
 此前 Windows 的未知安装查询失败（预期退出码 3，实际为 1）仍保留。后续只增加诊断输出，保留原断言；新矩阵通过不代表已查明根因。正常 CLI 关闭仍可能报告 HMR `ObjectDisposedException`，该诊断没有被压制。这些观察与已通过的检查分别记录。
 
-`0.2.0-alpha.2` 当前为发布候选。上述结果验证已合并实现，不代表最终版本 tag 或已发布包批次。main 与 release tag 验证、最终产物绑定和发布属于后续独立阶段；此前 alpha.1 验证包不能作为 alpha.2 上传。
+`0.2.0-alpha.3` 当前为发布候选。上述结果验证已合并实现，不代表最终版本 tag 或已发布包批次。main 与 release tag 验证、最终产物绑定和发布属于后续独立阶段；此前 alpha.1 验证包不能作为 alpha.2 上传。
 
 ## 应用管理与交付，2026-10-05
 
@@ -121,3 +121,8 @@ python scripts/verify-authoring.py --aot --packages artifacts/upgrade-packages
 该记录证明此前候选完成了上述检查。它不是形式等价证明、托管 CI 结果，也不对尚未审阅的清单条目作出承诺。包含机器路径和用户名的原始日志保存在维护者私有归档中，不属于公开源码树。
 
 上面的 455 总数只属于该次历史运行。后续验证从实际生成的 TRX 文件计算总数和各程序集数量，不沿用这个数字。
+
+
+### 在同一验证任务内复用解决方案结果
+
+`verify.py` 成功结束后，`verify-authoring.py --verification artifacts/verification/verification.json` 复用该 checkout 的解决方案 TRX，避免再次恢复、构建和测试整个解决方案。失败或不完整报告、源码变化、不同 SDK/RID/checkout，以及缺失或改变的 TRX 都会被拒绝。authoring gate 仍审核必需测试集，并运行编译、mutation、示例、部署和包消费检查。省略 `--verification` 可独立运行完整 authoring 验证。CI 和 release 使用这一同任务复用路径，不复用其他工作流的包，也不授予发布权限。

@@ -61,6 +61,7 @@ class Gate:
 
     def run(self, label: str, command, cwd=ROOT, env=None, diagnostic_failure=False, runtime_failure=None):
         command = [str(argument) for argument in command]
+        print(f"RUN {label}", flush=True)
         started = time.monotonic()
         stdout_path = self.directory / f"{label}.stdout.log"
         stderr_path = self.directory / f"{label}.stderr.log"
@@ -101,7 +102,7 @@ class Gate:
             step["seconds"] = round(time.monotonic() - started, 3)
             stdout_path.write_bytes(stdout)
             stderr_path.write_bytes(stderr)
-            print(f"{'PASS' if step['status'] == 'passed' else 'FAIL'} {label}", flush=True)
+            print(f"{'PASS' if step['status'] == 'passed' else 'FAIL'} {label} ({step['seconds']}s)", flush=True)
             if step["status"] != "passed":
                 print((stdout + stderr).decode("utf-8", "replace")[-6000:], file=sys.stderr)
         return stdout
@@ -239,6 +240,32 @@ def compilation_contracts(gate: Gate):
         gate.run(f"compile-{name}-restore", ["dotnet", "restore", csproj, "--configfile", directory / "NuGet.Config"], fixture)
         gate.run(f"compile-{name}", ["dotnet", "build", csproj, "-c", "Release", "--no-restore"], fixture,
                  diagnostic_failure=fails)
+
+
+def reuse_test_results(report_path: Path, current_hashes: dict, rid: str, sdk_version: str) -> Path:
+    """Reuse the preceding verification in this checkout, never an arbitrary green TRX."""
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    expected = {
+        "status": "requested-checks-passed", "sourceUnchanged": True,
+        "checkoutRoot": str(ROOT.resolve()), "rid": rid, "sdkVersion": sdk_version,
+        "initialSourceSha256": current_hashes, "sourceSha256": current_hashes,
+    }
+    for field, value in expected.items():
+        if report.get(field) != value:
+            raise ValueError(f"Cannot reuse verification: {field} differs or is incomplete")
+    for name in ("test", "test-map"):
+        steps = [step for step in report.get("steps", []) if step.get("name") == name]
+        if len(steps) != 1 or steps[0].get("exitCode") != 0:
+            raise ValueError(f"Cannot reuse verification: {name} did not pass")
+    recorded = report.get("testResults") or {}
+    directory = Path(recorded.get("directory", "")).resolve()
+    if not directory.is_relative_to((ROOT / "artifacts" / "verification").resolve()):
+        raise ValueError("Cannot reuse verification: test results belong to another checkout")
+    actual = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+              for path in sorted(directory.glob("*.trx"))}
+    if not actual or actual != recorded.get("sha256"):
+        raise ValueError("Cannot reuse verification: TRX reports are missing or changed")
+    return directory
 
 
 def verify_test_suites(gate: Gate, directory: Path):
@@ -514,6 +541,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--aot", action="store_true", help="Publish and run the actual probe scenario with Native AOT too")
     parser.add_argument("--packages", type=Path, help="Consume an existing local package batch from verify.py --package; never publishes packages")
+    parser.add_argument("--verification", type=Path,
+                        help="Reuse the immediately preceding verify.py report and bound TRX in this checkout")
     options = parser.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix="run-", dir=OUT))
@@ -524,11 +553,18 @@ def main() -> int:
     status, error = "failed", None
     try:
         gate.run("sdk", ["dotnet", "--info"])
-        gate.run("solution-restore", ["dotnet", "restore", "Cordis.slnx", "--locked-mode"])
-        gate.run("solution-build", ["dotnet", "build", "Cordis.slnx", "-c", "Release", "--no-restore"])
-        results = directory / "tests"
-        gate.run("solution-tests", ["dotnet", "test", "Cordis.slnx", "-c", "Release", "--no-build", "--no-restore",
-                                    "--logger", "trx", "--results-directory", results])
+        if options.verification:
+            sdk_version = gate.run("sdk-version", ["dotnet", "--version"]).decode().strip()
+            results = reuse_test_results(options.verification, initial, rid, sdk_version)
+            gate.record("reused-solution-tests", verification=str(options.verification.resolve()),
+                        sha256=hashlib.sha256(options.verification.read_bytes()).hexdigest(),
+                        results=str(results))
+        else:
+            gate.run("solution-restore", ["dotnet", "restore", "Cordis.slnx", "--locked-mode"])
+            gate.run("solution-build", ["dotnet", "build", "Cordis.slnx", "-c", "Release", "--no-restore"])
+            results = directory / "tests"
+            gate.run("solution-tests", ["dotnet", "test", "Cordis.slnx", "-c", "Release", "--no-build", "--no-restore",
+                                        "--logger", "trx", "--results-directory", results])
         verify_test_suites(gate, results)
         compilation_contracts(gate)
         configuration_mutations(gate)
@@ -568,7 +604,8 @@ def main() -> int:
         report = {
             "status": status, "error": error, "commit": commit, "workingTree": working_tree,
             "platform": platform.platform(), "rid": rid,
-            "requested": {"aot": options.aot, "packages": str(options.packages.resolve()) if options.packages else None},
+            "requested": {"aot": options.aot, "packages": str(options.packages.resolve()) if options.packages else None,
+                          "verification": str(options.verification.resolve()) if options.verification else None},
             "evidenceScope": ".NET authoring, deployment and package checks; not upstream assertion closure",
             "steps": gate.steps, "sourceUnchanged": not changed, "changedSources": changed,
             "initialSourceSha256": initial, "sourceSha256": final,

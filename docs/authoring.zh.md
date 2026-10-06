@@ -78,7 +78,7 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 返回的 binder 持有元数据和 validator。可卸载插件应让委托随插件存活，并释放外部保存的 binder、converter 和错误对象。没有全局元数据缓存。非数据配置仍适合直接使用 `Plugin<T>.Config`。
 
-具有 live 字段的完整 typed 数据对象推荐使用 Composition 的 `ConfigObject<T>.Create(validator).Field(...).Build()`。它将显式键、描述和投影组合为既有配置合同，不推断 POCO 成员，不改变校验或默认值。生成元数据适用时，可将 `ConfigBinding.FromJsonTypeInfo` 作为该 validator，并保持其命名/默认规则与字段声明一致。全部普通字段和保存字段都须声明。参见[配置示例](configuration-description.zh.md)及[实际手写/组合消费者](../examples/Probes/ConfigurationScenario.cs)。特殊转换和嵌套 live 路径继续使用 `ConfigSchema<T>`。此推荐用法需要 `0.2.0-alpha.2`（当前为发布候选）或更高版本，未包含在已发布的 `0.2.0-alpha.1` 包批次中。
+具有 live 字段的完整 typed 数据对象推荐使用 Composition 的 `ConfigObject<T>.Create(validator).Field(...).Build()`。它将显式键、描述和投影组合为既有配置合同，不推断 POCO 成员，不改变校验或默认值。生成元数据适用时，可将 `ConfigBinding.FromJsonTypeInfo` 作为该 validator，并保持其命名/默认规则与字段声明一致。全部普通字段和保存字段都须声明。参见[配置示例](configuration-description.zh.md)及[实际手写/组合消费者](../examples/Probes/ConfigurationScenario.cs)。特殊转换和嵌套 live 路径继续使用 `ConfigSchema<T>`。此推荐用法需要 `0.2.0-alpha.3`（当前为发布候选）或更高版本，未包含在已发布的 `0.2.0-alpha.1` 包批次中。
 
 ## 外部回调与所有权
 
