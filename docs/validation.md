@@ -10,7 +10,7 @@ Real browser checks covered shell-owned module identity and subpaths, default/cu
 
 The earlier Windows unknown-installation lookup failure (expected exit 3, actual 1) remains recorded. The diagnostic-only follow-up retained that assertion; a later passing matrix does not establish its root cause. Normal CLI shutdown can still report an HMR `ObjectDisposedException`; the diagnostic is not suppressed. These observations remain separate from the passed checks.
 
-`0.2.0-alpha.3` is a release candidate. Results above establish the merged implementation, not the final versioned tag or published package batch. Main and release-tag verification, final artifact binding and publication are separate stages; the earlier alpha.1 validation packages must not be uploaded as alpha.2.
+`0.2.0-alpha.3` is a release candidate. Results above establish the merged implementation, not the final versioned tag or published package batch. Main and release-tag verification, final artifact binding and publication are separate stages; the earlier alpha.1 validation packages must not be uploaded as the current version batch.
 
 ## Application management and delivery, 2026-10-05
 
