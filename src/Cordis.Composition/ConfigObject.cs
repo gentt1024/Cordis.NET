@@ -35,23 +35,30 @@ public sealed class ConfigObject<T>
         ArgumentNullException.ThrowIfNull(descriptor);
         ArgumentNullException.ThrowIfNull(project);
         var visited = new HashSet<ConfigDescriptor>();
+
         bool HasNestedLive(ConfigDescriptor node)
         {
-            if (!visited.Add(node)) return false;
-            if (node.IsVolatile) return true;
-            return node.Properties.Values.Any(HasNestedLive)
-                || node.Children.Any(HasNestedLive)
-                || node.Inner is not null && HasNestedLive(node.Inner)
-                || node.Key is not null && HasNestedLive(node.Key);
+            if (!visited.Add(node))
+                return false;
+            if (node.IsVolatile)
+                return true;
+            return node.Properties.Values.Any(HasNestedLive) || node.Children.Any(HasNestedLive) ||
+                node.Inner is not null && HasNestedLive(node.Inner) || node.Key is not null && HasNestedLive(node.Key);
         }
-        if (descriptor.Properties.Values.Any(HasNestedLive) || descriptor.Children.Any(HasNestedLive)
-            || descriptor.Inner is not null && HasNestedLive(descriptor.Inner)
-            || descriptor.Key is not null && HasNestedLive(descriptor.Key))
-            throw new ArgumentException("Nested live fields require explicit ConfigSchema bindings.", nameof(descriptor));
+
+        if (descriptor.Properties.Values.Any(HasNestedLive) || descriptor.Children.Any(HasNestedLive) ||
+            descriptor.Inner is not null && HasNestedLive(descriptor.Inner) ||
+            descriptor.Key is not null && HasNestedLive(descriptor.Key))
+            throw new ArgumentException(
+                "Nested live fields require explicit ConfigSchema bindings.",
+                nameof(descriptor));
         if (_fields.Any(field => field.Name == name))
             throw new ArgumentException($"Duplicate configuration member '{name}'.", nameof(name));
 
-        var field = new FieldDefinition(name, descriptor, value => project(value),
+        var field = new FieldDefinition(
+            name,
+            descriptor,
+            value => project(value),
             schema => descriptor.IsVolatile ? schema.WithVolatile(name, project) : schema);
         return new(_validate, Array.AsReadOnly(_fields.Append(field).ToArray()));
     }
@@ -65,15 +72,14 @@ public sealed class ConfigObject<T>
         foreach (var field in _fields)
             schema = field.Bind(schema);
 
-        return schema.WithOrdinaryEquality(OrdinaryEquals)
-            .WithSimplify(Project)
-            .WithDescriptionData(Project);
+        return schema.WithOrdinaryEquality(OrdinaryEquals).WithSimplify(Project).WithDescriptionData(Project);
     }
 
     private bool OrdinaryEquals(T left, T right)
     {
         foreach (var field in _fields)
-            if (!field.Descriptor.IsVolatile && !ConfigDescriptor.StrictEquals(field.Project(left), field.Project(right)))
+            if (!field.Descriptor.IsVolatile &&
+                !ConfigDescriptor.StrictEquals(field.Project(left), field.Project(right)))
                 return false;
         return true;
     }
@@ -86,6 +92,9 @@ public sealed class ConfigObject<T>
         return result;
     }
 
-    private sealed record FieldDefinition(string Name, ConfigDescriptor Descriptor,
-        Func<T, object?> Project, Func<ConfigSchema<T>, ConfigSchema<T>> Bind);
+    private sealed record FieldDefinition(
+        string Name,
+        ConfigDescriptor Descriptor,
+        Func<T, object?> Project,
+        Func<ConfigSchema<T>, ConfigSchema<T>> Bind);
 }

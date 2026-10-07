@@ -13,16 +13,32 @@ public sealed class AuthoringBootTests
         try
         {
             await File.WriteAllTextAsync(path, "- id: webserver\n  name: waiting\n");
-            var resolver = new StaticModuleResolver().Register("waiting", new Plugin<object?> { Inject = ["later"], Apply = (_, _) => { } });
+            var resolver = new StaticModuleResolver().Register(
+                "waiting",
+                new Plugin<object?>
+                {
+                    Inject = ["later"],
+                    Apply = (_, _) =>
+                    {
+                    }
+                });
             var warnings = new List<string>();
-            await using var context = await ApplicationBoot.BootGenericAsync(path, resolver, prepare: ctx =>
-            {
-                Assert.Null(ctx.Get("dshHomePath"));
-                Assert.Empty(ctx.Get<Loader>("loader")!.Entries());
-                return Task.CompletedTask;
-            }, warn: warnings.Add);
+            await using var context = await ApplicationBoot.BootGenericAsync(
+                path,
+                resolver,
+                prepare: ctx =>
+                {
+                    Assert.Null(ctx.Get("dshHomePath"));
+                    Assert.Empty(ctx.Get<Loader>("loader")!.Entries());
+                    return Task.CompletedTask;
+                },
+                warn: warnings.Add);
             Loader loader = null!;
-            await context.RunAsync(ctx => { loader = ctx.Get<Loader>("loader")!; return Task.CompletedTask; });
+            await context.RunAsync(ctx =>
+            {
+                loader = ctx.Get<Loader>("loader")!;
+                return Task.CompletedTask;
+            });
             var pending = Assert.Single(await ApplicationBoot.AuditAsync(loader));
             Assert.Equal(FiberState.Pending, pending.State);
             Assert.Equal(["later"], pending.Missing);
@@ -30,18 +46,29 @@ public sealed class AuthoringBootTests
             Assert.Null(pending.Error);
             Assert.Contains("waiting for service: later", Assert.Single(warnings));
 
-            var error = await Assert.ThrowsAsync<StartupException>(() => ApplicationBoot.BootAsync(path, resolver, prepare: ctx =>
-            {
-                Assert.IsType<DshHomePath>(ctx.Get("dshHomePath"));
-                return Task.CompletedTask;
-            }));
+            var error = await Assert.ThrowsAsync<StartupException>(() => ApplicationBoot.BootAsync(
+                path,
+                resolver,
+                prepare: ctx =>
+                {
+                    Assert.IsType<DshHomePath>(ctx.Get("dshHomePath"));
+                    return Task.CompletedTask;
+                }));
             Assert.True(Assert.Single(error.Diagnostics).Required);
-            var required = await Assert.ThrowsAsync<StartupException>(() => ApplicationBoot.BootGenericAsync(path, resolver,
-                required: new HashSet<string> { "webserver" }));
+            var required = await Assert.ThrowsAsync<StartupException>(() => ApplicationBoot.BootGenericAsync(
+                path,
+                resolver,
+                required: new HashSet<string>
+                {
+                    "webserver"
+                }));
             Assert.Equal(FiberState.Pending, Assert.Single(required.Diagnostics).State);
             Assert.Null(required.InnerException);
         }
-        finally { File.Delete(path); }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]
@@ -53,17 +80,34 @@ public sealed class AuthoringBootTests
         try
         {
             await File.WriteAllTextAsync(path, "- id: application\n  name: rejected\n");
-            var resolver = new StaticModuleResolver().Register("rejected", new Plugin<object?> { Apply = (_, _) => throw failure });
-            var error = await Assert.ThrowsAsync<StartupException>(() => ApplicationBoot.BootGenericAsync(path, resolver,
-                prepare: ctx => { ctx.Effect(() => (Action)(() => cleaned = true)); return Task.CompletedTask; },
-                required: new HashSet<string> { "application" }));
+            var resolver = new StaticModuleResolver().Register(
+                "rejected",
+                new Plugin<object?>
+                {
+                    Apply = (_, _) => throw failure
+                });
+            var error = await Assert.ThrowsAsync<StartupException>(() => ApplicationBoot.BootGenericAsync(
+                path,
+                resolver,
+                prepare: ctx =>
+                {
+                    ctx.Effect(() => (Action)(() => cleaned = true));
+                    return Task.CompletedTask;
+                },
+                required: new HashSet<string>
+                {
+                    "application"
+                }));
             Assert.True(cleaned);
             Assert.Equal(path, error.ConfigurationPath);
             Assert.Same(failure, Assert.Single(error.Diagnostics).Error);
             Assert.Contains(failure, Assert.IsType<AggregateException>(error.InnerException).InnerExceptions);
             Assert.Contains(failure, error.StartupMessages);
         }
-        finally { File.Delete(path); }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]
@@ -73,10 +117,19 @@ public sealed class AuthoringBootTests
         try
         {
             await File.WriteAllTextAsync(path, "[]\n");
-            await using var generic = await ApplicationBoot.BootGenericAsync(path, new StaticModuleResolver(), required: new HashSet<string> { "not-installed" });
+            await using var generic = await ApplicationBoot.BootGenericAsync(
+                path,
+                new StaticModuleResolver(),
+                required: new HashSet<string>
+                {
+                    "not-installed"
+                });
             await using var dsh = await ApplicationBoot.BootAsync(path, new StaticModuleResolver());
         }
-        finally { File.Delete(path); }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]
@@ -88,13 +141,41 @@ public sealed class AuthoringBootTests
         var reject = true;
         try
         {
-            await File.WriteAllTextAsync(path, "- id: import\n  name: absent\n- id: config\n  name: config\n- id: apply\n  name: apply\n");
+            await File.WriteAllTextAsync(
+                path,
+                "- id: import\n  name: absent\n- id: config\n  name: config\n- id: apply\n  name: apply\n");
             var resolver = new StaticModuleResolver()
-                .Register("config", new Plugin<object?> { Config = raw => reject ? throw configuration : ConfigResult<object?>.Success(raw), Apply = (_, _) => { } })
-                .Register("apply", new Plugin<object?> { Apply = (_, _) => { if (reject) throw apply; } });
-            await using var context = await ApplicationBoot.BootGenericAsync(path, resolver, warn: _ => { });
+                .Register(
+                    "config",
+                    new Plugin<object?>
+                    {
+                        Config = raw => reject ? throw configuration : ConfigResult<object?>.Success(raw),
+                        Apply = (_, _) =>
+                        {
+                        }
+                    })
+                .Register(
+                    "apply",
+                    new Plugin<object?>
+                    {
+                        Apply = (_, _) =>
+                        {
+                            if (reject)
+                                throw apply;
+                        }
+                    });
+            await using var context = await ApplicationBoot.BootGenericAsync(
+                path,
+                resolver,
+                warn: _ =>
+                {
+                });
             Loader loader = null!;
-            await context.RunAsync(ctx => { loader = ctx.Get<Loader>("loader")!; return Task.CompletedTask; });
+            await context.RunAsync(ctx =>
+            {
+                loader = ctx.Get<Loader>("loader")!;
+                return Task.CompletedTask;
+            });
             var diagnostics = await ApplicationBoot.AuditAsync(loader);
             var imported = Assert.Single(diagnostics, d => d.Id == "root:import");
             Assert.Equal("module resolution", imported.Phase);
@@ -113,15 +194,24 @@ public sealed class AuthoringBootTests
             Assert.Null(loader.Resolve("root:apply").Fiber!.FailurePhase);
             Assert.Equal("root:import", Assert.Single(await ApplicationBoot.AuditAsync(loader)).Id);
         }
-        finally { File.Delete(path); }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]
     public void SnapshotCopiesErrorEvidenceAndDependencyNamesWithoutKeepingException()
     {
-        var missing = new List<string> { "dependency" };
+        var missing = new List<string>
+        {
+            "dependency"
+        };
         var error = new InvalidOperationException("outer evidence", new ArgumentException("inner evidence"));
-        var original = new EntryDiagnostic("root:probe", "probe-module", FiberState.Failed, error, missing, true) { Phase = "known stage" };
+        var original = new EntryDiagnostic("root:probe", "probe-module", FiberState.Failed, error, missing, true)
+        {
+            Phase = "known stage"
+        };
         var snapshot = original.ToSnapshot();
         missing.Clear();
         Assert.Equal(original.Id, snapshot.Id);
@@ -134,7 +224,12 @@ public sealed class AuthoringBootTests
         Assert.Contains("inner evidence", snapshot.Error);
         Assert.Same(error, original.Error);
         Assert.Throws<NotSupportedException>(() => ((IList<string>)snapshot.Missing).Add("changed"));
-        Assert.Null((original with { Error = null }).ToSnapshot().Error);
+        Assert.Null(
+            (original with
+            {
+                Error = null
+            }).ToSnapshot()
+            .Error);
     }
 
     [Fact]
@@ -147,15 +242,19 @@ public sealed class AuthoringBootTests
             var deployed = Path.Combine(directory, "deployed.dll");
             File.Copy(typeof(AuthoringBootTests).Assembly.Location, deployed);
             var weak = ReadDeployedResource(deployed);
-            for (var attempt = 0; attempt < 10 && weak.IsAlive; attempt++)
+            for (var attempt = 0;attempt < 10 && weak.IsAlive;attempt++)
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
             }
+
             Assert.False(weak.IsAlive);
         }
-        finally { Directory.Delete(directory, true); }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -178,14 +277,18 @@ public sealed class AuthoringBootTests
         var config = Assert.IsAssignableFrom<IDictionary<string, object?>>(row.Config);
         Assert.Equal("patched", config["value"]);
         Assert.False(config.ContainsKey("expression")); // Existing patch semantics replace the config value.
-        Assert.Equal("json-probe", Assert.Single(EntryPatches.Apply([], PatchResources.Read(assembly, "Authoring.patch.json", json: true))).Id);
+        Assert.Equal(
+            "json-probe",
+            Assert.Single(EntryPatches.Apply([], PatchResources.Read(assembly, "Authoring.patch.json", json: true)))
+                .Id);
         var missing = Assert.Throws<FileNotFoundException>(() => PatchResources.Read(assembly, "absent.yml"));
         Assert.Contains("absent.yml", missing.Message);
         Assert.Contains(assembly.GetName().Name!, missing.Message);
         var malformed = Assert.Throws<FormatException>(() => PatchResources.Read(assembly, "Authoring.invalid.yml"));
         Assert.Contains("Authoring.invalid.yml", malformed.Message);
         Assert.NotNull(malformed.InnerException);
-        var syntax = Assert.Throws<FormatException>(() => PatchResources.Read(assembly, "Authoring.patch.yml", json: true));
+        var syntax =
+            Assert.Throws<FormatException>(() => PatchResources.Read(assembly, "Authoring.patch.yml", json: true));
         Assert.IsAssignableFrom<System.Text.Json.JsonException>(syntax.InnerException);
         var weak = new WeakReference(loadContext);
         loadContext.Unload();

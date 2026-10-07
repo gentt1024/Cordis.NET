@@ -15,14 +15,17 @@ public enum LogLevel
     /// Gets the error value.
     /// </summary>
     Error = 0,
+
     /// <summary>
     /// Gets the info value.
     /// </summary>
     Info = 1,
+
     /// <summary>
     /// Gets the warn value.
     /// </summary>
     Warn = 2,
+
     /// <summary>
     /// Gets the debug value.
     /// </summary>
@@ -38,7 +41,14 @@ public enum LogLevel
 /// <param name="Level">The level value.</param>
 /// <param name="Arguments">The arguments value.</param>
 /// <param name="Fiber">The fiber value.</param>
-public sealed record LogMessage(long Sequence, DateTimeOffset Timestamp, string Name, LogLevel Level, object?[] Arguments, WeakReference<Fiber> Fiber);
+public sealed record LogMessage(
+    long Sequence,
+    DateTimeOffset Timestamp,
+    string Name,
+    LogLevel Level,
+    object?[] Arguments,
+    WeakReference<Fiber> Fiber);
+
 /// <summary>
 /// Represents the i log exporter component.
 /// </summary>
@@ -88,12 +98,14 @@ public sealed class LoggerService(Context context)
     /// Gets the buffer value.
     /// </summary>
     public IReadOnlyList<LogMessage> Buffer => context._runtime.LogBuffer;
+
     /// <summary>
     /// Gets the buffer size value.
     /// </summary>
     public int BufferSize
     {
-        get => context._runtime.BufferSize; set => context._runtime.BufferSize = value;
+        get => context._runtime.BufferSize;
+        set => context._runtime.BufferSize = value;
     }
 
     /// <summary>Register a host-owned observer. Dispose it explicitly after the teardown it observes.</summary>
@@ -112,12 +124,16 @@ public sealed class LoggerService(Context context)
     /// <summary>
     /// Performs the exporter operation.
     /// </summary>
-    public EffectHandle Exporter(ILogExporter exporter) => context.Effect(() =>
-    {
-        long id = ++context._runtime.ExporterCounter;
-        context._runtime.Exporters.Add(id, exporter);
-        return (Action)(() => context._runtime.Exporters.Remove(id));
-    }, "ctx.logger.exporter()");
+    public EffectHandle Exporter(ILogExporter exporter) =>
+        context.Effect(
+            () =>
+            {
+                long id = ++context._runtime.ExporterCounter;
+                context._runtime.Exporters.Add(id, exporter);
+                return (Action)(() => context._runtime.Exporters.Remove(id));
+            },
+            "ctx.logger.exporter()");
+
     /// <summary>
     /// Creates the requested value.
     /// </summary>
@@ -136,21 +152,30 @@ public sealed class LoggerService(Context context)
             }
         }
 
-        return new Logger(context, name ?? interceptedName ?? Regex.Replace((context.ShadowProvider ?? context).Fiber.Name, "([a-z0-9])([A-Z])", "$1-$2").ToLowerInvariant(), level);
+        return new Logger(
+            context,
+            name ?? interceptedName ??
+            Regex
+                .Replace((context.ShadowProvider ?? context).Fiber.Name, "([a-z0-9])([A-Z])", "$1-$2")
+                .ToLowerInvariant(),
+            level);
     }
 
     /// <summary>
     /// Performs the error operation.
     /// </summary>
     public void Error(params object?[] args) => Create().Error(args);
+
     /// <summary>
     /// Performs the info operation.
     /// </summary>
     public void Info(params object?[] args) => Create().Info(args);
+
     /// <summary>
     /// Performs the warn operation.
     /// </summary>
     public void Warn(params object?[] args) => Create().Warn(args);
+
     /// <summary>
     /// Performs the debug operation.
     /// </summary>
@@ -168,24 +193,31 @@ public sealed class Logger(Context context, string name, int? level = null)
     /// <summary>
     /// Gets the name value.
     /// </summary>
-    public string Name { get; } = name;
+    public string Name
+    {
+        get;
+    } = name;
 
     /// <summary>
     /// Performs the error operation.
     /// </summary>
     public void Error(params object?[] args) => Write(LogLevel.Error, args);
+
     /// <summary>
     /// Performs the info operation.
     /// </summary>
     public void Info(params object?[] args) => Write(LogLevel.Info, args);
+
     /// <summary>
     /// Performs the warn operation.
     /// </summary>
     public void Warn(params object?[] args) => Write(LogLevel.Warn, args);
+
     /// <summary>
     /// Performs the debug operation.
     /// </summary>
     public void Debug(params object?[] args) => Write(LogLevel.Debug, args);
+
     /// <summary>
     /// Performs the write operation.
     /// </summary>
@@ -202,7 +234,13 @@ public sealed class Logger(Context context, string name, int? level = null)
         if (args.Length == 1 && args[0] is Exception { InnerException: { } inner })
             Write(severity, inner);
         var runtime = context._runtime;
-        var message = new LogMessage(++runtime.MessageCounter, DateTimeOffset.UtcNow, Name, severity, args, new((context.ShadowProvider ?? context).Fiber));
+        var message = new LogMessage(
+            ++runtime.MessageCounter,
+            DateTimeOffset.UtcNow,
+            Name,
+            severity,
+            args,
+            new((context.ShadowProvider ?? context).Fiber));
         if ((level ?? 1) >= (int)severity)
         {
             runtime.LogBuffer.Add(message);
@@ -212,7 +250,11 @@ public sealed class Logger(Context context, string name, int? level = null)
 
         foreach (var exporter in runtime.Exporters.Values.ToArray())
         {
-            int threshold = exporter.Levels is { } levels && levels.TryGetValue(Name, out var namedLevel) ? namedLevel : exporter.Levels is { } defaults && defaults.TryGetValue("default", out var defaultLevel) ? defaultLevel : level ?? exporter.Level;
+            int threshold = exporter.Levels is { } levels && levels.TryGetValue(Name, out var namedLevel)
+                ? namedLevel
+                : exporter.Levels is { } defaults && defaults.TryGetValue("default", out var defaultLevel)
+                    ? defaultLevel
+                    : level ?? exporter.Level;
             if (threshold >= (int)severity)
                 exporter.Export(message);
         }
@@ -221,7 +263,10 @@ public sealed class Logger(Context context, string name, int? level = null)
     /// <summary>
     /// Performs the format operation.
     /// </summary>
-    public static string Format(LogMessage message, int maxLength = 10240, IReadOnlyDictionary<char, Func<object?, string>>? formatters = null)
+    public static string Format(
+        LogMessage message,
+        int maxLength = 10240,
+        IReadOnlyDictionary<char, Func<object?, string>>? formatters = null)
     {
         var args = new Queue<object?>(message.Arguments);
         object? first = args.Count == 0 ? "" : args.Dequeue();
@@ -231,39 +276,54 @@ public sealed class Logger(Context context, string name, int? level = null)
             Exception error => error.ToString(),
             _ => FormatData(first)
         };
-        format = Regex.Replace(format, "%([a-zA-Z%])", match =>
-        {
-            char token = match.Value[1];
-            if (token == '%')
-                return "%";
-            if (token is not ('s' or 'd' or 'i' or 'f' or 'o' or 'O' or 'c' or 'C') && formatters?.ContainsKey(token) != true)
-                return match.Value;
-            var value = args.Count == 0 ? Undefined.Value : args.Dequeue();
-            if (formatters?.TryGetValue(token, out var custom) == true)
-                return custom(value);
-            return token switch
+        format = Regex.Replace(
+            format,
+            "%([a-zA-Z%])",
+            match =>
             {
-                'c' => "",
-                'd' or 'i' => Math.Truncate(Number(value)).ToString(CultureInfo.InvariantCulture),
-                'f' => Number(value).ToString(CultureInfo.InvariantCulture),
-                'o' or 'O' => FormatData(value),
-                _ => value?.ToString() ?? "null",
-            };
-        });
+                char token = match.Value[1];
+                if (token == '%')
+                    return "%";
+                if (token is not ('s' or 'd' or 'i' or 'f' or 'o' or 'O' or 'c' or 'C') &&
+                    formatters?.ContainsKey(token) != true)
+                    return match.Value;
+                var value = args.Count == 0 ? Undefined.Value : args.Dequeue();
+                if (formatters?.TryGetValue(token, out var custom) == true)
+                    return custom(value);
+                return token switch
+                {
+                    'c' => "",
+                    'd' or 'i' => Math.Truncate(Number(value)).ToString(CultureInfo.InvariantCulture),
+                    'f' => Number(value).ToString(CultureInfo.InvariantCulture),
+                    'o' or 'O' => FormatData(value),
+                    _ => value?.ToString() ?? "null",
+                };
+            });
         foreach (var value in args)
-            format += " " + (value is not null && value is not string && value is not ValueType ? FormatData(value) : value?.ToString() ?? "null");
-        return string.Join('\n', format.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').Select(line => line.Length <= maxLength ? line : line[..maxLength] + "..."));
+            format += " " + (value is not null && value is not string && value is not ValueType
+                ? FormatData(value)
+                : value?.ToString() ?? "null");
+        return string.Join(
+            '\n',
+            format
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Split('\n')
+                .Select(line => line.Length <= maxLength ? line : line[..maxLength] + "..."));
     }
 
-    private static double Number(object? value) => value switch
-    {
-        null => 0,
-        Undefined => double.NaN,
-        bool flag => flag ? 1 : 0,
-        string text => text.Trim().Length == 0 ? 0 : double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) ? number : double.NaN,
-        IConvertible convertible => ConvertNumber(convertible),
-        _ => double.NaN,
-    };
+    private static double Number(object? value) =>
+        value switch
+        {
+            null => 0,
+            Undefined => double.NaN,
+            bool flag => flag ? 1 : 0,
+            string text => text.Trim().Length == 0 ? 0 :
+                double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) ? number :
+                double.NaN,
+            IConvertible convertible => ConvertNumber(convertible),
+            _ => double.NaN,
+        };
+
     private static double ConvertNumber(IConvertible value)
     {
         try
@@ -372,8 +432,10 @@ public sealed class LogSubscription : IDisposable, IAsyncDisposable
 {
     private readonly Func<Task> remove;
     internal LogSubscription(Func<Task> remove) => this.remove = remove;
+
     /// <summary>Queues removal in the execution domain; use DisposeAsync to join it from another thread.</summary>
     public void Dispose() => _ = remove();
+
     /// <summary>
     /// Releases resources used by this instance.
     /// </summary>

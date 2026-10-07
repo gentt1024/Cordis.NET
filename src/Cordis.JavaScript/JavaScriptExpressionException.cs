@@ -7,11 +7,18 @@ public sealed class JavaScriptExpressionException(string errorName, string messa
     /// <summary>
     /// Gets the error name value.
     /// </summary>
-    public string ErrorName { get; } = errorName;
+    public string ErrorName
+    {
+        get;
+    } = errorName;
+
     /// <summary>
     /// Returns a string representation of this instance.
     /// </summary>
-    public override string ToString() => Message
-        + (InnerException is null ? "" : Environment.NewLine + " ---> " + InnerException + Environment.NewLine + "   --- End of inner exception stack trace ---")
-        + (StackTrace is null ? "" : Environment.NewLine + StackTrace);
+    public override string ToString() =>
+        Message + (InnerException is null
+            ? ""
+            : Environment.NewLine + " ---> " + InnerException + Environment.NewLine +
+            "   --- End of inner exception stack trace ---") +
+        (StackTrace is null ? "" : Environment.NewLine + StackTrace);
 }

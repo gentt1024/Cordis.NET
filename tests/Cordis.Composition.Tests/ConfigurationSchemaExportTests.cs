@@ -14,7 +14,9 @@ public sealed class ConfigurationSchemaExportTests
     {
         var descriptor = kind switch
         {
-            "tuple" => ConfigDescriptor.Tuple(), "union" => ConfigDescriptor.Union(), _ => ConfigDescriptor.Intersect(),
+            "tuple" => ConfigDescriptor.Tuple(),
+            "union" => ConfigDescriptor.Union(),
+            _ => ConfigDescriptor.Intersect(),
         };
         using var envelope = JsonDocument.Parse(ConfigurationSchemaExporter.ToSchemastery(descriptor).Document);
         Assert.Empty(envelope.RootElement.GetProperty("refs").GetProperty("0").GetProperty("list").EnumerateArray());
@@ -30,7 +32,8 @@ public sealed class ConfigurationSchemaExportTests
     [Fact]
     public void Tuple_projection_leaves_tail_items_open_like_the_fixed_non_strict_consumer()
     {
-        using var document = JsonDocument.Parse(ConfigurationSchemaExporter.ToJsonSchema(ConfigDescriptor.Tuple(ConfigDescriptor.Number())).Document);
+        using var document = JsonDocument.Parse(
+            ConfigurationSchemaExporter.ToJsonSchema(ConfigDescriptor.Tuple(ConfigDescriptor.Number())).Document);
         var schema = document.RootElement.GetProperty("$defs").GetProperty("node0");
         Assert.Single(schema.GetProperty("prefixItems").EnumerateArray());
         Assert.Equal(1, schema.GetProperty("minItems").GetInt32());
@@ -41,7 +44,9 @@ public sealed class ConfigurationSchemaExportTests
     public void Separate_exports_preserve_shared_declarations_and_state_runtime_validation_limits()
     {
         var shared = ConfigDescriptor.String().Default("fallback");
-        var descriptor = ConfigDescriptor.Object(("first", shared), ("second", shared),
+        var descriptor = ConfigDescriptor.Object(
+            ("first", shared),
+            ("second", shared),
             ("items", ConfigDescriptor.Array(ConfigDescriptor.Number())));
         var schemastery = ConfigurationSchemaExporter.ToSchemastery(descriptor);
         using var envelope = JsonDocument.Parse(schemastery.Document);
@@ -55,33 +60,50 @@ public sealed class ConfigurationSchemaExportTests
 
         var jsonSchema = ConfigurationSchemaExporter.ToJsonSchema(descriptor);
         using var document = JsonDocument.Parse(jsonSchema.Document);
-        Assert.Equal("https://json-schema.org/draft/2020-12/schema", document.RootElement.GetProperty("$schema").GetString());
+        Assert.Equal(
+            "https://json-schema.org/draft/2020-12/schema",
+            document.RootElement.GetProperty("$schema").GetString());
         var objectSchema = document.RootElement.GetProperty("$defs").GetProperty("node0");
         Assert.Equal("object", objectSchema.GetProperty("type").GetString());
-        Assert.Equal(objectSchema.GetProperty("properties").GetProperty("first").GetProperty("$ref").GetString(),
+        Assert.Equal(
+            objectSchema.GetProperty("properties").GetProperty("first").GetProperty("$ref").GetString(),
             objectSchema.GetProperty("properties").GetProperty("second").GetProperty("$ref").GetString());
-        Assert.Equal(new[] { "items" }, objectSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(
+            new[] { "items" },
+            objectSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString()));
         Assert.False(schemastery.Complete);
         Assert.False(jsonSchema.Complete);
-        Assert.Contains(jsonSchema.Diagnostics, diagnostic => diagnostic.Contains("captured validator", StringComparison.Ordinal));
+        Assert.Contains(
+            jsonSchema.Diagnostics,
+            diagnostic => diagnostic.Contains("captured validator", StringComparison.Ordinal));
     }
 
     [Fact]
     public void Unresolved_lazy_and_non_finite_defaults_produce_diagnostics_without_running_code()
     {
         var builds = 0;
-        var descriptor = ConfigDescriptor.Object(("lazy", ConfigDescriptor.Lazy(() =>
-        {
-            builds++;
-            throw new InvalidOperationException("Export must not execute plugin builders.");
-        })), ("nonFinite", ConfigDescriptor.Number().Default(double.NaN)));
-        foreach (var exported in new[] { ConfigurationSchemaExporter.ToSchemastery(descriptor), ConfigurationSchemaExporter.ToJsonSchema(descriptor) })
+        var descriptor = ConfigDescriptor.Object(
+            ("lazy", ConfigDescriptor.Lazy(() =>
+            {
+                builds++;
+                throw new InvalidOperationException("Export must not execute plugin builders.");
+            })),
+            ("nonFinite", ConfigDescriptor.Number().Default(double.NaN)));
+        foreach (var exported in new[]
+                 {
+                     ConfigurationSchemaExporter.ToSchemastery(descriptor),
+                     ConfigurationSchemaExporter.ToJsonSchema(descriptor)
+                 })
         {
             using var document = JsonDocument.Parse(exported.Document);
             Assert.Contains(exported.Diagnostics, diagnostic => diagnostic.Contains("lazy", StringComparison.Ordinal));
-            Assert.Contains(exported.Diagnostics, diagnostic => diagnostic.Contains("default", StringComparison.Ordinal) && diagnostic.Contains("omitted", StringComparison.Ordinal));
+            Assert.Contains(
+                exported.Diagnostics,
+                diagnostic => diagnostic.Contains("default", StringComparison.Ordinal) &&
+                    diagnostic.Contains("omitted", StringComparison.Ordinal));
             Assert.False(exported.Complete);
         }
+
         Assert.Equal(0, builds);
     }
 
@@ -90,15 +112,34 @@ public sealed class ConfigurationSchemaExportTests
     {
         var calls = 0;
         ConfigDescriptor? tree = null;
-        tree = ConfigDescriptor.Object(("value", ConfigDescriptor.String()),
-            ("next", ConfigDescriptor.Lazy(() => { calls++; return tree!; }).Optional()));
+        tree = ConfigDescriptor.Object(
+            ("value", ConfigDescriptor.String()),
+            ("next", ConfigDescriptor
+                .Lazy(() =>
+                {
+                    calls++;
+                    return tree!;
+                })
+                .Optional()));
         await using var context = new Context();
         await context.RunAsync(async owner =>
         {
-            var fiber = owner.Plugin(new Plugin<object?>
-            {
-                Configuration = new(raw => ConfigResult<object?>.Success(raw), tree), Apply = (_, _) => { },
-            }, new Dictionary<string, object?> { ["value"] = "first", ["next"] = new Dictionary<string, object?> { ["value"] = "last" } });
+            var fiber = owner.Plugin(
+                new Plugin<object?>
+                {
+                    Configuration = new(raw => ConfigResult<object?>.Success(raw), tree),
+                    Apply = (_, _) =>
+                    {
+                    },
+                },
+                new Dictionary<string, object?>
+                {
+                    ["value"] = "first",
+                    ["next"] = new Dictionary<string, object?>
+                    {
+                        ["value"] = "last"
+                    }
+                });
             await fiber.WaitAsync();
             var before = calls;
             var schemastery = ConfigurationSchemaExporter.ToSchemastery(fiber.ConfigDescription!);
@@ -106,7 +147,9 @@ public sealed class ConfigurationSchemaExportTests
             using var envelope = JsonDocument.Parse(schemastery.Document);
             Assert.Equal(3, envelope.RootElement.GetProperty("refs").EnumerateObject().Count());
             using var schema = JsonDocument.Parse(jsonSchema.Document);
-            Assert.Equal("#/$defs/node0", schema.RootElement.GetProperty("$defs").GetProperty("node2").GetProperty("$ref").GetString());
+            Assert.Equal(
+                "#/$defs/node0",
+                schema.RootElement.GetProperty("$defs").GetProperty("node2").GetProperty("$ref").GetString());
             Assert.Equal(before, calls);
         });
     }

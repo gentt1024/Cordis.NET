@@ -15,13 +15,19 @@ internal sealed class ApplicationShutdown : IDisposable
     {
         lock (gate)
         {
-            if (disposed || request.Task.IsCompleted) return;
+            if (disposed || request.Task.IsCompleted)
+                return;
             exitCode = code;
-            deadline = new Timer(_ =>
-            {
-                Console.Error.WriteLine("Application shutdown exceeded its five-second grace; forcing process exit.");
-                Environment.Exit(Volatile.Read(ref exitCode));
-            }, null, TimeSpan.FromSeconds(5), Timeout.InfiniteTimeSpan);
+            deadline = new Timer(
+                _ =>
+                {
+                    Console.Error.WriteLine(
+                        "Application shutdown exceeded its five-second grace; forcing process exit.");
+                    Environment.Exit(Volatile.Read(ref exitCode));
+                },
+                null,
+                TimeSpan.FromSeconds(5),
+                Timeout.InfiniteTimeSpan);
             request.TrySetResult(code);
         }
     }

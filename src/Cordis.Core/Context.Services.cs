@@ -4,21 +4,25 @@ public sealed partial class Context
 {
     internal Context? ShadowProvider
     {
-        get; set;
+        get;
+        set;
     }
 
     /// <summary>
     /// Returns a string representation of this instance.
     /// </summary>
     public override string ToString() => $"Context <{Fiber.Name}>";
+
     /// <summary>
     /// Determines whether is.
     /// </summary>
     public static bool Is(object? value) => value is Context;
+
     private string? _baseUrl;
     private bool _hasBaseUrl;
     private Func<Context, bool>? _filter;
     private bool _hasFilter;
+
     /// <summary>
     /// Gets the base url value.
     /// </summary>
@@ -48,19 +52,26 @@ public sealed partial class Context
     /// <summary>
     /// Gets the metadata value.
     /// </summary>
-    public IDictionary<string, object?> Metadata { get; } = new Dictionary<string, object?>();
+    public IDictionary<string, object?> Metadata
+    {
+        get;
+    } = new Dictionary<string, object?>();
+
     /// <summary>
     /// Gets the registry value.
     /// </summary>
     public RegistryService Registry => new(this);
+
     /// <summary>
     /// Gets the reflect value.
     /// </summary>
     public ReflectService Reflect => new(this);
+
     /// <summary>
     /// Gets the events value.
     /// </summary>
     public EventsService Events => new(this);
+
     /// <summary>
     /// Gets the logger value.
     /// </summary>
@@ -70,6 +81,7 @@ public sealed partial class Context
     /// Creates the requested value.
     /// </summary>
     public Context Extend() => new(_runtime, this, Fiber);
+
     /// <summary>
     /// Determines whether isolate.
     /// </summary>
@@ -103,7 +115,7 @@ public sealed partial class Context
         VerifyAccess();
         if (!ReferenceEquals(parent.Root, Root))
             throw new ArgumentException("Contexts must share a root.", nameof(parent));
-        for (var ancestor = parent; ancestor is not null; ancestor = ancestor._scopeParent)
+        for (var ancestor = parent;ancestor is not null;ancestor = ancestor._scopeParent)
             if (ReferenceEquals(ancestor, this))
                 throw new ArgumentException("Context ancestry cannot contain a cycle.", nameof(parent));
         RebindRealms(() => _scopeParent = parent);
@@ -136,7 +148,8 @@ public sealed partial class Context
             if (!_runtime.Services.TryGetValue(realm, out var existing))
                 _runtime.Services.Add(realm, pair.Value);
             else if (!ReferenceEquals(existing, pair.Value))
-                throw new InvalidOperationException($"Service '{pair.Value.Name}' is already registered in the destination realm.");
+                throw new InvalidOperationException(
+                    $"Service '{pair.Value.Name}' is already registered in the destination realm.");
         }
 
         foreach (var fiber in _runtime.Plugins.Values.SelectMany(p => p.Fibers).ToArray())
@@ -157,8 +170,13 @@ public sealed partial class Context
     /// <summary>
     /// Finds metadata.
     /// </summary>
-    public object? FindMetadata(string name) => Metadata.TryGetValue(name, out var value) ? value : _scopeParent?.FindMetadata(name);
-    internal object Realm(string name) => _realms.TryGetValue(name, out var label) ? label : _scopeParent is not null ? _scopeParent.Realm(name) : _realms[name] = new object();
+    public object? FindMetadata(string name) =>
+        Metadata.TryGetValue(name, out var value) ? value : _scopeParent?.FindMetadata(name);
+
+    internal object Realm(string name) =>
+        _realms.TryGetValue(name, out var label) ? label :
+        _scopeParent is not null ? _scopeParent.Realm(name) : _realms[name] = new object();
+
     /// <summary>
     /// Intercepts s.
     /// </summary>
@@ -172,6 +190,7 @@ public sealed partial class Context
     }
 
     internal void AddIntercept(string name, object? config) => _intercepts[name] = config;
+
     /// <summary>
     /// Performs the plugin operation.
     /// </summary>
@@ -180,53 +199,87 @@ public sealed partial class Context
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(plugin);
         var captured = (plugin as IConfigurationPlugin)?.CaptureConfiguration();
-        return _runtime.Register(this, new PluginDefinition(plugin.Identity, plugin.Name, plugin.Dependencies, captured?.Validate ?? plugin.ResolveConfig, plugin.ApplyAsync, captured?.Schema), configuration);
+        return _runtime.Register(
+            this,
+            new PluginDefinition(
+                plugin.Identity,
+                plugin.Name,
+                plugin.Dependencies,
+                captured?.Validate ?? plugin.ResolveConfig,
+                plugin.ApplyAsync,
+                captured?.Schema),
+            configuration);
     }
 
     /// <summary>
     /// Injects the requested value.
     /// </summary>
-    public Fiber Inject(IReadOnlyDictionary<string, object?> dependencies, Action<Context> callback) => Plugin(new Plugin<object?> { InjectConfig = dependencies, Apply = (ctx, _) => callback(ctx) });
+    public Fiber Inject(IReadOnlyDictionary<string, object?> dependencies, Action<Context> callback) =>
+        Plugin(
+            new Plugin<object?>
+            {
+                InjectConfig = dependencies,
+                Apply = (ctx, _) => callback(ctx)
+            });
+
     /// <summary>
     /// Injects the requested value.
     /// </summary>
-    public Fiber Inject(IReadOnlyDictionary<string, object?> dependencies, Func<Context, Task> callback) => Plugin(new Plugin<object?> { InjectConfig = dependencies, ApplyAsync = (ctx, _) => callback(ctx) });
+    public Fiber Inject(IReadOnlyDictionary<string, object?> dependencies, Func<Context, Task> callback) =>
+        Plugin(
+            new Plugin<object?>
+            {
+                InjectConfig = dependencies,
+                ApplyAsync = (ctx, _) => callback(ctx)
+            });
+
     /// <summary>
     /// Gets the requested value.
     /// </summary>
     public object? Get(string name, bool strict = true) => Reflect.Get(name, strict);
+
     /// <summary>
     /// Sets the requested value.
     /// </summary>
     public void Set(string name, object? value) => Reflect.Set(name, value);
+
     /// <summary>
     /// Performs the on operation.
     /// </summary>
-    public EffectHandle On(string name, CordisEventHandler callback, EventOptions? options = null) => Events.On(name, callback, options);
+    public EffectHandle On(string name, CordisEventHandler callback, EventOptions? options = null) =>
+        Events.On(name, callback, options);
+
     /// <summary>
     /// Performs the once operation.
     /// </summary>
-    public EffectHandle Once(string name, CordisEventHandler callback, EventOptions? options = null) => Events.Once(name, callback, options);
+    public EffectHandle Once(string name, CordisEventHandler callback, EventOptions? options = null) =>
+        Events.Once(name, callback, options);
+
     /// <summary>
     /// Emits the requested value.
     /// </summary>
     public void Emit(string name, params object?[] args) => Events.Emit(name, args);
+
     /// <summary>
     /// Performs the parallel async operation.
     /// </summary>
     public Task ParallelAsync(string name, params object?[] args) => Events.ParallelAsync(name, args);
+
     /// <summary>
     /// Performs the serial async operation.
     /// </summary>
     public Task<object?> SerialAsync(string name, params object?[] args) => Events.SerialAsync(name, args);
+
     /// <summary>
     /// Performs the bail operation.
     /// </summary>
     public object? Bail(string name, params object?[] args) => Events.Bail(name, args);
+
     /// <summary>
     /// Performs the waterfall operation.
     /// </summary>
-    public object? Waterfall(string name, Func<object?> next, params object?[] args) => Events.Waterfall(name, next, args);
+    public object? Waterfall(string name, Func<object?> next, params object?[] args) =>
+        Events.Waterfall(name, next, args);
 }
 
 /// <summary>Registry identity is the entry callback, never the display name.</summary>
@@ -236,6 +289,7 @@ public sealed class RegistryService(Context context)
     /// Gets the count value.
     /// </summary>
     public int Count => context._runtime.Plugins.Count;
+
     /// <summary>
     /// Gets the values value.
     /// </summary>
@@ -245,10 +299,12 @@ public sealed class RegistryService(Context context)
     /// Gets the requested value.
     /// </summary>
     public PluginRuntime? Get(IPlugin plugin) => context._runtime.Plugins.GetValueOrDefault(plugin.Identity);
+
     /// <summary>
     /// Determines whether has.
     /// </summary>
     public bool Has(IPlugin plugin) => Get(plugin) is not null;
+
     /// <summary>
     /// Deletes async.
     /// </summary>
@@ -273,19 +329,27 @@ public sealed class RegistryService(Context context)
 public sealed class PluginRuntime
 {
     internal PluginRuntime(PluginDefinition definition) => Definition = definition;
+
     internal PluginDefinition Definition
     {
         get;
     }
-    internal List<Fiber> MutableFibers { get; } = [];
+
+    internal List<Fiber> MutableFibers
+    {
+        get;
+    } = [];
+
     /// <summary>
     /// Gets the name value.
     /// </summary>
     public string? Name => Definition.Name;
+
     /// <summary>
     /// Gets the identity value.
     /// </summary>
     public object Identity => Definition.Identity;
+
     /// <summary>
     /// Gets the fibers value.
     /// </summary>

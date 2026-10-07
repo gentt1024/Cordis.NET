@@ -16,31 +16,45 @@ public sealed record DevelopmentBuildLine(string Text, bool StandardError);
 public static class DevelopmentBuildProcess
 {
     /// <summary>Run until exit or cancellation, consuming complete stdout/stderr lines without mixing streams.</summary>
-    public static async Task RunAsync(string command, IReadOnlyList<string> arguments, string directory,
-        string runRecord, Func<DevelopmentBuildLine, Task> consume, CancellationToken cancellationToken = default)
+    public static async Task RunAsync(
+        string command,
+        IReadOnlyList<string> arguments,
+        string directory,
+        string runRecord,
+        Func<DevelopmentBuildLine, Task> consume,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(consume);
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var lines = Channel.CreateBounded<DevelopmentBuildLine>(new BoundedChannelOptions(64)
-        { SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
+        var lines = Channel.CreateBounded<DevelopmentBuildLine>(
+            new BoundedChannelOptions(64)
+            {
+                SingleReader = true,
+                FullMode = BoundedChannelFullMode.Wait
+            });
         var buffers = new[] { new StringBuilder(), new StringBuilder() };
         var gate = new object();
         Exception? outputFailure = null;
+
         void Fail(Exception error)
         {
-            lock (gate) outputFailure ??= error;
+            lock (gate)
+                outputFailure ??= error;
             stop.Cancel();
         }
+
         void Emit(string text, bool standardError)
         {
             if (!lines.Writer.TryWrite(new(text, standardError)))
                 Fail(new IOException("Development output exceeded the bounded consumer queue."));
         }
+
         void Accumulate(string chunk, bool standardError)
         {
             lock (gate)
             {
-                if (outputFailure is not null) return;
+                if (outputFailure is not null)
+                    return;
                 var buffer = buffers[standardError ? 1 : 0];
                 foreach (var character in chunk)
                 {
@@ -53,6 +67,7 @@ public static class DevelopmentBuildProcess
                     {
                         buffer.Append(character);
                     }
+
                     if (buffer.Length > 65536)
                     {
                         Fail(new IOException("Development output line exceeded 64 KiB."));
@@ -61,6 +76,7 @@ public static class DevelopmentBuildProcess
                 }
             }
         }
+
         async Task ConsumeAsync()
         {
             try
@@ -68,28 +84,52 @@ public static class DevelopmentBuildProcess
                 await foreach (var line in lines.Reader.ReadAllAsync())
                     await consume(line);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { stop.Cancel(); }
-            catch (Exception error) { Fail(error); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                stop.Cancel();
+            }
+            catch (Exception error)
+            {
+                Fail(error);
+            }
         }
+
         var consumption = ConsumeAsync();
         Exception? processFailure = null;
         try
         {
-            await DotnetPackageProcess.RunAsync(command, arguments, directory, runRecord, _ => { },
-                Timeout.InfiniteTimeSpan, stop.Token, Accumulate);
+            await DotnetPackageProcess.RunAsync(
+                command,
+                arguments,
+                directory,
+                runRecord,
+                _ =>
+                {
+                },
+                Timeout.InfiniteTimeSpan,
+                stop.Token,
+                Accumulate);
         }
-        catch (Exception error) { processFailure = error; }
+        catch (Exception error)
+        {
+            processFailure = error;
+        }
         finally
         {
             lock (gate)
-                for (var index = 0; index < buffers.Length; index++)
-                    if (buffers[index].Length > 0 && outputFailure is null) Emit(buffers[index].ToString(), index == 1);
+                for (var index = 0;index < buffers.Length;index++)
+                    if (buffers[index].Length > 0 && outputFailure is null)
+                        Emit(buffers[index].ToString(), index == 1);
             lines.Writer.TryComplete();
         }
+
         await consumption;
-        if (outputFailure is not null) throw new IOException("Development compiler output was not consumed; no completion is implied.",
-            processFailure is null ? outputFailure : new AggregateException(outputFailure, processFailure));
-        if (processFailure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(processFailure).Throw();
+        if (outputFailure is not null)
+            throw new IOException(
+                "Development compiler output was not consumed; no completion is implied.",
+                processFailure is null ? outputFailure : new AggregateException(outputFailure, processFailure));
+        if (processFailure is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(processFailure).Throw();
         cancellationToken.ThrowIfCancellationRequested();
     }
 }

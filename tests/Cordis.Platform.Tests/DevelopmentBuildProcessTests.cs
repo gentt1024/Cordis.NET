@@ -17,12 +17,20 @@ public sealed class DevelopmentBuildProcessTests
                 ? ["/d", "/c", "echo ready & ping -n 1000 127.0.0.1 >nul"]
                 : ["-c", "printf 'ready\\n'; sleep 1000"];
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-            var error = await Assert.ThrowsAsync<IOException>(() => DevelopmentBuildProcess.RunAsync(command,
-                arguments, directory, record, _ => throw new InvalidDataException("Output consumer rejected the completed line."), deadline.Token));
+            var error = await Assert.ThrowsAsync<IOException>(() => DevelopmentBuildProcess.RunAsync(
+                command,
+                arguments,
+                directory,
+                record,
+                _ => throw new InvalidDataException("Output consumer rejected the completed line."),
+                deadline.Token));
             Assert.Contains("Output consumer rejected", error.ToString());
             // The existing owner only releases this record after process-tree exit and pipe settlement.
             Assert.False(File.Exists(record));
         }
-        finally { Directory.Delete(directory, true); }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
     }
 }

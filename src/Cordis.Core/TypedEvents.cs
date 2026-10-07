@@ -15,14 +15,20 @@ public sealed class EventKey<T>
     }
 
     /// <summary>The existing event table key; two keys with this name share listeners.</summary>
-    public string Name { get; }
+    public string Name
+    {
+        get;
+    }
 
     internal T Payload(object?[] arguments)
     {
         if (arguments.Length != 1)
-            throw new ArgumentException($"Event '{Name}' expects exactly one payload argument; received {arguments.Length}.");
-        if (arguments[0] is T value) return value;
-        if (arguments[0] is null && default(T) is null) return default!;
+            throw new ArgumentException(
+                $"Event '{Name}' expects exactly one payload argument; received {arguments.Length}.");
+        if (arguments[0] is T value)
+            return value;
+        if (arguments[0] is null && default(T) is null)
+            return default!;
         throw new ArgumentException($"Event '{Name}' payload is incompatible with {typeof(T).FullName}.");
     }
 }
@@ -42,7 +48,14 @@ public sealed partial class Context
     public EffectHandle On<T>(EventKey<T> key, Action<EventContext, T> listener, EventOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(listener);
-        return On(key, (evt, value) => { listener(evt, value); return Undefined.Value; }, options);
+        return On(
+            key,
+            (evt, value) =>
+            {
+                listener(evt, value);
+                return Undefined.Value;
+            },
+            options);
     }
 
     /// <summary>Own an asynchronous observer. Parallel/Serial await it; Emit/Bail/Waterfall
@@ -54,7 +67,10 @@ public sealed partial class Context
     }
 
     /// <summary>Own an asynchronous result listener without replacing null/false/undefined values.</summary>
-    public EffectHandle On<T>(EventKey<T> key, Func<EventContext, T, Task<object?>?> listener, EventOptions? options = null)
+    public EffectHandle On<T>(
+        EventKey<T> key,
+        Func<EventContext, T, Task<object?>?> listener,
+        EventOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(listener);
         return On(key, (evt, value) => (object?)listener(evt, value), options);
@@ -72,7 +88,14 @@ public sealed partial class Context
     public EffectHandle Once<T>(EventKey<T> key, Action<EventContext, T> listener, EventOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(listener);
-        return Once(key, (evt, value) => { listener(evt, value); return Undefined.Value; }, options);
+        return Once(
+            key,
+            (evt, value) =>
+            {
+                listener(evt, value);
+                return Undefined.Value;
+            },
+            options);
     }
 
     /// <summary>Own a one-shot async observer; awaiting is determined by the existing dispatch mode.</summary>
@@ -83,31 +106,34 @@ public sealed partial class Context
     }
 
     /// <summary>Own a one-shot async result listener, preserving raw result semantics.</summary>
-    public EffectHandle Once<T>(EventKey<T> key, Func<EventContext, T, Task<object?>?> listener, EventOptions? options = null)
+    public EffectHandle Once<T>(
+        EventKey<T> key,
+        Func<EventContext, T, Task<object?>?> listener,
+        EventOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(listener);
         return Once(key, (evt, value) => (object?)listener(evt, value), options);
     }
 
     /// <summary>Emit one payload synchronously. Receiver is separate and retains filtering/tracing.</summary>
-    public void Emit<T>(EventKey<T> key, T payload, object? receiver = null)
-        => Events.EmitWith(receiver, EventName(key), [payload]);
+    public void Emit<T>(EventKey<T> key, T payload, object? receiver = null) =>
+        Events.EmitWith(receiver, EventName(key), [payload]);
 
     /// <summary>Start listeners in dispatch order, await all, and aggregate failures as on the raw path.</summary>
-    public Task ParallelAsync<T>(EventKey<T> key, T payload, object? receiver = null)
-        => Events.ParallelWithAsync(receiver, EventName(key), [payload]);
+    public Task ParallelAsync<T>(EventKey<T> key, T payload, object? receiver = null) =>
+        Events.ParallelWithAsync(receiver, EventName(key), [payload]);
 
     /// <summary>Await listeners serially until a raw bailing result, retaining special-value distinctions.</summary>
-    public Task<object?> SerialAsync<T>(EventKey<T> key, T payload, object? receiver = null)
-        => Events.SerialWithAsync(receiver, EventName(key), [payload]);
+    public Task<object?> SerialAsync<T>(EventKey<T> key, T payload, object? receiver = null) =>
+        Events.SerialWithAsync(receiver, EventName(key), [payload]);
 
     /// <summary>Return the first raw bailing result synchronously; async listeners are not awaited.</summary>
-    public object? Bail<T>(EventKey<T> key, T payload, object? receiver = null)
-        => Events.BailWith(receiver, EventName(key), [payload]);
+    public object? Bail<T>(EventKey<T> key, T payload, object? receiver = null) =>
+        Events.BailWith(receiver, EventName(key), [payload]);
 
     /// <summary>Run explicit next/veto continuation semantics. An observer does not automatically continue.</summary>
-    public object? Waterfall<T>(EventKey<T> key, Func<object?> next, T payload, object? receiver = null)
-        => Events.WaterfallWith(receiver, EventName(key), next, [payload]);
+    public object? Waterfall<T>(EventKey<T> key, Func<object?> next, T payload, object? receiver = null) =>
+        Events.WaterfallWith(receiver, EventName(key), next, [payload]);
 
     private static string EventName<T>(EventKey<T> key)
     {

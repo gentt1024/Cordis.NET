@@ -4,6 +4,7 @@ namespace Cordis.Composition;
 /// <param name="Text">Display text.</param>
 /// <param name="Type">Renderer badge style.</param>
 public sealed record ConfigurationBadge(string Text, string Type);
+
 /// <summary>An ECMAScript pattern declaration; no CLR regular expression or plugin callback is retained.</summary>
 /// <param name="Source">Pattern source.</param>
 /// <param name="Flags">ECMAScript flags.</param>
@@ -15,35 +16,109 @@ public sealed record ConfigurationPattern(string Source, string Flags = "");
 public sealed record ConfigurationMetadata
 {
     /// <summary>Renderer role; secret produces write-only settings fields.</summary>
-    public string? Role { get; init; }
+    public string? Role
+    {
+        get;
+        init;
+    }
+
     /// <summary>Renderer-specific plain data.</summary>
-    public object? Extra { get; init; }
+    public object? Extra
+    {
+        get;
+        init;
+    }
+
     /// <summary>A plain description, used when localized descriptions are absent.</summary>
-    public string? Description { get; init; }
+    public string? Description
+    {
+        get;
+        init;
+    }
+
     /// <summary>Descriptions keyed by locale.</summary>
-    public IReadOnlyDictionary<string, string>? Descriptions { get; init; }
+    public IReadOnlyDictionary<string, string>? Descriptions
+    {
+        get;
+        init;
+    }
+
     /// <summary>Hide this field in application forms and settings.</summary>
-    public bool? Hidden { get; init; }
+    public bool? Hidden
+    {
+        get;
+        init;
+    }
+
     /// <summary>Disable input in a renderer.</summary>
-    public bool? Disabled { get; init; }
+    public bool? Disabled
+    {
+        get;
+        init;
+    }
+
     /// <summary>Initially collapse the renderer section.</summary>
-    public bool? Collapse { get; init; }
+    public bool? Collapse
+    {
+        get;
+        init;
+    }
+
     /// <summary>Renderer badges.</summary>
-    public IReadOnlyList<ConfigurationBadge>? Badges { get; init; }
+    public IReadOnlyList<ConfigurationBadge>? Badges
+    {
+        get;
+        init;
+    }
+
     /// <summary>Documentation link.</summary>
-    public string? Link { get; init; }
+    public string? Link
+    {
+        get;
+        init;
+    }
+
     /// <summary>Author comment.</summary>
-    public string? Comment { get; init; }
+    public string? Comment
+    {
+        get;
+        init;
+    }
+
     /// <summary>Declared numeric lower bound or string/array length bound.</summary>
-    public double? Min { get; init; }
+    public double? Min
+    {
+        get;
+        init;
+    }
+
     /// <summary>Declared numeric upper bound or string/array length bound.</summary>
-    public double? Max { get; init; }
+    public double? Max
+    {
+        get;
+        init;
+    }
+
     /// <summary>Declared numeric step relative to Min, or zero when inactive.</summary>
-    public double? Step { get; init; }
+    public double? Step
+    {
+        get;
+        init;
+    }
+
     /// <summary>Declared ECMAScript string pattern.</summary>
-    public ConfigurationPattern? Pattern { get; init; }
+    public ConfigurationPattern? Pattern
+    {
+        get;
+        init;
+    }
+
     /// <summary>Declared tolerant native acceptance; exact recovery behavior remains runtime-owned.</summary>
-    public bool? Loose { get; init; }
+    public bool? Loose
+    {
+        get;
+        init;
+    }
 }
 
 /// <summary>Application authoring helpers over Core's immutable plain-data annotation carrier.</summary>
@@ -55,18 +130,49 @@ public static class ConfigurationMetadataExtensions
         ArgumentNullException.ThrowIfNull(descriptor);
         ArgumentNullException.ThrowIfNull(metadata);
         var annotations = new Dictionary<string, object?>(descriptor.Annotations, StringComparer.Ordinal);
-        void Add(string key, object? value) { if (value is not null) annotations[key] = value; }
-        Add("role", metadata.Role); Add("extra", metadata.Extra);
-        Add("description", metadata.Descriptions is null ? metadata.Description : metadata.Descriptions.ToDictionary(pair => pair.Key, pair => (object?)pair.Value));
-        Add("hidden", metadata.Hidden); Add("disabled", metadata.Disabled); Add("collapse", metadata.Collapse);
-        Add("badges", metadata.Badges?.Select(badge => (object?)new Dictionary<string, object?> { ["text"] = badge.Text, ["type"] = badge.Type }).ToArray());
-        Add("link", metadata.Link); Add("comment", metadata.Comment);
+
+        void Add(string key, object? value)
+        {
+            if (value is not null)
+                annotations[key] = value;
+        }
+
+        Add("role", metadata.Role);
+        Add("extra", metadata.Extra);
+        Add(
+            "description",
+            metadata.Descriptions is null
+                ? metadata.Description
+                : metadata.Descriptions.ToDictionary(pair => pair.Key, pair => (object?)pair.Value));
+        Add("hidden", metadata.Hidden);
+        Add("disabled", metadata.Disabled);
+        Add("collapse", metadata.Collapse);
+        Add(
+            "badges",
+            metadata
+                .Badges?.Select(badge => (object?)new Dictionary<string, object?>
+                {
+                    ["text"] = badge.Text,
+                    ["type"] = badge.Type
+                })
+                .ToArray());
+        Add("link", metadata.Link);
+        Add("comment", metadata.Comment);
         foreach (var (name, value) in new[] { ("min", metadata.Min), ("max", metadata.Max), ("step", metadata.Step) })
         {
-            if (value is { } number && !double.IsFinite(number)) throw new ArgumentException("Metadata bounds must be finite.", nameof(metadata));
+            if (value is { } number && !double.IsFinite(number))
+                throw new ArgumentException("Metadata bounds must be finite.", nameof(metadata));
             Add(name, value);
         }
-        if (metadata.Pattern is { } pattern) Add("pattern", new Dictionary<string, object?> { ["source"] = pattern.Source, ["flags"] = pattern.Flags });
+
+        if (metadata.Pattern is { } pattern)
+            Add(
+                "pattern",
+                new Dictionary<string, object?>
+                {
+                    ["source"] = pattern.Source,
+                    ["flags"] = pattern.Flags
+                });
         Add("loose", metadata.Loose);
         return descriptor.WithAnnotations(annotations);
     }

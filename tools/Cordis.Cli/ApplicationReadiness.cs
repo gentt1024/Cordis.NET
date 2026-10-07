@@ -18,6 +18,7 @@ internal sealed class ApplicationReadiness : IApplicationReady
                 return new Registration(this, listener);
             }
         }
+
         listener();
         return new Registration(null, listener);
     }
@@ -27,12 +28,15 @@ internal sealed class ApplicationReadiness : IApplicationReady
         Action[] pending;
         lock (gate)
         {
-            if (ready) return;
+            if (ready)
+                return;
             ready = true;
             pending = listeners.ToArray();
             listeners.Clear();
         }
-        foreach (var listener in pending) listener();
+
+        foreach (var listener in pending)
+            listener();
     }
 
     private sealed class Registration(ApplicationReadiness? owner, Action listener) : IDisposable
@@ -40,8 +44,10 @@ internal sealed class ApplicationReadiness : IApplicationReady
         public void Dispose()
         {
             var current = Interlocked.Exchange(ref owner, null);
-            if (current is null) return;
-            lock (current.gate) current.listeners.Remove(listener);
+            if (current is null)
+                return;
+            lock (current.gate)
+                current.listeners.Remove(listener);
         }
     }
 }

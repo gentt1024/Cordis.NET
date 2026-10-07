@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 
 namespace Cordis;
+
 // A synchronization context, not a second scheduler for plugin lifecycle. One queued callback
 // is one JS-like synchronous turn. Async methods capture this context; no thread is dedicated.
 // This boundary prevents Task.Yield's pool continuation overtaking the caller's next statement.
@@ -28,7 +29,10 @@ internal sealed class CordisExecutionContext : SynchronizationContext
     private void Schedule()
     {
         if (Interlocked.CompareExchange(ref _draining, 1, 0) == 0)
-            ThreadPool.UnsafeQueueUserWorkItem(static (CordisExecutionContext state) => state.Drain(), this, preferLocal: false);
+            ThreadPool.UnsafeQueueUserWorkItem(
+                static (CordisExecutionContext state) => state.Drain(),
+                this,
+                preferLocal: false);
     }
 
     private void Drain()
@@ -67,29 +71,35 @@ internal sealed class CordisExecutionContext : SynchronizationContext
         // Do not let the first scheduler caller's AsyncLocals leak into subsequent entries.
         // Await continuations carry their own ExecutionContext; initial host entries need one too.
         System.Threading.ExecutionContext? caller = System.Threading.ExecutionContext.Capture();
-        Post(state =>
-        {
-            if (caller is null)
+        Post(
+            state =>
             {
-                _ = CompleteAsync();
-                return;
-            }
-
-            System.Threading.ExecutionContext.Run(caller, ignored =>
-            {
-                SynchronizationContext? previous = Current;
-                SetSynchronizationContext(this);
-                try
+                if (caller is null)
                 {
                     _ = CompleteAsync();
+                    return;
                 }
-                finally
-                {
-                    SetSynchronizationContext(previous);
-                }
-            }, null);
-        }, null);
+
+                System.Threading.ExecutionContext.Run(
+                    caller,
+                    ignored =>
+                    {
+                        SynchronizationContext? previous = Current;
+                        SetSynchronizationContext(this);
+                        try
+                        {
+                            _ = CompleteAsync();
+                        }
+                        finally
+                        {
+                            SetSynchronizationContext(previous);
+                        }
+                    },
+                    null);
+            },
+            null);
         return completion.Task;
+
         async Task CompleteAsync()
         {
             try
@@ -111,6 +121,8 @@ internal sealed class CordisExecutionContext : SynchronizationContext
     internal void VerifyAccess()
     {
         if (!HasAccess)
-            throw new InvalidOperationException("Cordis operations must execute inside Context.RunAsync or a Cordis callback. " + "After ConfigureAwait(false), marshal back with Context.RunAsync.");
+            throw new InvalidOperationException(
+                "Cordis operations must execute inside Context.RunAsync or a Cordis callback. " +
+                "After ConfigureAwait(false), marshal back with Context.RunAsync.");
     }
 }

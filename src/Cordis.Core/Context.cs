@@ -1,4 +1,5 @@
 namespace Cordis;
+
 /// <summary>
 /// A context owned by a fiber. Enter a root with RunAsync; plugin callbacks already execute there.
 /// Scopes share a runtime while resolving each service by its isolation label.
@@ -39,6 +40,7 @@ public sealed partial class Context : IAsyncDisposable
     {
         get;
     }
+
     /// <summary>
     /// Gets the fiber value.
     /// </summary>
@@ -74,14 +76,24 @@ public sealed partial class Context : IAsyncDisposable
     public Fiber Inject(IReadOnlyList<string> dependencies, Action<Context> callback)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return Plugin(new Plugin<object?> { Inject = dependencies, Apply = (ctx, _) => callback(ctx), });
+        return Plugin(
+            new Plugin<object?>
+            {
+                Inject = dependencies,
+                Apply = (ctx, _) => callback(ctx),
+            });
     }
 
     /// <summary>Async counterpart of Inject, with the same child ownership.</summary>
     public Fiber Inject(IReadOnlyList<string> dependencies, Func<Context, Task> callback)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return Plugin(new Plugin<object?> { Inject = dependencies, ApplyAsync = (ctx, _) => callback(ctx), });
+        return Plugin(
+            new Plugin<object?>
+            {
+                Inject = dependencies,
+                ApplyAsync = (ctx, _) => callback(ctx),
+            });
     }
 
     /// <summary>
@@ -97,11 +109,15 @@ public sealed partial class Context : IAsyncDisposable
     }
 
     /// <summary>Publish a named service. Disposal unpublishes it; it does not dispose the value.</summary>
-    public EffectHandle Provide(string name, object? value, Func<bool>? check = null) => Reflect.Provide(name, value, check);
+    public EffectHandle Provide(string name, object? value, Func<bool>? check = null) =>
+        Reflect.Provide(name, value, check);
+
     /// <summary>
     /// Provides the requested value.
     /// </summary>
-    public EffectHandle Provide(string name, object? value, Func<Context, bool> check) => Reflect.Provide(name, value, check);
+    public EffectHandle Provide(string name, object? value, Func<Context, bool> check) =>
+        Reflect.Provide(name, value, check);
+
     /// <summary>Run setup now and own the returned synchronous cleanup function.</summary>
     public EffectHandle Effect(Func<Action> setup, string label = "anonymous")
     {
@@ -137,11 +153,13 @@ public sealed partial class Context : IAsyncDisposable
     public EffectHandle Effect(Func<IEnumerable<IAsyncDisposable>> setup, string label = "anonymous")
     {
         ArgumentNullException.ThrowIfNull(setup);
-        return CreateEffect(effect =>
-        {
-            foreach (IAsyncDisposable item in setup())
-                effect.Collect(item);
-        }, label);
+        return CreateEffect(
+            effect =>
+            {
+                foreach (IAsyncDisposable item in setup())
+                    effect.Collect(item);
+            },
+            label);
     }
 
     private EffectHandle CreateEffect(Action<EffectHandle> setup, string label)
@@ -173,12 +191,15 @@ public sealed partial class Context : IAsyncDisposable
     /// End this .NET root execution lifetime (an adapter, unlike the reusable root Fiber restart).
     /// Child contexts dispose their owning fiber. Concurrent root disposal callers join one Task.
     /// </summary>
-    public ValueTask DisposeAsync() => new(_runtime.Execution.RunAsync(() =>
-    {
-        if (!ReferenceEquals(this, Root))
-            return Fiber.DisposeCoreAsync();
-        return _disposeTask ??= CloseRootAsync();
-    }));
+    public ValueTask DisposeAsync() =>
+        new(
+            _runtime.Execution.RunAsync(() =>
+            {
+                if (!ReferenceEquals(this, Root))
+                    return Fiber.DisposeCoreAsync();
+                return _disposeTask ??= CloseRootAsync();
+            }));
+
     private async Task CloseRootAsync()
     {
         _closing = true;

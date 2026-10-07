@@ -17,9 +17,12 @@ public static class ExternalCallbacks
     /// errors are written to standard error. An external source must release any registration it
     /// creates before throwing from subscribe. Retaining its callback can retain plugin objects.
     /// </remarks>
-    public static EffectHandle SubscribeExternal<T>(this Context context,
-        Func<Action<T>, IDisposable> subscribe, Func<T, Task> callback,
-        Action<Exception> reportError, Action<OperationCanceledException>? reportCancellation = null)
+    public static EffectHandle SubscribeExternal<T>(
+        this Context context,
+        Func<Action<T>, IDisposable> subscribe,
+        Func<T, Task> callback,
+        Action<Exception> reportError,
+        Action<OperationCanceledException>? reportCancellation = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(subscribe);
@@ -31,8 +34,9 @@ public static class ExternalCallbacks
         var effect = context.Effect(() => (Action)registration.Close, "external subscription");
         try
         {
-            registration.Attach(subscribe(registration.Notify)
-                ?? throw new InvalidOperationException("The external source returned a null subscription."));
+            registration.Attach(
+                subscribe(registration.Notify) ??
+                throw new InvalidOperationException("The external source returned a null subscription."));
             return effect;
         }
         catch
@@ -42,8 +46,11 @@ public static class ExternalCallbacks
         }
     }
 
-    private sealed class Registration<T>(Context context, Func<T, Task> callback,
-        Action<Exception> reportError, Action<OperationCanceledException>? reportCancellation)
+    private sealed class Registration<T>(
+        Context context,
+        Func<T, Task> callback,
+        Action<Exception> reportError,
+        Action<OperationCanceledException>? reportCancellation)
     {
         private int active = 1;
         private IDisposable? subscription;
@@ -51,13 +58,16 @@ public static class ExternalCallbacks
         internal void Attach(IDisposable value)
         {
             // Attach and Close run in the owner domain, but subscribe can reenter that domain.
-            if (Volatile.Read(ref active) == 0) value.Dispose();
-            else subscription = value;
+            if (Volatile.Read(ref active) == 0)
+                value.Dispose();
+            else
+                subscription = value;
         }
 
         internal void Close()
         {
-            if (Interlocked.Exchange(ref active, 0) == 0) return;
+            if (Interlocked.Exchange(ref active, 0) == 0)
+                return;
             var previous = subscription;
             subscription = null;
             previous?.Dispose();
@@ -65,7 +75,8 @@ public static class ExternalCallbacks
 
         internal void Notify(T value)
         {
-            if (Volatile.Read(ref active) != 0) _ = DispatchAsync(value);
+            if (Volatile.Read(ref active) != 0)
+                _ = DispatchAsync(value);
         }
 
         private async Task DispatchAsync(T value)
@@ -77,32 +88,55 @@ public static class ExternalCallbacks
                 {
                     entered = true;
                     // Check at execution, not merely enqueue, and never reactivate this flag.
-                    if (Volatile.Read(ref active) == 0
-                        || context.Fiber.State is FiberState.Unloading or FiberState.Disposed) return;
-                    await (callback(value)
-                        ?? throw new InvalidOperationException("The external callback returned a null Task."));
+                    if (Volatile.Read(ref active) == 0 ||
+                        context.Fiber.State is FiberState.Unloading or FiberState.Disposed)
+                        return;
+                    await (callback(value) ??
+                        throw new InvalidOperationException("The external callback returned a null Task."));
                 });
             }
-            catch (ObjectDisposedException) when (!entered) { }
-            catch (OperationCanceledException cancellation) { Report(reportCancellation, cancellation); }
-            catch (Exception error) { Report(reportError, error); }
+            catch (ObjectDisposedException) when (!entered)
+            {
+            }
+            catch (OperationCanceledException cancellation)
+            {
+                Report(reportCancellation, cancellation);
+            }
+            catch (Exception error)
+            {
+                Report(reportError, error);
+            }
         }
 
         internal async Task RollbackAsync(EffectHandle effect)
         {
-            try { await effect.DisposeAsync(); }
-            catch (Exception error) { Report(reportError, error); }
+            try
+            {
+                await effect.DisposeAsync();
+            }
+            catch (Exception error)
+            {
+                Report(reportError, error);
+            }
         }
 
         private static void Report<TException>(Action<TException>? observer, TException error)
             where TException : Exception
         {
-            try { observer?.Invoke(error); }
+            try
+            {
+                observer?.Invoke(error);
+            }
             catch (Exception observerError)
             {
                 // The root may already be closed, so its logger is no longer an error outlet.
-                try { Console.Error.WriteLine(new AggregateException(error, observerError)); }
-                catch (Exception) { } // An unavailable host error stream cannot fault a detached task.
+                try
+                {
+                    Console.Error.WriteLine(new AggregateException(error, observerError));
+                }
+                catch (Exception)
+                {
+                } // An unavailable host error stream cannot fault a detached task.
             }
         }
     }

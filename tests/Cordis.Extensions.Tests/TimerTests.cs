@@ -10,11 +10,14 @@ public sealed class TimerTests
     {
         using var cancellation = new CancellationTokenSource();
         var stream = await CreateDisposedStream(cancellation.Token);
-        for (var attempt = 0; attempt < 8 && stream.IsAlive; attempt++)
+        for (var attempt = 0;attempt < 8 && stream.IsAlive;attempt++)
         {
-            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
             await Task.Yield();
         }
+
         Assert.False(stream.IsAlive);
         GC.KeepAlive(cancellation);
     }
@@ -36,23 +39,39 @@ public sealed class TimerTests
     [Fact]
     public async Task LeadingThrottleRequiresOwnerDomain()
     {
-        await using var root = new Context(); ScheduledAction<int> action = null!; int calls = 0;
-        await root.RunAsync(ctx => { action = new TimerService(ctx).Throttle<int>(_ => calls++, TimeSpan.FromSeconds(1)); return Task.CompletedTask; });
-        Assert.Throws<InvalidOperationException>(() => action.Invoke(1)); Assert.Equal(0, calls);
-        await root.RunAsync(_ => { action.Invoke(1); return Task.CompletedTask; }); Assert.Equal(1, calls);
+        await using var root = new Context();
+        ScheduledAction<int> action = null!;
+        int calls = 0;
+        await root.RunAsync(ctx =>
+        {
+            action = new TimerService(ctx).Throttle<int>(_ => calls++, TimeSpan.FromSeconds(1));
+            return Task.CompletedTask;
+        });
+        Assert.Throws<InvalidOperationException>(() => action.Invoke(1));
+        Assert.Equal(0, calls);
+        await root.RunAsync(_ =>
+        {
+            action.Invoke(1);
+            return Task.CompletedTask;
+        });
+        Assert.Equal(1, calls);
     }
 
     [Fact]
     public async Task CallbackErrorsHaveDefaultLoggingAndOptionalObserver()
     {
-        await using var root = new Context(); var clock = new ManualClock();
+        await using var root = new Context();
+        var clock = new ManualClock();
         await root.RunAsync(ctx =>
         {
             var timer = new TimerService(ctx, clock);
             timer.Timeout(() => throw new InvalidOperationException("default error"), TimeSpan.FromSeconds(1));
             clock.Advance(TimeSpan.FromSeconds(1));
-            Assert.Contains(ctx.Logger.Buffer, message => message.Arguments.OfType<Exception>().Any(e => e.Message == "default error"));
-            Exception? observed = null; timer.UnhandledError += error => observed = error;
+            Assert.Contains(
+                ctx.Logger.Buffer,
+                message => message.Arguments.OfType<Exception>().Any(e => e.Message == "default error"));
+            Exception? observed = null;
+            timer.UnhandledError += error => observed = error;
             timer.Timeout(() => throw new InvalidOperationException("observed"), TimeSpan.FromSeconds(1));
             clock.Advance(TimeSpan.FromSeconds(1));
             Assert.Equal("observed", observed?.Message);
@@ -73,10 +92,13 @@ public sealed class TimerTests
             var next = iterator.MoveNextAsync().AsTask();
             Assert.False(next.IsCompleted);
             clock.Advance(TimeSpan.FromSeconds(1));
-            Assert.True(await next); Assert.Equal(1, iterator.Current);
+            Assert.True(await next);
+            Assert.Equal(1, iterator.Current);
             clock.Advance(TimeSpan.FromSeconds(2));
-            next = iterator.MoveNextAsync().AsTask(); Assert.False(next.IsCompleted);
-            await iterator.DisposeAsync(); Assert.False(await next);
+            next = iterator.MoveNextAsync().AsTask();
+            Assert.False(next.IsCompleted);
+            await iterator.DisposeAsync();
+            Assert.False(await next);
             Assert.False(await iterator.MoveNextAsync());
         });
     }
@@ -105,8 +127,11 @@ public sealed class TimerTests
         await root.RunAsync(async ctx =>
         {
             using var cancel = new CancellationTokenSource();
-            await using var iterator = new TimerService(ctx, new ManualClock()).IntervalAsync(TimeSpan.FromSeconds(1), cancel.Token).GetAsyncEnumerator();
-            var next = iterator.MoveNextAsync().AsTask(); cancel.Cancel();
+            await using var iterator = new TimerService(ctx, new ManualClock())
+                .IntervalAsync(TimeSpan.FromSeconds(1), cancel.Token)
+                .GetAsyncEnumerator();
+            var next = iterator.MoveNextAsync().AsTask();
+            cancel.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => next);
         });
     }
@@ -130,7 +155,8 @@ public sealed class TimerTests
                 SynchronizationContext.SetSynchronizationContext(null);
                 clock.Advance(TimeSpan.FromSeconds(1));
             });
-            thread.Start(); thread.Join();
+            thread.Start();
+            thread.Join();
             await ctx.Fiber.DisposeAsync();
             await Task.Yield();
             Assert.Equal(0, count);
@@ -147,7 +173,14 @@ public sealed class TimerTests
             int count = 0;
             var timer = new TimerService(ctx, clock);
             var complete = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            timer.Timeout(() => { ctx.Get<object>("absent"); count++; complete.SetResult(); }, TimeSpan.FromSeconds(1));
+            timer.Timeout(
+                () =>
+                {
+                    ctx.Get<object>("absent");
+                    count++;
+                    complete.SetResult();
+                },
+                TimeSpan.FromSeconds(1));
             clock.Advance(TimeSpan.FromSeconds(1));
             await complete.Task;
             timer.Timeout(() => count++, TimeSpan.FromSeconds(1));
@@ -180,11 +213,19 @@ public sealed class TimerTests
             List<int> values = [];
             var timer = new TimerService(ctx, clock);
             var complete = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            var action = timer.Debounce<int>(x => { values.Add(x); complete.TrySetResult(); }, TimeSpan.FromSeconds(1));
-            action.Invoke(1); action.Invoke(2);
+            var action = timer.Debounce<int>(
+                x =>
+                {
+                    values.Add(x);
+                    complete.TrySetResult();
+                },
+                TimeSpan.FromSeconds(1));
+            action.Invoke(1);
+            action.Invoke(2);
             clock.Advance(TimeSpan.FromSeconds(1));
             await complete.Task;
-            action.Invoke(3); await action.DisposeAsync();
+            action.Invoke(3);
+            await action.DisposeAsync();
             clock.Advance(TimeSpan.FromSeconds(1));
             Assert.Equal([2], values);
         });
@@ -199,10 +240,13 @@ public sealed class TimerTests
         {
             List<int> values = [];
             var action = new TimerService(ctx, clock).Throttle<int>(values.Add, TimeSpan.FromSeconds(1), true);
-            action.Invoke(1); action.Invoke(2);
-            clock.Advance(TimeSpan.FromSeconds(1)); action.Invoke(3);
+            action.Invoke(1);
+            action.Invoke(2);
+            clock.Advance(TimeSpan.FromSeconds(1));
+            action.Invoke(3);
             await action.DisposeAsync();
-            clock.Advance(TimeSpan.FromSeconds(1)); action.Invoke(4);
+            clock.Advance(TimeSpan.FromSeconds(1));
+            action.Invoke(4);
             Assert.Equal([1, 3, 4], values); // Upstream disposal suppresses trailing only.
         });
     }
@@ -212,29 +256,57 @@ public sealed class TimerTests
         private DateTimeOffset _now = DateTimeOffset.UnixEpoch;
         private readonly List<ManualTimer> _timers = [];
         public override DateTimeOffset GetUtcNow() => _now;
+
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
         {
-            var timer = new ManualTimer(this, callback, state, dueTime, period); _timers.Add(timer); return timer;
+            var timer = new ManualTimer(this, callback, state, dueTime, period);
+            _timers.Add(timer);
+            return timer;
         }
+
         public void Advance(TimeSpan duration)
         {
             _now += duration;
-            foreach (var timer in _timers.ToArray()) timer.Fire(_now);
+            foreach (var timer in _timers.ToArray())
+                timer.Fire(_now);
         }
-        private sealed class ManualTimer(ManualClock clock, TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) : ITimer
+
+        private sealed class ManualTimer(
+            ManualClock clock,
+            TimerCallback callback,
+            object? state,
+            TimeSpan dueTime,
+            TimeSpan period) : ITimer
         {
             private DateTimeOffset _due = clock._now + dueTime;
             private TimeSpan _period = period;
             private bool _disposed;
-            public bool Change(TimeSpan due, TimeSpan next) { _due = clock._now + due; _period = next; return !_disposed; }
+
+            public bool Change(TimeSpan due, TimeSpan next)
+            {
+                _due = clock._now + due;
+                _period = next;
+                return !_disposed;
+            }
+
             public void Fire(DateTimeOffset now)
             {
-                if (_disposed || now < _due) return;
-                if (_period == global::System.Threading.Timeout.InfiniteTimeSpan) _disposed = true; else _due = now + _period;
+                if (_disposed || now < _due)
+                    return;
+                if (_period == global::System.Threading.Timeout.InfiniteTimeSpan)
+                    _disposed = true;
+                else
+                    _due = now + _period;
                 callback(state);
             }
+
             public void Dispose() => _disposed = true;
-            public ValueTask DisposeAsync() { Dispose(); return ValueTask.CompletedTask; }
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
         }
     }
 }

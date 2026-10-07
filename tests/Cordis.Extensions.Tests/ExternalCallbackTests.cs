@@ -18,17 +18,24 @@ public sealed class ExternalCallbackTests
         var errors = new ConcurrentQueue<Exception>();
         await root.RunAsync(ctx =>
         {
-            effect = ctx.SubscribeExternal<int>(callback =>
-            {
-                notify = callback;
-                return new Cleanup(() => { disposed++; callback(99); });
-            }, value =>
-            {
-                ctx.Get<object>("optional", strict: false); // Throws if dispatch did not enter the domain.
-                calls++;
-                received.TrySetResult(value);
-                return Task.CompletedTask;
-            }, errors.Enqueue);
+            effect = ctx.SubscribeExternal<int>(
+                callback =>
+                {
+                    notify = callback;
+                    return new Cleanup(() =>
+                    {
+                        disposed++;
+                        callback(99);
+                    });
+                },
+                value =>
+                {
+                    ctx.Get<object>("optional", strict: false); // Throws if dispatch did not enter the domain.
+                    calls++;
+                    received.TrySetResult(value);
+                    return Task.CompletedTask;
+                },
+                errors.Enqueue);
             return Task.CompletedTask;
         });
         OnForeignThread(() => notify(7));
@@ -50,11 +57,20 @@ public sealed class ExternalCallbackTests
         await root.RunAsync(async ctx =>
         {
             Action<int> notify = null!;
-            var effect = ctx.SubscribeExternal<int>(callback =>
-            {
-                notify = callback;
-                return new Cleanup(() => { });
-            }, _ => { calls++; return Task.CompletedTask; }, errors.Enqueue);
+            var effect = ctx.SubscribeExternal<int>(
+                callback =>
+                {
+                    notify = callback;
+                    return new Cleanup(() =>
+                    {
+                    });
+                },
+                _ =>
+                {
+                    calls++;
+                    return Task.CompletedTask;
+                },
+                errors.Enqueue);
             // Keep this synchronous turn occupied until the foreign callback is queued.
             OnForeignThread(() => notify(1));
             await effect.DisposeAsync();
@@ -75,15 +91,23 @@ public sealed class ExternalCallbackTests
         await root.RunAsync(async ctx =>
         {
             var provider = ctx.Provide("dependency", new object());
-            var consumer = ctx.Plugin(new Plugin<object?>
-            {
-                Inject = ["dependency"],
-                Apply = (owner, _) => owner.SubscribeExternal<int>(callback =>
+            var consumer = ctx.Plugin(
+                new Plugin<object?>
                 {
-                    callbacks.Add(callback);
-                    return new Cleanup(() => disposed++);
-                }, value => { values.Add(value); return Task.CompletedTask; }, errors.Enqueue),
-            });
+                    Inject = ["dependency"],
+                    Apply = (owner, _) => owner.SubscribeExternal<int>(
+                        callback =>
+                        {
+                            callbacks.Add(callback);
+                            return new Cleanup(() => disposed++);
+                        },
+                        value =>
+                        {
+                            values.Add(value);
+                            return Task.CompletedTask;
+                        },
+                        errors.Enqueue),
+                });
             await consumer.WaitAsync();
             Assert.Single(callbacks);
             OnForeignThread(() => callbacks[0](1));
@@ -110,16 +134,19 @@ public sealed class ExternalCallbackTests
         var disposed = 0;
         await root.RunAsync(ctx =>
         {
-            ctx.SubscribeExternal<int>(callback =>
-            {
-                Assert.Contains(ctx.Fiber.GetEffects(), effect => effect.Label == "external subscription");
-                callback(1);
-                return new Cleanup(() => disposed++);
-            }, async _ =>
-            {
-                await ctx.Fiber.DisposeAsync();
-                finished.TrySetResult();
-            }, errors.Enqueue);
+            ctx.SubscribeExternal<int>(
+                callback =>
+                {
+                    Assert.Contains(ctx.Fiber.GetEffects(), effect => effect.Label == "external subscription");
+                    callback(1);
+                    return new Cleanup(() => disposed++);
+                },
+                async _ =>
+                {
+                    await ctx.Fiber.DisposeAsync();
+                    finished.TrySetResult();
+                },
+                errors.Enqueue);
             return Task.CompletedTask;
         });
         await finished.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -137,11 +164,18 @@ public sealed class ExternalCallbackTests
         await root.RunAsync(ctx =>
         {
             Action<int> captured = null!;
-            var thrown = Assert.Throws<InvalidOperationException>(() => ctx.SubscribeExternal<int>(callback =>
-            {
-                captured = callback;
-                throw failure;
-            }, _ => { calls++; return Task.CompletedTask; }, errors.Enqueue));
+            var thrown = Assert.Throws<InvalidOperationException>(() => ctx.SubscribeExternal<int>(
+                callback =>
+                {
+                    captured = callback;
+                    throw failure;
+                },
+                _ =>
+                {
+                    calls++;
+                    return Task.CompletedTask;
+                },
+                errors.Enqueue));
             Assert.Same(failure, thrown);
             Assert.Empty(ctx.Fiber.GetEffects());
             captured(1);
@@ -158,14 +192,19 @@ public sealed class ExternalCallbackTests
         var errors = new List<Exception>();
         await root.RunAsync(ctx =>
         {
-            Assert.Throws<InvalidOperationException>(() => ctx.SubscribeExternal<int>(_ => null!,
-                _ => Task.CompletedTask, errors.Add));
+            Assert.Throws<InvalidOperationException>(() =>
+                ctx.SubscribeExternal<int>(_ => null!, _ => Task.CompletedTask, errors.Add));
             Assert.Empty(ctx.Fiber.GetEffects());
-            ctx.SubscribeExternal<int>(callback =>
-            {
-                callback(1);
-                return new Cleanup(() => { });
-            }, _ => null!, errors.Add);
+            ctx.SubscribeExternal<int>(
+                callback =>
+                {
+                    callback(1);
+                    return new Cleanup(() =>
+                    {
+                    });
+                },
+                _ => null!,
+                errors.Add);
             Assert.Contains("null Task", Assert.Single(errors).Message);
             return Task.CompletedTask;
         });
@@ -182,16 +221,19 @@ public sealed class ExternalCallbackTests
         var unsubscribed = false;
         await root.RunAsync(ctx =>
         {
-            ctx.SubscribeExternal<int>(callback =>
-            {
-                callback(1);
-                return new Cleanup(() => unsubscribed = true);
-            }, async _ =>
-            {
-                started.SetResult();
-                await continueWork.Task;
-                throw failure;
-            }, error => reported.TrySetResult(error));
+            ctx.SubscribeExternal<int>(
+                callback =>
+                {
+                    callback(1);
+                    return new Cleanup(() => unsubscribed = true);
+                },
+                async _ =>
+                {
+                    started.SetResult();
+                    await continueWork.Task;
+                    throw failure;
+                },
+                error => reported.TrySetResult(error));
             return Task.CompletedTask;
         });
         await started.Task;
@@ -213,15 +255,21 @@ public sealed class ExternalCallbackTests
         await root.RunAsync(ctx =>
         {
             Action<int> notify = null!;
-            ctx.SubscribeExternal<int>(callback =>
-            {
-                notify = callback;
-                return new Cleanup(() => { });
-            }, value => value switch
-            {
-                1 => Task.FromCanceled(cancellation.Token),
-                _ => throw new ObjectDisposedException("callback-resource"),
-            }, errors.Add, cancellations.Add);
+            ctx.SubscribeExternal<int>(
+                callback =>
+                {
+                    notify = callback;
+                    return new Cleanup(() =>
+                    {
+                    });
+                },
+                value => value switch
+                {
+                    1 => Task.FromCanceled(cancellation.Token),
+                    _ => throw new ObjectDisposedException("callback-resource"),
+                },
+                errors.Add,
+                cancellations.Add);
             notify(1);
             notify(2);
             Assert.Equal(cancellation.Token, Assert.Single(cancellations).CancellationToken);
@@ -240,12 +288,21 @@ public sealed class ExternalCallbackTests
         {
             Action<int> notify = null!;
             var failure = new InvalidOperationException("unsubscribe failed");
-            var effect = ctx.SubscribeExternal<int>(callback =>
-            {
-                notify = callback;
-                return new Cleanup(() => throw failure);
-            }, _ => { calls++; return Task.CompletedTask; }, errors.Enqueue);
-            Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => effect.DisposeAsync().AsTask()));
+            var effect = ctx.SubscribeExternal<int>(
+                callback =>
+                {
+                    notify = callback;
+                    return new Cleanup(() => throw failure);
+                },
+                _ =>
+                {
+                    calls++;
+                    return Task.CompletedTask;
+                },
+                errors.Enqueue);
+            Assert.Same(
+                failure,
+                await Assert.ThrowsAsync<InvalidOperationException>(() => effect.DisposeAsync().AsTask()));
             notify(1);
             Assert.Equal(0, calls);
             Assert.Empty(ctx.Fiber.GetEffects());
@@ -258,11 +315,18 @@ public sealed class ExternalCallbackTests
     {
         await using var root = new Context();
         var subscribed = false;
-        Assert.Throws<InvalidOperationException>(() => root.SubscribeExternal<int>(_ =>
-        {
-            subscribed = true;
-            return new Cleanup(() => { });
-        }, _ => Task.CompletedTask, _ => { }));
+        Assert.Throws<InvalidOperationException>(() => root.SubscribeExternal<int>(
+            _ =>
+            {
+                subscribed = true;
+                return new Cleanup(() =>
+                {
+                });
+            },
+            _ => Task.CompletedTask,
+            _ =>
+            {
+            }));
         Assert.False(subscribed);
     }
 
@@ -272,12 +336,19 @@ public sealed class ExternalCallbackTests
         var thread = new Thread(() =>
         {
             SynchronizationContext.SetSynchronizationContext(null);
-            try { operation(); }
-            catch (Exception error) { failure = error; }
+            try
+            {
+                operation();
+            }
+            catch (Exception error)
+            {
+                failure = error;
+            }
         });
         thread.Start();
         Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "The external callback did not return.");
-        if (failure is not null) throw failure;
+        if (failure is not null)
+            throw failure;
     }
 
     private sealed class Cleanup(Action callback) : IDisposable

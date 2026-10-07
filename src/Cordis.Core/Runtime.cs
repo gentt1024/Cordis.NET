@@ -16,6 +16,7 @@ internal sealed class Runtime
     private long _counter;
     private readonly Action<Exception>? _report;
     internal Runtime(Action<Exception>? report) => _report = report;
+
     internal void Report(Exception error)
     {
         _report?.Invoke(error);
@@ -64,7 +65,10 @@ internal sealed class Runtime
 
     internal Fiber[] Notify(Context context, string name)
     {
-        Fiber[] fibers = Plugins.Values.SelectMany(p => p.Fibers).Where(f => f.Inject.ContainsKey(name) && ReferenceEquals(f.Context.Realm(name), context.Realm(name))).ToArray();
+        Fiber[] fibers = Plugins
+            .Values.SelectMany(p => p.Fibers)
+            .Where(f => f.Inject.ContainsKey(name) && ReferenceEquals(f.Context.Realm(name), context.Realm(name)))
+            .ToArray();
         foreach (Fiber fiber in fibers)
             fiber.Refresh();
         var receiver = context.Extend();
@@ -89,9 +93,26 @@ internal sealed class Runtime
 
 internal sealed class ServiceEntry(string name, Context context, object? value, Func<Context, bool>? check)
 {
-    internal string Name { get; } = name;
-    internal Context Context { get; } = context;
+    internal string Name
+    {
+        get;
+    } = name;
+
+    internal Context Context
+    {
+        get;
+    } = context;
+
     internal Fiber Owner => Context.Fiber;
-    internal object? Value { get; set; } = value;
-    internal Func<Context, bool>? Check { get; } = check;
+
+    internal object? Value
+    {
+        get;
+        set;
+    } = value;
+
+    internal Func<Context, bool>? Check
+    {
+        get;
+    } = check;
 }

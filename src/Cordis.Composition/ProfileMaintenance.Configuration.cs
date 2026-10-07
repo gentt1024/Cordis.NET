@@ -13,8 +13,11 @@ public static partial class ProfileMaintenance
         parser.Consume<StreamStart>();
         parser.Consume<DocumentStart>();
         var root = ReadNode(parser);
-        var matches = rows.Select((row, index) => (row, index)).Where(item => item.row.Id == id
-            && !Data.Truthy(item.row.GetValueOrDefault("insert")) && (item.row.Name.Length == 0 || item.row.Name == name)).ToArray();
+        var matches = rows
+            .Select((row, index) => (row, index))
+            .Where(item => item.row.Id == id && !Data.Truthy(item.row.GetValueOrDefault("insert")) &&
+                (item.row.Name.Length == 0 || item.row.Name == name))
+            .ToArray();
 
         // Keep a flow root in place so comments attached to unrelated rows survive.
         // This is a source-format adaptation; the same parsed patch document is applied.
@@ -24,23 +27,35 @@ public static partial class ProfileMaintenance
             {
                 foreach (var (row, index) in matches.Reverse())
                 {
-                    if (!row.Remove("config")) continue;
+                    if (!row.Remove("config"))
+                        continue;
                     var node = root.Children[index];
                     if (row.Keys.All(key => key is "id" or "name"))
                     {
                         var comma = FlowSeparator(text, node.ContentEnd);
-                        if (comma < 0 && index > 0) comma = FlowSeparator(text, root.Children[index - 1].ContentEnd);
-                        if (comma >= node.ContentEnd) text = text.Remove(comma, 1);
+                        if (comma < 0 && index > 0)
+                            comma = FlowSeparator(text, root.Children[index - 1].ContentEnd);
+                        if (comma >= node.ContentEnd)
+                            text = text.Remove(comma, 1);
                         text = text.Remove(node.Start, node.ContentEnd - node.Start);
-                        if (comma >= 0 && comma < node.Start) text = text.Remove(comma, 1);
+                        if (comma >= 0 && comma < node.Start)
+                            text = text.Remove(comma, 1);
                     }
-                    else text = text[..node.Start] + ConfigurationFile.WriteFlow(row) + text[node.ContentEnd..];
+                    else
+                        text = text[..node.Start] + ConfigurationFile.WriteFlow(row) + text[node.ContentEnd..];
                 }
+
                 return text;
             }
+
             if (matches.Length == 0)
-                return text[..root.End] + (rows.Count == 0 ? "" : ", ")
-                    + ConfigurationFile.WriteFlow(new EntryOptions { Id = id, Name = name, Config = next }) + text[root.End..];
+                return text[..root.End] + (rows.Count == 0 ? "" : ", ") + ConfigurationFile.WriteFlow(
+                    new EntryOptions
+                    {
+                        Id = id,
+                        Name = name,
+                        Config = next
+                    }) + text[root.End..];
         }
 
         if (inherited)
@@ -48,7 +63,8 @@ public static partial class ProfileMaintenance
             foreach (var (row, index) in matches.Reverse())
             {
                 var node = root.Children[index];
-                if (!node.Fields.TryGetValue("config", out var field)) continue;
+                if (!node.Fields.TryGetValue("config", out var field))
+                    continue;
                 row.Remove("config");
                 if (row.Keys.All(key => key is "id" or "name"))
                 {
@@ -60,25 +76,39 @@ public static partial class ProfileMaintenance
                 else
                 {
                     var start = field.KeyStart - node.Column + 1;
-                    var end = field.Container && !field.Flow ? field.End - field.EndColumn + 1 : EndOfLine(text, field.ContentEnd);
+                    var end = field.Container && !field.Flow
+                        ? field.End - field.EndColumn + 1
+                        : EndOfLine(text, field.ContentEnd);
                     text = text[..start] + text[end..];
                 }
             }
+
             return ConfigurationFile.Parse(text) is null ? text + "[]\n" : text;
         }
 
         var rendered = ConfigurationFile.WriteFlow(next);
         if (matches.Length == 0)
-            return text.TrimEnd() + "\n" + ConfigurationFile.Write(new[] { new EntryOptions { Id = id, Name = name, Config = next } });
+            return text.TrimEnd() + "\n" + ConfigurationFile.Write(
+                new[]
+                {
+                    new EntryOptions
+                    {
+                        Id = id,
+                        Name = name,
+                        Config = next
+                    }
+                });
         var target = root.Children[matches[^1].index];
         if (target.Fields.TryGetValue("config", out var existing))
         {
             var suffix = existing.Container && !existing.Flow ? "\n" + new string(' ', existing.EndColumn - 1) : "";
             return text[..existing.Start] + rendered + suffix + text[existing.ContentEnd..];
         }
+
         if (target.Flow)
             return text[..target.End] + ", config: " + rendered + text[target.End..];
-        return text[..target.End] + new string(' ', target.Column - 1) + "config: " + rendered + "\n" + text[target.End..];
+        return text[..target.End] + new string(' ', target.Column - 1) + "config: " + rendered + "\n" +
+            text[target.End..];
     }
 
     private static int EndOfLine(string text, int position)
@@ -91,10 +121,21 @@ public static partial class ProfileMaintenance
     {
         while (position < text.Length)
         {
-            if (char.IsWhiteSpace(text[position])) { position++; continue; }
-            if (text[position] == '#') { position = EndOfLine(text, position); continue; }
+            if (char.IsWhiteSpace(text[position]))
+            {
+                position++;
+                continue;
+            }
+
+            if (text[position] == '#')
+            {
+                position = EndOfLine(text, position);
+                continue;
+            }
+
             return text[position] == ',' ? position : -1;
         }
+
         return -1;
     }
 
@@ -105,12 +146,14 @@ public static partial class ProfileMaintenance
         try
         {
             await File.WriteAllTextAsync(temporary, text);
-            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            if (!OperatingSystem.IsWindows())
+                File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             File.Move(temporary, filename, true);
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            if (File.Exists(temporary))
+                File.Delete(temporary);
         }
     }
 }

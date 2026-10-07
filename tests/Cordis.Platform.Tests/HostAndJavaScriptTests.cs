@@ -15,11 +15,18 @@ public sealed class HostAndJavaScriptTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<BorrowedService>();
-        services.AddCordis(options => options.Borrow<BorrowedService>("borrowed").Configure(async (ctx, _, _) =>
-        {
-            var fiber = ctx.Plugin(new Plugin<object?> { Inject = ["borrowed"], Apply = (child, _) => Assert.NotNull(child.Get<BorrowedService>("borrowed")) });
-            await fiber.WaitAsync();
-        }));
+        services.AddCordis(options => options
+            .Borrow<BorrowedService>("borrowed")
+            .Configure(async (ctx, _, _) =>
+            {
+                var fiber = ctx.Plugin(
+                    new Plugin<object?>
+                    {
+                        Inject = ["borrowed"],
+                        Apply = (child, _) => Assert.NotNull(child.Get<BorrowedService>("borrowed"))
+                    });
+                await fiber.WaitAsync();
+            }));
         var provider = services.BuildServiceProvider();
         var borrowed = provider.GetRequiredService<BorrowedService>();
         var hosted = provider.GetRequiredService<IHostedService>();
@@ -48,11 +55,13 @@ public sealed class HostAndJavaScriptTests
             Assert.Equal(true, evaluator.Evaluate("nothing === null && ctx.missing === undefined", ctx));
             Assert.Equal(true, evaluator.Evaluate("voidValue === undefined", ctx));
             Assert.Same(Undefined.Value, evaluator.Evaluate("undefined", ctx));
-            var values = Assert.IsAssignableFrom<IList<object?>>(evaluator.Evaluate("[undefined, null, false, 0]", ctx));
+            var values =
+                Assert.IsAssignableFrom<IList<object?>>(evaluator.Evaluate("[undefined, null, false, 0]", ctx));
             Assert.Same(Undefined.Value, values[0]);
             Assert.Null(values[1]);
             Assert.Equal(false, values[2]);
-            var map = Assert.IsAssignableFrom<IDictionary<string, object?>>(evaluator.Evaluate("({absent: undefined, nothing: null})", ctx));
+            var map = Assert.IsAssignableFrom<IDictionary<string, object?>>(
+                evaluator.Evaluate("({absent: undefined, nothing: null})", ctx));
             Assert.Same(Undefined.Value, map["absent"]);
             Assert.Null(map["nothing"]);
             ctx.Provide("mutable", 3);
@@ -61,12 +70,20 @@ public sealed class HostAndJavaScriptTests
             Assert.Same(Undefined.Value, evaluator.Evaluate("mutable = undefined", ctx));
             Assert.Same(Undefined.Value, ctx.Get<object>("mutable"));
             Assert.Equal("OK", evaluator.Evaluate("answer.Echo('ok').toUpperCase()", ctx));
-            var reference = Assert.Throws<JavaScriptExpressionException>(() => evaluator.Evaluate("missingIdentifier + 1", ctx));
-            Assert.Equal("ReferenceError", reference.ErrorName); Assert.IsType<JavaScriptException>(reference.InnerException);
-            var thrown = Assert.Throws<JavaScriptExpressionException>(() => evaluator.Evaluate("(() => { throw new Error('expression-failed') })()", ctx));
-            Assert.Equal("Error", thrown.ErrorName); Assert.Contains("expression-failed", thrown.Message); Assert.IsType<JavaScriptException>(thrown.InnerException);
-            var syntax = Assert.Throws<JavaScriptExpressionException>(() => evaluator.Evaluate("JSON.parse('invalid')", ctx));
-            Assert.Equal("SyntaxError", syntax.ErrorName); Assert.StartsWith("SyntaxError:", syntax.ToString()); Assert.IsType<JavaScriptException>(syntax.InnerException);
+            var reference =
+                Assert.Throws<JavaScriptExpressionException>(() => evaluator.Evaluate("missingIdentifier + 1", ctx));
+            Assert.Equal("ReferenceError", reference.ErrorName);
+            Assert.IsType<JavaScriptException>(reference.InnerException);
+            var thrown = Assert.Throws<JavaScriptExpressionException>(() =>
+                evaluator.Evaluate("(() => { throw new Error('expression-failed') })()", ctx));
+            Assert.Equal("Error", thrown.ErrorName);
+            Assert.Contains("expression-failed", thrown.Message);
+            Assert.IsType<JavaScriptException>(thrown.InnerException);
+            var syntax =
+                Assert.Throws<JavaScriptExpressionException>(() => evaluator.Evaluate("JSON.parse('invalid')", ctx));
+            Assert.Equal("SyntaxError", syntax.ErrorName);
+            Assert.StartsWith("SyntaxError:", syntax.ToString());
+            Assert.IsType<JavaScriptException>(syntax.InnerException);
             return Task.CompletedTask;
         });
     }
@@ -91,16 +108,26 @@ public sealed class HostAndJavaScriptTests
     {
         await using var context = new Context();
         var values = new List<object?>();
-        var modules = new StaticModuleResolver().Register("consumer", new Plugin<object?>
-        {
-            Inject = ["number"],
-            Apply = (_, config) => values.Add(config)
-        });
+        var modules = new StaticModuleResolver().Register(
+            "consumer",
+            new Plugin<object?>
+            {
+                Inject = ["number"],
+                Apply = (_, config) => values.Add(config)
+            });
         await context.RunAsync(async ctx =>
         {
             var loader = new Loader(ctx, modules, expressionEvaluator: new JintExpressionEvaluator());
             var raw = new JsExpression("number * 2");
-            await loader.Root.UpdateAsync([new EntryOptions { Id = "consumer", Name = "consumer", Config = raw }]);
+            await loader.Root.UpdateAsync(
+            [
+                new EntryOptions
+                {
+                    Id = "consumer",
+                    Name = "consumer",
+                    Config = raw
+                }
+            ]);
             await loader.WaitAsync();
             Assert.Empty(values);
             Assert.Same(raw, loader.Resolve("consumer").Fiber!.RawConfig);
@@ -122,10 +149,22 @@ public sealed class HostAndJavaScriptTests
         var applies = 0;
         await context.RunAsync(async ctx =>
         {
-            var loader = new Loader(ctx,
-                new StaticModuleResolver().Register("plugin", new Plugin<object?> { Apply = (_, _) => applies++ }),
+            var loader = new Loader(
+                ctx,
+                new StaticModuleResolver().Register(
+                    "plugin",
+                    new Plugin<object?>
+                    {
+                        Apply = (_, _) => applies++
+                    }),
                 expressionEvaluator: new JintExpressionEvaluator());
-            await loader.CreateAsync(new() { Id = "row", Name = "plugin", Disabled = new JsExpression("undefined") });
+            await loader.CreateAsync(
+                new()
+                {
+                    Id = "row",
+                    Name = "plugin",
+                    Disabled = new JsExpression("undefined")
+                });
             await loader.WaitAsync();
             Assert.False(loader.Resolve("row").Disabled);
             Assert.Equal(1, applies);
@@ -138,14 +177,17 @@ public sealed class HostAndJavaScriptTests
         var stopped = false;
         var services = new ServiceCollection();
         services.AddSingleton<BorrowedService>();
-        services.AddCordis(options => options.Borrow<BorrowedService>("borrowed").Configure((ctx, _, _) =>
-        {
-            ctx.Effect(() => (Action)(() => stopped = true));
-            throw new InvalidOperationException("startup");
-        }));
+        services.AddCordis(options => options
+            .Borrow<BorrowedService>("borrowed")
+            .Configure((ctx, _, _) =>
+            {
+                ctx.Effect(() => (Action)(() => stopped = true));
+                throw new InvalidOperationException("startup");
+            }));
         await using var provider = services.BuildServiceProvider();
         var borrowed = provider.GetRequiredService<BorrowedService>();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetRequiredService<IHostedService>().StartAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            provider.GetRequiredService<IHostedService>().StartAsync(CancellationToken.None));
         Assert.True(stopped);
         Assert.Equal(0, borrowed.DisposeCount);
     }
@@ -155,9 +197,15 @@ public sealed class HostAndJavaScriptTests
         public int Value => 21;
         public string Echo(string value) => value;
     }
+
     public sealed class BorrowedService : IDisposable
     {
-        public int DisposeCount { get; private set; }
+        public int DisposeCount
+        {
+            get;
+            private set;
+        }
+
         public void Dispose() => DisposeCount++;
     }
 }

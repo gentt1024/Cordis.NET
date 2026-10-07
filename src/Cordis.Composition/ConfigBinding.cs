@@ -28,7 +28,8 @@ public static class ConfigBinding
     /// There is no static metadata cache. Exceptions from user business rules propagate unchanged.
     /// </remarks>
     public static Func<object?, ConfigResult<T>> FromJsonTypeInfo<T>(
-        JsonTypeInfo<T> typeInfo, Func<T, IEnumerable<string>>? validate = null)
+        JsonTypeInfo<T> typeInfo,
+        Func<T, IEnumerable<string>>? validate = null)
     {
         ArgumentNullException.ThrowIfNull(typeInfo);
         return raw =>
@@ -42,7 +43,12 @@ public static class ConfigBinding
             try
             {
                 var buffer = new ArrayBufferWriter<byte>();
-                using (var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions { MaxDepth = 64 }))
+                using (var writer = new Utf8JsonWriter(
+                           buffer,
+                           new JsonWriterOptions
+                           {
+                               MaxDepth = 64
+                           }))
                     Write(writer, raw, "$", 0, new HashSet<object>(ReferenceEqualityComparer.Instance));
                 value = JsonSerializer.Deserialize(buffer.WrittenSpan, typeInfo);
             }
@@ -64,38 +70,75 @@ public static class ConfigBinding
             if (validate is not null)
             {
                 var issues = validate(value).Select(issue => $"validation: {issue}").ToArray();
-                if (issues.Length > 0) return ConfigResult<T>.Failure(issues);
+                if (issues.Length > 0)
+                    return ConfigResult<T>.Failure(issues);
             }
+
             return ConfigResult<T>.Success(value);
         };
     }
 
     private static void Write(Utf8JsonWriter writer, object? value, string path, int depth, HashSet<object> ancestors)
     {
-        if (depth > 64) throw new DataBindingException(path, "data exceeds the maximum depth of 64.");
+        if (depth > 64)
+            throw new DataBindingException(path, "data exceeds the maximum depth of 64.");
         switch (value)
         {
-            case null: writer.WriteNullValue(); return;
-            case string text: writer.WriteStringValue(text); return;
-            case bool boolean: writer.WriteBooleanValue(boolean); return;
-            case byte number: writer.WriteNumberValue(number); return;
-            case sbyte number: writer.WriteNumberValue(number); return;
-            case short number: writer.WriteNumberValue(number); return;
-            case ushort number: writer.WriteNumberValue(number); return;
-            case int number: writer.WriteNumberValue(number); return;
-            case uint number: writer.WriteNumberValue(number); return;
-            case long number: writer.WriteNumberValue(number); return;
-            case ulong number: writer.WriteNumberValue(number); return;
-            case decimal number: writer.WriteNumberValue(number); return;
-            case float number when float.IsFinite(number): writer.WriteNumberValue(number); return;
-            case double number when double.IsFinite(number): writer.WriteNumberValue(number); return;
-            case float or double: throw new DataBindingException(path, "numbers must be finite.");
-            case JsonElement element: WriteElement(writer, element, path, depth, ancestors); return;
-            case Undefined: throw new DataBindingException(path, "undefined is not a data value.");
-            case JsExpression: throw new DataBindingException(path, "unevaluated expressions are not data values.");
+            case null:
+                writer.WriteNullValue();
+                return;
+            case string text:
+                writer.WriteStringValue(text);
+                return;
+            case bool boolean:
+                writer.WriteBooleanValue(boolean);
+                return;
+            case byte number:
+                writer.WriteNumberValue(number);
+                return;
+            case sbyte number:
+                writer.WriteNumberValue(number);
+                return;
+            case short number:
+                writer.WriteNumberValue(number);
+                return;
+            case ushort number:
+                writer.WriteNumberValue(number);
+                return;
+            case int number:
+                writer.WriteNumberValue(number);
+                return;
+            case uint number:
+                writer.WriteNumberValue(number);
+                return;
+            case long number:
+                writer.WriteNumberValue(number);
+                return;
+            case ulong number:
+                writer.WriteNumberValue(number);
+                return;
+            case decimal number:
+                writer.WriteNumberValue(number);
+                return;
+            case float number when float.IsFinite(number):
+                writer.WriteNumberValue(number);
+                return;
+            case double number when double.IsFinite(number):
+                writer.WriteNumberValue(number);
+                return;
+            case float or double:
+                throw new DataBindingException(path, "numbers must be finite.");
+            case JsonElement element:
+                WriteElement(writer, element, path, depth, ancestors);
+                return;
+            case Undefined:
+                throw new DataBindingException(path, "undefined is not a data value.");
+            case JsExpression:
+                throw new DataBindingException(path, "unevaluated expressions are not data values.");
         }
 
-        if (!ancestors.Add(value)) throw new DataBindingException(path, "cyclic data is not supported.");
+        if (!ancestors.Add(value))
+            throw new DataBindingException(path, "cyclic data is not supported.");
         try
         {
             switch (value)
@@ -109,7 +152,7 @@ public static class ConfigBinding
                 case IList list:
                     CheckContainerDepth(path, depth);
                     writer.WriteStartArray();
-                    for (var index = 0; index < list.Count; index++)
+                    for (var index = 0;index < list.Count;index++)
                         Write(writer, list[index], $"{path}[{index}]", depth + 1, ancestors);
                     writer.WriteEndArray();
                     break;
@@ -117,11 +160,18 @@ public static class ConfigBinding
                     throw new DataBindingException(path, $"unsupported data type '{value.GetType().FullName}'.");
             }
         }
-        finally { ancestors.Remove(value); }
+        finally
+        {
+            ancestors.Remove(value);
+        }
     }
 
-    private static void WriteMap(Utf8JsonWriter writer, IEnumerable<KeyValuePair<string, object?>> map,
-        string path, int depth, HashSet<object> ancestors)
+    private static void WriteMap(
+        Utf8JsonWriter writer,
+        IEnumerable<KeyValuePair<string, object?>> map,
+        string path,
+        int depth,
+        HashSet<object> ancestors)
     {
         if (map.Any(pair => pair.Key == "__jsExpr"))
             throw new DataBindingException(path, "unevaluated expressions are not data values.");
@@ -132,10 +182,16 @@ public static class ConfigBinding
             writer.WritePropertyName(pair.Key);
             Write(writer, pair.Value, PropertyPath(path, pair.Key), depth + 1, ancestors);
         }
+
         writer.WriteEndObject();
     }
 
-    private static void WriteElement(Utf8JsonWriter writer, JsonElement element, string path, int depth, HashSet<object> ancestors)
+    private static void WriteElement(
+        Utf8JsonWriter writer,
+        JsonElement element,
+        string path,
+        int depth,
+        HashSet<object> ancestors)
     {
         switch (element.ValueKind)
         {
@@ -147,13 +203,15 @@ public static class ConfigBinding
                     writer.WritePropertyName(property.Name);
                     Write(writer, property.Value, PropertyPath(path, property.Name), depth + 1, ancestors);
                 }
+
                 writer.WriteEndObject();
                 break;
             case JsonValueKind.Array:
                 CheckContainerDepth(path, depth);
                 writer.WriteStartArray();
                 var index = 0;
-                foreach (var item in element.EnumerateArray()) Write(writer, item, $"{path}[{index++}]", depth + 1, ancestors);
+                foreach (var item in element.EnumerateArray())
+                    Write(writer, item, $"{path}[{index++}]", depth + 1, ancestors);
                 writer.WriteEndArray();
                 break;
             case JsonValueKind.Number:
@@ -163,13 +221,16 @@ public static class ConfigBinding
                 break;
             case JsonValueKind.Undefined:
                 throw new DataBindingException(path, "undefined is not a data value.");
-            default: element.WriteTo(writer); break;
+            default:
+                element.WriteTo(writer);
+                break;
         }
     }
 
     private static void CheckContainerDepth(string path, int depth)
     {
-        if (depth >= 64) throw new DataBindingException(path, "data exceeds the maximum depth of 64.");
+        if (depth >= 64)
+            throw new DataBindingException(path, "data exceeds the maximum depth of 64.");
     }
 
     private static string PropertyPath(string path, string key) =>
@@ -177,6 +238,9 @@ public static class ConfigBinding
 
     private sealed class DataBindingException(string path, string message) : Exception(message)
     {
-        public string Path { get; } = path;
+        public string Path
+        {
+            get;
+        } = path;
     }
 }

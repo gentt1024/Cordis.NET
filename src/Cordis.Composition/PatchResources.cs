@@ -14,8 +14,9 @@ public static class PatchResources
     {
         ArgumentNullException.ThrowIfNull(assembly);
         ArgumentException.ThrowIfNullOrWhiteSpace(resourceName);
-        using var stream = assembly.GetManifestResourceStream(resourceName)
-            ?? throw new FileNotFoundException($"Embedded patch resource '{resourceName}' was not found in assembly '{assembly.FullName}'.", resourceName);
+        using var stream = assembly.GetManifestResourceStream(resourceName) ?? throw new FileNotFoundException(
+            $"Embedded patch resource '{resourceName}' was not found in assembly '{assembly.FullName}'.",
+            resourceName);
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
@@ -30,10 +31,16 @@ public static class PatchResources
     public static List<EntryOptions> Read(Assembly assembly, string resourceName, bool json = false)
     {
         var text = ReadText(assembly, resourceName);
-        try { return ConfigurationFile.ParseEntries(text, json); }
-        catch (Exception error) when (error is FormatException or System.Text.Json.JsonException or YamlDotNet.Core.YamlException)
+        try
         {
-            throw new FormatException($"Cannot parse embedded patch resource '{resourceName}' in assembly '{assembly.FullName}'.", error);
+            return ConfigurationFile.ParseEntries(text, json);
+        }
+        catch (Exception error) when (error is FormatException or System.Text.Json.JsonException
+                                          or YamlDotNet.Core.YamlException)
+        {
+            throw new FormatException(
+                $"Cannot parse embedded patch resource '{resourceName}' in assembly '{assembly.FullName}'.",
+                error);
         }
     }
 }

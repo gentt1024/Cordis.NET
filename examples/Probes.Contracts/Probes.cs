@@ -4,7 +4,11 @@ namespace Cordis.Example.Probes;
 
 public interface IProbeRegistry
 {
-    string Version { get; }
+    string Version
+    {
+        get;
+    }
+
     IAsyncDisposable Register(string name, Func<string> read);
     IReadOnlyDictionary<string, string> Snapshot();
 }

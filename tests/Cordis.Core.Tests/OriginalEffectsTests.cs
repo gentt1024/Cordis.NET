@@ -20,7 +20,11 @@ public sealed class OriginalEffectsTests
         await root.RunAsync(async ctx =>
         {
             int calls = 0;
-            var fiber = ctx.Plugin(new Plugin<object?> { Apply = (c, _) => c.Effect(() => (Action)(() => calls++), "test") });
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => c.Effect(() => (Action)(() => calls++), "test")
+                });
             await fiber.WaitAsync();
             var meta = Assert.Single(fiber.GetEffects());
             Assert.Equal("test", meta.Label);
@@ -59,7 +63,14 @@ public sealed class OriginalEffectsTests
         await root.RunAsync(async ctx =>
         {
             var order = new List<int>();
-            var handle = ctx.Effect(() => new IAsyncDisposable[] { new Cleanup(() => order.Add(1)), ctx.On("custom-event", (_, _) => null), new Cleanup(() => order.Add(2)), ctx.Effect(() => new IAsyncDisposable[] { ctx.On("custom-event", (_, _) => null), new Cleanup(() => order.Add(3)) }) });
+            var handle = ctx.Effect(() => new IAsyncDisposable[]
+            {
+                new Cleanup(() => order.Add(1)),
+                ctx.On("custom-event", (_, _) => null),
+                new Cleanup(() => order.Add(2)),
+                ctx.Effect(() =>
+                    new IAsyncDisposable[] { ctx.On("custom-event", (_, _) => null), new Cleanup(() => order.Add(3)) })
+            });
             ctx.On("custom-event", (_, _) => null);
             var effects = ctx.Fiber.GetEffects();
             Assert.Equal(2, effects.Count);
@@ -96,6 +107,7 @@ public sealed class OriginalEffectsTests
             var enteredTwo = new TaskCompletionSource();
             var started = new TaskCompletionSource();
             var order = new List<int>();
+
             async IAsyncEnumerable<IAsyncDisposable> Generate()
             {
                 started.SetResult();
@@ -136,12 +148,15 @@ public sealed class OriginalEffectsTests
             }
             else
                 await disposal;
-            Assert.Equal(mode switch
-            {
-                1 => new[] { 1, 2 },
-                2 => [1, 3, 4, 2],
-                _ => [1, 3, 5, 6, 4, 2]
-            }, order);
+
+            Assert.Equal(
+                mode switch
+                {
+                    1 => new[] { 1, 2 },
+                    2 => [1, 3, 4, 2],
+                    _ => [1, 3, 5, 6, 4, 2]
+                },
+                order);
         });
     }
 
@@ -152,7 +167,8 @@ public sealed class OriginalEffectsTests
         await root.RunAsync(ctx =>
         {
             int calls = 0;
-            Assert.Throws<InvalidOperationException>(() => ctx.Effect((Func<Action>)(() => throw new InvalidOperationException("test"))));
+            Assert.Throws<InvalidOperationException>(() =>
+                ctx.Effect((Func<Action>)(() => throw new InvalidOperationException("test"))));
             Assert.Equal(0, calls);
             Assert.Empty(ctx.Fiber.GetEffects());
             return Task.CompletedTask;
@@ -166,6 +182,7 @@ public sealed class OriginalEffectsTests
         await root.RunAsync(async ctx =>
         {
             int entered = 0;
+
             async IAsyncEnumerable<IAsyncDisposable> Generate()
             {
                 entered++;
