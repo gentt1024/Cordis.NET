@@ -28,7 +28,14 @@ public sealed class UpstreamTests
         public EffectHandle Own(Action cleanup) => Context.Effect(() => cleanup);
         public object? ReadCounter() => Context.Reflect.Read("counter");
         public object? Associated(string member) => Associate(member);
-        public IReadOnlyDictionary<string, object?> Invoke(IReadOnlyDictionary<string, object?>? head = null) => ResolveConfig(new Dictionary<string, object?> { { "a", 1 } }, head);
+
+        public IReadOnlyDictionary<string, object?> Invoke(IReadOnlyDictionary<string, object?>? head = null) =>
+            ResolveConfig(
+                new Dictionary<string, object?>
+                {
+                    { "a", 1 }
+                },
+                head);
     }
 
     [Theory]
@@ -50,34 +57,53 @@ public sealed class UpstreamTests
             else if (scenario == "explicit")
                 ctx.Logger.Create("custom").Debug("x");
             else if (scenario == "intercept")
-                ctx.Intercept("logger", new Dictionary<string, object?> { { "name", "intercepted" } }).Logger.Debug("x");
+                ctx
+                    .Intercept(
+                        "logger",
+                        new Dictionary<string, object?>
+                        {
+                            { "name", "intercepted" }
+                        })
+                    .Logger.Debug("x");
             else
             {
-                await ctx.Plugin(new Plugin<object?>
-                {
-                    Name = "foo:driver",
-                    Apply = (c, _) =>
-                {
-                    new OriginService(c);
-                    if (scenario == "init")
-                        c.Logger.Debug("x");
-                }
-                }).WaitAsync();
+                await ctx
+                    .Plugin(
+                        new Plugin<object?>
+                        {
+                            Name = "foo:driver",
+                            Apply = (c, _) =>
+                            {
+                                new OriginService(c);
+                                if (scenario == "init")
+                                    c.Logger.Debug("x");
+                            }
+                        })
+                    .WaitAsync();
                 if (scenario != "init")
                 {
-                    var caller = scenario == "service-override" ? ctx.Intercept("logger", new Dictionary<string, object?> { { "name", "caller-override" } }) : ctx;
+                    var caller = scenario == "service-override"
+                        ? ctx.Intercept(
+                            "logger",
+                            new Dictionary<string, object?>
+                            {
+                                { "name", "caller-override" }
+                            })
+                        : ctx;
                     caller.Get<OriginService>("foo")!.Log();
                 }
             }
 
-            Assert.Equal(scenario switch
-            {
-                "root" => "root",
-                "explicit" => "custom",
-                "intercept" => "intercepted",
-                "service-override" => "caller-override",
-                _ => "foo:driver"
-            }, Assert.Single(captured).Name);
+            Assert.Equal(
+                scenario switch
+                {
+                    "root" => "root",
+                    "explicit" => "custom",
+                    "intercept" => "intercepted",
+                    "service-override" => "caller-override",
+                    _ => "foo:driver"
+                },
+                Assert.Single(captured).Name);
         });
     }
 
@@ -91,14 +117,21 @@ public sealed class UpstreamTests
         {
             ctx.Provide("counter", 42);
             int cleanup = 0;
-            var provider = ctx.Plugin(new Plugin<object?> { Inject = inject ? ["counter"] : [], Apply = (c, _) => new OriginService(c) });
+            var provider = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Inject = inject ? ["counter"] : [],
+                    Apply = (c, _) => new OriginService(c)
+                });
             await provider.WaitAsync();
-            var consumer = ctx.Inject(["foo"], c =>
-            {
-                var service = c.Get<OriginService>("foo")!;
-                service.Own(() => cleanup++);
-                Assert.Equal(42, service.ReadCounter());
-            });
+            var consumer = ctx.Inject(
+                ["foo"],
+                c =>
+                {
+                    var service = c.Get<OriginService>("foo")!;
+                    service.Own(() => cleanup++);
+                    Assert.Equal(42, service.ReadCounter());
+                });
             await consumer.WaitAsync();
             await consumer.DisposeAsync();
             Assert.Equal(1, cleanup);
@@ -112,12 +145,34 @@ public sealed class UpstreamTests
         await using var root = new Context();
         await root.RunAsync(async ctx =>
         {
-            await ctx.Plugin(new Plugin<object?> { Apply = (c, _) => new OriginService(c) }).WaitAsync();
+            await ctx
+                .Plugin(
+                    new Plugin<object?>
+                    {
+                        Apply = (c, _) => new OriginService(c)
+                    })
+                .WaitAsync();
             var service = ctx.Get<OriginService>("foo")!;
             Assert.Equal(1, service.Invoke()["a"]);
-            var caller = ctx.Intercept("foo", new Dictionary<string, object?> { { "b", 2 } }).Intercept("foo", new Dictionary<string, object?> { { "a", 3 } });
+            var caller = ctx
+                .Intercept(
+                    "foo",
+                    new Dictionary<string, object?>
+                    {
+                        { "b", 2 }
+                    })
+                .Intercept(
+                    "foo",
+                    new Dictionary<string, object?>
+                    {
+                        { "a", 3 }
+                    });
             var view = caller.Get<OriginService>("foo")!;
-            var config = view.Invoke(new Dictionary<string, object?> { { "c", 4 } });
+            var config = view.Invoke(
+                new Dictionary<string, object?>
+                {
+                    { "c", 4 }
+                });
             Assert.Equal(3, config["a"]);
             Assert.Equal(2, config["b"]);
             Assert.Equal(4, config["c"]);
@@ -131,7 +186,13 @@ public sealed class UpstreamTests
         await using var root = new Context();
         await root.RunAsync(async ctx =>
         {
-            await ctx.Plugin(new Plugin<object?> { Apply = (c, _) => new OriginService(c) }).WaitAsync();
+            await ctx
+                .Plugin(
+                    new Plugin<object?>
+                    {
+                        Apply = (c, _) => new OriginService(c)
+                    })
+                .WaitAsync();
             var registration = ctx.Provide("foo.bar", 12);
             var service = ctx.Get<OriginService>("foo")!;
             Assert.Equal(12, service.Associated("bar"));
@@ -152,14 +213,17 @@ public sealed class UpstreamTests
             ctx.On("event", (_, _) => ++outer);
             var isolated = ctx.Isolate("foo");
             isolated.On("event", (_, _) => ++inner);
-            await isolated.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) =>
-            {
-                var service = new OriginService(c);
-                c.Events.EmitWith(service, "event");
-            }
-            }).WaitAsync();
+            await isolated
+                .Plugin(
+                    new Plugin<object?>
+                    {
+                        Apply = (c, _) =>
+                        {
+                            var service = new OriginService(c);
+                            c.Events.EmitWith(service, "event");
+                        }
+                    })
+                .WaitAsync();
             Assert.Equal(0, outer);
             Assert.Equal(1, inner);
         });
@@ -172,16 +236,25 @@ public sealed class UpstreamTests
         await root.RunAsync(async ctx =>
         {
             int calls = 0, cleanup = 0;
-            await ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) => c.Inject(["foo"], nested =>
-            {
-                calls++;
-                nested.Effect(() => (Action)(() => cleanup++));
-            })
-            }).WaitAsync();
+            await ctx
+                .Plugin(
+                    new Plugin<object?>
+                    {
+                        Apply = (c, _) => c.Inject(
+                            ["foo"],
+                            nested =>
+                            {
+                                calls++;
+                                nested.Effect(() => (Action)(() => cleanup++));
+                            })
+                    })
+                .WaitAsync();
             Assert.Equal(0, calls);
-            var provider = ctx.Plugin(new Plugin<object?> { Apply = (c, _) => new OriginService(c) });
+            var provider = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => new OriginService(c)
+                });
             await provider.WaitAsync();
             foreach (var fiber in ctx.Registry.Values.SelectMany(v => v.Fibers).ToArray())
                 await fiber.WaitAsync();
@@ -198,32 +271,35 @@ public sealed class UpstreamTests
         await root.RunAsync(async ctx =>
         {
             var calls = new List<string>();
-            var foo = ctx.Plugin(new Plugin<object?>
-            {
-                Inject = ["qux"],
-                Apply = (c, _) =>
-            {
-                calls.Add("foo");
-                c.Provide("foo", 1);
-            }
-            });
-            var bar = ctx.Plugin(new Plugin<object?>
-            {
-                Inject = ["foo", "qux"],
-                Apply = (c, _) =>
-            {
-                calls.Add("bar");
-                c.Provide("bar", 1);
-            }
-            });
-            var qux = ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) =>
-            {
-                calls.Add("qux");
-                c.Provide("qux", 1);
-            }
-            });
+            var foo = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Inject = ["qux"],
+                    Apply = (c, _) =>
+                    {
+                        calls.Add("foo");
+                        c.Provide("foo", 1);
+                    }
+                });
+            var bar = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Inject = ["foo", "qux"],
+                    Apply = (c, _) =>
+                    {
+                        calls.Add("bar");
+                        c.Provide("bar", 1);
+                    }
+                });
+            var qux = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) =>
+                    {
+                        calls.Add("qux");
+                        c.Provide("qux", 1);
+                    }
+                });
             await qux.WaitAsync();
             await foo.WaitAsync();
             await bar.WaitAsync();
@@ -287,6 +363,7 @@ public sealed class UpstreamTests
             }
             else
                 await disposal;
+
             Assert.Equal([1, 2], order);
         });
     }
@@ -300,6 +377,7 @@ public sealed class UpstreamTests
         await root.RunAsync(async ctx =>
         {
             int cleanup = 0;
+
             async IAsyncEnumerable<IAsyncDisposable> Generator()
             {
                 yield return new Cleanup(() => cleanup++);
@@ -334,13 +412,15 @@ public sealed class UpstreamTests
             var clean = new TaskCompletionSource();
             var provider = ctx.Provide("foo", 1);
             int starts = 0;
-            var consumer = ctx.Inject(["foo"], async c =>
-            {
-                starts++;
-                entered.TrySetResult();
-                await loaded.Task;
-                c.Effect(() => new AwaitCleanup(clean.Task));
-            });
+            var consumer = ctx.Inject(
+                ["foo"],
+                async c =>
+                {
+                    starts++;
+                    entered.TrySetResult();
+                    await loaded.Task;
+                    c.Effect(() => new AwaitCleanup(clean.Task));
+                });
             await entered.Task;
             Assert.Equal(FiberState.Loading, consumer.State);
             var remove = provider.DisposeAsync().AsTask();
@@ -382,7 +462,12 @@ public sealed class UpstreamTests
         await root.RunAsync(async ctx =>
         {
             var configs = new List<string>();
-            var fiber = ctx.Plugin(new Plugin<string> { Apply = (_, v) => configs.Add(v) }, "hello");
+            var fiber = ctx.Plugin(
+                new Plugin<string>
+                {
+                    Apply = (_, v) => configs.Add(v)
+                },
+                "hello");
             var identity = fiber.Context;
             await fiber.WaitAsync();
             fiber.Update("world");
@@ -402,22 +487,30 @@ public sealed class UpstreamTests
         await root.RunAsync(async ctx =>
         {
             int apply = 0, notified = 0;
-            ctx.On("internal/plugin", (_, args) =>
-            {
-                var f = (Fiber)args[0]!;
-                if (f.Uid is not null)
-                    f.Inject["foo"] = null;
-                else
-                    throw new Exception("observer");
-                return null;
-            });
-            ctx.On("internal/plugin", (_, args) =>
-            {
-                if (((Fiber)args[0]!).Uid is null)
-                    notified++;
-                return null;
-            });
-            var fiber = ctx.Plugin(new Plugin<object?> { Apply = (_, _) => apply++ });
+            ctx.On(
+                "internal/plugin",
+                (_, args) =>
+                {
+                    var f = (Fiber)args[0]!;
+                    if (f.Uid is not null)
+                        f.Inject["foo"] = null;
+                    else
+                        throw new Exception("observer");
+                    return null;
+                });
+            ctx.On(
+                "internal/plugin",
+                (_, args) =>
+                {
+                    if (((Fiber)args[0]!).Uid is null)
+                        notified++;
+                    return null;
+                });
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (_, _) => apply++
+                });
             await fiber.WaitAsync();
             Assert.Equal(FiberState.Pending, fiber.State);
             ctx.Provide("foo", null);
@@ -438,7 +531,11 @@ public sealed class UpstreamTests
             var a = ctx.Isolate("foo");
             var b = ctx.Isolate("foo");
             var entry = a.Extend();
-            var provider = entry.Plugin(new Plugin<object?> { Apply = (c, _) => c.Provide("foo", 42) });
+            var provider = entry.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => c.Provide("foo", 42)
+                });
             await provider.WaitAsync();
             Assert.Equal(42, a.Get("foo"));
             entry.Reparent(b);
@@ -490,14 +587,15 @@ public sealed class UpstreamTests
         await root.RunAsync(async ctx =>
         {
             int start = 0, stop = 0;
-            var fiber = ctx.Plugin(new Plugin<object?>
-            {
-                ApplyEffect = (_, _) =>
-            {
-                start++;
-                return new Cleanup(() => stop++);
-            }
-            });
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    ApplyEffect = (_, _) =>
+                    {
+                        start++;
+                        return new Cleanup(() => stop++);
+                    }
+                });
             await fiber.WaitAsync();
             Assert.Equal(1, start);
             Assert.Equal(0, stop);
@@ -517,6 +615,7 @@ public sealed class UpstreamTests
             var second = new TaskCompletionSource();
             var entered = new TaskCompletionSource();
             var order = new List<int>();
+
             async IAsyncEnumerable<IAsyncDisposable> Generate()
             {
                 await first.Task;
@@ -549,13 +648,40 @@ public sealed class UpstreamTests
         {
             var records = new List<LogMessage>();
             ctx.Logger.Exporter(new DelegateLogExporter(records.Add, 3));
-            ctx.Logger.Info("%o %d %f %% %q", new Dictionary<string, object?> { { "a", 1 }, { "missing", Undefined.Value } }, Undefined.Value, "not-number");
+            ctx.Logger.Info(
+                "%o %d %f %% %q",
+                new Dictionary<string, object?>
+                {
+                    { "a", 1 },
+                    { "missing", Undefined.Value }
+                },
+                Undefined.Value,
+                "not-number");
             Assert.Equal("{\"a\":1} NaN NaN % %q", Logger.Format(records[0]));
-            ctx.Logger.Info(new Dictionary<string, object?> { { "a", false } });
+            ctx.Logger.Info(
+                new Dictionary<string, object?>
+                {
+                    { "a", false }
+                });
             Assert.Equal("{\"a\":false}", Logger.Format(records[1]));
             ctx.Logger.Info("%z", 12);
-            Assert.Equal("value=12", Logger.Format(records[2], formatters: new Dictionary<char, Func<object?, string>> { { 'z', x => "value=" + x } }));
-            Assert.Equal("val...", Logger.Format(records[2], 3, new Dictionary<char, Func<object?, string>> { { 'z', x => "value=" + x } }));
+            Assert.Equal(
+                "value=12",
+                Logger.Format(
+                    records[2],
+                    formatters: new Dictionary<char, Func<object?, string>>
+                    {
+                        { 'z', x => "value=" + x }
+                    }));
+            Assert.Equal(
+                "val...",
+                Logger.Format(
+                    records[2],
+                    3,
+                    new Dictionary<char, Func<object?, string>>
+                    {
+                        { 'z', x => "value=" + x }
+                    }));
             int info = 0;
             ctx.Logger.Exporter(new DelegateLogExporter(_ => info++));
             ctx.Logger.Warn("warn");
@@ -575,16 +701,25 @@ public sealed class UpstreamTests
         await root.RunAsync(async ctx =>
         {
             int cleanup = 0;
-            await ctx.Plugin(new Plugin<object?> { Apply = (c, _) => new OriginService(c) }).WaitAsync();
-            var listener = ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) => c.On("use", (e, args) =>
-            {
-                ((OriginService)args[0]!).Own(() => cleanup++);
-                ((OriginService)e.Receiver!).Own(() => cleanup++);
-                return null;
-            })
-            });
+            await ctx
+                .Plugin(
+                    new Plugin<object?>
+                    {
+                        Apply = (c, _) => new OriginService(c)
+                    })
+                .WaitAsync();
+            var listener = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => c.On(
+                        "use",
+                        (e, args) =>
+                        {
+                            ((OriginService)args[0]!).Own(() => cleanup++);
+                            ((OriginService)e.Receiver!).Own(() => cleanup++);
+                            return null;
+                        })
+                });
             await listener.WaitAsync();
             var service = ctx.Get<OriginService>("foo")!;
             ctx.Events.EmitWith(service, "use", service);
@@ -625,24 +760,34 @@ public sealed class UpstreamTests
         {
             var a = ctx.Isolate("bar");
             var b = ctx.Isolate("bar");
-            var pa = a.Plugin(new Plugin<object?> { Apply = (c, _) => c.Provide("bar", "alpha") });
-            var pb = b.Plugin(new Plugin<object?> { Apply = (c, _) => c.Provide("bar", "beta") });
+            var pa = a.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => c.Provide("bar", "alpha")
+                });
+            var pb = b.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => c.Provide("bar", "beta")
+                });
             await pa.WaitAsync();
             await pb.WaitAsync();
             var scope = a.Extend();
             var clean = new TaskCompletionSource();
             var entered = new TaskCompletionSource();
             var values = new List<string>();
-            var consumer = scope.Inject(["bar"], c =>
-            {
-                values.Add((string)c.Reflect.Read("bar")!);
-                c.Effect(() => new VerifyCleanup(async () =>
+            var consumer = scope.Inject(
+                ["bar"],
+                c =>
                 {
-                    entered.TrySetResult();
-                    await clean.Task;
                     values.Add((string)c.Reflect.Read("bar")!);
-                }));
-            });
+                    c.Effect(() => new VerifyCleanup(async () =>
+                    {
+                        entered.TrySetResult();
+                        await clean.Task;
+                        values.Add((string)c.Reflect.Read("bar")!);
+                    }));
+                });
             await consumer.WaitAsync();
             scope.Reparent(b);
             await entered.Task;
@@ -688,18 +833,23 @@ public sealed class UpstreamTests
         {
             var sequence = new List<string>();
             var handles = new List<EffectHandle>();
-            var fiber = ctx.Plugin(new Plugin<int>
-            {
-                Apply = (owner, value) =>
-            {
-                sequence.Add($"apply{value}");
-                handles.Add(owner.On("internal/update", (evt, _) =>
+            var fiber = ctx.Plugin(
+                new Plugin<int>
                 {
-                    sequence.Add($"hook{value}");
-                    return evt.Next();
-                }));
-            }
-            }, 1);
+                    Apply = (owner, value) =>
+                    {
+                        sequence.Add($"apply{value}");
+                        handles.Add(
+                            owner.On(
+                                "internal/update",
+                                (evt, _) =>
+                                {
+                                    sequence.Add($"hook{value}");
+                                    return evt.Next();
+                                }));
+                    }
+                },
+                1);
             await fiber.WaitAsync();
             fiber.Update(2);
             await fiber.WaitAsync();
@@ -721,7 +871,7 @@ public sealed class UpstreamTests
         await using var root = new Context();
         var weak = await RegisterAndDispose(root);
         await root.RunAsync(_ => Task.CompletedTask);
-        for (int attempt = 0; attempt < 8 && weak.IsAlive; attempt++)
+        for (int attempt = 0;attempt < 8 && weak.IsAlive;attempt++)
         {
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -738,7 +888,11 @@ public sealed class UpstreamTests
         WeakReference result = null!;
         await root.RunAsync(async ctx =>
         {
-            var fiber = ctx.Plugin(new Plugin<object?> { Apply = (owner, _) => owner.On("internal/update", (evt, _) => evt.Next()) });
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (owner, _) => owner.On("internal/update", (evt, _) => evt.Next())
+                });
             await fiber.WaitAsync();
             result = new WeakReference(fiber);
             await fiber.DisposeAsync();

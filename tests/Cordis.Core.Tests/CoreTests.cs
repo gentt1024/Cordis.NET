@@ -58,7 +58,14 @@ public sealed class CoreTests
                 ApplyAsync = async (c, _) =>
                 {
                     c.On("event", (_, _) => ++calls);
-                    await c.Plugin(new Plugin<object?> { Name = "same", Apply = (child, _) => child.On("event", (_, _) => ++calls) }).WaitAsync();
+                    await c
+                        .Plugin(
+                            new Plugin<object?>
+                            {
+                                Name = "same",
+                                Apply = (child, _) => child.On("event", (_, _) => ++calls)
+                            })
+                        .WaitAsync();
                 }
             };
             var fiber = ctx.Plugin(plugin);
@@ -87,14 +94,20 @@ public sealed class CoreTests
         await root.RunAsync(async ctx =>
         {
             int calls = 0, disposed = 0;
-            ctx.On("internal/plugin", (_, args) =>
-            {
-                var f = (Fiber)args[0]!;
-                if (f.Uid is not null)
-                    f.Context.Effect(() => (Action)(() => disposed++));
-                return null;
-            });
-            var fiber = ctx.Plugin(new Plugin<object?> { Apply = (_, _) => calls++ });
+            ctx.On(
+                "internal/plugin",
+                (_, args) =>
+                {
+                    var f = (Fiber)args[0]!;
+                    if (f.Uid is not null)
+                        f.Context.Effect(() => (Action)(() => disposed++));
+                    return null;
+                });
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (_, _) => calls++
+                });
             await fiber.DisposeAsync();
             Assert.Equal(0, calls);
             Assert.Equal(1, disposed);
@@ -114,18 +127,23 @@ public sealed class CoreTests
         await root.RunAsync(async ctx =>
         {
             int cleanup = 0;
-            var fiber = ctx.Plugin(new Plugin<object?> { Apply = (c, _) => c.Effect(() => (Action)(() => cleanup++)) });
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => c.Effect(() => (Action)(() => cleanup++))
+                });
             await fiber.WaitAsync();
             await ctx.Fiber.DisposeAsync();
             Assert.Equal(1, cleanup);
             Assert.Equal(0, ctx.Fiber.Uid);
             Assert.Null(fiber.Uid);
-            var fresh = ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (_, _) =>
-            {
-            }
-            });
+            var fresh = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (_, _) =>
+                    {
+                    }
+                });
             await fresh.WaitAsync();
             Assert.Equal(FiberState.Active, fresh.State);
         });
@@ -183,19 +201,30 @@ public sealed class CoreTests
             var entered = new TaskCompletionSource();
             var values = new List<int>();
             object raw = new();
-            ctx.On("internal/config", (e, args) => e.Receiver is Fiber f && f.Name == "consumer" ? f.Context.Get<int>("value") : e.Next(), new(Global: true));
-            var consumer = ctx.Plugin(new Plugin<int> { Name = "consumer", Inject = ["value"], Apply = (_, v) => values.Add(v) }, raw);
+            ctx.On(
+                "internal/config",
+                (e, args) => e.Receiver is Fiber f && f.Name == "consumer" ? f.Context.Get<int>("value") : e.Next(),
+                new(Global: true));
+            var consumer = ctx.Plugin(
+                new Plugin<int>
+                {
+                    Name = "consumer",
+                    Inject = ["value"],
+                    Apply = (_, v) => values.Add(v)
+                },
+                raw);
             await consumer.WaitAsync();
             Assert.Equal(FiberState.Pending, consumer.State);
-            var provider = ctx.Plugin(new Plugin<object?>
-            {
-                ApplyAsync = async (c, _) =>
-            {
-                c.Provide("value", 1);
-                entered.SetResult();
-                await ready.Task;
-            }
-            });
+            var provider = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    ApplyAsync = async (c, _) =>
+                    {
+                        c.Provide("value", 1);
+                        entered.SetResult();
+                        await ready.Task;
+                    }
+                });
             await entered.Task;
             Assert.Null(ctx.Get("value"));
             Assert.Equal(1, ctx.Get("value", false));
@@ -206,7 +235,11 @@ public sealed class CoreTests
             Assert.Equal([1], values);
             await provider.DisposeAsync();
             Assert.Equal(FiberState.Pending, consumer.State);
-            var next = ctx.Plugin(new Plugin<object?> { Apply = (c, _) => c.Provide("value", 2) });
+            var next = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => c.Provide("value", 2)
+                });
             await next.WaitAsync();
             await consumer.WaitAsync();
             Assert.Equal([1, 2], values);
@@ -223,26 +256,29 @@ public sealed class CoreTests
             bool ready = false;
             ctx.Provide("foo", 42, () => ready);
             int calls = 0;
-            var dependent = ctx.Inject(["foo"], c =>
-            {
-                calls++;
-                Assert.Equal(42, c.Reflect.Read("foo"));
-            });
+            var dependent = ctx.Inject(
+                ["foo"],
+                c =>
+                {
+                    calls++;
+                    Assert.Equal(42, c.Reflect.Read("foo"));
+                });
             await dependent.WaitAsync();
             Assert.Equal(0, calls);
             ready = true;
             ctx.Reflect.Notify("foo");
             await dependent.WaitAsync();
             Assert.Equal(1, calls);
-            var provider = ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) =>
-            {
-                c.Provide("own", 7);
-                Assert.Equal(7, c.Reflect.Read("own"));
-                Assert.Null(c.Get("own"));
-            }
-            });
+            var provider = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) =>
+                    {
+                        c.Provide("own", 7);
+                        Assert.Equal(7, c.Reflect.Read("own"));
+                        Assert.Null(c.Get("own"));
+                    }
+                });
             await provider.WaitAsync();
             await dependent.DisposeAsync();
             Assert.Throws<InvalidOperationException>(() => dependent.Context.Reflect.Read("foo"));
@@ -256,15 +292,18 @@ public sealed class CoreTests
         await root.RunAsync(async ctx =>
         {
             var values = new List<int>();
-            var fiber = ctx.Plugin(new Plugin<int>
-            {
-                Config = x => x is int n && n >= 0 ? ConfigResult<int>.Success(n) : ConfigResult<int>.Failure("negative"),
-                Apply = (c, n) =>
-            {
-                values.Add(n);
-                c.On("internal/update", (e, args) => (int)args[0]! == 9 ? null : e.Next());
-            }
-            }, 1);
+            var fiber = ctx.Plugin(
+                new Plugin<int>
+                {
+                    Config = x =>
+                        x is int n && n >= 0 ? ConfigResult<int>.Success(n) : ConfigResult<int>.Failure("negative"),
+                    Apply = (c, n) =>
+                    {
+                        values.Add(n);
+                        c.On("internal/update", (e, args) => (int)args[0]! == 9 ? null : e.Next());
+                    }
+                },
+                1);
             await fiber.WaitAsync();
             Assert.Throws<ConfigurationValidationException>(() => fiber.Update(-1));
             Assert.Equal(-1, fiber.RawConfig);
@@ -312,16 +351,19 @@ public sealed class CoreTests
             int calls = 0;
             var target = ctx.Extend();
             target.Metadata["selected"] = true;
-            target.On("event", (e, _) =>
-            {
-                calls++;
-                Assert.NotNull(e.Receiver);
-                return null;
-            });
+            target.On(
+                "event",
+                (e, _) =>
+                {
+                    calls++;
+                    Assert.NotNull(e.Receiver);
+                    return null;
+                });
             var no = ctx.Extend();
             no.Filter = _ => false;
             var yes = ctx.Extend();
             yes.Filter = c => c.Metadata.ContainsKey("selected");
+
             async Task Send(Context receiver)
             {
                 switch (mode)
@@ -357,6 +399,7 @@ public sealed class CoreTests
             bool settled = false;
             ctx.On("event", (_, _) => throw new InvalidOperationException("sync"));
             ctx.On("event", (_, _) => Work());
+
             async Task Work()
             {
                 await Task.Yield();
@@ -379,21 +422,14 @@ public sealed class CoreTests
         await root.RunAsync(async ctx =>
         {
             int calls = 0;
-            foreach (var value in new object?[]
-            {
-                null,
-                false,
-                Undefined.Value,
-                0,
-                42
-            }
-
-            )
-                ctx.On("event", (_, _) =>
-                {
-                    calls++;
-                    return value;
-                });
+            foreach (var value in new object?[] { null, false, Undefined.Value, 0, 42 })
+                ctx.On(
+                    "event",
+                    (_, _) =>
+                    {
+                        calls++;
+                        return value;
+                    });
             var result = mode == "serial" ? await ctx.SerialAsync("event") : ctx.Bail("event");
             Assert.Equal(0, result);
             Assert.Equal(4, calls);
@@ -423,11 +459,17 @@ public sealed class CoreTests
         await root.RunAsync(async ctx =>
         {
             var order = new List<int>();
-            var outer = ctx.Effect(() => new IAsyncDisposable[] { new Cleanup(() => order.Add(1)), ctx.Effect(() => (Action)(() => order.Add(2))), new Cleanup(() => order.Add(3)) });
+            var outer = ctx.Effect(() => new IAsyncDisposable[]
+            {
+                new Cleanup(() => order.Add(1)),
+                ctx.Effect(() => (Action)(() => order.Add(2))),
+                new Cleanup(() => order.Add(3))
+            });
             Assert.Single(ctx.Fiber.GetEffects());
             Assert.Single(ctx.Fiber.GetEffects()[0].Children);
             await outer.DisposeAsync();
             Assert.Equal([3, 2, 1], order);
+
             IEnumerable<IAsyncDisposable> Broken()
             {
                 yield return new Cleanup(() => order.Add(4));
@@ -447,20 +489,21 @@ public sealed class CoreTests
         {
             Task? disposal = null;
             int cleanup = 0;
-            var fiber = ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) => c.Effect(() =>
-            {
-                disposal = c.Fiber.DisposeAsync().AsTask();
-                return (Action)(() =>
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
                 {
-                    cleanup++;
-                    Assert.Throws<CordisException>(() => c.Effect(() => (Action)(() =>
+                    Apply = (c, _) => c.Effect(() =>
                     {
-                    })));
+                        disposal = c.Fiber.DisposeAsync().AsTask();
+                        return (Action)(() =>
+                        {
+                            cleanup++;
+                            Assert.Throws<CordisException>(() => c.Effect(() => (Action)(() =>
+                            {
+                            })));
+                        });
+                    })
                 });
-            })
-            });
             await fiber.WaitAsync();
             await disposal!;
             Assert.Equal(1, cleanup);
@@ -477,14 +520,15 @@ public sealed class CoreTests
             var entered = new TaskCompletionSource();
             var release = new TaskCompletionSource();
             EffectHandle? effect = null;
-            var fiber = ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) => effect = c.Effect(() => new AsyncCleanup(async () =>
-            {
-                entered.SetResult();
-                await release.Task;
-            }))
-            });
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) => effect = c.Effect(() => new AsyncCleanup(async () =>
+                    {
+                        entered.SetResult();
+                        await release.Task;
+                    }))
+                });
             await fiber.WaitAsync();
             var first = effect!.DisposeAsync().AsTask();
             await entered.Task;
@@ -507,6 +551,7 @@ public sealed class CoreTests
             var order = new List<int>();
             var release = new TaskCompletionSource();
             var started = new TaskCompletionSource();
+
             async IAsyncEnumerable<IAsyncDisposable> Generate()
             {
                 started.SetResult();
@@ -538,14 +583,15 @@ public sealed class CoreTests
         await root.RunAsync(async ctx =>
         {
             int cleanup = 0;
-            var fiber = ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) =>
-            {
-                c.Effect(() => (Action)(() => cleanup++));
-                c.Effect(() => (Action)(() => throw new Exception("cleanup")));
-            }
-            });
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (c, _) =>
+                    {
+                        c.Effect(() => (Action)(() => cleanup++));
+                        c.Effect(() => (Action)(() => throw new Exception("cleanup")));
+                    }
+                });
             await fiber.WaitAsync();
             await fiber.DisposeAsync();
             Assert.Equal(1, cleanup);
@@ -566,7 +612,20 @@ public sealed class CoreTests
             await first.DisposeAsync();
             ctx.Logger.Debug("root");
             ctx.Logger.Create("custom").Debug("%s %d", "hello", 2.7);
-            ctx.Intercept("logger", new Dictionary<string, object?> { { "name", "outer" } }).Intercept("logger", new Dictionary<string, object?> { { "name", "inner" } }).Logger.Debug("x");
+            ctx
+                .Intercept(
+                    "logger",
+                    new Dictionary<string, object?>
+                    {
+                        { "name", "outer" }
+                    })
+                .Intercept(
+                    "logger",
+                    new Dictionary<string, object?>
+                    {
+                        { "name", "inner" }
+                    })
+                .Logger.Debug("x");
             Assert.Empty(a);
             Assert.Equal(new[] { "root", "custom", "inner" }, b.Select(m => m.Name));
             Assert.Equal("hello 2", Logger.Format(b[1]));
@@ -580,28 +639,35 @@ public sealed class CoreTests
         await root.RunAsync(async ctx =>
         {
             int value = 1;
-            ctx.Reflect.Accessor("alias", new((_, _) => value, (_, v, _) =>
-            {
-                value = (int)v!;
-                return true;
-            }));
+            ctx.Reflect.Accessor(
+                "alias",
+                new(
+                    (_, _) => value,
+                    (_, v, _) =>
+                    {
+                        value = (int)v!;
+                        return true;
+                    }));
             Assert.True(ctx.Reflect.Has("alias"));
             Assert.Null(ctx.Get("alias"));
             Assert.Equal(1, ctx.Reflect.Read("alias"));
             ctx.Reflect.Write("alias", 2);
             Assert.Equal(2, ctx.Reflect.Read("alias"));
-            await ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (c, _) =>
-            {
-                Assert.Throws<InvalidOperationException>(() => c.Reflect.Read("missing"));
-                Assert.Throws<InvalidOperationException>(() => c.Set("missing", 0));
-                c.Provide("own", 1);
-                Assert.Throws<InvalidOperationException>(() => c.Provide("own", 2));
-                c.Set("own", 3);
-                Assert.Equal(3, c.Reflect.Read("own"));
-            }
-            }).WaitAsync();
+            await ctx
+                .Plugin(
+                    new Plugin<object?>
+                    {
+                        Apply = (c, _) =>
+                        {
+                            Assert.Throws<InvalidOperationException>(() => c.Reflect.Read("missing"));
+                            Assert.Throws<InvalidOperationException>(() => c.Set("missing", 0));
+                            c.Provide("own", 1);
+                            Assert.Throws<InvalidOperationException>(() => c.Provide("own", 2));
+                            c.Set("own", 3);
+                            Assert.Equal(3, c.Reflect.Read("own"));
+                        }
+                    })
+                .WaitAsync();
         });
     }
 
@@ -614,16 +680,18 @@ public sealed class CoreTests
             ctx.Provide("value", 1);
             ctx.Filter = _ => false;
             var calls = 0;
-            var allow = ctx.On("internal/set", (evt, args) =>
-            {
-                calls++;
-                Assert.Null(evt.Receiver);
-                Assert.Same(ctx, args[0]);
-                Assert.Equal("value", args[1]);
-                Assert.Equal(2, args[2]);
-                Assert.IsType<InvalidOperationException>(args[3]);
-                return evt.Next();
-            });
+            var allow = ctx.On(
+                "internal/set",
+                (evt, args) =>
+                {
+                    calls++;
+                    Assert.Null(evt.Receiver);
+                    Assert.Same(ctx, args[0]);
+                    Assert.Equal("value", args[1]);
+                    Assert.Equal(2, args[2]);
+                    Assert.IsType<InvalidOperationException>(args[3]);
+                    return evt.Next();
+                });
 
             ctx.Reflect.Write("value", 2);
             Assert.Equal(2, ctx.Get<int>("value"));
@@ -653,11 +721,17 @@ public sealed class CoreTests
         {
             var applies = 0;
             var disposes = 0;
-            var intercept = new Dictionary<string, object?> { ["mode"] = "override" };
+            var intercept = new Dictionary<string, object?>
+            {
+                ["mode"] = "override"
+            };
             var plugin = new Plugin<object?>
             {
                 Inject = ["messages", "messages"],
-                InjectConfig = new Dictionary<string, object?> { ["messages"] = intercept },
+                InjectConfig = new Dictionary<string, object?>
+                {
+                    ["messages"] = intercept
+                },
                 Apply = (child, _) =>
                 {
                     applies++;
@@ -721,13 +795,15 @@ public sealed class CoreTests
             bool fail = false;
             var listener = ctx.Extend();
             listener.Metadata["selected"] = true;
-            listener.On("event", (_, _) =>
-            {
-                if (fail)
-                    throw new InvalidOperationException("test");
-                calls++;
-                return null;
-            });
+            listener.On(
+                "event",
+                (_, _) =>
+                {
+                    if (fail)
+                        throw new InvalidOperationException("test");
+                    calls++;
+                    return null;
+                });
             await Send(null);
             Assert.Equal(1, calls);
             var no = ctx.Extend();

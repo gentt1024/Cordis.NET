@@ -10,13 +10,17 @@ public sealed class PluginManagerOriginalTests
     public async Task PatchPreservesCommentsExpressionsAndLastOverride()
     {
         await using var f = new Fixture();
-        await File.WriteAllTextAsync(f.Patch, "# personal configuration\n- id: tool\n  config:\n    value: !!js process.platform\n- id: tool\n  disabled: false # availability\n");
+        await File.WriteAllTextAsync(
+            f.Patch,
+            "# personal configuration\n- id: tool\n  config:\n    value: !!js process.platform\n- id: tool\n  disabled: false # availability\n");
         Assert.True(await ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", false));
         var text = await File.ReadAllTextAsync(f.Patch);
         Assert.Contains("# personal configuration", text);
         Assert.Contains("!!js process.platform", text);
         Assert.Contains("# availability", text);
-        EqualRows("- id: tool\n  config:\n    value: !!js process.platform\n- id: tool\n  disabled: true\n", await Profiles.ReadPatchesAsync(f.Patch));
+        EqualRows(
+            "- id: tool\n  config:\n    value: !!js process.platform\n- id: tool\n  disabled: true\n",
+            await Profiles.ReadPatchesAsync(f.Patch));
         Assert.False(await ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", false));
         Assert.Equal(text, await File.ReadAllTextAsync(f.Patch));
         Assert.True(await ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", true));
@@ -31,7 +35,9 @@ public sealed class PluginManagerOriginalTests
         EqualRows("- id: tool\n  disabled: true\n", await Profiles.ReadPatchesAsync(f.Patch));
         await File.WriteAllTextAsync(f.Patch, "- insert:\n    - id: tool\n      name: package\n");
         await ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", true);
-        EqualRows("- insert:\n    - id: tool\n      name: package\n- id: tool\n  disabled: false\n", await Profiles.ReadPatchesAsync(f.Patch));
+        EqualRows(
+            "- insert:\n    - id: tool\n      name: package\n- id: tool\n  disabled: false\n",
+            await Profiles.ReadPatchesAsync(f.Patch));
     }
 
     [Theory]
@@ -41,7 +47,8 @@ public sealed class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         await File.WriteAllTextAsync(f.Patch, text);
-        await Assert.ThrowsAnyAsync<Exception>(() => ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", true));
+        await Assert.ThrowsAnyAsync<Exception>(() =>
+            ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", true));
         Assert.Equal(text, await File.ReadAllTextAsync(f.Patch));
     }
 
@@ -51,7 +58,9 @@ public sealed class PluginManagerOriginalTests
         await using var f = new Fixture();
         await File.WriteAllTextAsync(f.Patch, "- id: tool\n  name: another-package\n  disabled: false\n");
         await ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", false);
-        EqualRows("- id: tool\n  name: another-package\n  disabled: false\n- id: tool\n  disabled: true\n", await Profiles.ReadPatchesAsync(f.Patch));
+        EqualRows(
+            "- id: tool\n  name: another-package\n  disabled: false\n- id: tool\n  disabled: true\n",
+            await Profiles.ReadPatchesAsync(f.Patch));
         Assert.False(await ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", false));
     }
 
@@ -61,7 +70,8 @@ public sealed class PluginManagerOriginalTests
         await using var f = new Fixture();
         File.Delete(f.Patch);
         Directory.CreateDirectory(f.Patch);
-        await Assert.ThrowsAnyAsync<Exception>(() => ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", true));
+        await Assert.ThrowsAnyAsync<Exception>(() =>
+            ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", true));
         Assert.True(Directory.Exists(f.Patch));
     }
 
@@ -69,15 +79,27 @@ public sealed class PluginManagerOriginalTests
     public async Task PatchUpdatesLastMatchingNamedOverride()
     {
         await using var f = new Fixture();
-        const string input = "- id: tool\n  disabled: true\n- id: tool\n  name: package\n  config:\n    value: !!js process.platform\n  disabled: true # availability\n- id: tool\n  name: another-package\n  disabled: true\n";
+        const string input =
+            "- id: tool\n  disabled: true\n- id: tool\n  name: package\n  config:\n    value: !!js process.platform\n  disabled: true # availability\n- id: tool\n  name: another-package\n  disabled: true\n";
         await File.WriteAllTextAsync(f.Patch, input);
         Assert.True(await ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", true));
         var text = await File.ReadAllTextAsync(f.Patch);
         Assert.Contains("!!js process.platform", text);
         Assert.Contains("# availability", text);
         var patches = await Profiles.ReadPatchesAsync(f.Patch);
-        EqualRows(input.Replace("disabled: true # availability", "disabled: false # availability", StringComparison.Ordinal), patches);
-        var result = Assert.Single(EntryPatches.Apply([new() { Id = "tool", Name = "package" }], patches));
+        EqualRows(
+            input.Replace("disabled: true # availability", "disabled: false # availability", StringComparison.Ordinal),
+            patches);
+        var result = Assert.Single(
+            EntryPatches.Apply(
+                [
+                    new()
+                    {
+                        Id = "tool",
+                        Name = "package"
+                    }
+                ],
+                patches));
         Assert.Equal("tool", result.Id);
         Assert.Equal("package", result.Name);
         Assert.Equal(false, result.Disabled);
@@ -121,7 +143,19 @@ public sealed class PluginManagerOriginalTests
     public async Task OverlayReportsSavedToggleAsOverridden()
     {
         await using var f = new Fixture();
-        await f.Start(overlays: [new("cli", [new() { Id = "managed", Disabled = true }])]);
+        await f.Start(
+            overlays:
+            [
+                new(
+                    "cli",
+                    [
+                        new()
+                        {
+                            Id = "managed",
+                            Disabled = true
+                        }
+                    ])
+            ]);
         AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", true), true, "overridden");
         Assert.Equal(false, Assert.Single(await Profiles.ReadPatchesAsync(f.Patch)).Disabled);
     }
@@ -160,16 +194,20 @@ public sealed class PluginManagerOriginalTests
     public async Task ProtectsManagementDependencyAndContainingBundle(string module)
     {
         await using var f = new Fixture();
-        f.Modules.Register(module, new Plugin<object?>
-        {
-            Apply = (_, _) =>
-        {
-        }
-        });
+        f.Modules.Register(
+            module,
+            new Plugin<object?>
+            {
+                Apply = (_, _) =>
+                {
+                }
+            });
         await f.Start(module: module);
         var manifest = File.ReadAllText(f.ManifestPath);
         var patch = File.ReadAllText(f.Patch);
-        Assert.Equal("management-required", (await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == "root:managed").ReadOnlyReason);
+        Assert.Equal(
+            "management-required",
+            (await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == "root:managed").ReadOnlyReason);
         Assert.Equal("management-required", (await f.Manager.SetPluginEnabledAsync("root:managed", false)).Error);
         var bundle = (await f.Manager.ListBundlesAsync()).Single(row => row.Name == "extra");
         Assert.False(bundle.Removable);
@@ -183,14 +221,16 @@ public sealed class PluginManagerOriginalTests
     public async Task ActivationFailureKeepsSavedChangeAndCorrectedConfigRetries()
     {
         await using var f = new Fixture();
-        f.Modules.Register("managed", new Plugin<object?>
-        {
-            Apply = (_, config) =>
-        {
-            if (config is not true)
-                throw new InvalidOperationException("invalid settings");
-        }
-        });
+        f.Modules.Register(
+            "managed",
+            new Plugin<object?>
+            {
+                Apply = (_, config) =>
+                {
+                    if (config is not true)
+                        throw new InvalidOperationException("invalid settings");
+                }
+            });
         await f.Start(initiallyDisabled: true);
         await File.WriteAllTextAsync(f.Patch, "- id: managed\n  disabled: true\n");
         AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", true), true, "failed");
@@ -205,7 +245,28 @@ public sealed class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         await f.Start();
-        await f.Bundle("described", [new() { ["insert"] = new[] { new EntryOptions { Id = "described-row", Name = "managed" } } }, new() { Id = "managed", Disabled = true }], "2.0.0", "Describes itself.");
+        await f.Bundle(
+            "described",
+            [
+                new()
+                {
+                    ["insert"] = new[]
+                    {
+                        new EntryOptions
+                        {
+                            Id = "described-row",
+                            Name = "managed"
+                        }
+                    }
+                },
+                new()
+                {
+                    Id = "managed",
+                    Disabled = true
+                }
+            ],
+            "2.0.0",
+            "Describes itself.");
         var bundle = (await f.Manager.ListBundlesAsync()).Single(row => row.Name == "described");
         Assert.Equal("2.0.0", bundle.Version);
         Assert.Equal("Describes itself.", bundle.Description);
@@ -216,9 +277,12 @@ public sealed class PluginManagerOriginalTests
         Assert.Equal(new[] { "managed" }, bundle.Overrides);
         Assert.Equal(new BundleConfigurationRow("described-row", "managed", null), Assert.Single(bundle.Rows));
         Assert.Equal("applied", (await f.Manager.SetBundleEnabledAsync("described", true)).Application);
-        Assert.Equal("root:described-row", Assert.Single((await f.Manager.ListBundlesAsync()).Single(row => row.Name == "described").Rows).EntryId);
+        Assert.Equal(
+            "root:described-row",
+            Assert.Single((await f.Manager.ListBundlesAsync()).Single(row => row.Name == "described").Rows).EntryId);
         await f.Manager.SetBundleEnabledAsync("described", false);
-        Assert.Null(Assert.Single((await f.Manager.ListBundlesAsync()).Single(row => row.Name == "described").Rows).EntryId);
+        Assert.Null(
+            Assert.Single((await f.Manager.ListBundlesAsync()).Single(row => row.Name == "described").Rows).EntryId);
     }
 
     [Fact]
@@ -226,7 +290,24 @@ public sealed class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         await f.Start();
-        var offered = await f.Bundle("offered", [new() { ["insert"] = new[] { new EntryOptions { Id = "offered-row", Name = "managed" } } }], "3.0.0", "Package one-liner.", dependency: false);
+        var offered = await f.Bundle(
+            "offered",
+            [
+                new()
+                {
+                    ["insert"] = new[]
+                    {
+                        new EntryOptions
+                        {
+                            Id = "offered-row",
+                            Name = "managed"
+                        }
+                    }
+                }
+            ],
+            "3.0.0",
+            "Package one-liner.",
+            dependency: false);
         f.Installation["offered"] = offered;
         f.Manager.OptionalBundles.Add("offered");
         var plain = await f.Bundle("plain", [], dependency: false);
@@ -253,7 +334,9 @@ public sealed class PluginManagerOriginalTests
         await f.Start();
         var reasons = new List<string>();
         f.Manager.Changed += reasons.Add;
-        await ApplicationBoot.ReconcileAsync(f.Include, ProfileComposition.Flatten((await ProfileComposition.RefreshAsync(f.Launch)).Layers));
+        await ApplicationBoot.ReconcileAsync(
+            f.Include,
+            ProfileComposition.Flatten((await ProfileComposition.RefreshAsync(f.Launch)).Layers));
         Assert.Empty(reasons);
         await f.Manager.SetPluginEnabledAsync("root:managed", false);
         Assert.Equal(new[] { "plugin" }, reasons);
@@ -334,12 +417,39 @@ public sealed class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         await f.Start();
-        await f.Bundle("grouped", [new() { ["insert"] = new[] { new EntryOptions { Id = "group", Name = "cordis:group", Group = true, Config = new[] { new EntryOptions { Id = "child", Name = "managed" } } } } }]);
+        await f.Bundle(
+            "grouped",
+            [
+                new()
+                {
+                    ["insert"] = new[]
+                    {
+                        new EntryOptions
+                        {
+                            Id = "group",
+                            Name = "cordis:group",
+                            Group = true,
+                            Config = new[]
+                            {
+                                new EntryOptions
+                                {
+                                    Id = "child",
+                                    Name = "managed"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]);
         var grouped = await f.Manager.SetBundleEnabledAsync("grouped", true);
         Assert.True(grouped.Application == "applied", grouped.Diagnostic);
         Assert.Contains(await f.Manager.ListPluginsAsync(), row => row.PatchId == "child");
-        await File.WriteAllTextAsync(f.Patch, "- insert:\n    - id: duplicate-group\n      name: group\n      group: true\n      config:\n        - id: managed\n          name: managed\n");
-        Assert.Equal("unaddressable", (await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == "root:managed").ReadOnlyReason);
+        await File.WriteAllTextAsync(
+            f.Patch,
+            "- insert:\n    - id: duplicate-group\n      name: group\n      group: true\n      config:\n        - id: managed\n          name: managed\n");
+        Assert.Equal(
+            "unaddressable",
+            (await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == "root:managed").ReadOnlyReason);
     }
 
     [Fact]
@@ -382,21 +492,54 @@ public sealed class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         await f.Start();
-        f.Modules.Register("broken", new Plugin<object?> { Apply = (_, _) => throw new InvalidOperationException("test activation failed") });
-        f.Modules.Register("pending", new Plugin<object?>
-        {
-            Inject = ["unavailable"],
-            Apply = (_, _) =>
-        {
-        }
-        });
-        await f.Bundle("broken", [new() { ["insert"] = new[] { new EntryOptions { Id = "broken", Name = "broken" }, new EntryOptions { Id = "missing", Name = "absent" }, new EntryOptions { Id = "pending", Name = "pending" } } }]);
+        f.Modules.Register(
+            "broken",
+            new Plugin<object?>
+            {
+                Apply = (_, _) => throw new InvalidOperationException("test activation failed")
+            });
+        f.Modules.Register(
+            "pending",
+            new Plugin<object?>
+            {
+                Inject = ["unavailable"],
+                Apply = (_, _) =>
+                {
+                }
+            });
+        await f.Bundle(
+            "broken",
+            [
+                new()
+                {
+                    ["insert"] = new[]
+                    {
+                        new EntryOptions
+                        {
+                            Id = "broken",
+                            Name = "broken"
+                        },
+                        new EntryOptions
+                        {
+                            Id = "missing",
+                            Name = "absent"
+                        },
+                        new EntryOptions
+                        {
+                            Id = "pending",
+                            Name = "pending"
+                        }
+                    }
+                }
+            ]);
         Assert.Equal("failed", (await f.Manager.SetBundleEnabledAsync("broken", true)).Application);
         Assert.Equal("failed", (await f.Manager.SetPluginEnabledAsync("root:broken", true)).Application);
         Assert.Equal("failed", (await f.Manager.SetBundleEnabledAsync("broken", true)).Application);
         var changed = await f.Manager.SetPluginEnabledAsync("root:managed", false);
         Assert.Equal("applied", changed.Application);
-        Assert.True(changed.Warnings!.Count == 3, string.Join("; ", changed.Warnings.Select(w => w.Id + ":" + w.Error?.Message)));
+        Assert.True(
+            changed.Warnings!.Count == 3,
+            string.Join("; ", changed.Warnings.Select(w => w.Id + ":" + w.Error?.Message)));
         Assert.Equal("applied", (await f.Manager.SetPluginEnabledAsync("root:managed", true)).Application);
     }
 
@@ -409,7 +552,10 @@ public sealed class PluginManagerOriginalTests
         await f.Bundle("new-bundle", []);
         var result = ProfileMaintenance.Reconcile(f.DirectoryPath, before, true, f.Packages, f.Installation);
         Assert.Equal(new[] { "new-bundle" }, result.Inventory.Manifest.Bundles);
-        Assert.Equal(new[] { "new-bundle" }, ProfileMaintenance.Reconcile(f.DirectoryPath, result.Inventory, true, f.Packages, f.Installation).Inventory.Manifest.Bundles);
+        Assert.Equal(
+            new[] { "new-bundle" },
+            ProfileMaintenance.Reconcile(f.DirectoryPath, result.Inventory, true, f.Packages, f.Installation)
+                .Inventory.Manifest.Bundles);
     }
 
     [Fact]
@@ -435,10 +581,15 @@ public sealed class PluginManagerOriginalTests
         await using var f = new Fixture();
         File.WriteAllText(f.ManifestPath, "{}");
         var before = ProfileMaintenance.Inventory(f.DirectoryPath, f.Packages, f.Installation);
-        Assert.Empty(ProfileMaintenance.Reconcile(f.DirectoryPath, before, true, f.Packages, f.Installation).Inventory.Manifest.Bundles);
+        Assert.Empty(
+            ProfileMaintenance.Reconcile(f.DirectoryPath, before, true, f.Packages, f.Installation)
+                .Inventory.Manifest.Bundles);
         await f.Bundle("new", []);
         ProfileMaintenance.WriteBundles(f.DirectoryPath, f.Manifest, ["new"]);
-        Assert.Equal(new[] { "new" }, ProfileMaintenance.Reconcile(f.DirectoryPath, before, true, f.Packages, f.Installation).Inventory.Manifest.Bundles);
+        Assert.Equal(
+            new[] { "new" },
+            ProfileMaintenance.Reconcile(f.DirectoryPath, before, true, f.Packages, f.Installation)
+                .Inventory.Manifest.Bundles);
     }
 
     [Fact]
@@ -481,7 +632,9 @@ public sealed class PluginManagerOriginalTests
         Assert.Equal(true, preview.Single(row => row.Id == "managed").Disabled);
     }
 
-    private static void EqualRows(string expected, object actual) => Assert.True(Data.DeepEquals(ConfigurationFile.ParseEntries(expected), actual));
+    private static void EqualRows(string expected, object actual) =>
+        Assert.True(Data.DeepEquals(ConfigurationFile.ParseEntries(expected), actual));
+
     private static void AssertChange(ConfigurationChange change, bool changed, string application)
     {
         Assert.Equal(changed, change.Changed);
@@ -490,37 +643,81 @@ public sealed class PluginManagerOriginalTests
 
     private sealed class Fixture : IAsyncDisposable
     {
-        public string DirectoryPath { get; } = Path.Combine(Path.GetTempPath(), "cordis-manager-" + Guid.NewGuid().ToString("N"));
+        public string DirectoryPath
+        {
+            get;
+        } = Path.Combine(Path.GetTempPath(), "cordis-manager-" + Guid.NewGuid().ToString("N"));
+
         public string Patch => Path.Combine(DirectoryPath, "cordis.patch.yml");
         public string ManifestPath => Path.Combine(DirectoryPath, "package.json");
         public PackageManifest Manifest => PackageManifest.Read(ManifestPath);
-        public Context Context { get; } = new();
-        public StaticModuleResolver Modules { get; } = new();
-        public Dictionary<string, string> Installation { get; } = new(StringComparer.Ordinal);
-        public Dictionary<string, string> Packages { get; } = new(StringComparer.Ordinal);
-        public Include Include { get; private set; } = null!;
-        public ProfileLaunch Launch { get; private set; } = null!;
-        public PluginConfigurationOperations Manager { get; private set; } = null!;
+
+        public Context Context
+        {
+            get;
+        } = new();
+
+        public StaticModuleResolver Modules
+        {
+            get;
+        } = new();
+
+        public Dictionary<string, string> Installation
+        {
+            get;
+        } = new(StringComparer.Ordinal);
+
+        public Dictionary<string, string> Packages
+        {
+            get;
+        } = new(StringComparer.Ordinal);
+
+        public Include Include
+        {
+            get;
+            private set;
+        } = null!;
+
+        public ProfileLaunch Launch
+        {
+            get;
+            private set;
+        } = null!;
+
+        public PluginConfigurationOperations Manager
+        {
+            get;
+            private set;
+        } = null!;
 
         public Fixture()
         {
             Directory.CreateDirectory(DirectoryPath);
             Profiles.Initialize(DirectoryPath, []);
-            Modules.Register("cordis:manager", new Plugin<object?>
-            {
-                Apply = (_, _) =>
-            {
-            }
-            });
-            Modules.Register("managed", new Plugin<object?>
-            {
-                Apply = (_, _) =>
-            {
-            }
-            });
+            Modules.Register(
+                "cordis:manager",
+                new Plugin<object?>
+                {
+                    Apply = (_, _) =>
+                    {
+                    }
+                });
+            Modules.Register(
+                "managed",
+                new Plugin<object?>
+                {
+                    Apply = (_, _) =>
+                    {
+                    }
+                });
         }
 
-        public async Task<string> Bundle(string name, List<EntryOptions> patches, string version = "1.0.0", string? description = null, bool dependency = true)
+        public async Task<string> Bundle(
+            string name,
+            List<EntryOptions> patches,
+            string version = "1.0.0",
+            string? description = null,
+            bool dependency = true)
         {
             var directory = Path.Combine(DirectoryPath, name);
             Directory.CreateDirectory(directory);
@@ -553,10 +750,44 @@ public sealed class PluginManagerOriginalTests
             return directory;
         }
 
-        public async Task Start(bool live = true, IReadOnlyList<ConfigurationLayer>? overlays = null, string module = "managed", bool initiallyDisabled = false)
+        public async Task Start(
+            bool live = true,
+            IReadOnlyList<ConfigurationLayer>? overlays = null,
+            string module = "managed",
+            bool initiallyDisabled = false)
         {
-            Installation["core"] = await Bundle("core", [new() { ["insert"] = new[] { new EntryOptions { Id = "manager", Name = "cordis:manager" } } }], dependency: false);
-            await Bundle("extra", [new() { ["insert"] = new[] { new EntryOptions { Id = "managed", Name = module, Disabled = initiallyDisabled } } }]);
+            Installation["core"] = await Bundle(
+                "core",
+                [
+                    new()
+                    {
+                        ["insert"] = new[]
+                        {
+                            new EntryOptions
+                            {
+                                Id = "manager",
+                                Name = "cordis:manager"
+                            }
+                        }
+                    }
+                ],
+                dependency: false);
+            await Bundle(
+                "extra",
+                [
+                    new()
+                    {
+                        ["insert"] = new[]
+                        {
+                            new EntryOptions
+                            {
+                                Id = "managed",
+                                Name = module,
+                                Disabled = initiallyDisabled
+                            }
+                        }
+                    }
+                ]);
             ProfileMaintenance.WriteBundles(DirectoryPath, Manifest, ["core", "extra"]);
             var profile = await Profiles.LoadAsync(DirectoryPath, Installation, Packages);
             var home = Path.Combine(DirectoryPath, "home");
@@ -576,7 +807,10 @@ public sealed class PluginManagerOriginalTests
                 };
                 return Task.CompletedTask;
             });
-            Include = await ApplicationBoot.MountAsync(loader, path, ProfileComposition.Flatten((await ProfileComposition.RefreshAsync(Launch)).Layers));
+            Include = await ApplicationBoot.MountAsync(
+                loader,
+                path,
+                ProfileComposition.Flatten((await ProfileComposition.RefreshAsync(Launch)).Layers));
             Manager = new(Launch, Include, "root:manager")
             {
                 RunExclusiveAsync = live ? action => action() : null

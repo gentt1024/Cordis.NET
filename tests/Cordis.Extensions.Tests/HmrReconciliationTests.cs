@@ -19,32 +19,82 @@ public sealed class HmrReconciliationTests
             var config = Path.Combine(directory.FullName, "cordis.yml");
             var user = Path.Combine(directory.FullName, "cordis.patch.yml");
             await File.WriteAllTextAsync(config, $"- id: {id}\n  name: noop\n  config:\n    value: base\n");
-            var basePatches = new List<EntryOptions> { new() { Id = id, Config = new EntryOptions { ["value"] = "generated" } } };
+            var basePatches = new List<EntryOptions>
+            {
+                new()
+                {
+                    Id = id,
+                    Config = new EntryOptions
+                    {
+                        ["value"] = "generated"
+                    }
+                }
+            };
             await using var context = new Context();
             IPlugin plugin = asynchronous
-                ? new Plugin<EntryOptions> { ApplyAsync = async (_, raw) => { await Task.Yield(); if (raw.GetValueOrDefault("fail") is true) throw new InvalidOperationException("candidate config failed"); } }
-                : new Plugin<EntryOptions> { Apply = (_, raw) => { if (raw.GetValueOrDefault("fail") is true) throw new InvalidOperationException("candidate config failed"); } };
+                ? new Plugin<EntryOptions>
+                {
+                    ApplyAsync = async (_, raw) =>
+                    {
+                        await Task.Yield();
+                        if (raw.GetValueOrDefault("fail") is true)
+                            throw new InvalidOperationException("candidate config failed");
+                    }
+                }
+                : new Plugin<EntryOptions>
+                {
+                    Apply = (_, raw) =>
+                    {
+                        if (raw.GetValueOrDefault("fail") is true)
+                            throw new InvalidOperationException("candidate config failed");
+                    }
+                };
             Loader? loader = null;
-            await context.RunAsync(ctx => { loader = new Loader(ctx, new StaticModuleResolver().Register("noop", plugin), expressionEvaluator: new JintExpressionEvaluator()); return Task.CompletedTask; });
+            await context.RunAsync(ctx =>
+            {
+                loader = new Loader(
+                    ctx,
+                    new StaticModuleResolver().Register("noop", plugin),
+                    expressionEvaluator: new JintExpressionEvaluator());
+                return Task.CompletedTask;
+            });
             var include = await ApplicationBoot.MountAsync(loader!, config, basePatches);
-            ControlledWatcher? native = null; int watchers = 0, failures = 0;
-            await using var hmr = new HmrCoordinator(path => { watchers++; return native = new(path); });
+            ControlledWatcher? native = null;
+            int watchers = 0, failures = 0;
+            await using var hmr = new HmrCoordinator(path =>
+            {
+                watchers++;
+                return native = new(path);
+            });
             var outcomes = Channel.CreateUnbounded<Exception?>();
-            hmr.Error += error => { failures++; outcomes.Writer.TryWrite(error); };
+            hmr.Error += error =>
+            {
+                failures++;
+                outcomes.Writer.TryWrite(error);
+            };
             var required = new HashSet<string>(["webserver"], StringComparer.Ordinal);
+
             async Task Refresh(bool defaultCompose)
             {
                 var patches = await Profiles.ReadPatchesAsync(user, true);
-                await ApplicationBoot.ReconcileAsync(include, defaultCompose ? patches : [.. basePatches, .. patches], required);
+                await ApplicationBoot.ReconcileAsync(
+                    include,
+                    defaultCompose ? patches : [.. basePatches, .. patches],
+                    required);
                 outcomes.Writer.TryWrite(null);
             }
-            var watch = hmr.WatchConfig(user, () => Refresh(false)); native!.EnableRaisingEvents = false;
+
+            var watch = hmr.WatchConfig(user, () => Refresh(false));
+            native!.EnableRaisingEvents = false;
             Assert.Equal(1, watchers);
+
             async Task<Exception?> Change(string text)
             {
-                await File.WriteAllTextAsync(user, text); native.Change("cordis.patch.yml");
+                await File.WriteAllTextAsync(user, text);
+                native.Change("cordis.patch.yml");
                 return await outcomes.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
             }
+
             Entry Row() => include.Store[id];
             Assert.Null(await Change($"- id: {id}\n  config:\n    value: live\n"));
             Assert.Equal("live", ((EntryOptions)Row().Options.Config!)["value"]);
@@ -60,18 +110,25 @@ public sealed class HmrReconciliationTests
             Assert.Equal("recovered", ((EntryOptions)Row().Options.Config!)["value"]);
             Assert.Equal(FiberState.Active, Row().Fiber!.State);
             Assert.Equal(3, failures);
-            File.Delete(user); native.Change("cordis.patch.yml");
+            File.Delete(user);
+            native.Change("cordis.patch.yml");
             Assert.Null(await outcomes.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10)));
             Assert.Equal("generated", ((EntryOptions)Row().Options.Config!)["value"]);
             await watch.DisposeAsync();
-            await using var defaultWatch = hmr.WatchConfig(user, () => Refresh(true)); native.EnableRaisingEvents = false;
+            await using var defaultWatch = hmr.WatchConfig(user, () => Refresh(true));
+            native.EnableRaisingEvents = false;
             Assert.Equal(2, watchers);
             Assert.Null(await Change($"- id: {id}\n  config:\n    value: identity\n"));
             Assert.Equal("identity", ((EntryOptions)Row().Options.Config!)["value"]);
         }
-        finally { directory.Delete(true); }
+        finally
+        {
+            directory.Delete(true);
+        }
     }
 
     private sealed class ControlledWatcher(string directory) : FileSystemWatcher(directory)
-    { public void Change(string name) => OnChanged(new(WatcherChangeTypes.Changed, Path, name)); }
+    {
+        public void Change(string name) => OnChanged(new(WatcherChangeTypes.Changed, Path, name));
+    }
 }

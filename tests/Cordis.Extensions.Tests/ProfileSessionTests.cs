@@ -13,12 +13,21 @@ public sealed class ProfileSessionTests
         var path = Path.Combine(scenario.Launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename);
         System.IO.Directory.CreateDirectory(path);
         var warnings = new List<string>();
-        var launch = scenario.Launch with { RuntimeIdentity = new("0.2.0-rc.2"), CompatibilityWarning = warnings.Add };
-        await using var session = await ProfileSession.StartAsync(scenario.Config, launch, scenario.Resolver, enableHmr: true);
+        var launch = scenario.Launch with
+        {
+            RuntimeIdentity = new("0.2.0-rc.2"),
+            CompatibilityWarning = warnings.Add
+        };
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            launch,
+            scenario.Resolver,
+            enableHmr: true);
         await scenario.ExpectAsync("initial");
         Assert.NotEmpty(warnings);
         Assert.False(session.ConfigurationOperations.ReadVersionCompatibility().Rewritable);
-        var result = await session.ConfigurationOperations.SetVersionExemptionAsync("test@1.0.0", "0.2.0-rc.2", true, true);
+        var result =
+            await session.ConfigurationOperations.SetVersionExemptionAsync("test@1.0.0", "0.2.0-rc.2", true, true);
         Assert.NotNull(result.Error);
         Assert.True(System.IO.Directory.Exists(path));
         await session.RefreshAsync();
@@ -32,27 +41,42 @@ public sealed class ProfileSessionTests
         System.IO.Directory.CreateDirectory(package);
         var module = Path.Combine(package, "plugin.dll");
         await File.WriteAllTextAsync(module, "manifest lookup only; static test resolver owns the implementation");
-        await File.WriteAllTextAsync(Path.Combine(package, "package.json"), "{\"name\":\"external-plugin\",\"version\":\"1.0.0\",\"peerDependencies\":{\"@deepseek-ai/dsh\":\"<0.1.0\"}}");
+        await File.WriteAllTextAsync(
+            Path.Combine(package, "package.json"),
+            "{\"name\":\"external-plugin\",\"version\":\"1.0.0\",\"peerDependencies\":{\"@deepseek-ai/dsh\":\"<0.1.0\"}}");
         var uri = new Uri(module).AbsoluteUri;
         int applies = 0;
-        scenario.Resolver.Register(uri, new Plugin<object?> { Apply = (_, _) => applies++ });
+        scenario.Resolver.Register(
+            uri,
+            new Plugin<object?>
+            {
+                Apply = (_, _) => applies++
+            });
         await File.WriteAllTextAsync(scenario.Config, $"- id: external\n  name: {uri}\n");
         var compatibility = Path.Combine(scenario.Launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename);
         const string corrupt = "{\"bad-record\":42}";
         await File.WriteAllTextAsync(compatibility, corrupt);
         var warnings = new List<string>();
-        var launch = scenario.Launch with { RuntimeIdentity = new DshRuntimeIdentity("0.2.0-rc.2"), CompatibilityWarning = warnings.Add };
+        var launch = scenario.Launch with
+        {
+            RuntimeIdentity = new DshRuntimeIdentity("0.2.0-rc.2"),
+            CompatibilityWarning = warnings.Add
+        };
         await using (var session = await ProfileSession.StartAsync(scenario.Config, launch, scenario.Resolver))
         {
-            Assert.Equal(0, applies); Assert.True(session.Loader.Resolve("root:external").Disabled);
+            Assert.Equal(0, applies);
+            Assert.True(session.Loader.Resolve("root:external").Disabled);
             await File.WriteAllTextAsync(scenario.ProfilePatch, "# force profile composition refresh\n[]\n");
             await session.RefreshAsync();
-            Assert.Equal(0, applies); Assert.True(session.Loader.Resolve("root:external").Disabled);
+            Assert.Equal(0, applies);
+            Assert.True(session.Loader.Resolve("root:external").Disabled);
             Assert.Equal(corrupt, await File.ReadAllTextAsync(compatibility));
             Assert.Contains(warnings, warning => warning.Contains("compatibility", StringComparison.Ordinal));
         }
+
         await using var generic = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
-        Assert.Equal(1, applies); Assert.False(generic.Loader.Resolve("root:external").Disabled);
+        Assert.Equal(1, applies);
+        Assert.False(generic.Loader.Resolve("root:external").Disabled);
         Assert.Equal(corrupt, await File.ReadAllTextAsync(compatibility));
     }
 
@@ -62,11 +86,15 @@ public sealed class ProfileSessionTests
         await using var scenario = await Scenario.CreateAsync();
         var bundle = Path.Combine(scenario.Directory, "multiple");
         System.IO.Directory.CreateDirectory(bundle);
-        await File.WriteAllTextAsync(Path.Combine(bundle, "package.json"), "{\"dsh\":{\"bundle\":{\"patch\":[\"first.yml\",\"second.yml\"]}}}");
+        await File.WriteAllTextAsync(
+            Path.Combine(bundle, "package.json"),
+            "{\"dsh\":{\"bundle\":{\"patch\":[\"first.yml\",\"second.yml\"]}}}");
         await File.WriteAllTextAsync(Path.Combine(bundle, "first.yml"), "- id: p\n  config: first\n");
         await File.WriteAllTextAsync(Path.Combine(bundle, "second.yml"), "- id: p\n  config: second\n");
         scenario.Mappings["multiple"] = bundle;
-        await File.WriteAllTextAsync(Path.Combine(scenario.Launch.Profile.Directory, "package.json"), "{\"dsh\":{\"profile\":{\"bundles\":[\"missing\",\"multiple\"]}}}");
+        await File.WriteAllTextAsync(
+            Path.Combine(scenario.Launch.Profile.Directory, "package.json"),
+            "{\"dsh\":{\"profile\":{\"bundles\":[\"missing\",\"multiple\"]}}}");
         await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
         await scenario.ExpectAsync("second");
         Assert.Equal(["missing", "multiple"], session.SelectedBundles);
@@ -80,7 +108,9 @@ public sealed class ProfileSessionTests
         await scenario.ExpectAsync("initial");
         Assert.Empty(session.LoadedBundles);
         Assert.Equal(["missing", "multiple"], session.SkippedBundles.Select(item => item.Name));
-        Assert.Equal(2, warnings.Count(message => message.Contains("skipping profile bundle", StringComparison.Ordinal)));
+        Assert.Equal(
+            2,
+            warnings.Count(message => message.Contains("skipping profile bundle", StringComparison.Ordinal)));
         await File.WriteAllTextAsync(Path.Combine(bundle, "second.yml"), "- id: p\n  config: recovered\n");
         await File.WriteAllTextAsync(scenario.ProfilePatch, "# retry\n[]\n");
         await session.RefreshAsync();
@@ -94,13 +124,27 @@ public sealed class ProfileSessionTests
     public async Task Profile_refresh_proceeds_while_package_writer_lock_is_held()
     {
         await using var scenario = await Scenario.CreateAsync();
-        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver, enableHmr: true);
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true);
         await scenario.ExpectAsync("initial");
         var lockPath = Path.Combine(scenario.Launch.Profile.Directory, "package.json.cordis-lock");
-        await using var writerLock = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
+        await using var writerLock = new FileStream(
+            lockPath,
+            FileMode.OpenOrCreate,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            1,
+            FileOptions.DeleteOnClose);
         await scenario.WriteAsync(session, scenario.ProfilePatch, "- id: p\n  config: during-install\n");
         await scenario.ExpectAsync("during-install");
-        await session.Context.RunAsync(ctx => { Assert.Equal("during-install", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("during-install", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
     }
 
     [Fact]
@@ -108,16 +152,33 @@ public sealed class ProfileSessionTests
     {
         await using var scenario = await Scenario.CreateAsync();
         var original = await File.ReadAllTextAsync(scenario.ProfilePatch);
-        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver, enableHmr: true);
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true);
         await scenario.ExpectAsync("initial");
         var error = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         session.Error += failure => error.TrySetResult(failure);
-        await session.Hmr!.RunExclusiveAsync(() => { File.Delete(scenario.ProfilePatch); System.IO.Directory.CreateDirectory(scenario.ProfilePatch); return Task.CompletedTask; });
+        await session.Hmr!.RunExclusiveAsync(() =>
+        {
+            File.Delete(scenario.ProfilePatch);
+            System.IO.Directory.CreateDirectory(scenario.ProfilePatch);
+            return Task.CompletedTask;
+        });
         await error.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        await session.Hmr.RunExclusiveAsync(async () => { System.IO.Directory.Delete(scenario.ProfilePatch); await File.WriteAllTextAsync(scenario.ProfilePatch, original); });
+        await session.Hmr.RunExclusiveAsync(async () =>
+        {
+            System.IO.Directory.Delete(scenario.ProfilePatch);
+            await File.WriteAllTextAsync(scenario.ProfilePatch, original);
+        });
         await session.RefreshAsync();
         Assert.Equal(original, await File.ReadAllTextAsync(scenario.ProfilePatch));
-        await session.Context.RunAsync(ctx => { Assert.Equal("initial", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("initial", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
     }
 
     [Fact]
@@ -125,10 +186,19 @@ public sealed class ProfileSessionTests
     {
         await using var scenario = await Scenario.CreateAsync();
         var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver,
-            enableHmr: true, applicationReady: ready.Task, prepare: _ => File.WriteAllTextAsync(scenario.ProfilePatch, "- id: p\n  config: during-boot\n"));
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true,
+            applicationReady: ready.Task,
+            prepare: _ => File.WriteAllTextAsync(scenario.ProfilePatch, "- id: p\n  config: during-boot\n"));
         await scenario.ExpectAsync("initial");
-        await session.Context.RunAsync(ctx => { Assert.Equal("initial", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("initial", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
         ready.SetResult(true);
         await scenario.ExpectAsync("during-boot");
     }
@@ -138,8 +208,12 @@ public sealed class ProfileSessionTests
     {
         await using var scenario = await Scenario.CreateAsync();
         var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver,
-            enableHmr: true, applicationReady: ready.Task);
+        var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true,
+            applicationReady: ready.Task);
         await scenario.ExpectAsync("initial");
         await File.WriteAllTextAsync(scenario.ProfilePatch, "- id: p\n  config: cancelled\n");
         await session.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
@@ -155,21 +229,37 @@ public sealed class ProfileSessionTests
         int updates = 0;
         await session.Context.RunAsync(ctx =>
         {
-            ctx.On("internal/update", (e, _) => { updates++; return e.Next(); }, new EventOptions(Global: true, Prepend: true));
+            ctx.On(
+                "internal/update",
+                (e, _) =>
+                {
+                    updates++;
+                    return e.Next();
+                },
+                new EventOptions(Global: true, Prepend: true));
             return Task.CompletedTask;
         });
-        await File.WriteAllTextAsync(Path.Combine(scenario.Launch.Profile.Directory, "package.json"),
+        await File.WriteAllTextAsync(
+            Path.Combine(scenario.Launch.Profile.Directory, "package.json"),
             "{\"dependencies\":{\"added\":\"1.0.0\"},\"dsh\":{\"profile\":{}}}");
         await session.RefreshAsync();
         Assert.Equal(0, updates);
         var bundle = Path.Combine(scenario.Directory, "added");
         System.IO.Directory.CreateDirectory(bundle);
-        await File.WriteAllTextAsync(Path.Combine(bundle, "package.json"), "{\"dsh\":{\"bundle\":{\"patch\":\"cordis.patch.yml\"}}}");
-        await File.WriteAllTextAsync(Path.Combine(bundle, "cordis.patch.yml"), "- insert:\n    - id: bundled\n      name: counter\n      disabled: true\n");
+        await File.WriteAllTextAsync(
+            Path.Combine(bundle, "package.json"),
+            "{\"dsh\":{\"bundle\":{\"patch\":\"cordis.patch.yml\"}}}");
+        await File.WriteAllTextAsync(
+            Path.Combine(bundle, "cordis.patch.yml"),
+            "- insert:\n    - id: bundled\n      name: counter\n      disabled: true\n");
         scenario.Mappings["added"] = bundle;
-        await File.WriteAllTextAsync(Path.Combine(scenario.Launch.Profile.Directory, "package.json"), "{\"dsh\":{\"profile\":{\"bundles\":[\"added\"]}}}");
-        await session.RefreshAsync(); Assert.Equal(1, updates);
-        await session.RefreshAsync(); Assert.Equal(1, updates);
+        await File.WriteAllTextAsync(
+            Path.Combine(scenario.Launch.Profile.Directory, "package.json"),
+            "{\"dsh\":{\"profile\":{\"bundles\":[\"added\"]}}}");
+        await session.RefreshAsync();
+        Assert.Equal(1, updates);
+        await session.RefreshAsync();
+        Assert.Equal(1, updates);
         Assert.Contains(session.Loader.Entries(), entry => entry.Id.EndsWith(":bundled", StringComparison.Ordinal));
     }
 
@@ -179,7 +269,8 @@ public sealed class ProfileSessionTests
         await using var scenario = await Scenario.CreateAsync();
         await File.AppendAllTextAsync(scenario.Config, "- id: missing\n  name: missing-module\n");
         await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
-        var warnings = new List<string>(); session.Warning += warnings.Add;
+        var warnings = new List<string>();
+        session.Warning += warnings.Add;
         await scenario.WriteAsync(session, scenario.ProfilePatch, "- id: p\n  config: edited\n");
         await session.RefreshAsync();
         await scenario.ExpectAsync("edited");
@@ -190,7 +281,11 @@ public sealed class ProfileSessionTests
     public async Task Real_profile_and_home_watches_reapply_precedence_and_recover_from_malformed_input()
     {
         await using var scenario = await Scenario.CreateAsync();
-        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver, enableHmr: true);
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true);
         await scenario.ExpectAsync("initial");
         Assert.NotNull(session.Hmr);
         await session.Context.RunAsync(ctx =>
@@ -207,26 +302,42 @@ public sealed class ProfileSessionTests
         session.Error += failure => error.TrySetResult(failure);
         await scenario.WriteAsync(session, scenario.HomePatch, "invalid: [");
         await error.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        await session.Context.RunAsync(ctx => { Assert.Equal("home", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("home", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
         await scenario.WriteAsync(session, scenario.HomePatch, "[]\n");
         await scenario.ExpectAsync("profile");
         // Include re-reads must use the successful current profile overlays.
         await scenario.WriteAsync(session, scenario.Config, "- id: p\n  name: counter\n  config: changed-file\n");
         await session.RefreshAsync();
-        await session.Context.RunAsync(ctx => { Assert.Equal("profile", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("profile", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
     }
 
     [Fact]
     public async Task Include_watch_keeps_old_tree_after_invalid_structure_and_recovers()
     {
         await using var scenario = await Scenario.CreateAsync();
-        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver, enableHmr: true);
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true);
         await scenario.ExpectAsync("initial");
         var error = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         session.Error += failure => error.TrySetResult(failure);
         await scenario.WriteAsync(session, scenario.Config, "not: an-entry-array\n");
         await error.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        await session.Context.RunAsync(ctx => { Assert.Equal("initial", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("initial", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
         await scenario.WriteAsync(session, scenario.Config, "- id: p\n  name: counter\n  config: recovered\n");
         await scenario.ExpectAsync("recovered");
     }
@@ -235,17 +346,30 @@ public sealed class ProfileSessionTests
     public async Task Bundle_list_change_reconciles_available_modules_without_restart()
     {
         await using var scenario = await Scenario.CreateAsync();
-        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver, enableHmr: true);
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true);
         await scenario.ExpectAsync("initial");
         var bundle = Path.Combine(scenario.Directory, "new-bundle");
         System.IO.Directory.CreateDirectory(bundle);
-        await File.WriteAllTextAsync(Path.Combine(bundle, "package.json"), "{\"dsh\":{\"bundle\":{\"patch\":\"cordis.patch.yml\"}}}");
+        await File.WriteAllTextAsync(
+            Path.Combine(bundle, "package.json"),
+            "{\"dsh\":{\"bundle\":{\"patch\":\"cordis.patch.yml\"}}}");
         await File.WriteAllTextAsync(Path.Combine(bundle, "cordis.patch.yml"), "- id: p\n  config: new-bundle\n");
         scenario.Mappings["new"] = bundle;
-        await scenario.WriteAsync(session, Path.Combine(scenario.Launch.Profile.Directory, "package.json"), "{\"dsh\":{\"profile\":{\"bundles\":[\"new\"]}}}");
+        await scenario.WriteAsync(
+            session,
+            Path.Combine(scenario.Launch.Profile.Directory, "package.json"),
+            "{\"dsh\":{\"profile\":{\"bundles\":[\"new\"]}}}");
         await scenario.ExpectAsync("new-bundle");
         Assert.False(session.RequiresRestart);
-        await session.Context.RunAsync(ctx => { Assert.Equal("new-bundle", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("new-bundle", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
     }
 
     [Fact]
@@ -256,27 +380,52 @@ public sealed class ProfileSessionTests
         var extra = Path.Combine(scenario.Directory, "extra");
         System.IO.Directory.CreateDirectory(package);
         System.IO.Directory.CreateDirectory(extra);
-        var entry = new DeploymentEntry("counter", package, "1", Path.Combine(package, "package.json"), DeploymentPackageScope.Installation);
-        var generation = new DeploymentGeneration(Path.Combine(scenario.Launch.Home, "profiles"), scenario.Launch.Profile.Directory, [entry]);
+        var entry = new DeploymentEntry(
+            "counter",
+            package,
+            "1",
+            Path.Combine(package, "package.json"),
+            DeploymentPackageScope.Installation);
+        var generation = new DeploymentGeneration(
+            Path.Combine(scenario.Launch.Home, "profiles"),
+            scenario.Launch.Profile.Directory,
+            [entry]);
         var packages = new DeploymentPackageResolver(generation, native: (_, _) => package);
         var modules = new DeploymentModuleResolver(packages, scenario.Resolver).Register(package, ".", "counter");
         var next = generation;
-        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, modules,
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            modules,
             refreshDeployment: () => Task.FromResult(next));
         await scenario.ExpectAsync("initial");
-        next = new(generation.ProfilesDirectory, generation.ProfileDirectory,
+        next = new(
+            generation.ProfilesDirectory,
+            generation.ProfileDirectory,
             [entry, new("extra", extra, "1", Path.Combine(extra, "package.json"), DeploymentPackageScope.Profile)]);
         await scenario.WriteAsync(session, scenario.ProfilePatch, "- id: p\n  config: additive\n");
         await session.RefreshAsync();
         await scenario.ExpectAsync("additive");
         Assert.Same(next, packages.Generation);
         var accepted = next;
-        next = new(generation.ProfilesDirectory, generation.ProfileDirectory, [entry with { Directory = extra }]);
+        next = new(
+            generation.ProfilesDirectory,
+            generation.ProfileDirectory,
+            [
+                entry with
+                {
+                    Directory = extra
+                }
+            ]);
         await scenario.WriteAsync(session, scenario.ProfilePatch, "- id: p\n  config: blocked-remap\n");
         await session.RefreshAsync();
         Assert.True(session.RequiresRestart);
         Assert.Same(accepted, packages.Generation);
-        await session.Context.RunAsync(ctx => { Assert.Equal("additive", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("additive", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
     }
 
     [Fact]
@@ -285,8 +434,14 @@ public sealed class ProfileSessionTests
         await using var scenario = await Scenario.CreateAsync();
         var nested = Path.Combine(scenario.Directory, "nested.yml");
         await File.WriteAllTextAsync(nested, "- id: p\n  name: counter\n  config: nested\n");
-        await File.WriteAllTextAsync(scenario.Config, "- id: nested\n  name: cordis:include\n  config:\n    path: nested.yml\n");
-        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver, enableHmr: true);
+        await File.WriteAllTextAsync(
+            scenario.Config,
+            "- id: nested\n  name: cordis:include\n  config:\n    path: nested.yml\n");
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true);
         await scenario.ExpectAsync("nested");
         await session.RefreshAsync();
         await session.RefreshAsync();
@@ -302,34 +457,78 @@ public sealed class ProfileSessionTests
         await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
         await scenario.ExpectAsync("initial");
         Assert.Null(session.Hmr);
-        await session.Context.RunAsync(ctx => { Assert.Null(ctx.Get("hmr")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Null(ctx.Get("hmr"));
+            return Task.CompletedTask;
+        });
         await scenario.WriteAsync(session, scenario.ProfilePatch, "- id: p\n  config: manual\n");
-        await session.Context.RunAsync(ctx => { Assert.Equal("initial", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("initial", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
         await session.RefreshAsync();
         await scenario.ExpectAsync("manual");
-        await session.Context.RunAsync(ctx => { Assert.Equal("manual", ctx.Get("value")); return Task.CompletedTask; });
+        await session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal("manual", ctx.Get("value"));
+            return Task.CompletedTask;
+        });
     }
 
     [Fact]
     public async Task Disposal_from_own_reload_queue_does_not_wait_on_itself()
     {
         await using var scenario = await Scenario.CreateAsync();
-        var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver, enableHmr: true);
-        await session.Hmr!.RunExclusiveAsync(async () => await session.DisposeAsync()).WaitAsync(TimeSpan.FromSeconds(10));
+        var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            enableHmr: true);
+        await session.Hmr!
+            .RunExclusiveAsync(async () => await session.DisposeAsync())
+            .WaitAsync(TimeSpan.FromSeconds(10));
         await Assert.ThrowsAsync<ObjectDisposedException>(() => session.RefreshAsync());
     }
 
     private sealed class Scenario : IAsyncDisposable
     {
         private readonly Channel<string> values = Channel.CreateUnbounded<string>();
-        public required string Directory { get; init; }
-        public required string Config { get; init; }
-        public required ProfileLaunch Launch { get; init; }
-        public required Dictionary<string, string> Mappings { get; init; }
-        public StaticModuleResolver Resolver { get; } = new();
+
+        public required string Directory
+        {
+            get;
+            init;
+        }
+
+        public required string Config
+        {
+            get;
+            init;
+        }
+
+        public required ProfileLaunch Launch
+        {
+            get;
+            init;
+        }
+
+        public required Dictionary<string, string> Mappings
+        {
+            get;
+            init;
+        }
+
+        public StaticModuleResolver Resolver
+        {
+            get;
+        } = new();
+
         public string ProfilePatch => Path.Combine(Launch.Profile.Directory, "cordis.patch.yml");
         public string HomePatch => Path.Combine(Launch.Home, "cordis.patch.yml");
         public bool HasApply => values.Reader.TryPeek(out _);
+
         public static async Task<Scenario> CreateAsync()
         {
             var directory = System.IO.Directory.CreateTempSubdirectory("cordis-profile-session-").FullName;
@@ -340,25 +539,43 @@ public sealed class ProfileSessionTests
             var loaded = await Profiles.LoadAsync(profile, mappings);
             var config = Path.Combine(directory, "cordis.yml");
             await File.WriteAllTextAsync(config, "- id: p\n  name: counter\n  config: initial\n");
-            var scenario = new Scenario { Directory = directory, Config = config, Mappings = mappings, Launch = new(loaded, home, [], mappings) };
-            scenario.Resolver.Register("counter", new Plugin<string>
+            var scenario = new Scenario
             {
-                Apply = (ctx, config) =>
-            {
-                ctx.Provide("value", config);
-                scenario.values.Writer.TryWrite(config);
-            }
-            });
+                Directory = directory,
+                Config = config,
+                Mappings = mappings,
+                Launch = new(loaded, home, [], mappings)
+            };
+            scenario.Resolver.Register(
+                "counter",
+                new Plugin<string>
+                {
+                    Apply = (ctx, config) =>
+                    {
+                        ctx.Provide("value", config);
+                        scenario.values.Writer.TryWrite(config);
+                    }
+                });
             return scenario;
         }
+
         public async Task ExpectAsync(string expected)
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            while (await values.Reader.ReadAsync(timeout.Token) != expected) { }
+            while (await values.Reader.ReadAsync(timeout.Token) != expected)
+            {
+            }
         }
-        public Task WriteAsync(ProfileSession session, string path, string contents) => session.Hmr is { } hmr
-            ? hmr.RunExclusiveAsync(() => File.WriteAllTextAsync(path, contents))
-            : File.WriteAllTextAsync(path, contents);
-        public ValueTask DisposeAsync() { System.IO.Directory.Delete(Directory, true); return ValueTask.CompletedTask; }
+
+        public Task WriteAsync(ProfileSession session, string path, string contents) =>
+            session.Hmr is { } hmr
+                ? hmr.RunExclusiveAsync(() => File.WriteAllTextAsync(path, contents))
+                : File.WriteAllTextAsync(path, contents);
+
+        public ValueTask DisposeAsync()
+        {
+            System.IO.Directory.Delete(Directory, true);
+            return ValueTask.CompletedTask;
+        }
     }
 }

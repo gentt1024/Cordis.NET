@@ -1,4 +1,5 @@
 namespace Cordis;
+
 /// <summary>
 /// One immediately-started effect. Public disposal is single-shot; the owning fiber still joins
 /// cleanup started by an earlier caller. Ready observes setup, not cleanup or future readiness.
@@ -13,6 +14,7 @@ public sealed class EffectHandle : IAsyncDisposable
     private Task? _disposal;
     private bool _active = true;
     internal EffectHandle(Fiber owner, string label) => (_owner, Label) = (owner, label);
+
     /// <summary>
     /// Gets the label value.
     /// </summary>
@@ -20,12 +22,15 @@ public sealed class EffectHandle : IAsyncDisposable
     {
         get;
     }
+
     /// <summary>
     /// Gets the ready value.
     /// </summary>
     public Task Ready => _setup.Task;
 
-    internal EffectMetadata Describe() => new(Label, Array.AsReadOnly(_children.Select(child => child.Describe()).ToArray()));
+    internal EffectMetadata Describe() =>
+        new(Label, Array.AsReadOnly(_children.Select(child => child.Describe()).ToArray()));
+
     internal void Start(Action setup)
     {
         try
@@ -47,7 +52,9 @@ public sealed class EffectHandle : IAsyncDisposable
     {
         try
         {
-            Task<IAsyncDisposable> pending = setup() ?? throw new ArgumentException("Effect setup returned a null Task.", nameof(setup));
+            Task<IAsyncDisposable> pending = setup() ?? throw new ArgumentException(
+                "Effect setup returned a null Task.",
+                nameof(setup));
             _ = FinishSetupAsync(pending);
         }
         catch (Exception error)
@@ -93,6 +100,7 @@ public sealed class EffectHandle : IAsyncDisposable
         }
 
         _ = IterateAsync();
+
         async Task IterateAsync()
         {
             try
@@ -154,6 +162,7 @@ public sealed class EffectHandle : IAsyncDisposable
     /// matching the baseline single-shot disposer rather than becoming another cleanup join.
     /// </summary>
     public ValueTask DisposeAsync() => new(_owner.Execution.RunAsync(DisposeCoreAsync));
+
     internal Task DisposeCoreAsync()
     {
         if (!_active)

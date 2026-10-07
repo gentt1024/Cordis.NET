@@ -9,8 +9,15 @@ namespace Cordis.Hosting;
 /// </summary>
 public sealed class CordisHostOptions
 {
-    internal List<Action<Context, IServiceProvider>> BorrowedServices { get; } = [];
-    internal List<Func<Context, IServiceProvider, CancellationToken, Task>> Startup { get; } = [];
+    internal List<Action<Context, IServiceProvider>> BorrowedServices
+    {
+        get;
+    } = [];
+
+    internal List<Func<Context, IServiceProvider, CancellationToken, Task>> Startup
+    {
+        get;
+    } = [];
 
     /// <summary>The DI container owns the service. Cordis only publishes and unpublishes it.</summary>
     public CordisHostOptions Borrow<T>(string name) where T : notnull
@@ -36,7 +43,9 @@ public sealed class CordisHostOptions
 public static class CordisHostExtensions
 {
     /// <summary>Add one Cordis root and its thin Generic Host lifecycle adapter.</summary>
-    public static IServiceCollection AddCordis(this IServiceCollection services, Action<CordisHostOptions>? configure = null)
+    public static IServiceCollection AddCordis(
+        this IServiceCollection services,
+        Action<CordisHostOptions>? configure = null)
     {
         var options = new CordisHostOptions();
         configure?.Invoke(options);
@@ -47,7 +56,8 @@ public static class CordisHostExtensions
     }
 }
 
-internal sealed class CordisHostedService(Context context, IServiceProvider services, CordisHostOptions options) : IHostedService
+internal sealed class CordisHostedService(Context context, IServiceProvider services, CordisHostOptions options)
+    : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -55,7 +65,8 @@ internal sealed class CordisHostedService(Context context, IServiceProvider serv
         {
             await context.RunAsync(async ctx =>
             {
-                foreach (var publish in options.BorrowedServices) publish(ctx, services);
+                foreach (var publish in options.BorrowedServices)
+                    publish(ctx, services);
                 foreach (var start in options.Startup)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -63,7 +74,11 @@ internal sealed class CordisHostedService(Context context, IServiceProvider serv
                 }
             });
         }
-        catch { await context.DisposeAsync(); throw; }
+        catch
+        {
+            await context.DisposeAsync();
+            throw;
+        }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken) => await context.DisposeAsync();

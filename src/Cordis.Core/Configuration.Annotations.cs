@@ -10,7 +10,10 @@ public sealed partial class ConfigDescriptor
     /// <summary>Immutable plain-data annotations interpreted by application adapters.</summary>
     /// <remarks>Core does not enforce annotation constraints. Authors must keep them consistent with their validator.
     /// Annotation values cannot retain plugin objects, delegates or mutable caller collections.</remarks>
-    public IReadOnlyDictionary<string, object?> Annotations { get; }
+    public IReadOnlyDictionary<string, object?> Annotations
+    {
+        get;
+    }
 
     /// <summary>Replace application annotations with a detached acyclic plain-data snapshot.</summary>
     /// <remarks>Preserves shape, defaults and stable-reference declarations. This method adds no validation behavior.</remarks>
@@ -18,7 +21,19 @@ public sealed partial class ConfigDescriptor
     {
         ArgumentNullException.ThrowIfNull(annotations);
         var snapshot = (IReadOnlyDictionary<string, object?>)ConfigSnapshots.Create(annotations)!;
-        return new(Kind, Properties, Inner, IsOptional, IsVolatile, HasDefault, DefaultValue,
-            _lazy, Children, Key, _lazyIdentity, _selectBranch, snapshot);
+        return new(
+            Kind,
+            Properties,
+            Inner,
+            IsOptional,
+            IsVolatile,
+            HasDefault,
+            DefaultValue,
+            _lazy,
+            Children,
+            Key,
+            _lazyIdentity,
+            _selectBranch,
+            snapshot);
     }
 }

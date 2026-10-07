@@ -1,4 +1,5 @@
 using Xunit;
+
 namespace Cordis.Extensions.Tests;
 
 public sealed class ConsoleTests
@@ -12,7 +13,13 @@ public sealed class ConsoleTests
         await using var context = new Context();
         await context.RunAsync(ctx =>
         {
-            var exporter = new ConsoleExporter(ctx, new() { Colors = colors, ShowTime = "" });
+            var exporter = new ConsoleExporter(
+                ctx,
+                new()
+                {
+                    Colors = colors,
+                    ShowTime = ""
+                });
             var message = new LogMessage(1, DateTimeOffset.UnixEpoch, "test", LogLevel.Info, ["hello"], new(ctx.Fiber));
             Assert.Equal(expected, exporter.Render(message));
             return Task.CompletedTask;
@@ -31,10 +38,22 @@ public sealed class ConsoleTests
         await using var context = new Context();
         await context.RunAsync(ctx =>
         {
-            var exporter = new ConsoleExporter(ctx, new() { ShowTime = "", ShowDiff = true });
+            var exporter = new ConsoleExporter(
+                ctx,
+                new()
+                {
+                    ShowTime = "",
+                    ShowDiff = true
+                });
             var message = new LogMessage(1, DateTimeOffset.UnixEpoch, "test", LogLevel.Info, ["hello"], new(ctx.Fiber));
             exporter.Render(message);
-            Assert.EndsWith(" +" + expected, exporter.Render(message with { Timestamp = message.Timestamp.AddMilliseconds(milliseconds) }));
+            Assert.EndsWith(
+                " +" + expected,
+                exporter.Render(
+                    message with
+                    {
+                        Timestamp = message.Timestamp.AddMilliseconds(milliseconds)
+                    }));
             return Task.CompletedTask;
         });
     }
@@ -46,11 +65,21 @@ public sealed class ConsoleTests
         await context.RunAsync(async ctx =>
         {
             using var output = new StringWriter();
-            var first = new ConsoleExporter(ctx, new() { ShowTime = "", LabelWidth = 5, LabelRightAligned = true, MaxLength = 8 }, output);
+            var first = new ConsoleExporter(
+                ctx,
+                new()
+                {
+                    ShowTime = "",
+                    LabelWidth = 5,
+                    LabelRightAligned = true,
+                    MaxLength = 8
+                },
+                output);
             var second = ctx.Logger.Exporter(new DelegateLogExporter(_ => output.WriteLine("second")));
             ctx.Logger.Create("test").Info("%s\nabcdefghij", "hello");
             Assert.Contains(" test [I] hello\n          abcdefgh...", output.ToString());
-            await first.DisposeAsync(); output.GetStringBuilder().Clear();
+            await first.DisposeAsync();
+            output.GetStringBuilder().Clear();
             ctx.Logger.Info("remaining");
             Assert.Equal("second" + Environment.NewLine, output.ToString());
             await second.DisposeAsync();

@@ -11,8 +11,14 @@ await context.RunAsync(async root =>
     await loader.Root.UpdateAsync(entries);
     await loader.WaitAsync();
     Console.WriteLine(root.Get<string>("greeting"));
-    await loader.UpdateAsync("greeting", new EntryOptions { Config = "Configuration stays live with JIT or AOT" });
+    await loader.UpdateAsync(
+        "greeting",
+        new EntryOptions
+        {
+            Config = "Configuration stays live with JIT or AOT"
+        });
     await loader.WaitAsync();
     Console.WriteLine(root.Get<string>("greeting"));
-    if (root.Get<string>("greeting") != "Configuration stays live with JIT or AOT") throw new Exception("Update failed");
+    if (root.Get<string>("greeting") != "Configuration stays live with JIT or AOT")
+        throw new Exception("Update failed");
 });

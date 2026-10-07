@@ -8,6 +8,7 @@ if (args.Length == 1 && args[0] is "--help" or "-h" or "-?")
     Usage();
     return 0;
 }
+
 if (args.Length != 2)
 {
     Usage();
@@ -17,17 +18,22 @@ if (args.Length != 2)
 var shadowRoot = Path.Combine(Path.GetTempPath(), "cordis-probes-" + Guid.NewGuid().ToString("N"));
 var observations = await RunAsync(Path.GetFullPath(args[0]), Path.GetFullPath(args[1]), shadowRoot);
 Check(observations.Length == 2 && observations.All(item => item.UnloadRequested), "both unload requests");
-for (var index = 0; index < observations.Length; index++)
+for (var index = 0;index < observations.Length;index++)
 {
     // These observations contain weak references. Collection is cooperative; this host never forces GC.
     var observation = observations[index];
     var deleted = observation.TryDeleteShadow();
-    Console.WriteLine($"v{index + 1}: unload requested={observation.UnloadRequested}, " +
+    Console.WriteLine(
+        $"v{index + 1}: unload requested={observation.UnloadRequested}, " +
         $"collected={observation.IsCollected}, shadow deleted={deleted}");
-    if (!deleted) Console.WriteLine($"pending shadow cleanup: {observation.ShadowDirectory}");
+    if (!deleted)
+        Console.WriteLine($"pending shadow cleanup: {observation.ShadowDirectory}");
 }
-if (observations.All(item => item.ShadowDeleted)) Directory.Delete(shadowRoot);
-Console.WriteLine("CLR probe authoring scenario passed (lifecycle cleanup and unload requests; GC completion is independent)");
+
+if (observations.All(item => item.ShadowDeleted))
+    Directory.Delete(shadowRoot);
+Console.WriteLine(
+    "CLR probe authoring scenario passed (lifecycle cleanup and unload requests; GC completion is independent)");
 return 0;
 
 static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string secondBundle, string shadowRoot)
@@ -45,11 +51,18 @@ static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string se
         await root.RunAsync(async ctx =>
         {
             loader = new Loader(ctx, resolver);
-            await loader.Root.UpdateAsync([new EntryOptions
-            {
-                Id = "provider", Name = "probes",
-                Config = new Dictionary<string, object?> { ["Prefix"] = "live" },
-            }]);
+            await loader.Root.UpdateAsync(
+            [
+                new EntryOptions
+                {
+                    Id = "provider",
+                    Name = "probes",
+                    Config = new Dictionary<string, object?>
+                    {
+                        ["Prefix"] = "live"
+                    },
+                }
+            ]);
             await loader.WaitAsync();
             Check(loader.Resolve("provider").Fiber?.State == FiberState.Active, "v1 provider activation");
             connection = ctx.Plugin(Consumer("connection", "connected", connectionVersions));
@@ -58,7 +71,9 @@ static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string se
             ShowAndCheck(ctx, "v1", ["connection", "worker"]);
         });
 
-        await resolver.ReplaceAsync("probes", Definition(secondBundle),
+        await resolver.ReplaceAsync(
+            "probes",
+            Definition(secondBundle),
             async (old, next) => await loader!.ReplacePluginAsync(old, next));
         Console.WriteLine("v1 provider replaced; unload requested=" + resolver.Unloads[0].UnloadRequested);
         await root.RunAsync(async ctx =>
@@ -74,27 +89,30 @@ static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string se
             Console.WriteLine("consumer cleanup complete; provider remains active");
         });
     }
+
     Console.WriteLine("root lifecycle cleanup complete");
     // Stop fibers before retiring the resolver's last implementation.
     await resolver.DisposeAsync();
     return resolver.Unloads.ToArray();
 }
 
-static IPlugin Consumer(string name, string value, List<string> versions) => new Plugin<object?>
-{
-    Name = name, Inject = [ProbeContract.Name, ProbeContract.Formatter],
-    Apply = (caller, _) =>
+static IPlugin Consumer(string name, string value, List<string> versions) =>
+    new Plugin<object?>
     {
-        // Obtain a fresh caller-bound view on every activation. Keep only version strings for reporting.
-        var probes = caller.Probes;
-        var formatter = caller.ProbeFormatter;
-        var version = probes.Version;
-        versions.Add(version);
-        probes.Register(name, () => formatter.Format(value));
-        caller.Effect(() => (Action)(() => Console.WriteLine($"{name}: {version} activation ended")));
-        Console.WriteLine($"{name}: activated with {version} caller view");
-    },
-};
+        Name = name,
+        Inject = [ProbeContract.Name, ProbeContract.Formatter],
+        Apply = (caller, _) =>
+        {
+            // Obtain a fresh caller-bound view on every activation. Keep only version strings for reporting.
+            var probes = caller.Probes;
+            var formatter = caller.ProbeFormatter;
+            var version = probes.Version;
+            versions.Add(version);
+            probes.Register(name, () => formatter.Format(value));
+            caller.Effect(() => (Action)(() => Console.WriteLine($"{name}: {version} activation ended")));
+            Console.WriteLine($"{name}: activated with {version} caller view");
+        },
+    };
 
 static void ShowAndCheck(Context context, string version, string[] names)
 {
@@ -104,13 +122,22 @@ static void ShowAndCheck(Context context, string version, string[] names)
     Check(snapshot.Keys.Order(StringComparer.Ordinal).SequenceEqual(names), "caller-owned contributions");
     foreach (var name in names)
         Check(snapshot[name] == "live:" + (name == "connection" ? "connected" : "ready"), "shared formatter");
-    Console.WriteLine($"{version} contributions: " + (snapshot.Count == 0 ? "(none)" :
-        string.Join(", ", snapshot.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Key + "=" + pair.Value))));
+    Console.WriteLine(
+        $"{version} contributions: " + (snapshot.Count == 0
+            ? "(none)"
+            : string.Join(
+                ", ",
+                snapshot
+                    .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                    .Select(pair => pair.Key + "=" + pair.Value))));
 }
 
 static ClrModuleDefinition Definition(string bundle) => new(bundle, "ProbePlugin.dll", "Cordis.ProbeFixture.Entry");
+
 static void Check(bool condition, string message)
 {
-    if (!condition) throw new InvalidOperationException(message);
+    if (!condition)
+        throw new InvalidOperationException(message);
 }
+
 static void Usage() => Console.WriteLine("Usage: Probes.Clr <v1-bundle-directory> <v2-bundle-directory>");

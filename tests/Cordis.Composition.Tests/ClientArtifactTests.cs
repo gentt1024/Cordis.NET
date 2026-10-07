@@ -10,7 +10,9 @@ public sealed class ClientArtifactTests
         var directory = Directory.CreateTempSubdirectory("cordis-client-artifact-").FullName;
         try
         {
-            await File.WriteAllTextAsync(Path.Combine(directory, "package.json"), """
+            await File.WriteAllTextAsync(
+                Path.Combine(directory, "package.json"),
+                """
                 {"name":"client","dsh":{"client":{"platform":"web"}},"exports":{"./client":{"default":"./client.mjs"}}}
                 """);
             var entry = Path.Combine(directory, "client.mjs");
@@ -26,7 +28,10 @@ public sealed class ClientArtifactTests
             Assert.False(stream.CanWrite);
             Assert.Equal("\"" + first.Revision + "\"", first.ETag);
         }
-        finally { Directory.Delete(directory, true); }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
     }
 
     [Theory]
@@ -39,19 +44,36 @@ public sealed class ClientArtifactTests
         {
             var package = Directory.CreateDirectory(Path.Combine(directory, "package")).FullName;
             await File.WriteAllTextAsync(Path.Combine(directory, "outside.mjs"), "export const value = 'outside';\n");
-            if (link) DeploymentResolutionTests.CreateDirectoryAlias(Path.Combine(package, "link"), directory);
-            await File.WriteAllTextAsync(Path.Combine(package, "package.json"), ConfigurationFile.Write(new EntryOptions
-            {
-                ["name"] = "client", ["dsh"] = new EntryOptions { ["client"] = new EntryOptions { ["platform"] = "web" } },
-                ["exports"] = new EntryOptions { ["./client"] = target },
-            }, true));
+            if (link)
+                DeploymentResolutionTests.CreateDirectoryAlias(Path.Combine(package, "link"), directory);
+            await File.WriteAllTextAsync(
+                Path.Combine(package, "package.json"),
+                ConfigurationFile.Write(
+                    new EntryOptions
+                    {
+                        ["name"] = "client",
+                        ["dsh"] = new EntryOptions
+                        {
+                            ["client"] = new EntryOptions
+                            {
+                                ["platform"] = "web"
+                            }
+                        },
+                        ["exports"] = new EntryOptions
+                        {
+                            ["./client"] = target
+                        },
+                    },
+                    true));
             var packages = DeploymentPackageResolver.Native((_, _) => package);
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => ClientArtifact.CaptureAsync(packages, "client", new Uri(Path.Combine(package, "host.yml"))));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+                ClientArtifact.CaptureAsync(packages, "client", new Uri(Path.Combine(package, "host.yml"))));
         }
         finally
         {
             var alias = Path.Combine(directory, "package", "link");
-            if (Directory.Exists(alias)) Directory.Delete(alias);
+            if (Directory.Exists(alias))
+                Directory.Delete(alias);
             Directory.Delete(directory, true);
         }
     }

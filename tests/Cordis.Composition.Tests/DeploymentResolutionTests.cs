@@ -8,8 +8,16 @@ public sealed class DeploymentResolutionTests
 {
     private sealed class Fixture : IDisposable
     {
-        public string Root { get; } = Path.Combine(Path.GetTempPath(), "cordis-deployment-" + Guid.NewGuid().ToString("N"));
-        public Dictionary<(string Anchor, string Name), string> Edges { get; } = [];
+        public string Root
+        {
+            get;
+        } = Path.Combine(Path.GetTempPath(), "cordis-deployment-" + Guid.NewGuid().ToString("N"));
+
+        public Dictionary<(string Anchor, string Name), string> Edges
+        {
+            get;
+        } = [];
+
         public string Profiles => Path.Combine(Root, "profiles");
         public string Active => Path.Combine(Profiles, "active");
         public string Installation => Path.Combine(Root, "install", "package.json");
@@ -21,17 +29,41 @@ public sealed class DeploymentResolutionTests
             Package("profiles/active", "profile");
         }
 
-        public string Package(string relative, string name, string version = "1.0.0", string[]? dependencies = null, string[]? peers = null)
+        public string Package(
+            string relative,
+            string name,
+            string version = "1.0.0",
+            string[]? dependencies = null,
+            string[]? peers = null)
         {
             var directory = Path.GetFullPath(Path.Combine(Root, relative));
             Directory.CreateDirectory(directory);
-            File.WriteAllText(Path.Combine(directory, "package.json"), JsonSerializer.Serialize(new Dictionary<string, object?> { ["name"] = name, ["version"] = version, ["dependencies"] = (dependencies ?? []).ToDictionary(n => n, _ => "*"), ["peerDependencies"] = (peers ?? []).ToDictionary(n => n, _ => "*") }));
+            File.WriteAllText(
+                Path.Combine(directory, "package.json"),
+                JsonSerializer.Serialize(
+                    new Dictionary<string, object?>
+                    {
+                        ["name"] = name,
+                        ["version"] = version,
+                        ["dependencies"] = (dependencies ?? []).ToDictionary(n => n, _ => "*"),
+                        ["peerDependencies"] = (peers ?? []).ToDictionary(n => n, _ => "*")
+                    }));
             return directory;
         }
 
         public string? Resolve(string anchor, string name) => Edges.GetValueOrDefault((Path.GetFullPath(anchor), name));
         public void Edge(string from, string name, string to) => Edges[(Path.Combine(from, "package.json"), name)] = to;
-        public Profile Profile(params string[] bundles) => new("active", Active, bundles.Select(path => new Bundle(Path.GetFileName(path), path, Path.Combine(path, "cordis.patch.yml"), [])).ToArray(), new(Path.Combine(Active, "cordis.patch.yml"), []));
+
+        public Profile Profile(params string[] bundles) =>
+            new(
+                "active",
+                Active,
+                bundles
+                    .Select(path =>
+                        new Bundle(Path.GetFileName(path), path, Path.Combine(path, "cordis.patch.yml"), []))
+                    .ToArray(),
+                new(Path.Combine(Active, "cordis.patch.yml"), []));
+
         public void Dispose() => Directory.Delete(Root, true);
     }
 
@@ -54,7 +86,11 @@ public sealed class DeploymentResolutionTests
         var installationOnly = DeploymentGeneration.Create(f.Installation, f.Profiles, null, f.Resolve);
         Assert.Null(installationOnly.ProfileDirectory);
         Assert.Empty(installationOnly.LocalPackageNames);
-        Assert.Equal(lib, new DeploymentPackageResolver(installationOnly).PackageDirectory("lib", new Uri(Path.Combine(f.Profiles, "entry.cs"))));
+        Assert.Equal(
+            lib,
+            new DeploymentPackageResolver(installationOnly).PackageDirectory(
+                "lib",
+                new Uri(Path.Combine(f.Profiles, "entry.cs"))));
     }
 
     [Fact]
@@ -93,7 +129,17 @@ public sealed class DeploymentResolutionTests
         var installed = f.Package("installed", "lib");
         var bundled = f.Package("bundled", "bundle-lib");
         var local = f.Package("local", "lib", "2.0.0");
-        var generation = new DeploymentGeneration(f.Profiles, f.Active, [new("lib", installed, "1", f.Installation, DeploymentPackageScope.Installation), new("bundle-lib", bundled, "1", f.Installation, DeploymentPackageScope.Profile)], new Dictionary<string, string> { { "lib", local } });
+        var generation = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [
+                new("lib", installed, "1", f.Installation, DeploymentPackageScope.Installation),
+                new("bundle-lib", bundled, "1", f.Installation, DeploymentPackageScope.Profile)
+            ],
+            new Dictionary<string, string>
+            {
+                { "lib", local }
+            });
         var resolver = new DeploymentPackageResolver(generation);
         var active = new Uri(Path.Combine(f.Active, "entry.cs"));
         var other = new Uri(Path.Combine(f.Profiles, "other", "entry.cs"));
@@ -109,13 +155,20 @@ public sealed class DeploymentResolutionTests
         using var f = new Fixture();
         var original = f.Package("original", "lib");
         var added = f.Package("added", "added-lib", "2.0.0");
-        var first = new DeploymentGeneration(f.Profiles, f.Active, [new("lib", original, "1.0.0", f.Installation, DeploymentPackageScope.Installation)]);
+        var first = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [new("lib", original, "1.0.0", f.Installation, DeploymentPackageScope.Installation)]);
         var resolver = new DeploymentPackageResolver(first);
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
         Assert.Null(resolver.PackageOf("added-lib", parent));
         var metadata = resolver.PackageOf("lib/private", parent);
         Assert.Same(metadata, resolver.PackageOf("lib", parent));
-        var next = new DeploymentGeneration(f.Profiles, f.Active, first.Entries.Append(new("added-lib", added, "2.0.0", f.Installation, DeploymentPackageScope.Installation)));
+        var next = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            first.Entries.Append(
+                new("added-lib", added, "2.0.0", f.Installation, DeploymentPackageScope.Installation)));
         resolver.Replace(next);
         Assert.Equal(added, resolver.PackageDirectory("added-lib", parent));
         Assert.Equal("added-lib", resolver.PackageOf("added-lib", parent)!.Name);
@@ -159,7 +212,16 @@ public sealed class DeploymentResolutionTests
             },
             _ => original
         };
-        var next = new DeploymentGeneration(change == "profile" ? Path.Combine(f.Root, "different") : f.Profiles, f.Active, change == "remove" ? [] : [altered], change == "local-override" ? new Dictionary<string, string> { { "lib", directory } } : null);
+        var next = new DeploymentGeneration(
+            change == "profile" ? Path.Combine(f.Root, "different") : f.Profiles,
+            f.Active,
+            change == "remove" ? [] : [altered],
+            change == "local-override"
+                ? new Dictionary<string, string>
+                {
+                    { "lib", directory }
+                }
+                : null);
         Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(next));
         Assert.Same(first, resolver.Generation);
         Assert.Equal(directory, resolver.PackageDirectory("lib", new Uri(Path.Combine(f.Active, "entry.cs"))));
@@ -172,7 +234,14 @@ public sealed class DeploymentResolutionTests
         var first = new DeploymentGeneration(f.Profiles, f.Active, []);
         var resolver = new DeploymentPackageResolver(first);
         var local = f.Package("new-local", "new-local");
-        var next = new DeploymentGeneration(f.Profiles, f.Active, [], new Dictionary<string, string> { { "new-local", local } });
+        var next = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [],
+            new Dictionary<string, string>
+            {
+                { "new-local", local }
+            });
         resolver.Replace(next);
         resolver.Replace(next);
         Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(first));
@@ -185,11 +254,25 @@ public sealed class DeploymentResolutionTests
         using var f = new Fixture();
         var original = f.Package("local", "local");
         var redirected = f.Package("redirected", "local");
-        var first = new DeploymentGeneration(f.Profiles, f.Active, [], new Dictionary<string, string> { ["local"] = original });
+        var first = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [],
+            new Dictionary<string, string>
+            {
+                ["local"] = original
+            });
         var resolver = new DeploymentPackageResolver(first);
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
         var metadata = resolver.PackageOf("local", parent);
-        var next = new DeploymentGeneration(f.Profiles, f.Active, [], new Dictionary<string, string> { ["local"] = redirected });
+        var next = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [],
+            new Dictionary<string, string>
+            {
+                ["local"] = redirected
+            });
         Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(next));
         Assert.Same(first, resolver.Generation);
         Assert.Same(metadata, resolver.PackageOf("local", parent));
@@ -204,11 +287,26 @@ public sealed class DeploymentResolutionTests
         var linked = f.Package("workspace/link", "linked", peers: ["peer"]);
         var other = f.Package("workspace/other", "linked", peers: ["peer"]);
         var native = f.Package("native", "peer");
-        var entries = new[] { new DeploymentEntry("peer", shared, "1", f.Installation, DeploymentPackageScope.Installation) };
-        var first = new DeploymentGeneration(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", linked)]);
+        var entries = new[]
+        {
+            new DeploymentEntry("peer", shared, "1", f.Installation, DeploymentPackageScope.Installation)
+        };
+        var first = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            entries,
+            localPackages: null,
+            linkedRoots: [new("linked", linked)]);
         var packages = new DeploymentPackageResolver(first, native: (_, _) => native);
-        var plugin = new Plugin<object?> { Apply = (_, _) => { } };
-        var modules = new DeploymentModuleResolver(packages, new StaticModuleResolver().Register("shared-plugin", plugin)).Register(shared, ".", "shared-plugin");
+        var plugin = new Plugin<object?>
+        {
+            Apply = (_, _) =>
+            {
+            }
+        };
+        var modules =
+            new DeploymentModuleResolver(packages, new StaticModuleResolver().Register("shared-plugin", plugin))
+                .Register(shared, ".", "shared-plugin");
         var parent = new Uri(Path.Combine(linked, "entry.cs"));
         var loaded = await modules.ResolveAsync("peer", parent);
         Assert.Same(plugin, loaded);
@@ -219,11 +317,17 @@ public sealed class DeploymentResolutionTests
         packages.Replace(first);
         Assert.Same(loaded, await modules.ResolveAsync("peer", parent));
         packages.Replace(removed);
-        var redirected = new DeploymentGeneration(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", other), new("new-link", linked)]);
+        var redirected = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            entries,
+            localPackages: null,
+            linkedRoots: [new("linked", other), new("new-link", linked)]);
         Assert.Throws<DeploymentRestartRequiredException>(() => packages.Replace(redirected));
         Assert.Same(removed, packages.Generation);
         Assert.Equal(native, packages.PackageDirectory("peer", parent));
-        packages.Replace(new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("new-link", other)]));
+        packages.Replace(
+            new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("new-link", other)]));
         Assert.Equal(shared, packages.PackageDirectory("peer", new Uri(Path.Combine(other, "entry.cs"))));
     }
 
@@ -234,8 +338,18 @@ public sealed class DeploymentResolutionTests
         var shared = f.Package("shared", "peer");
         var linked = f.Package("workspace/link", "linked");
         var privateDependency = f.Package("private", "peer");
-        var entries = new[] { new DeploymentEntry("peer", shared, "1", f.Installation, DeploymentPackageScope.Installation) };
-        var packages = new DeploymentPackageResolver(new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", linked), new("installed", shared)]), native: (_, _) => privateDependency);
+        var entries = new[]
+        {
+            new DeploymentEntry("peer", shared, "1", f.Installation, DeploymentPackageScope.Installation)
+        };
+        var packages = new DeploymentPackageResolver(
+            new(
+                f.Profiles,
+                f.Active,
+                entries,
+                localPackages: null,
+                linkedRoots: [new("linked", linked), new("installed", shared)]),
+            native: (_, _) => privateDependency);
         var parent = new Uri(Path.Combine(linked, "nested", "entry.cs"));
         Assert.Equal(privateDependency, packages.PackageDirectory("peer", parent));
         f.Package("workspace/link", "linked", peers: ["peer"]);
@@ -243,7 +357,9 @@ public sealed class DeploymentResolutionTests
         f.Package("workspace/link", "linked");
         Assert.Equal(privateDependency, packages.PackageDirectory("peer", parent));
         Assert.Equal(privateDependency, packages.PackageDirectory("peer", new Uri(Path.Combine(shared, "entry.cs"))));
-        var nearest = new DeploymentPackageResolver(new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", linked)]), local: (_, _) => privateDependency);
+        var nearest = new DeploymentPackageResolver(
+            new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("linked", linked)]),
+            local: (_, _) => privateDependency);
         f.Package("workspace/link", "linked", peers: ["peer"]);
         Assert.Equal(privateDependency, nearest.PackageDirectory("peer", parent));
     }
@@ -258,15 +374,29 @@ public sealed class DeploymentResolutionTests
         CreateDirectoryAlias(alias, firstTarget);
         try
         {
-            var first = new DeploymentGeneration(f.Profiles, f.Active, [], localPackages: null, linkedRoots: [new("linked", alias)]);
+            var first = new DeploymentGeneration(
+                f.Profiles,
+                f.Active,
+                [],
+                localPackages: null,
+                linkedRoots: [new("linked", alias)]);
             var resolver = new DeploymentPackageResolver(first);
             Assert.Equal(firstTarget, Assert.Single(first.LinkedRoots).Directory);
-            Directory.Delete(alias); CreateDirectoryAlias(alias, secondTarget);
-            var redirected = new DeploymentGeneration(f.Profiles, f.Active, [], localPackages: null, linkedRoots: [new("linked", alias)]);
+            Directory.Delete(alias);
+            CreateDirectoryAlias(alias, secondTarget);
+            var redirected = new DeploymentGeneration(
+                f.Profiles,
+                f.Active,
+                [],
+                localPackages: null,
+                linkedRoots: [new("linked", alias)]);
             Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(redirected));
             Assert.Same(first, resolver.Generation);
         }
-        finally { Directory.Delete(alias); }
+        finally
+        {
+            Directory.Delete(alias);
+        }
     }
 
     [Fact]
@@ -279,15 +409,25 @@ public sealed class DeploymentResolutionTests
         CreateDirectoryAlias(alias, original);
         try
         {
-            var first = new DeploymentGeneration(f.Profiles, f.Active, [new("lib", alias, "1", f.Installation, DeploymentPackageScope.Installation)]);
-            Directory.Delete(alias); CreateDirectoryAlias(alias, redirected);
+            var first = new DeploymentGeneration(
+                f.Profiles,
+                f.Active,
+                [new("lib", alias, "1", f.Installation, DeploymentPackageScope.Installation)]);
+            Directory.Delete(alias);
+            CreateDirectoryAlias(alias, redirected);
             var resolver = new DeploymentPackageResolver(first);
-            var next = new DeploymentGeneration(f.Profiles, f.Active, [new("lib", alias, "1", f.Installation, DeploymentPackageScope.Installation)]);
+            var next = new DeploymentGeneration(
+                f.Profiles,
+                f.Active,
+                [new("lib", alias, "1", f.Installation, DeploymentPackageScope.Installation)]);
             Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(next));
             Assert.Same(first, resolver.Generation);
             Assert.Equal(original, resolver.PackageDirectory("lib", new Uri(Path.Combine(f.Active, "entry.cs"))));
         }
-        finally { Directory.Delete(alias); }
+        finally
+        {
+            Directory.Delete(alias);
+        }
     }
 
     [Fact]
@@ -295,15 +435,32 @@ public sealed class DeploymentResolutionTests
     {
         using var f = new Fixture();
         var directory = f.Package("module-target", "plugin");
-        var alias = Path.Combine(f.Root, "alias"); CreateDirectoryAlias(alias, directory);
+        var alias = Path.Combine(f.Root, "alias");
+        CreateDirectoryAlias(alias, directory);
         try
         {
-            var packages = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("plugin", alias, "1", f.Installation, DeploymentPackageScope.Installation)]));
-            var plugin = new Plugin<object?> { Apply = (_, _) => { } };
-            var resolver = new DeploymentModuleResolver(packages, new StaticModuleResolver().Register("mapped", plugin)).Register(alias, ".", "mapped");
+            var packages = new DeploymentPackageResolver(
+                new(
+                    f.Profiles,
+                    f.Active,
+                    [new("plugin", alias, "1", f.Installation, DeploymentPackageScope.Installation)]));
+            var plugin = new Plugin<object?>
+            {
+                Apply = (_, _) =>
+                {
+                }
+            };
+            var resolver =
+                new DeploymentModuleResolver(packages, new StaticModuleResolver().Register("mapped", plugin)).Register(
+                    alias,
+                    ".",
+                    "mapped");
             Assert.Same(plugin, await resolver.ResolveAsync("plugin", new Uri(Path.Combine(f.Active, "entry.cs"))));
         }
-        finally { Directory.Delete(alias); }
+        finally
+        {
+            Directory.Delete(alias);
+        }
     }
 
     [Fact]
@@ -313,7 +470,8 @@ public sealed class DeploymentResolutionTests
         var first = DeploymentGeneration.Create(f.Installation, f.Profiles, f.Profile(), f.Resolve);
         var resolver = new DeploymentPackageResolver(first);
         File.WriteAllText(Path.Combine(f.Active, "package.json"), "{");
-        Assert.ThrowsAny<JsonException>(() => DeploymentGeneration.Create(f.Installation, f.Profiles, f.Profile(), f.Resolve));
+        Assert.ThrowsAny<JsonException>(() =>
+            DeploymentGeneration.Create(f.Installation, f.Profiles, f.Profile(), f.Resolve));
         Assert.Same(first, resolver.Generation);
         Assert.False(Directory.Exists(Path.Combine(f.Profiles, "node_modules")));
     }
@@ -323,7 +481,11 @@ public sealed class DeploymentResolutionTests
     {
         using var f = new Fixture();
         var directory = f.Package("metadata", "metadata-lib", "2.0.0");
-        var resolver = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("metadata-lib", directory, "2.0.0", f.Installation, DeploymentPackageScope.Installation)]));
+        var resolver = new DeploymentPackageResolver(
+            new(
+                f.Profiles,
+                f.Active,
+                [new("metadata-lib", directory, "2.0.0", f.Installation, DeploymentPackageScope.Installation)]));
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
         var package = resolver.PackageOf("metadata-lib/private", parent)!;
         Assert.Equal("metadata-lib", package.Name);
@@ -347,13 +509,20 @@ public sealed class DeploymentResolutionTests
         var outside = f.Package("outside", "outside-lib");
         var above = f.Package("above", "ancestor-lib");
         var stale = f.Package("profiles/node_modules/stale", "stale");
-        var resolver = new DeploymentPackageResolver(new(f.Profiles, f.Active, []), native: (name, _) => name == "outside-lib" ? outside : null, ancestor: (name, _) => name == "ancestor-lib" ? above : null);
-        Assert.Equal(outside, resolver.PackageDirectory("outside-lib", new Uri(Path.Combine(f.Root, "external", "entry.cs"))));
+        var resolver = new DeploymentPackageResolver(
+            new(f.Profiles, f.Active, []),
+            native: (name, _) => name == "outside-lib" ? outside : null,
+            ancestor: (name, _) => name == "ancestor-lib" ? above : null);
+        Assert.Equal(
+            outside,
+            resolver.PackageDirectory("outside-lib", new Uri(Path.Combine(f.Root, "external", "entry.cs"))));
         var scoped = new Uri(Path.Combine(f.Active, "entry.cs"));
         Assert.Equal(above, resolver.PackageDirectory("ancestor-lib", scoped));
         Assert.Null(resolver.PackageDirectory("stale", scoped));
         Assert.True(Directory.Exists(stale));
-        var withAncestor = new DeploymentPackageResolver(resolver.Generation, ancestor: (name, _) => name == "stale" ? above : null);
+        var withAncestor = new DeploymentPackageResolver(
+            resolver.Generation,
+            ancestor: (name, _) => name == "stale" ? above : null);
         Assert.Equal(above, withAncestor.PackageDirectory("stale", scoped));
         Assert.True(Directory.Exists(stale));
     }
@@ -363,7 +532,11 @@ public sealed class DeploymentResolutionTests
     {
         using var f = new Fixture();
         var directory = f.Package("module", "plugin-package");
-        var packages = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("plugin-package", directory, "1.0.0", f.Installation, DeploymentPackageScope.Installation)]));
+        var packages = new DeploymentPackageResolver(
+            new(
+                f.Profiles,
+                f.Active,
+                [new("plugin-package", directory, "1.0.0", f.Installation, DeploymentPackageScope.Installation)]));
         var expected = new Plugin<object?>
         {
             Apply = (_, _) =>
@@ -375,7 +548,8 @@ public sealed class DeploymentResolutionTests
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
         Assert.Same(expected, await resolver.ResolveAsync("plugin-package", parent));
         Assert.Equal(directory, packages.PackageOf("plugin-package/private", parent)!.Directory);
-        await Assert.ThrowsAsync<FileNotFoundException>(async () => await resolver.ResolveAsync("plugin-package/private", parent));
+        await Assert.ThrowsAsync<FileNotFoundException>(async () =>
+            await resolver.ResolveAsync("plugin-package/private", parent));
     }
 
     [Fact]
@@ -401,7 +575,9 @@ public sealed class DeploymentResolutionTests
         using var f = new Fixture();
         var missing = Path.Combine(f.Root, "missing");
         var fallback = f.Package("fallback", "lib");
-        var resolver = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("lib", missing, "1", f.Installation, DeploymentPackageScope.Installation)]), ancestor: (_, _) => fallback);
+        var resolver = new DeploymentPackageResolver(
+            new(f.Profiles, f.Active, [new("lib", missing, "1", f.Installation, DeploymentPackageScope.Installation)]),
+            ancestor: (_, _) => fallback);
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
         Assert.Equal(missing, resolver.PackageDirectory("lib", parent));
         Assert.Null(resolver.PackageOf("lib", parent));
@@ -416,25 +592,25 @@ public sealed class DeploymentResolutionTests
         if (OperatingSystem.IsWindows())
         {
             var script = Path.Combine(f.Root, "junction.ps1");
-            File.WriteAllText(script, "param([string]$Link,[string]$Target)\nNew-Item -ItemType Junction -Path $Link -Target $Target | Out-Null");
+            File.WriteAllText(
+                script,
+                "param([string]$Link,[string]$Target)\nNew-Item -ItemType Junction -Path $Link -Target $Target | Out-Null");
             var start = new System.Diagnostics.ProcessStartInfo("powershell.exe")
             {
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
             foreach (var argument in new[]
-            {
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                script,
-                alias,
-                directory
-            }
-
-            )
+                     {
+                         "-NoProfile",
+                         "-NonInteractive",
+                         "-ExecutionPolicy",
+                         "Bypass",
+                         "-File",
+                         script,
+                         alias,
+                         directory
+                     })
                 start.ArgumentList.Add(argument);
             using var process = System.Diagnostics.Process.Start(start)!;
             process.WaitForExit();
@@ -442,9 +618,16 @@ public sealed class DeploymentResolutionTests
         }
         else
             Directory.CreateSymbolicLink(alias, directory);
-        var first = new DeploymentGeneration(f.Profiles, f.Active, [new("lib", directory, "1", Path.Combine(directory, "package.json"), DeploymentPackageScope.Installation)]);
+
+        var first = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [new("lib", directory, "1", Path.Combine(directory, "package.json"), DeploymentPackageScope.Installation)]);
         var resolver = new DeploymentPackageResolver(first);
-        var next = new DeploymentGeneration(f.Profiles, f.Active, [new("lib", alias, "1", Path.Combine(alias, "package.json"), DeploymentPackageScope.Installation)]);
+        var next = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [new("lib", alias, "1", Path.Combine(alias, "package.json"), DeploymentPackageScope.Installation)]);
         try
         {
             resolver.Replace(next);
@@ -462,7 +645,8 @@ public sealed class DeploymentResolutionTests
         using var f = new Fixture();
         var directory = f.Package("lib", "lib");
         var owned = Path.Combine(f.Root, "application", "owned-profile");
-        var resolver = new DeploymentPackageResolver(new(f.Profiles, owned, [new("lib", directory, "1", f.Installation, DeploymentPackageScope.Profile)]));
+        var resolver = new DeploymentPackageResolver(
+            new(f.Profiles, owned, [new("lib", directory, "1", f.Installation, DeploymentPackageScope.Profile)]));
         Assert.Equal(directory, resolver.PackageDirectory("lib", new Uri(Path.Combine(owned, "entry.cs"))));
         Assert.Null(resolver.PackageDirectory("lib", new Uri(Path.Combine(f.Active, "entry.cs"))));
     }
@@ -474,7 +658,10 @@ public sealed class DeploymentResolutionTests
         var selected = f.Package("selected", "lib");
         var higher = f.Package("higher", "lib", "2");
         string? late = null;
-        var resolver = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("lib", selected, "1", f.Installation, DeploymentPackageScope.Installation)]), local: (name, _) => name == "late" ? late : null, ancestor: (name, _) => name == "lib" ? higher : null);
+        var resolver = new DeploymentPackageResolver(
+            new(f.Profiles, f.Active, [new("lib", selected, "1", f.Installation, DeploymentPackageScope.Installation)]),
+            local: (name, _) => name == "late" ? late : null,
+            ancestor: (name, _) => name == "lib" ? higher : null);
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
         Assert.Null(resolver.PackageDirectory("late", parent));
         Assert.Null(resolver.PackageDirectory("legacy-missing/subpath", parent));
@@ -495,13 +682,21 @@ public sealed class DeploymentResolutionTests
         using var f = new Fixture();
         var chosen = f.Package("chosen", "lib");
         var another = f.Package("another", "lib");
-        var generation = new DeploymentGeneration(f.Profiles, f.Active, mode is "only-deployment" or "neither" ? [] : [new("lib", chosen, "1", f.Installation, DeploymentPackageScope.Installation)]);
-        var resolver = new DeploymentPackageResolver(generation, native: (_, _) => mode switch
-        {
-            "different" => another,
-            "same" or "only-deployment" => chosen,
-            _ => null
-        }, behavior: DeploymentResolutionBehavior.Verify);
+        var generation = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            mode is "only-deployment" or "neither"
+                ? []
+                : [new("lib", chosen, "1", f.Installation, DeploymentPackageScope.Installation)]);
+        var resolver = new DeploymentPackageResolver(
+            generation,
+            native: (_, _) => mode switch
+            {
+                "different" => another,
+                "same" or "only-deployment" => chosen,
+                _ => null
+            },
+            behavior: DeploymentResolutionBehavior.Verify);
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
         if (mode == "same")
             Assert.Equal(chosen, resolver.PackageOf("lib", parent)!.Directory);
@@ -518,7 +713,15 @@ public sealed class DeploymentResolutionTests
         var local = f.Package("local", "lib");
         var fallback = f.Package("fallback", "lib");
         File.WriteAllText(Path.Combine(local, "package.json"), "{");
-        var resolver = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("lib", fallback, "1", f.Installation, DeploymentPackageScope.Installation)], new Dictionary<string, string> { { "lib", local } }));
+        var resolver = new DeploymentPackageResolver(
+            new(
+                f.Profiles,
+                f.Active,
+                [new("lib", fallback, "1", f.Installation, DeploymentPackageScope.Installation)],
+                new Dictionary<string, string>
+                {
+                    { "lib", local }
+                }));
         Assert.ThrowsAny<JsonException>(() => resolver.PackageOf("lib", new Uri(Path.Combine(f.Active, "entry.cs"))));
     }
 
@@ -530,29 +733,27 @@ public sealed class DeploymentResolutionTests
         var outside = f.Package("outside", "outside-lib");
         var scoped = f.Package("scoped", "@scope/outside");
         var ancestor = f.Package("ancestor", "ancestor-lib");
-        var resolver = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("resolution-lib", selected, "1.0.0", f.Installation, DeploymentPackageScope.Installation)]), native: (name, _) => name switch
-        {
-            "outside-lib" => outside,
-            "@scope/outside" => scoped,
-            _ => null
-        }, ancestor: (name, _) => name == "ancestor-lib" ? ancestor : null);
+        var resolver = new DeploymentPackageResolver(
+            new(
+                f.Profiles,
+                f.Active,
+                [new("resolution-lib", selected, "1.0.0", f.Installation, DeploymentPackageScope.Installation)]),
+            native: (name, _) => name switch
+            {
+                "outside-lib" => outside,
+                "@scope/outside" => scoped,
+                _ => null
+            },
+            ancestor: (name, _) => name == "ancestor-lib" ? ancestor : null);
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
         foreach (var request in new[]
-        {
-            "",
-            "./local.js",
-            "/absolute.js",
-            "\\\\server\\share",
-            "#internal",
-            "@scope",
-            "node:fs"
-        }
-
-        )
+                 {
+                     "", "./local.js", "/absolute.js", "\\\\server\\share", "#internal", "@scope", "node:fs"
+                 })
             Assert.Null(resolver.PackageDirectory(request, parent));
         Assert.Equal(selected, resolver.PackageDirectory("resolution-lib/private", parent));
         var outsideParent = new Uri(Path.Combine(f.Root, "elsewhere", "entry.cs"));
-        for (var repeat = 0; repeat < 2; repeat++)
+        for (var repeat = 0;repeat < 2;repeat++)
         {
             Assert.Equal(outside, resolver.PackageDirectory("outside-lib", outsideParent));
             Assert.Equal(ancestor, resolver.PackageDirectory("ancestor-lib", parent));
@@ -561,7 +762,10 @@ public sealed class DeploymentResolutionTests
         Assert.Equal(scoped, resolver.PackageDirectory("@scope/outside", outsideParent));
         Assert.Equal(scoped, resolver.PackageDirectory("@scope/outside/private", outsideParent));
         Assert.Null(resolver.PackageDirectory("missing", new Uri(parent, "%ZZ")));
-        var verified = new DeploymentPackageResolver(resolver.Generation, native: (name, _) => name == "resolution-lib" ? selected : null, behavior: DeploymentResolutionBehavior.Verify);
+        var verified = new DeploymentPackageResolver(
+            resolver.Generation,
+            native: (name, _) => name == "resolution-lib" ? selected : null,
+            behavior: DeploymentResolutionBehavior.Verify);
         Assert.Equal(selected, verified.PackageDirectory("resolution-lib", parent));
         Assert.Null(verified.PackageDirectory("missing-metadata", parent));
         Assert.Null(verified.PackageDirectory("node:fs", parent));
@@ -588,7 +792,8 @@ public sealed class DeploymentResolutionTests
         locals.Clear();
         Assert.Equal(2, generation.LocalPackages.Count);
         Assert.Throws<NotSupportedException>(() => ((IList<string>)generation.LocalPackageNames).Add("other"));
-        Assert.Throws<NotSupportedException>(() => ((IDictionary<string, string>)generation.LocalPackages).Add("other", f.Root));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IDictionary<string, string>)generation.LocalPackages).Add("other", f.Root));
     }
 
     [Fact]
@@ -597,15 +802,26 @@ public sealed class DeploymentResolutionTests
         using var f = new Fixture();
         var local = f.Package("local", "plugin");
         var fallback = f.Package("fallback", "plugin");
-        var packages = new DeploymentPackageResolver(new(f.Profiles, f.Active, [new("plugin", fallback, "1", f.Installation, DeploymentPackageScope.Installation)], new Dictionary<string, string> { ["plugin"] = local }));
-        var modules = new StaticModuleResolver().Register("fallback-plugin", new Plugin<object?>
-        {
-            Apply = (_, _) =>
-        {
-        }
-        });
+        var packages = new DeploymentPackageResolver(
+            new(
+                f.Profiles,
+                f.Active,
+                [new("plugin", fallback, "1", f.Installation, DeploymentPackageScope.Installation)],
+                new Dictionary<string, string>
+                {
+                    ["plugin"] = local
+                }));
+        var modules = new StaticModuleResolver().Register(
+            "fallback-plugin",
+            new Plugin<object?>
+            {
+                Apply = (_, _) =>
+                {
+                }
+            });
         var resolver = new DeploymentModuleResolver(packages, modules).Register(fallback, ".", "fallback-plugin");
-        await Assert.ThrowsAsync<FileNotFoundException>(async () => await resolver.ResolveAsync("plugin", new Uri(Path.Combine(f.Active, "entry.cs"))));
+        await Assert.ThrowsAsync<FileNotFoundException>(async () =>
+            await resolver.ResolveAsync("plugin", new Uri(Path.Combine(f.Active, "entry.cs"))));
         Assert.Equal(local, packages.PackageDirectory("plugin", new Uri(Path.Combine(f.Active, "entry.cs"))));
     }
 
@@ -628,8 +844,16 @@ public sealed class DeploymentResolutionTests
         };
         manifest.Write(Path.Combine(bundle, "package.json"));
         File.WriteAllText(Path.Combine(bundle, "patch.yml"), "[]\n");
-        ProfileMaintenance.WriteBundles(f.Active, PackageManifest.Read(Path.Combine(f.Active, "package.json")), ["sealed-bundle"]);
-        var profile = await Profiles.LoadAsync(f.Active, new Dictionary<string, string> { ["sealed-bundle"] = bundle });
+        ProfileMaintenance.WriteBundles(
+            f.Active,
+            PackageManifest.Read(Path.Combine(f.Active, "package.json")),
+            ["sealed-bundle"]);
+        var profile = await Profiles.LoadAsync(
+            f.Active,
+            new Dictionary<string, string>
+            {
+                ["sealed-bundle"] = bundle
+            });
         Assert.Equal(bundle, Assert.Single(profile.Bundles).Directory);
         Assert.Equal(Path.Combine(bundle, "patch.yml"), profile.Bundles[0].PatchPath);
     }
@@ -664,8 +888,26 @@ public sealed class DeploymentResolutionTests
         var owned = a.Package("local", "pnpm-owned");
         var sentinel = Path.Combine(owned, "sentinel");
         File.WriteAllText(sentinel, "profile-installed");
-        var resolverA = new DeploymentPackageResolver(new(a.Profiles, a.Active, [new("commander", installedA, "1", a.Installation, DeploymentPackageScope.Installation), new("bundle-only", bundleA, "1", a.Installation, DeploymentPackageScope.Profile)], new Dictionary<string, string> { ["pnpm-owned"] = owned }));
-        var resolverB = new DeploymentPackageResolver(new(b.Profiles, b.Active, [new("commander", installedB, "2", b.Installation, DeploymentPackageScope.Installation), new("bundle-only", bundleB, "1", b.Installation, DeploymentPackageScope.Profile)]));
+        var resolverA = new DeploymentPackageResolver(
+            new(
+                a.Profiles,
+                a.Active,
+                [
+                    new("commander", installedA, "1", a.Installation, DeploymentPackageScope.Installation),
+                    new("bundle-only", bundleA, "1", a.Installation, DeploymentPackageScope.Profile)
+                ],
+                new Dictionary<string, string>
+                {
+                    ["pnpm-owned"] = owned
+                }));
+        var resolverB = new DeploymentPackageResolver(
+            new(
+                b.Profiles,
+                b.Active,
+                [
+                    new("commander", installedB, "2", b.Installation, DeploymentPackageScope.Installation),
+                    new("bundle-only", bundleB, "1", b.Installation, DeploymentPackageScope.Profile)
+                ]));
         var parentA = new Uri(Path.Combine(a.Active, "entry.cs"));
         var parentB = new Uri(Path.Combine(b.Active, "entry.cs"));
         Assert.Equal(installedA, resolverA.PackageDirectory("commander", parentA));
@@ -696,9 +938,15 @@ public sealed class DeploymentResolutionTests
         var incorrect = f.Package("home/lib", "stale-only", "4");
         try
         {
-            var resolver = new DeploymentPackageResolver(new(alias, Path.Combine(alias, "active"), []), ancestor: (_, parent) => Path.GetDirectoryName(parent.LocalPath) == carrier ? expected : incorrect);
-            Assert.Equal(expected, resolver.PackageDirectory("stale-only", new Uri(Path.Combine(realActive, "entry.cs"))));
-            Assert.Equal(incorrect, resolver.PackageDirectory("stale-only", new Uri(Path.Combine(alias, "active", "entry.cs"))));
+            var resolver = new DeploymentPackageResolver(
+                new(alias, Path.Combine(alias, "active"), []),
+                ancestor: (_, parent) => Path.GetDirectoryName(parent.LocalPath) == carrier ? expected : incorrect);
+            Assert.Equal(
+                expected,
+                resolver.PackageDirectory("stale-only", new Uri(Path.Combine(realActive, "entry.cs"))));
+            Assert.Equal(
+                incorrect,
+                resolver.PackageDirectory("stale-only", new Uri(Path.Combine(alias, "active", "entry.cs"))));
         }
         finally
         {
@@ -715,25 +963,18 @@ public sealed class DeploymentResolutionTests
         }
 
         var script = Path.Combine(Path.GetDirectoryName(alias)!, "junction.ps1");
-        File.WriteAllText(script, "param([string]$Link,[string]$Target)\nNew-Item -ItemType Junction -Path $Link -Target $Target | Out-Null");
+        File.WriteAllText(
+            script,
+            "param([string]$Link,[string]$Target)\nNew-Item -ItemType Junction -Path $Link -Target $Target | Out-Null");
         var start = new System.Diagnostics.ProcessStartInfo("powershell.exe")
         {
             UseShellExecute = false,
             CreateNoWindow = true
         };
         foreach (var arg in new[]
-        {
-            "-NoProfile",
-            "-NonInteractive",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-            script,
-            alias,
-            target
-        }
-
-        )
+                 {
+                     "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, alias, target
+                 })
             start.ArgumentList.Add(arg);
         using var process = System.Diagnostics.Process.Start(start)!;
         process.WaitForExit();

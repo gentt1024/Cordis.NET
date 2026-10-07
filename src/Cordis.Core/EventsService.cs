@@ -1,4 +1,5 @@
 namespace Cordis;
+
 /// <summary>JavaScript undefined, distinct from an explicitly returned null.</summary>
 public sealed class Undefined
 {
@@ -9,7 +10,10 @@ public sealed class Undefined
     /// <summary>
     /// Gets the value value.
     /// </summary>
-    public static Undefined Value { get; } = new();
+    public static Undefined Value
+    {
+        get;
+    } = new();
 
     /// <summary>
     /// Returns a string representation of this instance.
@@ -23,12 +27,14 @@ public sealed class Undefined
 /// <param name="context">The context value.</param>
 /// <param name="arguments">The arguments value.</param>
 public delegate object? CordisEventHandler(EventContext context, object?[] arguments);
+
 /// <summary>
 /// Represents the event options component.
 /// </summary>
 /// <param name="Prepend">The prepend value.</param>
 /// <param name="Global">The global value.</param>
 public sealed record EventOptions(bool Prepend = false, bool Global = false);
+
 /// <summary>
 /// Represents the event context component.
 /// </summary>
@@ -39,7 +45,10 @@ public sealed class EventContext(object? receiver, Func<object?>? next = null)
     /// <summary>
     /// Gets the receiver value.
     /// </summary>
-    public object? Receiver { get; } = receiver;
+    public object? Receiver
+    {
+        get;
+    } = receiver;
 
     /// <summary>
     /// Performs the next operation.
@@ -48,6 +57,7 @@ public sealed class EventContext(object? receiver, Func<object?>? next = null)
 }
 
 internal sealed record EventHook(Context Owner, CordisEventHandler Handler, EventOptions Options);
+
 /// <summary>
 /// Represents the events service service.
 /// </summary>
@@ -57,12 +67,16 @@ public sealed class EventsService(Context context)
     /// <summary>
     /// Gets the listener counts value.
     /// </summary>
-    public IReadOnlyDictionary<string, int> ListenerCounts => context._runtime.Hooks.Where(pair => pair.Value.Count != 0).ToDictionary(pair => pair.Key, pair => pair.Value.Count);
+    public IReadOnlyDictionary<string, int> ListenerCounts =>
+        context
+            ._runtime.Hooks.Where(pair => pair.Value.Count != 0)
+            .ToDictionary(pair => pair.Key, pair => pair.Value.Count);
 
     /// <summary>
     /// Determines whether is bailed.
     /// </summary>
     public static bool IsBailed(object? value) => value is not null && value is not Undefined && value is not false;
+
     /// <summary>
     /// Performs the on operation.
     /// </summary>
@@ -75,18 +89,20 @@ public sealed class EventsService(Context context)
         if (intercepted is EffectHandle replacement)
             return replacement;
         bool localUpdate = name == "internal/update" && !options.Global;
-        var effect = context.Effect(() =>
-        {
-            var hook = new EventHook(context, listener, options);
-            var hooks = localUpdate ? context.Fiber.UpdateHooks : context._runtime.Hooks.GetValueOrDefault(name);
-            if (hooks is null)
-                context._runtime.Hooks[name] = hooks = [];
-            if (options.Prepend)
-                hooks.Insert(0, hook);
-            else
-                hooks.Add(hook);
-            return (Action)(() => hooks.Remove(hook));
-        }, $"ctx.on({Logger.FormatData(name)})");
+        var effect = context.Effect(
+            () =>
+            {
+                var hook = new EventHook(context, listener, options);
+                var hooks = localUpdate ? context.Fiber.UpdateHooks : context._runtime.Hooks.GetValueOrDefault(name);
+                if (hooks is null)
+                    context._runtime.Hooks[name] = hooks = [];
+                if (options.Prepend)
+                    hooks.Insert(0, hook);
+                else
+                    hooks.Add(hook);
+                return (Action)(() => hooks.Remove(hook));
+            },
+            $"ctx.on({Logger.FormatData(name)})");
         if (localUpdate)
             context.Fiber.RemoveEffect(effect);
         return effect;
@@ -98,11 +114,14 @@ public sealed class EventsService(Context context)
     public EffectHandle Once(string name, CordisEventHandler listener, EventOptions? options = null)
     {
         EffectHandle? handle = null;
-        handle = On(name, (evt, args) =>
-        {
-            _ = handle!.DisposeAsync();
-            return listener(evt, args);
-        }, options);
+        handle = On(
+            name,
+            (evt, args) =>
+            {
+                _ = handle!.DisposeAsync();
+                return listener(evt, args);
+            },
+            options);
         return handle;
     }
 
@@ -115,28 +134,35 @@ public sealed class EventsService(Context context)
         if (name == "internal/update" && receiver is Fiber updated)
         {
             var globals = candidates.ToArray();
-            candidates = globals.Where(h => h.Options.Prepend).Concat(updated.UpdateHooks).Concat(globals.Where(h => !h.Options.Prepend));
+            candidates = globals
+                .Where(h => h.Options.Prepend)
+                .Concat(updated.UpdateHooks)
+                .Concat(globals.Where(h => !h.Options.Prepend));
         }
 
-        return candidates.Where(hook =>
-        {
-            if (name == "internal/update" && !hook.Options.Global && receiver is Fiber fiber && !ReferenceEquals(hook.Owner.Fiber, fiber))
-                return false;
-            if (hook.Options.Global)
-                return true;
-            return receiver switch
+        return candidates
+            .Where(hook =>
             {
-                Context ctx => ctx.Filter?.Invoke(hook.Owner) ?? true,
-                Service service => service.Filter(hook.Owner),
-                _ => true
-            };
-        }).ToArray();
+                if (name == "internal/update" && !hook.Options.Global && receiver is Fiber fiber &&
+                    !ReferenceEquals(hook.Owner.Fiber, fiber))
+                    return false;
+                if (hook.Options.Global)
+                    return true;
+                return receiver switch
+                {
+                    Context ctx => ctx.Filter?.Invoke(hook.Owner) ?? true,
+                    Service service => service.Filter(hook.Owner),
+                    _ => true
+                };
+            })
+            .ToArray();
     }
 
     /// <summary>
     /// Emits the requested value.
     /// </summary>
     public void Emit(string name, params object?[] args) => EmitWith(null, name, args);
+
     /// <summary>
     /// Emits with.
     /// </summary>
@@ -179,23 +205,26 @@ public sealed class EventsService(Context context)
     /// Performs the parallel async operation.
     /// </summary>
     public Task ParallelAsync(string name, params object?[] args) => ParallelWithAsync(null, name, args);
+
     /// <summary>
     /// Performs the parallel with async operation.
     /// </summary>
     public async Task ParallelWithAsync(object? receiver, string name, params object?[] args)
     {
-        var tasks = Dispatch("emit", receiver, name, args).Select(async hook =>
-        {
-            try
+        var tasks = Dispatch("emit", receiver, name, args)
+            .Select(async hook =>
             {
-                await AwaitResult(Invoke(hook, receiver, args));
-                return (Exception?)null;
-            }
-            catch (Exception e)
-            {
-                return e;
-            }
-        }).ToArray();
+                try
+                {
+                    await AwaitResult(Invoke(hook, receiver, args));
+                    return (Exception?)null;
+                }
+                catch (Exception e)
+                {
+                    return e;
+                }
+            })
+            .ToArray();
         var errors = (await Task.WhenAll(tasks)).OfType<Exception>().ToArray();
         if (errors.Length != 0)
             throw new AggregateException(errors);
@@ -205,6 +234,7 @@ public sealed class EventsService(Context context)
     /// Performs the serial async operation.
     /// </summary>
     public Task<object?> SerialAsync(string name, params object?[] args) => SerialWithAsync(null, name, args);
+
     /// <summary>
     /// Performs the serial with async operation.
     /// </summary>
@@ -224,6 +254,7 @@ public sealed class EventsService(Context context)
     /// Performs the bail operation.
     /// </summary>
     public object? Bail(string name, params object?[] args) => BailWith(null, name, args);
+
     /// <summary>
     /// Performs the bail with operation.
     /// </summary>
@@ -242,7 +273,9 @@ public sealed class EventsService(Context context)
     /// <summary>
     /// Performs the waterfall operation.
     /// </summary>
-    public object? Waterfall(string name, Func<object?> next, params object?[] args) => WaterfallWith(null, name, next, args);
+    public object? Waterfall(string name, Func<object?> next, params object?[] args) =>
+        WaterfallWith(null, name, next, args);
+
     /// <summary>
     /// Performs the waterfall with operation.
     /// </summary>
@@ -254,7 +287,9 @@ public sealed class EventsService(Context context)
         return Invoke();
     }
 
-    private static object? Invoke(EventHook hook, object? receiver, object?[] args) => InvokeHook(hook, receiver, args, null);
+    private static object? Invoke(EventHook hook, object? receiver, object?[] args) =>
+        InvokeHook(hook, receiver, args, null);
+
     private static object? InvokeHook(EventHook hook, object? receiver, object?[] args, Func<object?>? next)
     {
         var reflect = hook.Owner.Reflect;

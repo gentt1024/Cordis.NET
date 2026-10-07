@@ -20,16 +20,27 @@ public sealed class ProfileSession : IAsyncDisposable
     private readonly string[] profilePaths;
     private string? successfulProfileInputs;
     private bool disposed;
-    private static StringComparer PathComparer => OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
-    private ProfileSession(ProfileLaunch launch, IModuleResolver resolver, bool enableHmr, IReadOnlySet<string>? required,
-        Action<Exception>? diagnostic, Func<Task<DeploymentGeneration>>? refreshDeployment)
+    private static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+    private ProfileSession(
+        ProfileLaunch launch,
+        IModuleResolver resolver,
+        bool enableHmr,
+        IReadOnlySet<string>? required,
+        Action<Exception>? diagnostic,
+        Func<Task<DeploymentGeneration>>? refreshDeployment)
     {
         // Command-line overlays belong to the launch, not subsequent caller mutations.
         this.launch = launch with
         {
-            Overlays = launch.Overlays.Select(layer => layer with
-            { Patches = ProfileComposition.Flatten([layer]) }).ToArray()
+            Overlays = launch
+                .Overlays.Select(layer => layer with
+                {
+                    Patches = ProfileComposition.Flatten([layer])
+                })
+                .ToArray()
         };
         this.required = required;
         this.diagnostic = diagnostic;
@@ -39,11 +50,18 @@ public sealed class ProfileSession : IAsyncDisposable
         packages = (resolver as DeploymentModuleResolver)?.Packages;
         this.refreshDeployment = refreshDeployment;
         if (refreshDeployment is not null && packages is null)
-            throw new ArgumentException("A deployment refresh requires a DeploymentModuleResolver.", nameof(refreshDeployment));
-        profilePaths = [Path.Combine(launch.Profile.Directory, "package.json"),
-            launch.Profile.UserLayer.Source, Path.Combine(launch.Home, "cordis.patch.yml"),
-            .. launch.RuntimeIdentity is null ? Array.Empty<string>()
-                : [Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename)]];
+            throw new ArgumentException(
+                "A deployment refresh requires a DeploymentModuleResolver.",
+                nameof(refreshDeployment));
+        profilePaths =
+        [
+            Path.Combine(launch.Profile.Directory, "package.json"),
+            launch.Profile.UserLayer.Source,
+            Path.Combine(launch.Home, "cordis.patch.yml"),
+            .. launch.RuntimeIdentity is null
+                ? Array.Empty<string>()
+                : [Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename)]
+        ];
         Context = new Context(Report);
         Hmr = enableHmr ? queue : null;
         queue.Error += Report;
@@ -53,59 +71,122 @@ public sealed class ProfileSession : IAsyncDisposable
     /// <summary>
     /// The session-owned application context. Disposing it also stops session background work.
     /// </summary>
-    public Context Context { get; }
+    public Context Context
+    {
+        get;
+    }
+
     /// <summary>
     /// The session-owned loader using the caller's resolver.
     /// </summary>
-    public Loader Loader { get; private set; } = null!;
+    public Loader Loader
+    {
+        get;
+        private set;
+    } = null!;
+
     /// <summary>
     /// The mounted root include reconciled by this session.
     /// </summary>
-    public Include Include { get; private set; } = null!;
+    public Include Include
+    {
+        get;
+        private set;
+    } = null!;
+
     /// <summary>Profile mutations sharing this session's lifecycle queue and refresh ownership.</summary>
-    public PluginConfigurationOperations ConfigurationOperations { get; private set; } = null!;
+    public PluginConfigurationOperations ConfigurationOperations
+    {
+        get;
+        private set;
+    } = null!;
+
     /// <summary>Null when automatic watching was not requested. Manual refresh remains available.</summary>
-    public HmrCoordinator? Hmr { get; }
+    public HmrCoordinator? Hmr
+    {
+        get;
+    }
+
     /// <summary>
     /// Whether the latest refresh requires a host restart. A successful subsequent refresh clears this flag.
     /// </summary>
-    public bool RequiresRestart { get; private set; }
+    public bool RequiresRestart
+    {
+        get;
+        private set;
+    }
+
     /// <summary>
     /// The most recently reported failure, cleared by a successful refresh. Retaining plugin exceptions can delay CLR unload.
     /// </summary>
-    public Exception? LastError { get; private set; }
+    public Exception? LastError
+    {
+        get;
+        private set;
+    }
+
     /// <summary>
     /// UTC time of successful startup or the latest successful refresh.
     /// </summary>
-    public DateTimeOffset? LastSuccessfulRefresh { get; private set; }
+    public DateTimeOffset? LastSuccessfulRefresh
+    {
+        get;
+        private set;
+    }
+
     /// <summary>
     /// Runs synchronously after a successful refresh inside the lifecycle queue. Handlers must not synchronously re-enter that queue.
     /// </summary>
     public event Action? Refreshed;
+
     /// <summary>
     /// Runs synchronously when reconciliation requires restart, inside the lifecycle queue.
     /// </summary>
     public event Action? RestartRequired;
+
     /// <summary>
     /// Reports failures synchronously on the emitting operation. Handler exceptions are ignored to preserve the primary failure.
     /// </summary>
     public event Action<Exception>? Error;
+
     /// <summary>The latest manifest selection, including skipped bundles.</summary>
-    public IReadOnlyList<string> SelectedBundles { get; private set; } = [];
+    public IReadOnlyList<string> SelectedBundles
+    {
+        get;
+        private set;
+    } = [];
+
     /// <summary>Bundles that contributed layers to the latest successful composition.</summary>
-    public IReadOnlyList<string> LoadedBundles { get; private set; } = [];
+    public IReadOnlyList<string> LoadedBundles
+    {
+        get;
+        private set;
+    } = [];
+
     /// <summary>Current bundle failures, in manifest order.</summary>
-    public IReadOnlyList<SkippedBundle> SkippedBundles { get; private set; } = [];
+    public IReadOnlyList<SkippedBundle> SkippedBundles
+    {
+        get;
+        private set;
+    } = [];
+
     /// <summary>
     /// Reports warnings synchronously on the emitting operation. Handler exceptions are ignored.
     /// </summary>
     public event Action<string>? Warning;
 
     /// <summary>Mount current bundle/profile/home/launch layers; no resolver or package manager is created implicitly.</summary>
-    public static async Task<ProfileSession> StartAsync(string configurationPath, ProfileLaunch launch, IModuleResolver resolver,
-        IExpressionEvaluator? evaluator = null, bool enableHmr = false, IReadOnlySet<string>? required = null,
-        Func<Context, Task>? prepare = null, Action<Exception>? diagnostic = null,
-        Func<Task<DeploymentGeneration>>? refreshDeployment = null, Task<bool>? applicationReady = null)
+    public static async Task<ProfileSession> StartAsync(
+        string configurationPath,
+        ProfileLaunch launch,
+        IModuleResolver resolver,
+        IExpressionEvaluator? evaluator = null,
+        bool enableHmr = false,
+        IReadOnlySet<string>? required = null,
+        Func<Context, Task>? prepare = null,
+        Action<Exception>? diagnostic = null,
+        Func<Task<DeploymentGeneration>>? refreshDeployment = null,
+        Task<bool>? applicationReady = null)
     {
         ArgumentNullException.ThrowIfNull(launch);
         ArgumentNullException.ThrowIfNull(resolver);
@@ -123,14 +204,32 @@ public sealed class ProfileSession : IAsyncDisposable
                 ctx.Provide("profileContext", session.launch);
                 var homePaths = new DshHomePaths(session.launch.Home);
                 ctx.Provide("dshHomePath", (DshHomePath)homePaths.PathOf);
-                if (session.Hmr is not null) ctx.Provide("hmr", session.Hmr);
-                session.Loader = new Loader(ctx, resolver, new Uri(Path.GetFullPath(configurationPath)), evaluator, session.Report);
-                if (prepare is not null) await prepare(ctx);
+                if (session.Hmr is not null)
+                    ctx.Provide("hmr", session.Hmr);
+                session.Loader = new Loader(
+                    ctx,
+                    resolver,
+                    new Uri(Path.GetFullPath(configurationPath)),
+                    evaluator,
+                    session.Report);
+                if (prepare is not null)
+                    await prepare(ctx);
             });
             session.Include = session.launch.RuntimeIdentity is { } runtime
-                ? await DshProfilePolicy.MountAsync(session.Loader, configurationPath, session.launch.Profile.Directory, runtime,
-                    ProfileComposition.Flatten(refresh.Layers), session.packages, session.launch.CompatibilityWarning, session.launch.ManifestLocator, session.launch.CompatibilityPackageName)
-                : await ApplicationBoot.MountAsync(session.Loader, configurationPath, ProfileComposition.Flatten(refresh.Layers));
+                ? await DshProfilePolicy.MountAsync(
+                    session.Loader,
+                    configurationPath,
+                    session.launch.Profile.Directory,
+                    runtime,
+                    ProfileComposition.Flatten(refresh.Layers),
+                    session.packages,
+                    session.launch.CompatibilityWarning,
+                    session.launch.ManifestLocator,
+                    session.launch.CompatibilityPackageName)
+                : await ApplicationBoot.MountAsync(
+                    session.Loader,
+                    configurationPath,
+                    ProfileComposition.Flatten(refresh.Layers));
             await session.AcceptBundlesAsync(refresh);
             session.ConfigurationOperations = new(session.launch, session.Include)
             {
@@ -138,7 +237,9 @@ public sealed class ProfileSession : IAsyncDisposable
                 ReconcileAsync = async requiredEntries =>
                 {
                     await session.RefreshCoreAsync(requiredEntries);
-                    if (session.RequiresRestart) throw new DeploymentRestartRequiredException("The profile deployment requires a host restart before configuration can be reconciled.");
+                    if (session.RequiresRestart)
+                        throw new DeploymentRestartRequiredException(
+                            "The profile deployment requires a host restart before configuration can be reconciled.");
                     return await ApplicationBoot.AuditAsync(session.Loader, session.required);
                 },
             };
@@ -162,8 +263,8 @@ public sealed class ProfileSession : IAsyncDisposable
         }
     }
 
-    private static async Task<bool> WaitForReadinessAsync(Task<bool> boot, Task<bool>? application)
-        => await boot.ConfigureAwait(false) && (application is null || await application.ConfigureAwait(false));
+    private static async Task<bool> WaitForReadinessAsync(Task<bool> boot, Task<bool>? application) =>
+        await boot.ConfigureAwait(false) && (application is null || await application.ConfigureAwait(false));
 
     /// <summary>Serialize an explicit refresh with automatic configuration and code reloads.</summary>
     public Task RefreshAsync() => queue.RunExclusiveAsync(() => RefreshCoreAsync());
@@ -179,27 +280,47 @@ public sealed class ProfileSession : IAsyncDisposable
             {
                 if (refreshDeployment is not null)
                 {
-                    try { packages!.Replace(await refreshDeployment()); }
+                    try
+                    {
+                        packages!.Replace(await refreshDeployment());
+                    }
                     catch (DeploymentRestartRequiredException)
-                    { await RequestRestartAsync(); return; }
+                    {
+                        await RequestRestartAsync();
+                        return;
+                    }
                 }
-                else if (MappingsRequireRestart()) { await RequestRestartAsync(); return; }
+                else if (MappingsRequireRestart())
+                {
+                    await RequestRestartAsync();
+                    return;
+                }
+
                 // Bundle selection only changes composition. An additive resolver generation
                 // can make its new code available without restarting the existing modules.
                 var refresh = await ProfileComposition.RefreshAsync(launch);
-                var requiredEntries = editedEntries is null ? required
-                    : new HashSet<string>((required ?? new HashSet<string>()).Concat(editedEntries), StringComparer.Ordinal);
-                await WarnInactiveAsync(await ApplicationBoot.ReconcileAsync(Include, ProfileComposition.Flatten(refresh.Layers), requiredEntries));
+                var requiredEntries = editedEntries is null
+                    ? required
+                    : new HashSet<string>(
+                        (required ?? new HashSet<string>()).Concat(editedEntries),
+                        StringComparer.Ordinal);
+                await WarnInactiveAsync(
+                    await ApplicationBoot.ReconcileAsync(
+                        Include,
+                        ProfileComposition.Flatten(refresh.Layers),
+                        requiredEntries));
                 await AcceptBundlesAsync(refresh);
                 successfulProfileInputs = inputs;
                 successfulMappings = mappings;
                 acceptedInstallation = new(launch.InstallationBundles, StringComparer.Ordinal);
                 acceptedLocal = new(launch.LocalBundles ?? new Dictionary<string, string>(), StringComparer.Ordinal);
             }
+
             foreach (var include in await IncludesAsync())
             {
                 var text = await File.ReadAllTextAsync(include.Filename);
-                if (successfulInputs.TryGetValue(include.Filename, out var previous) && text == previous) continue;
+                if (successfulInputs.TryGetValue(include.Filename, out var previous) && text == previous)
+                    continue;
                 // Include contains refresh errors; validate structure here so a rejected input is
                 // never recorded as successful and callers can observe/retry that same input.
                 ConfigurationFile.ParseEntries(text, Path.GetExtension(include.Filename) == ".json");
@@ -207,6 +328,7 @@ public sealed class ProfileSession : IAsyncDisposable
                 await WarnInactiveAsync(await ApplicationBoot.AuditAsync(Loader, required));
                 successfulInputs[include.Filename] = text;
             }
+
             await SynchronizeWatchesAsync();
             RequiresRestart = false;
             LastError = null;
@@ -234,22 +356,27 @@ public sealed class ProfileSession : IAsyncDisposable
 
     private async Task SynchronizeWatchesAsync()
     {
-        if (Hmr is null || disposed) return;
-        var paths = profilePaths.Concat((await IncludesAsync()).Select(include => include.Filename))
-            .Select(HmrCoordinator.CanonicalPath).ToHashSet(PathComparer);
+        if (Hmr is null || disposed)
+            return;
+        var paths = profilePaths
+            .Concat((await IncludesAsync()).Select(include => include.Filename))
+            .Select(HmrCoordinator.CanonicalPath)
+            .ToHashSet(PathComparer);
         foreach (var path in watches.Keys.Where(path => !paths.Contains(path)).ToArray())
         {
             await watches[path].DisposeAsync();
             watches.Remove(path);
         }
+
         foreach (var path in paths)
-            if (!watches.ContainsKey(path)) watches.Add(path, queue.WatchConfig(path, () => RefreshCoreAsync()));
+            if (!watches.ContainsKey(path))
+                watches.Add(path, queue.WatchConfig(path, () => RefreshCoreAsync()));
     }
 
     private async Task<string> ProfileInputSnapshotAsync()
     {
         var values = new List<object?>();
-        for (var index = 0; index < profilePaths.Length; index++)
+        for (var index = 0;index < profilePaths.Length;index++)
         {
             var path = profilePaths[index];
             try
@@ -259,35 +386,56 @@ public sealed class ProfileSession : IAsyncDisposable
                 // dependency/lock bookkeeping. Resolution generation updates remain explicit.
                 if (index == 0)
                 {
-                    var manifest = ConfigurationFile.Parse(text, true) as EntryOptions
-                        ?? throw new FormatException($"Manifest {path} must be a JSON object.");
+                    var manifest = ConfigurationFile.Parse(text, true) as EntryOptions ??
+                        throw new FormatException($"Manifest {path} must be a JSON object.");
                     values.Add(new PackageManifest(manifest).Bundles.ToList());
                 }
-                else values.Add(text);
+                else
+                    values.Add(text);
             }
-            catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { values.Add(null); }
-            catch (Exception error) when (path == Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename)
-                && error is IOException or UnauthorizedAccessException)
+            catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+            {
+                values.Add(null);
+            }
+            catch (Exception error) when (path == Path.Combine(
+                                              launch.Profile.Directory,
+                                              DshProfilePolicy.CompatibilityFilename) &&
+                                          error is IOException or UnauthorizedAccessException)
             {
                 // Bad grant data must remain non-authorizing and non-rewritable, not prevent boot.
                 // Admission emits the diagnostic; this marker makes unreadable/readable transitions refreshable.
-                values.Add(new EntryOptions { ["unreadableCompatibility"] = error.GetType().Name });
+                values.Add(
+                    new EntryOptions
+                    {
+                        ["unreadableCompatibility"] = error.GetType().Name
+                    });
             }
         }
+
         return ConfigurationFile.Write(values, true);
     }
 
-    private string MappingSnapshot() => ConfigurationFile.Write(new object?[]
-    {
-        launch.InstallationBundles.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToDictionary(pair => pair.Key, pair => (object?)pair.Value),
-        launch.LocalBundles?.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToDictionary(pair => pair.Key, pair => (object?)pair.Value)
-    }, true);
+    private string MappingSnapshot() =>
+        ConfigurationFile.Write(
+            new object?[]
+            {
+                launch
+                    .InstallationBundles.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                    .ToDictionary(pair => pair.Key, pair => (object?)pair.Value),
+                launch
+                    .LocalBundles?.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                    .ToDictionary(pair => pair.Key, pair => (object?)pair.Value)
+            },
+            true);
 
     private bool MappingsRequireRestart()
     {
-        static bool Changed(IReadOnlyDictionary<string, string> before, IReadOnlyDictionary<string, string>? after)
-            => before.Any(pair => after is null || !after.TryGetValue(pair.Key, out var path)
-                || !PathComparer.Equals(Path.GetFullPath(pair.Value), Path.GetFullPath(path)));
+        static bool Changed(IReadOnlyDictionary<string, string> before, IReadOnlyDictionary<string, string>? after) =>
+            before.Any(pair =>
+                after is null || !after.TryGetValue(pair.Key, out var path) || !PathComparer.Equals(
+                    Path.GetFullPath(pair.Value),
+                    Path.GetFullPath(path)));
+
         return Changed(acceptedInstallation, launch.InstallationBundles) || Changed(acceptedLocal, launch.LocalBundles);
     }
 
@@ -295,33 +443,71 @@ public sealed class ProfileSession : IAsyncDisposable
     {
         RequiresRestart = true;
         RestartRequired?.Invoke();
-        if (queue.RestartHost is { } restart) await restart();
+        if (queue.RestartHost is { } restart)
+            await restart();
     }
 
     private void Report(Exception error)
     {
         LastError = error;
-        try { diagnostic?.Invoke(error); } catch { }
-        try { Error?.Invoke(error); } catch { }
+        try
+        {
+            diagnostic?.Invoke(error);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            Error?.Invoke(error);
+        }
+        catch
+        {
+        }
     }
 
     private async void LogWarning(object? value)
     {
-        try { await Context.RunAsync(ctx => { ctx.Logger.Warn(value); return Task.CompletedTask; }); }
-        catch (ObjectDisposedException) { }
-        catch (Exception error) { Report(error); }
+        try
+        {
+            await Context.RunAsync(ctx =>
+            {
+                ctx.Logger.Warn(value);
+                return Task.CompletedTask;
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (Exception error)
+        {
+            Report(error);
+        }
     }
 
     private async Task WarnInactiveAsync(IReadOnlyList<EntryDiagnostic> entries)
     {
-        if (entries.Count == 0) return;
+        if (entries.Count == 0)
+            return;
         foreach (var entry in entries)
         {
             var message = $"{entry.Id} ({entry.Module}): {entry.Error?.Message ?? "inactive"}";
-            await Context.RunAsync(ctx => { ctx.Logger.Warn(message); return Task.CompletedTask; });
-            try { Warning?.Invoke(message); } catch { }
+            await Context.RunAsync(ctx =>
+            {
+                ctx.Logger.Warn(message);
+                return Task.CompletedTask;
+            });
+            try
+            {
+                Warning?.Invoke(message);
+            }
+            catch
+            {
+            }
         }
     }
+
     private async Task AcceptBundlesAsync(ProfileRefresh refresh)
     {
         SelectedBundles = refresh.SelectedBundles;
@@ -329,9 +515,20 @@ public sealed class ProfileSession : IAsyncDisposable
         SkippedBundles = refresh.SkippedBundles;
         foreach (var skipped in SkippedBundles)
         {
-            var message = $"skipping profile bundle {ConfigurationFile.Write(skipped.Name, true).TrimEnd()}: {skipped.Reason}";
-            await Context.RunAsync(ctx => { ctx.Logger.Warn(message); return Task.CompletedTask; });
-            try { Warning?.Invoke(message); } catch { }
+            var message =
+                $"skipping profile bundle {ConfigurationFile.Write(skipped.Name, true).TrimEnd()}: {skipped.Reason}";
+            await Context.RunAsync(ctx =>
+            {
+                ctx.Logger.Warn(message);
+                return Task.CompletedTask;
+            });
+            try
+            {
+                Warning?.Invoke(message);
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -340,7 +537,8 @@ public sealed class ProfileSession : IAsyncDisposable
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        if (disposed) return;
+        if (disposed)
+            return;
         // Package preparation runs outside the HMR queue. Stop its children before closing
         // that queue or the borrowed resolver; admitted publication must be allowed to settle.
         await StopPackagesAsync();
@@ -362,17 +560,26 @@ public sealed class ProfileSession : IAsyncDisposable
 
     private async Task StopPackagesAsync()
     {
-        if (ConfigurationOperations is null) return;
+        if (ConfigurationOperations is null)
+            return;
         var stopped = ConfigurationOperations.StopPackageOperationsAsync();
-        if (!queue.IsExecuting) await stopped;
-        else _ = ObservePackageShutdownAsync(stopped);
+        if (!queue.IsExecuting)
+            await stopped;
+        else
+            _ = ObservePackageShutdownAsync(stopped);
     }
 
     private async Task ObservePackageShutdownAsync(Task stopped)
     {
         // Disposal from an applying operation cannot await itself. Admission is already
         // closed synchronously; report any eventual cleanup error without retaining it globally.
-        try { await stopped; }
-        catch (Exception error) { Report(error); }
+        try
+        {
+            await stopped;
+        }
+        catch (Exception error)
+        {
+            Report(error);
+        }
     }
 }

@@ -7,13 +7,18 @@ public sealed class PublicConfigurationReviewTests
 {
     private sealed class LiteralEvaluator : IExpressionEvaluator
     {
-        public int Calls { get; private set; }
+        public int Calls
+        {
+            get;
+            private set;
+        }
+
         public object? Evaluate(string expression, Context context)
         {
             Calls++;
             return expression.Trim() is "1" or "1 + 0"
-            ? 1
-            : throw new InvalidOperationException("The review fixture accepts only the literal 1.");
+                ? 1
+                : throw new InvalidOperationException("The review fixture accepts only the literal 1.");
         }
     }
 
@@ -28,14 +33,31 @@ public sealed class PublicConfigurationReviewTests
         await root.RunAsync(async ctx =>
         {
             var applies = 0;
-            var plugin = new Plugin<object?> { Apply = (_, _) => applies++ };
-            var loader = new Loader(ctx, new StaticModuleResolver().Register("review", plugin),
+            var plugin = new Plugin<object?>
+            {
+                Apply = (_, _) => applies++
+            };
+            var loader = new Loader(
+                ctx,
+                new StaticModuleResolver().Register("review", plugin),
                 expressionEvaluator: new LiteralEvaluator());
-            await loader.Root.UpdateAsync([new() { Id = "p", Name = "review", Config = ParsedExpressionConfig(1) }]);
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "p",
+                    Name = "review",
+                    Config = ParsedExpressionConfig(1)
+                }
+            ]);
             await loader.WaitAsync();
             var entry = loader.Resolve("p");
             var effective = entry.Fiber!.Config;
-            await entry.UpdateAsync(new() { Config = ParsedExpressionConfig(1) });
+            await entry.UpdateAsync(
+                new()
+                {
+                    Config = ParsedExpressionConfig(1)
+                });
             await loader.WaitAsync();
             Assert.Equal(1, applies);
             Assert.Same(effective, entry.Fiber!.Config);
@@ -53,17 +75,37 @@ public sealed class PublicConfigurationReviewTests
                 raw => raw is EntryOptions config
                     ? ConfigResult<EntryOptions>.Success(config)
                     : ConfigResult<EntryOptions>.Failure("Expected an object."),
-                ConfigDescriptor.Object(("ordinary", ConfigDescriptor.Number()),
-                    ("live", ConfigDescriptor.Number().Volatile())))
-                .WithVolatile("live", config => Convert.ToInt32(config["live"]));
-            var plugin = new Plugin<EntryOptions> { Configuration = schema, Apply = (_, _) => applies++ };
-            var loader = new Loader(ctx, new StaticModuleResolver().Register("review", plugin),
+                ConfigDescriptor.Object(
+                    ("ordinary", ConfigDescriptor.Number()),
+                    ("live", ConfigDescriptor.Number().Volatile()))).WithVolatile(
+                "live",
+                config => Convert.ToInt32(config["live"]));
+            var plugin = new Plugin<EntryOptions>
+            {
+                Configuration = schema,
+                Apply = (_, _) => applies++
+            };
+            var loader = new Loader(
+                ctx,
+                new StaticModuleResolver().Register("review", plugin),
                 expressionEvaluator: new LiteralEvaluator());
-            await loader.Root.UpdateAsync([new() { Id = "p", Name = "review", Config = ParsedExpressionConfig(1) }]);
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "p",
+                    Name = "review",
+                    Config = ParsedExpressionConfig(1)
+                }
+            ]);
             await loader.WaitAsync();
             var entry = loader.Resolve("p");
             var before = entry.Fiber!.GetConfigReference<int>("live");
-            await entry.UpdateAsync(new() { Config = ParsedExpressionConfig(2) });
+            await entry.UpdateAsync(
+                new()
+                {
+                    Config = ParsedExpressionConfig(2)
+                });
             await loader.WaitAsync();
             Assert.Equal(1, applies);
             Assert.Same(before, entry.Fiber!.GetConfigReference<int>("live"));
@@ -79,18 +121,41 @@ public sealed class PublicConfigurationReviewTests
         {
             var applies = 0;
             var evaluator = new LiteralEvaluator();
-            var loader = new Loader(ctx, new StaticModuleResolver().Register("review",
-                new Plugin<object?> { Apply = (_, _) => applies++ }), expressionEvaluator: evaluator);
-            await loader.Root.UpdateAsync([new() { Id = "p", Name = "review", Config = ParsedExpressionConfig(1) }]);
+            var loader = new Loader(
+                ctx,
+                new StaticModuleResolver().Register(
+                    "review",
+                    new Plugin<object?>
+                    {
+                        Apply = (_, _) => applies++
+                    }),
+                expressionEvaluator: evaluator);
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "p",
+                    Name = "review",
+                    Config = ParsedExpressionConfig(1)
+                }
+            ]);
             await loader.WaitAsync();
             var entry = loader.Resolve("p");
             var calls = evaluator.Calls;
             var json = ConfigurationFile.Parse("{\"ordinary\":{\"__jsExpr\":\"1\"},\"live\":1}", true);
-            await entry.UpdateAsync(new() { Config = json });
+            await entry.UpdateAsync(
+                new()
+                {
+                    Config = json
+                });
             await loader.WaitAsync();
             Assert.Equal(1, applies);
             Assert.Equal(calls, evaluator.Calls);
-            await entry.UpdateAsync(new() { Config = ConfigurationFile.Parse("ordinary: !!js 1 + 0\nlive: 1\n") });
+            await entry.UpdateAsync(
+                new()
+                {
+                    Config = ConfigurationFile.Parse("ordinary: !!js 1 + 0\nlive: 1\n")
+                });
             await loader.WaitAsync();
             Assert.Equal(2, applies);
             Assert.True(evaluator.Calls > calls);
@@ -106,10 +171,12 @@ public sealed class PublicConfigurationReviewTests
     public async Task FactoryRecursiveLazyDescriptionAcceptsFiniteTree(int depth)
     {
         var expansions = 0;
+
         ConfigDescriptor BuildTree()
         {
             if (++expansions > 32)
-                throw new InvalidOperationException("Review guard: recursive factory eagerly expanded past finite input.");
+                throw new InvalidOperationException(
+                    "Review guard: recursive factory eagerly expanded past finite input.");
             return ConfigDescriptor.Object(
                 ("name", ConfigDescriptor.String()),
                 ("children", ConfigDescriptor.Array(ConfigDescriptor.Lazy(BuildTree)).Default(Array.Empty<object?>())));
@@ -125,9 +192,16 @@ public sealed class PublicConfigurationReviewTests
         await using var root = new Context();
         await root.RunAsync(async ctx =>
         {
-            object? tree = new EntryOptions { ["name"] = "leaf" };
-            for (var level = 0; level < depth; level++)
-                tree = new EntryOptions { ["name"] = "branch", ["children"] = new[] { tree } };
+            object? tree = new EntryOptions
+            {
+                ["name"] = "leaf"
+            };
+            for (var level = 0;level < depth;level++)
+                tree = new EntryOptions
+                {
+                    ["name"] = "branch",
+                    ["children"] = new[] { tree }
+                };
             var fiber = ctx.Plugin(plugin, tree);
             await fiber.WaitAsync();
             Assert.Equal(FiberState.Active, fiber.State);
@@ -142,10 +216,22 @@ public sealed class PublicConfigurationReviewTests
         await using var root = new Context();
         await root.RunAsync(async ctx =>
         {
-            var schema = new ConfigSchema<object?>(raw => ConfigResult<object?>.Success(raw),
-                ConfigDescriptor.Object(("unused", ConfigDescriptor.Lazy(
-                    () => throw new InvalidOperationException("Unused branch was expanded.")).Optional())));
-            var fiber = ctx.Plugin(new Plugin<object?> { Configuration = schema, Apply = (_, _) => { } }, new EntryOptions());
+            var schema = new ConfigSchema<object?>(
+                raw => ConfigResult<object?>.Success(raw),
+                ConfigDescriptor.Object(
+                    ("unused",
+                        ConfigDescriptor
+                            .Lazy(() => throw new InvalidOperationException("Unused branch was expanded."))
+                            .Optional())));
+            var fiber = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Configuration = schema,
+                    Apply = (_, _) =>
+                    {
+                    }
+                },
+                new EntryOptions());
             await fiber.WaitAsync();
             Assert.Equal(FiberState.Active, fiber.State);
         });
@@ -160,36 +246,82 @@ public sealed class PublicConfigurationReviewTests
         {
             var applies = 0;
             var validations = 0;
+
             ConfigResult<EntryOptions> Validate(object? raw)
             {
                 validations++;
                 var input = raw as IReadOnlyDictionary<string, object?>;
                 var nested = input?.GetValueOrDefault("nested") as IReadOnlyDictionary<string, object?>;
                 var value = nested?.GetValueOrDefault("fixed") as string ?? "default";
-                return ConfigResult<EntryOptions>.Success(new EntryOptions
-                    { ["nested"] = new EntryOptions { ["fixed"] = value } });
+                return ConfigResult<EntryOptions>.Success(
+                    new EntryOptions
+                    {
+                        ["nested"] = new EntryOptions
+                        {
+                            ["fixed"] = value
+                        }
+                    });
             }
-            var schema = new ConfigSchema<EntryOptions>(Validate,
-                ConfigDescriptor.Object(("nested", ConfigDescriptor.Object(("fixed", ConfigDescriptor.String()))
-                    .Default(new EntryOptions { ["fixed"] = "default" }))));
-            var plugin = new Plugin<EntryOptions> { Configuration = schema, Apply = (_, _) => applies++ };
+
+            var schema = new ConfigSchema<EntryOptions>(
+                Validate,
+                ConfigDescriptor.Object(
+                    ("nested", ConfigDescriptor
+                        .Object(("fixed", ConfigDescriptor.String()))
+                        .Default(
+                            new EntryOptions
+                            {
+                                ["fixed"] = "default"
+                            }))));
+            var plugin = new Plugin<EntryOptions>
+            {
+                Configuration = schema,
+                Apply = (_, _) => applies++
+            };
             var loader = new Loader(ctx, new StaticModuleResolver().Register("review", plugin));
-            await loader.Root.UpdateAsync([new() { Id = "p", Name = "review", Config = new EntryOptions() }]);
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "p",
+                    Name = "review",
+                    Config = new EntryOptions()
+                }
+            ]);
             await loader.WaitAsync();
             var entry = loader.Resolve("p");
             var before = entry.Fiber!.Config;
             var beforeValidations = validations;
-            var explicitDefault = new EntryOptions { ["nested"] = new EntryOptions { ["fixed"] = "default" } };
-            await entry.UpdateAsync(new() { Config = explicitDefault });
+            var explicitDefault = new EntryOptions
+            {
+                ["nested"] = new EntryOptions
+                {
+                    ["fixed"] = "default"
+                }
+            };
+            await entry.UpdateAsync(
+                new()
+                {
+                    Config = explicitDefault
+                });
             await loader.WaitAsync();
             Assert.Equal(1, applies);
             Assert.Same(before, entry.Fiber!.Config);
             Assert.Equal(beforeValidations, validations);
             Assert.Same(explicitDefault, entry.Fiber.RawConfig);
-            await entry.UpdateAsync(new() { Config = new EntryOptions { ["nested"] = new EntryOptions { ["fixed"] = "changed" } } });
+            await entry.UpdateAsync(
+                new()
+                {
+                    Config = new EntryOptions
+                    {
+                        ["nested"] = new EntryOptions
+                        {
+                            ["fixed"] = "changed"
+                        }
+                    }
+                });
             await loader.WaitAsync();
             Assert.Equal(2, applies);
         });
     }
-
 }

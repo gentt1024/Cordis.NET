@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Runtime.ExceptionServices;
 
 namespace Cordis;
+
 /// <summary>
 /// A registration and its serial load/unload transitions. Pending is settled, not an error.
 /// Its Context is stable across activations, as in the frozen DSH implementation.
@@ -23,6 +24,7 @@ public sealed class Fiber : IAsyncDisposable
     private object? _config;
     private ConfigurationCell? _configurationCell;
     private readonly Dictionary<string, object> _configurationReferences = new(StringComparer.Ordinal);
+
     internal Fiber(Runtime runtime, Context root)
     {
         _runtime = runtime;
@@ -34,7 +36,13 @@ public sealed class Fiber : IAsyncDisposable
         Inject = new Dictionary<string, object?>();
     }
 
-    internal Fiber(Runtime runtime, Context parent, PluginDefinition definition, IReadOnlyDictionary<string, object?> inject, long uid, object? rawConfig)
+    internal Fiber(
+        Runtime runtime,
+        Context parent,
+        PluginDefinition definition,
+        IReadOnlyDictionary<string, object?> inject,
+        long uid,
+        object? rawConfig)
     {
         _runtime = runtime;
         _parent = parent;
@@ -53,6 +61,7 @@ public sealed class Fiber : IAsyncDisposable
     {
         get;
     }
+
     /// <summary>
     /// Gets the inject value.
     /// </summary>
@@ -60,20 +69,33 @@ public sealed class Fiber : IAsyncDisposable
     {
         get;
     }
-    internal List<EventHook> UpdateHooks { get; } = [];
-    internal Dictionary<string, ServiceEntry> Store { get; } = new(StringComparer.Ordinal);
+
+    internal List<EventHook> UpdateHooks
+    {
+        get;
+    } = [];
+
+    internal Dictionary<string, ServiceEntry> Store
+    {
+        get;
+    } = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Gets the parent value.
     /// </summary>
     public Context Parent => _parent;
+
     /// <summary>
     /// Gets the error value.
     /// </summary>
     public Exception? Error => _error;
+
     /// <summary>The activation operation that produced Error: "configuration" or "apply", or null when no activation error is retained.</summary>
     /// <remarks>This value identifies where the error occurred, regardless of its exception type. A successful activation or an update that clears Error also clears this value.</remarks>
     public string? FailurePhase => Volatile.Read(ref _failurePhase);
+
     internal CordisExecutionContext Execution => _runtime.Execution;
+
     /// <summary>
     /// Gets the context value.
     /// </summary>
@@ -81,6 +103,7 @@ public sealed class Fiber : IAsyncDisposable
     {
         get;
     }
+
     /// <summary>
     /// Gets the name value.
     /// </summary>
@@ -102,103 +125,133 @@ public sealed class Fiber : IAsyncDisposable
     /// Gets the state value.
     /// </summary>
     public FiberState State => (FiberState)Volatile.Read(ref _state);
+
     /// <summary>
     /// Gets the config value.
     /// </summary>
     public object? Config => Volatile.Read(ref _config);
+
     /// <summary>The optional captured description of the Fiber's captured validator.</summary>
     public ConfigDescriptor? ConfigDescription => Definition?.Configuration?.Descriptor;
+
     /// <summary>Whether this activation has captured live configuration projections.</summary>
     public bool HasConfigReferences => Definition?.Configuration?.Bindings.Count > 0;
+
     /// <summary>Read one immutable published reference snapshot without retaining the effective configuration.</summary>
-    public IReadOnlyDictionary<string, object?> ConfigurationValues => _configurationCell?.State.Values
-        ?? System.Collections.ObjectModel.ReadOnlyDictionary<string, object?>.Empty;
+    public IReadOnlyDictionary<string, object?> ConfigurationValues =>
+        _configurationCell?.State.Values ?? System.Collections.ObjectModel.ReadOnlyDictionary<string, object?>.Empty;
+
     /// <summary>Run the active plugin's normal configuration hooks and validator without publishing or saving.</summary>
     /// <remarks>Call within the owning execution domain. Validation callbacks may have their own effects.</remarks>
     public object? ValidateConfiguration(object? raw)
     {
         Context.VerifyAccess();
-        if (State != FiberState.Active) throw new InvalidOperationException("Configuration validation requires an active plugin.");
+        if (State != FiberState.Active)
+            throw new InvalidOperationException("Configuration validation requires an active plugin.");
         return ResolveConfig(raw);
     }
+
     /// <summary>Obtain an identity-stable readonly reference to an explicitly projected volatile field.</summary>
     public ConfigReference<T> GetConfigReference<T>(string path)
     {
         Context.VerifyAccess();
         ArgumentNullException.ThrowIfNull(path);
-        var binding = Definition?.Configuration?.Bindings.SingleOrDefault(binding => binding.Path == path)
-            ?? throw new KeyNotFoundException($"No volatile configuration field '{path}' is declared.");
-        if (binding.ValueType != typeof(T)) throw new InvalidCastException($"The configuration reference '{path}' has another value type.");
+        var binding = Definition?.Configuration?.Bindings.SingleOrDefault(binding => binding.Path == path) ??
+            throw new KeyNotFoundException($"No volatile configuration field '{path}' is declared.");
+        if (binding.ValueType != typeof(T))
+            throw new InvalidCastException($"The configuration reference '{path}' has another value type.");
         if (_configurationCell is null || !_configurationCell.State.Values.ContainsKey(path))
-            throw new InvalidOperationException($"The configuration field '{path}' cannot be snapshotted as its declared type.");
+            throw new InvalidOperationException(
+                $"The configuration field '{path}' cannot be snapshotted as its declared type.");
         if (!_configurationReferences.TryGetValue(path, out var reference))
             _configurationReferences.Add(path, reference = binding.CreateReference(_configurationCell));
         return (ConfigReference<T>)reference;
     }
+
     /// <summary>Obtain the stable reference for an explicitly declared root whole-value boundary.</summary>
     public ConfigReference<T> GetConfigReference<T>() => GetConfigReference<T>("");
+
     /// <summary>Obtain a stable reference by its exact nested object-key path.</summary>
     public ConfigReference<T> GetConfigReference<T>(IReadOnlyList<string> path)
     {
         ArgumentNullException.ThrowIfNull(path);
         return GetConfigReference<T>(ConfigBinding.DisplayPath(path));
     }
+
     /// <summary>Retain a Loader's latest raw input, including rejected candidates, without changing activation or effective values.</summary>
     public void RetainRawConfiguration(object? raw)
     {
         Context.VerifyAccess();
         _rawConfig = raw;
     }
+
     /// <summary>Convert an opted-in effective value to detached raw persistence data; legacy plugins retain their existing value.</summary>
     public object? SimplifyConfiguration(object? effective)
     {
         Context.VerifyAccess();
-        if (Definition?.Configuration is not { } schema) return effective;
-        return schema.Simplify is null ? schema.Descriptor.Simplify(effective) : ConfigSnapshots.Create(schema.Simplify(effective));
+        if (Definition?.Configuration is not { } schema)
+            return effective;
+        return schema.Simplify is null
+            ? schema.Descriptor.Simplify(effective)
+            : ConfigSnapshots.Create(schema.Simplify(effective));
     }
+
     /// <summary>Validate once and detach all volatile field candidates without publishing raw, effective, or reference values.</summary>
     /// <remarks>False requests an ordinary lifecycle update. Validation exceptions propagate; no effective state changes.</remarks>
     public bool TryPrepareConfigurationUpdate(object? raw, out ConfigurationUpdate? candidate)
     {
         Context.VerifyAccess();
         candidate = null;
-        if (State != FiberState.Active || _uid < 0 || Definition?.Configuration is not { } schema || _configurationCell is not { } cell) return false;
+        if (State != FiberState.Active || _uid < 0 || Definition?.Configuration is not { } schema ||
+            _configurationCell is not { } cell)
+            return false;
         var previous = cell.State;
         var resolved = ResolveConfig(raw);
         if (schema.Bindings.Count == 0 || schema.Descriptor.HasBlockedVolatilePlacement() ||
             !schema.TryProject(resolved, out var values) || values.Count != previous.Values.Count ||
-            !(schema.OrdinaryEquality?.Invoke(Config, resolved) ?? schema.Descriptor.EffectiveEquals(Config, resolved))) return false;
+            !(schema.OrdinaryEquality?.Invoke(Config, resolved) ?? schema.Descriptor.EffectiveEquals(Config, resolved)))
+            return false;
         candidate = new ConfigurationUpdate(this, cell, previous, values, resolved, raw);
         return true;
     }
+
     internal bool CommitConfiguration(ConfigurationCell cell, ConfigurationState previous, ConfigurationState next)
     {
-        if (State != FiberState.Active || _uid < 0 || !ReferenceEquals(cell, _configurationCell) || !ReferenceEquals(previous, cell.State)) return false;
+        if (State != FiberState.Active || _uid < 0 || !ReferenceEquals(cell, _configurationCell) ||
+            !ReferenceEquals(previous, cell.State))
+            return false;
         // One publication switches every field snapshot together. Effective config
         // keeps its activation identity; retired cells never receive later generations.
         cell.State = next;
         return true;
     }
+
     private void PublishConfiguration(object? resolved)
     {
         if (Definition?.Configuration is { } schema)
         {
             if (schema.Descriptor.HasBlockedVolatilePlacement())
-                throw new ConfigurationValidationException(["Volatile fields require a fixed object path without an enclosing volatile field."]);
+                throw new ConfigurationValidationException(
+                    ["Volatile fields require a fixed object path without an enclosing volatile field."]);
             schema.Descriptor.ValidateBindings(schema.Bindings);
             if (!schema.TryProject(resolved, out var values))
-                throw new ConfigurationValidationException(["Volatile fields must project to their declared readonly snapshot types."]);
+                throw new ConfigurationValidationException(
+                    ["Volatile fields must project to their declared readonly snapshot types."]);
             _configurationCell = new(new(values));
             _configurationReferences.Clear();
         }
+
         _config = resolved;
     }
+
     /// <summary>
     /// Gets the raw config value.
     /// </summary>
     public object? RawConfig => Volatile.Read(ref _rawConfig);
 
-    internal void AttachOwnership() => _ownership = _parent.Effect(() => new AsyncCleanup(DisposeOwnedAsync), "ctx.plugin()");
+    internal void AttachOwnership() =>
+        _ownership = _parent.Effect(() => new AsyncCleanup(DisposeOwnedAsync), "ctx.plugin()");
+
     internal void AssertCanCreateEffect()
     {
         if (_uid < 0 || State == FiberState.Unloading || Context.Root.IsClosing)
@@ -222,6 +275,7 @@ public sealed class Fiber : IAsyncDisposable
 
     internal void RemoveEffect(EffectHandle handle) => _effects.Remove(handle);
     internal void Report(Exception error) => _runtime.Report(error);
+
     internal void Refresh()
     {
         var owners = new List<string>();
@@ -284,7 +338,11 @@ public sealed class Fiber : IAsyncDisposable
             _runtime.NotifyOwner(this);
     }
 
-    private FiberState StableState() => _uid < 0 ? FiberState.Disposed : _error is not null ? FiberState.Failed : _epoch == Inactive ? FiberState.Pending : FiberState.Active;
+    private FiberState StableState() =>
+        _uid < 0 ? FiberState.Disposed :
+        _error is not null ? FiberState.Failed :
+        _epoch == Inactive ? FiberState.Pending : FiberState.Active;
+
     private async Task LoadAsync()
     {
         string epoch = _epoch;
@@ -360,6 +418,7 @@ public sealed class Fiber : IAsyncDisposable
 
     /// <summary>Wait for current lifecycle work. A missing required service may leave Pending.</summary>
     public Task WaitAsync() => Execution.RunAsync(WaitCoreAsync);
+
     internal async Task WaitCoreAsync()
     {
         while (_inertia is not null)
@@ -369,11 +428,13 @@ public sealed class Fiber : IAsyncDisposable
     }
 
     /// <summary>Reapply current raw configuration, retaining this registration and Context.</summary>
-    public Task RestartAsync() => Execution.RunAsync(() =>
-    {
-        BeginRestart();
-        return WaitCoreAsync();
-    });
+    public Task RestartAsync() =>
+        Execution.RunAsync(() =>
+        {
+            BeginRestart();
+            return WaitCoreAsync();
+        });
+
     private void BeginRestart()
     {
         ObjectDisposedException.ThrowIf(Context.Root.IsClosed, Context.Root);
@@ -403,14 +464,19 @@ public sealed class Fiber : IAsyncDisposable
         }
 
         var resolved = ResolveConfig(configuration);
-        Context.Events.WaterfallWith(this, "internal/update", () =>
-        {
-            PublishConfiguration(resolved);
-            _error = null;
-            _failurePhase = null;
-            BeginRestart();
-            return Undefined.Value;
-        }, resolved, noSave);
+        Context.Events.WaterfallWith(
+            this,
+            "internal/update",
+            () =>
+            {
+                PublishConfiguration(resolved);
+                _error = null;
+                _failurePhase = null;
+                BeginRestart();
+                return Undefined.Value;
+            },
+            resolved,
+            noSave);
     }
 
     private object? ResolveConfig(object? raw)
@@ -427,6 +493,7 @@ public sealed class Fiber : IAsyncDisposable
     /// Context.DisposeAsync additionally ends the .NET execution lifetime.
     /// </summary>
     public ValueTask DisposeAsync() => new(Execution.RunAsync(DisposeCoreAsync));
+
     internal Task DisposeCoreAsync()
     {
         if (_ownership is not null)

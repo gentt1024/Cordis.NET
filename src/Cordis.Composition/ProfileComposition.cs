@@ -1,4 +1,5 @@
 using System.Text;
+
 namespace Cordis.Composition;
 
 /// <summary>
@@ -10,19 +11,45 @@ namespace Cordis.Composition;
 /// <param name="InstallationBundles">The installation bundles value.</param>
 /// <param name="LocalBundles">The local bundles value.</param>
 /// <param name="TelemetryDisabledEnv">The telemetry disabled env value.</param>
-public sealed record ProfileLaunch(Profile Profile, string Home, IReadOnlyList<ConfigurationLayer> Overlays, IReadOnlyDictionary<string, string> InstallationBundles, IReadOnlyDictionary<string, string>? LocalBundles = null, string? TelemetryDisabledEnv = null)
+public sealed record ProfileLaunch(
+    Profile Profile,
+    string Home,
+    IReadOnlyList<ConfigurationLayer> Overlays,
+    IReadOnlyDictionary<string, string> InstallationBundles,
+    IReadOnlyDictionary<string, string>? LocalBundles = null,
+    string? TelemetryDisabledEnv = null)
 {
     /// <summary>Explicit running DSH identity. Null retains generic composition without DSH version policy.</summary>
-    public DshRuntimeIdentity? RuntimeIdentity { get; init; }
+    public DshRuntimeIdentity? RuntimeIdentity
+    {
+        get;
+        init;
+    }
+
     /// <summary>Optional platform mapping of package names used only for exact compatibility grant keys.</summary>
     /// <remarks>The mapping must be deterministic. Package/version metadata, dependency and selection spelling stay unchanged.
     /// Null preserves the fixed npm identity rules. Hosts using NuGet may select its explicit name adapter.</remarks>
-    public Func<string, string>? CompatibilityPackageName { get; init; }
+    public Func<string, string>? CompatibilityPackageName
+    {
+        get;
+        init;
+    }
+
     /// <summary>Optional sink for corrupt grant data and explicitly exempted compatibility warnings.</summary>
-    public Action<string>? CompatibilityWarning { get; init; }
+    public Action<string>? CompatibilityWarning
+    {
+        get;
+        init;
+    }
+
     /// <summary>Host-owned manifest lookup for static or CLR identifiers when DSH admission is enabled.</summary>
-    public Func<string, Uri, PackageManifest?>? ManifestLocator { get; init; }
+    public Func<string, Uri, PackageManifest?>? ManifestLocator
+    {
+        get;
+        init;
+    }
 }
+
 /// <summary>
 /// Represents the profile refresh component.
 /// </summary>
@@ -31,9 +58,18 @@ public sealed record ProfileLaunch(Profile Profile, string Home, IReadOnlyList<C
 public sealed record ProfileRefresh(IReadOnlyList<ConfigurationLayer> Layers, IReadOnlyList<string> CurrentBundles)
 {
     /// <summary>Manifest selection, including bundles that contributed no layer.</summary>
-    public IReadOnlyList<string> SelectedBundles { get; init; } = CurrentBundles;
+    public IReadOnlyList<string> SelectedBundles
+    {
+        get;
+        init;
+    } = CurrentBundles;
+
     /// <summary>Current load failures, in selection order.</summary>
-    public IReadOnlyList<SkippedBundle> SkippedBundles { get; init; } = [];
+    public IReadOnlyList<SkippedBundle> SkippedBundles
+    {
+        get;
+        init;
+    } = [];
 }
 
 /// <summary>
@@ -45,55 +81,134 @@ public static class ProfileComposition
     public static async Task<ProfileRefresh> RefreshAsync(ProfileLaunch launch)
     {
         var admission = launch.RuntimeIdentity is { } runtime
-            ? DshProfilePolicy.CreateAdmission(launch.Profile.Directory, runtime, launch.CompatibilityWarning, launch.CompatibilityPackageName) : null;
-        var current = await Profiles.LoadAsync(launch.Profile.Directory, launch.InstallationBundles, launch.LocalBundles, false, admission);
+            ? DshProfilePolicy.CreateAdmission(
+                launch.Profile.Directory,
+                runtime,
+                launch.CompatibilityWarning,
+                launch.CompatibilityPackageName)
+            : null;
+        var current = await Profiles.LoadAsync(
+            launch.Profile.Directory,
+            launch.InstallationBundles,
+            launch.LocalBundles,
+            false,
+            admission);
         var homePath = Path.Combine(launch.Home, "cordis.patch.yml");
-        var layers = current.Bundles.SelectMany(bundle => bundle.PatchLayers)
-            .Append(new ConfigurationLayer(launch.Profile.UserLayer.Source, await Profiles.ReadPatchesAsync(launch.Profile.UserLayer.Source, true)))
-            .Append(new ConfigurationLayer(homePath, await Profiles.ReadPatchesAsync(homePath, true))).Concat(launch.Overlays).ToList();
+        var layers = current
+            .Bundles.SelectMany(bundle => bundle.PatchLayers)
+            .Append(
+                new ConfigurationLayer(
+                    launch.Profile.UserLayer.Source,
+                    await Profiles.ReadPatchesAsync(launch.Profile.UserLayer.Source, true)))
+            .Append(new ConfigurationLayer(homePath, await Profiles.ReadPatchesAsync(homePath, true)))
+            .Concat(launch.Overlays)
+            .ToList();
         // DSH's privacy opt-out is literal: even "0" and "false" disable telemetry.
-        if (!string.IsNullOrEmpty(launch.TelemetryDisabledEnv) && Profiles.Compose(layers).Any(row => row.Id == "session-telemetry-otel"))
-            layers.Add(new("DSH_TELEMETRY_DISABLED", [new() { Id = "session-telemetry-otel", Disabled = true }]));
+        if (!string.IsNullOrEmpty(launch.TelemetryDisabledEnv) &&
+            Profiles.Compose(layers).Any(row => row.Id == "session-telemetry-otel"))
+            layers.Add(
+                new(
+                    "DSH_TELEMETRY_DISABLED",
+                    [
+                        new()
+                        {
+                            Id = "session-telemetry-otel",
+                            Disabled = true
+                        }
+                    ]));
         var names = current.Bundles.Select(b => b.Name).ToArray();
-        return new(layers, names) { SelectedBundles = current.SelectedBundles, SkippedBundles = current.SkippedBundles };
+        return new(layers, names)
+        {
+            SelectedBundles = current.SelectedBundles,
+            SkippedBundles = current.SkippedBundles
+        };
     }
+
     /// <summary>
     /// Performs the flatten operation.
     /// </summary>
-    public static List<EntryOptions> Flatten(IEnumerable<ConfigurationLayer> layers) => Data.Entries(Data.Clone(layers.SelectMany(layer => layer.Patches).ToList()));
+    public static List<EntryOptions> Flatten(IEnumerable<ConfigurationLayer> layers) =>
+        Data.Entries(Data.Clone(layers.SelectMany(layer => layer.Patches).ToList()));
+
     /// <summary>Render each contiguous run with the source and layers that changed it, using one flattened patch application per snapshot.</summary>
-    public static async Task<string> PreviewAsync(string basePath, IReadOnlyList<ConfigurationLayer> layers, Action<string>? warn = null, string diagnosticName = "cordis")
+    public static async Task<string> PreviewAsync(
+        string basePath,
+        IReadOnlyList<ConfigurationLayer> layers,
+        Action<string>? warn = null,
+        string diagnosticName = "cordis")
     {
         warn ??= Console.Error.WriteLine;
         string content;
-        try { content = await File.ReadAllTextAsync(basePath); }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { throw new IOException($"{diagnosticName}: failed to read config {basePath}: {error.Message}", error); }
+        try
+        {
+            content = await File.ReadAllTextAsync(basePath);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw new IOException($"{diagnosticName}: failed to read config {basePath}: {error.Message}", error);
+        }
+
         List<EntryOptions> original;
-        try { original = ConfigurationFile.ParseEntries(content, Path.GetExtension(basePath) == ".json"); }
-        catch (Exception error) when (error is FormatException or YamlDotNet.Core.YamlException or System.Text.Json.JsonException) { throw new FormatException($"{diagnosticName}: failed to parse config {basePath}: {error.Message}", error); }
+        try
+        {
+            original = ConfigurationFile.ParseEntries(content, Path.GetExtension(basePath) == ".json");
+        }
+        catch (Exception error) when (error is FormatException or YamlDotNet.Core.YamlException
+                                          or System.Text.Json.JsonException)
+        {
+            throw new FormatException($"{diagnosticName}: failed to parse config {basePath}: {error.Message}", error);
+        }
+
         var previous = original;
         var previousWarnings = 0;
         var origins = original.Select(_ => (Source: Path.GetFileName(basePath), Patches: new List<string>())).ToList();
-        for (var count = 1; count <= layers.Count; count++)
+        for (var count = 1;count <= layers.Count;count++)
         {
             var warnings = new List<string>();
             var current = EntryPatches.Apply(original, Flatten(layers.Take(count)), warnings.Add);
-            foreach (var warning in warnings.Skip(previousWarnings)) warn($"{diagnosticName}: [{layers[count - 1].Source}] {warning}");
-            for (var index = 0; index < current.Count; index++)
+            foreach (var warning in warnings.Skip(previousWarnings))
+                warn($"{diagnosticName}: [{layers[count - 1].Source}] {warning}");
+            for (var index = 0;index < current.Count;index++)
             {
-                if (index >= previous.Count) origins.Add((layers[count - 1].Source, []));
-                else if (ConfigurationFile.Write(previous[index], true) != ConfigurationFile.Write(current[index], true)) origins[index].Patches.Add(layers[count - 1].Source);
+                if (index >= previous.Count)
+                    origins.Add((layers[count - 1].Source, []));
+                else if (ConfigurationFile.Write(previous[index], true) !=
+                         ConfigurationFile.Write(current[index], true))
+                    origins[index].Patches.Add(layers[count - 1].Source);
             }
-            previous = current; previousWarnings = warnings.Count;
+
+            previous = current;
+            previousWarnings = warnings.Count;
         }
-        var output = new StringBuilder(); var group = new List<EntryOptions>(); string? label = null;
-        void Flush() { if (group.Count == 0) return; output.Append("# == ").AppendLine(label).Append(ConfigurationFile.Write(group)); group.Clear(); }
-        for (var index = 0; index < previous.Count; index++)
+
+        var output = new StringBuilder();
+        var group = new List<EntryOptions>();
+        string? label = null;
+
+        void Flush()
         {
-            var origin = origins[index]; var next = origin.Patches.Count == 0 ? origin.Source : origin.Source + ", patched by " + string.Join(", ", origin.Patches);
-            if (next != label) { Flush(); label = next; }
+            if (group.Count == 0)
+                return;
+            output.Append("# == ").AppendLine(label).Append(ConfigurationFile.Write(group));
+            group.Clear();
+        }
+
+        for (var index = 0;index < previous.Count;index++)
+        {
+            var origin = origins[index];
+            var next = origin.Patches.Count == 0
+                ? origin.Source
+                : origin.Source + ", patched by " + string.Join(", ", origin.Patches);
+            if (next != label)
+            {
+                Flush();
+                label = next;
+            }
+
             group.Add(previous[index]);
         }
-        Flush(); return output.Length == 0 ? "[]\n" : output.ToString();
+
+        Flush();
+        return output.Length == 0 ? "[]\n" : output.ToString();
     }
 }

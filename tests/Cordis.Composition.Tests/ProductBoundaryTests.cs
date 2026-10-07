@@ -42,19 +42,35 @@ public sealed class ProductBoundaryTests
     [InlineData(false, false, 8080)]
     [InlineData(true, false, 8080)]
     [InlineData(false, true, 3080)]
-    public async Task LauncherValuesReachInjectionReadyRowsAndSurviveConfigUpdates(bool objectInject, bool emptyArguments, int expected)
+    public async Task LauncherValuesReachInjectionReadyRowsAndSurviveConfigUpdates(
+        bool objectInject,
+        bool emptyArguments,
+        int expected)
     {
         await using var root = new Context();
         var observed = new List<object?>();
-        var modules = new StaticModuleResolver().Register("startup", new Plugin<object?>
-        {
-            Inject = ["cmdlineArgs"],
-            Apply = (ctx, _) =>
-        {
-            var args = ctx.Get<CommandLineArguments>("cmdlineArgs")!.Get();
-            ctx.Provide("demoStartup", args.Count == 0 ? null : int.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture));
-        }
-        }).Register("reader", new Plugin<object?> { Apply = (_, config) => observed.Add(config) });
+        var modules = new StaticModuleResolver()
+            .Register(
+                "startup",
+                new Plugin<object?>
+                {
+                    Inject = ["cmdlineArgs"],
+                    Apply = (ctx, _) =>
+                    {
+                        var args = ctx.Get<CommandLineArguments>("cmdlineArgs")!.Get();
+                        ctx.Provide(
+                            "demoStartup",
+                            args.Count == 0
+                                ? null
+                                : int.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture));
+                    }
+                })
+            .Register(
+                "reader",
+                new Plugin<object?>
+                {
+                    Apply = (_, config) => observed.Add(config)
+                });
         await root.RunAsync(async ctx =>
         {
             var loader = new Loader(ctx, modules, expressionEvaluator: new StartupEvaluator());
@@ -63,32 +79,44 @@ public sealed class ProductBoundaryTests
                 Id = "reader",
                 Name = "reader",
                 Config = new JsExpression("demoStartup ?? 3080"),
-                ["inject"] = objectInject ? new EntryOptions
-                {
-                    ["demoStartup"] = new EntryOptions
+                ["inject"] = objectInject
+                    ? new EntryOptions
                     {
-                        ["required"] = true
+                        ["demoStartup"] = new EntryOptions
+                        {
+                            ["required"] = true
+                        }
                     }
-                }
-
-                : new[]
-                {
-                    "demoStartup"
-                }
+                    : new[] { "demoStartup" }
             };
-            await loader.Root.UpdateAsync([new() { Id = "startup", Name = "startup" }, reader]);
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "startup",
+                    Name = "startup"
+                },
+                reader
+            ]);
             await loader.WaitAsync();
             Assert.Empty(observed);
-            var source = emptyArguments ? new List<string>() : new List<string>
-            {
-                "--port",
-                "8080"
-            };
+            var source = emptyArguments
+                ? new List<string>()
+                : new List<string>
+                {
+                    "--port",
+                    "8080"
+                };
             CommandLineArguments.Provide(ctx, source);
             source.Clear();
             await loader.WaitAsync();
             Assert.Equal(expected, Assert.Single(observed));
-            await loader.UpdateAsync("reader", new() { Config = new JsExpression("demoStartup ?? 3080") });
+            await loader.UpdateAsync(
+                "reader",
+                new()
+                {
+                    Config = new JsExpression("demoStartup ?? 3080")
+                });
             await loader.WaitAsync();
             Assert.Equal(expected, observed[^1]);
         });
@@ -102,30 +130,39 @@ public sealed class ProductBoundaryTests
         await using var f = new Fixture();
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        f.Modules.Register("backend", new Plugin<object?>
-        {
-            Apply = (ctx, _) =>
-        {
-            ctx.Provide("picker", true);
-            ctx.Effect(() => new Cleanup(async () =>
+        f.Modules.Register(
+            "backend",
+            new Plugin<object?>
             {
-                entered.TrySetResult();
-                await release.Task;
-            }));
-        }
-        });
-        f.Modules.Register("owner", new Plugin<object?>
-        {
-            ApplyAsync = async (ctx, _) =>
-        {
-            ctx.Effect(() => new Cleanup(async () =>
+                Apply = (ctx, _) =>
+                {
+                    ctx.Provide("picker", true);
+                    ctx.Effect(() => new Cleanup(async () =>
+                    {
+                        entered.TrySetResult();
+                        await release.Task;
+                    }));
+                }
+            });
+        f.Modules.Register(
+            "owner",
+            new Plugin<object?>
             {
-                if (f.Loader.Store.ContainsKey("backend"))
-                    await f.Loader.RemoveAsync("backend");
-            }));
-            await f.Loader.CreateAsync(new() { Id = "backend", Name = "backend" });
-        }
-        });
+                ApplyAsync = async (ctx, _) =>
+                {
+                    ctx.Effect(() => new Cleanup(async () =>
+                    {
+                        if (f.Loader.Store.ContainsKey("backend"))
+                            await f.Loader.RemoveAsync("backend");
+                    }));
+                    await f.Loader.CreateAsync(
+                        new()
+                        {
+                            Id = "backend",
+                            Name = "backend"
+                        });
+                }
+            });
         await f.Mount();
         Assert.DoesNotContain("backend", File.ReadAllText(f.Path));
         if (removedFirst)
@@ -174,21 +211,33 @@ public sealed class ProductBoundaryTests
     public async Task FailedSurfaceSetupUnwindsAlreadyMountedBackend()
     {
         await using var f = new Fixture();
-        f.Modules.Register("backend", new Plugin<object?> { Apply = (ctx, _) => ctx.Provide("picker", true) });
-        f.Modules.Register("owner", new Plugin<object?>
-        {
-            ApplyAsync = async (ctx, _) =>
-        {
-            ctx.Effect(() => new Cleanup(async () =>
+        f.Modules.Register(
+            "backend",
+            new Plugin<object?>
             {
-                if (f.Loader.Store.ContainsKey("backend"))
-                    await f.Loader.RemoveAsync("backend");
-            }));
-            await f.Loader.CreateAsync(new() { Id = "backend", Name = "backend" });
-            await f.Loader.Resolve("backend").Fiber!.WaitAsync();
-            throw new InvalidOperationException("surface load failed");
-        }
-        });
+                Apply = (ctx, _) => ctx.Provide("picker", true)
+            });
+        f.Modules.Register(
+            "owner",
+            new Plugin<object?>
+            {
+                ApplyAsync = async (ctx, _) =>
+                {
+                    ctx.Effect(() => new Cleanup(async () =>
+                    {
+                        if (f.Loader.Store.ContainsKey("backend"))
+                            await f.Loader.RemoveAsync("backend");
+                    }));
+                    await f.Loader.CreateAsync(
+                        new()
+                        {
+                            Id = "backend",
+                            Name = "backend"
+                        });
+                    await f.Loader.Resolve("backend").Fiber!.WaitAsync();
+                    throw new InvalidOperationException("surface load failed");
+                }
+            });
         await f.Mount();
         await Assert.ThrowsAsync<InvalidOperationException>(() => f.Include.Resolve("owner").Fiber!.WaitAsync());
         Assert.DoesNotContain(f.Loader.Entries(), entry => entry.Options.Name == "backend");
@@ -203,12 +252,14 @@ public sealed class ProductBoundaryTests
     public async Task TerminalDebouncedWriteFailureReachesTeardownOwner()
     {
         await using var f = new Fixture();
-        f.Modules.Register("owner", new Plugin<object?>
-        {
-            Apply = (_, _) =>
-        {
-        }
-        });
+        f.Modules.Register(
+            "owner",
+            new Plugin<object?>
+            {
+                Apply = (_, _) =>
+                {
+                }
+            });
         await f.Mount();
         var reported = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         f.Diagnostic = error => reported.TrySetResult(error);
@@ -229,29 +280,72 @@ public sealed class ProductBoundaryTests
         {
             var package = Path.Combine(directory, "late-bundle");
             Directory.CreateDirectory(package);
-            File.WriteAllText(Path.Combine(package, "package.json"), "{\"name\":\"late-bundle\",\"version\":\"1.0.0\"}");
-            var manifest = new PackageManifest(new EntryOptions { ["custom"] = true, ["dependencies"] = new EntryOptions { ["late-bundle"] = "file:./late-bundle" }, ["dsh"] = new EntryOptions { ["profile"] = new EntryOptions { ["bundles"] = new[] { "builtin" } } } });
+            File.WriteAllText(
+                Path.Combine(package, "package.json"),
+                "{\"name\":\"late-bundle\",\"version\":\"1.0.0\"}");
+            var manifest = new PackageManifest(
+                new EntryOptions
+                {
+                    ["custom"] = true,
+                    ["dependencies"] = new EntryOptions
+                    {
+                        ["late-bundle"] = "file:./late-bundle"
+                    },
+                    ["dsh"] = new EntryOptions
+                    {
+                        ["profile"] = new EntryOptions
+                        {
+                            ["bundles"] = new[] { "builtin" }
+                        }
+                    }
+                });
             manifest.Write(Path.Combine(directory, "package.json"));
             var packages = new Dictionary<string, string>
             {
                 ["late-bundle"] = package
             };
-            Assert.Equal(new[] { "builtin" }, (await PluginConfigurationOperations.ReconcileDeployedPackagesAsync(directory, manifest, packages, new Dictionary<string, string>())).Inventory.Manifest.Bundles);
-            File.WriteAllText(Path.Combine(package, "package.json"), "{\"name\":\"late-bundle\",\"version\":\"2.0.0\",\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
+            Assert.Equal(
+                new[] { "builtin" },
+                (await PluginConfigurationOperations.ReconcileDeployedPackagesAsync(
+                    directory,
+                    manifest,
+                    packages,
+                    new Dictionary<string, string>())).Inventory.Manifest.Bundles);
+            File.WriteAllText(
+                Path.Combine(package, "package.json"),
+                "{\"name\":\"late-bundle\",\"version\":\"2.0.0\",\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
             File.WriteAllText(Path.Combine(package, "patch.yml"), "[]\n");
-            Assert.Equal(new[] { "builtin" }, (await PluginConfigurationOperations.ReconcileDeployedPackagesAsync(directory, manifest, packages, new Dictionary<string, string>())).Inventory.Manifest.Bundles);
+            Assert.Equal(
+                new[] { "builtin" },
+                (await PluginConfigurationOperations.ReconcileDeployedPackagesAsync(
+                    directory,
+                    manifest,
+                    packages,
+                    new Dictionary<string, string>())).Inventory.Manifest.Bundles);
             var added = Path.Combine(directory, "added");
             Directory.CreateDirectory(added);
-            File.WriteAllText(Path.Combine(added, "package.json"), "{\"name\":\"added\",\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
+            File.WriteAllText(
+                Path.Combine(added, "package.json"),
+                "{\"name\":\"added\",\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
             File.WriteAllText(Path.Combine(added, "patch.yml"), "[]\n");
             packages["alias"] = added;
             var after = PackageManifest.Read(Path.Combine(directory, "package.json"));
             ((EntryOptions)after.Raw["dependencies"]!)["alias"] = "file:./added";
             after.Write(Path.Combine(directory, "package.json"));
-            var result = await PluginConfigurationOperations.ReconcileDeployedPackagesAsync(directory, manifest, packages, new Dictionary<string, string>());
+            var result = await PluginConfigurationOperations.ReconcileDeployedPackagesAsync(
+                directory,
+                manifest,
+                packages,
+                new Dictionary<string, string>());
             Assert.Equal(new[] { "builtin", "alias" }, result.Inventory.Manifest.Bundles);
             Assert.True((bool)result.Inventory.Manifest.Raw["custom"]!);
-            Assert.Equal(new[] { "builtin", "alias" }, (await PluginConfigurationOperations.ReconcileDeployedPackagesAsync(directory, result.Inventory.Manifest, packages, new Dictionary<string, string>())).Inventory.Manifest.Bundles);
+            Assert.Equal(
+                new[] { "builtin", "alias" },
+                (await PluginConfigurationOperations.ReconcileDeployedPackagesAsync(
+                    directory,
+                    result.Inventory.Manifest,
+                    packages,
+                    new Dictionary<string, string>())).Inventory.Manifest.Bundles);
         }
         finally
         {
@@ -265,14 +359,16 @@ public sealed class ProductBoundaryTests
         await using var f = new Fixture();
         var values = new List<object?>();
         var stopped = 0;
-        f.Modules.Register("owner", new Plugin<object?>
-        {
-            Apply = (ctx, config) =>
-        {
-            values.Add(config);
-            ctx.Effect(() => (Action)(() => stopped++));
-        }
-        });
+        f.Modules.Register(
+            "owner",
+            new Plugin<object?>
+            {
+                Apply = (ctx, config) =>
+                {
+                    values.Add(config);
+                    ctx.Effect(() => (Action)(() => stopped++));
+                }
+            });
         await f.Mount();
         var directory = Path.GetDirectoryName(f.Path)!;
         var home = Path.Combine(directory, "home");
@@ -281,7 +377,9 @@ public sealed class ProductBoundaryTests
         Directory.CreateDirectory(home);
         Directory.CreateDirectory(bundleDirectory);
         Profiles.Initialize(profileDirectory, ["bundle"]);
-        File.WriteAllText(Path.Combine(bundleDirectory, "package.json"), "{\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
+        File.WriteAllText(
+            Path.Combine(bundleDirectory, "package.json"),
+            "{\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
         File.WriteAllText(Path.Combine(bundleDirectory, "patch.yml"), "- id: owner\n  config: bundle-default\n");
         var mappings = new Dictionary<string, string>
         {
@@ -290,7 +388,12 @@ public sealed class ProductBoundaryTests
         var launch = new ProfileLaunch(await Profiles.LoadAsync(profileDirectory, mappings), home, [], mappings);
         var patch = Path.Combine(profileDirectory, "cordis.patch.yml");
         File.WriteAllText(patch, "- id: owner\n  config: 2\n");
-        async Task Apply() => await ApplicationBoot.ReconcileAsync(f.Include, ProfileComposition.Flatten((await ProfileComposition.RefreshAsync(launch)).Layers));
+
+        async Task Apply() =>
+            await ApplicationBoot.ReconcileAsync(
+                f.Include,
+                ProfileComposition.Flatten((await ProfileComposition.RefreshAsync(launch)).Layers));
+
         await Apply();
         Assert.Equal(2L, values[^1]);
         File.Delete(patch);
@@ -316,13 +419,39 @@ public sealed class ProductBoundaryTests
 
     private sealed class Fixture : IAsyncDisposable
     {
-        private readonly string directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cordis-boundary-" + Guid.NewGuid().ToString("N"));
+        private readonly string directory = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(),
+            "cordis-boundary-" + Guid.NewGuid().ToString("N"));
+
         public string Path => System.IO.Path.Combine(directory, "cordis.yml");
-        public Context Root { get; } = new();
-        public StaticModuleResolver Modules { get; } = new();
-        public Loader Loader { get; private set; } = null!;
-        public Include Include { get; private set; } = null!;
-        public Action<Exception>? Diagnostic { get; set; }
+
+        public Context Root
+        {
+            get;
+        } = new();
+
+        public StaticModuleResolver Modules
+        {
+            get;
+        } = new();
+
+        public Loader Loader
+        {
+            get;
+            private set;
+        } = null!;
+
+        public Include Include
+        {
+            get;
+            private set;
+        } = null!;
+
+        public Action<Exception>? Diagnostic
+        {
+            get;
+            set;
+        }
 
         public Fixture()
         {
