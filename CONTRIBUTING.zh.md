@@ -10,6 +10,29 @@
 
 ## 验证改动
 
+### C# 风格与 lint
+
+根目录 `.editorconfig` 是风格规则的唯一来源。固定 SDK 的编译器与 Roslyn analyzers 负责 correctness、nullable、async、lifetime、interop、performance 和 API 误用诊断。构建将警告视为错误。格式化不执行语义修复。
+
+```console
+python scripts/format.py
+python scripts/format.py --check
+```
+
+脚本按 `dotnet-tools.json` 还原仓库本地固定版本的 JetBrains ReSharper GlobalTools，并按锁文件还原 solution 依赖。它对仓库 C# 文件依次执行使用 `Built-in: Reformat Code` 的 `jb cleanupcode`、文件夹和 solution 两种模式的 `dotnet format whitespace`，再执行一次 CleanupCode。solution 模式覆盖条件编译分支。各阶段都使用同一份明确的 C# 文件清单，包含 solution 外的 fixture 和工具源码。后续每一步都必须保持前一步的输出不变。
+
+`--check` 将当前已跟踪文件和未被忽略的新增文件复制到临时目录，包括配置和未提交的改动。依赖还原和格式化均在副本中执行，不向原工作区写回任何内容。任一步修改副本中的 C# 文件都会使检查失败。解析后位于仓库外的文件会被拒绝。CI 在 Windows 和 Linux 上执行此检查。运行需要 Git 和 Python。
+
+Roslyn 定义大括号、换行、空格和缩进，展开单行 block 和内嵌 statement。JetBrains 对签名、参数、调用链和 initializer 补充以 120 列为目标的换行。不可拆分的 token 和字符串内容可以超过该宽度。GlobalTools 仅为开发工具，不是任何 `Cordis.NET.*` 包的依赖。不使用 CSharpier。
+
+为保持两个 formatter 稳定，嵌套循环使用缩进，`for` 分号两侧不留空格，并保留显式换行，包括多行构造函数后调用之前的换行。既有生命周期例外使用精确且带注释的 analyzer suppression；格式化不得改变清理或取消时序。
+
+Rider 和 Visual Studio 会自动读取 `.editorconfig`。在 Rider 或装有 ReSharper 的 Visual Studio 中，使用 **Reformat Code**，并启用 Roslyn analyzers。Visual Studio 内置 formatter 处理 Roslyn 规则；提交前运行脚本以补齐按宽度换行。以固定版本 CLI 的输出为准。纯格式化改动应避免 Full Cleanup，因为它可能改写代码。参见 [CleanupCode 文档](https://www.jetbrains.com/help/resharper/CleanupCode.html)和[换行设置](https://www.jetbrains.com/help/resharper/EditorConfig_CSHARP_LineBreaksPageSchema.html)。
+
+### 构建与测试
+
+安装 `global.json` 指定的精确 SDK，并在 Rider/Visual Studio 和 CLI 中选择该安装位置。禁用 SDK 补丁滚动，使 ILLink 等 SDK 提供的依赖与 CI 和锁文件保持一致。仅使用该 SDK 重新生成依赖锁文件；常规验证使用锁定还原。
+
 ```console
 dotnet restore Cordis.slnx --locked-mode
 dotnet build Cordis.slnx -c Release --no-restore

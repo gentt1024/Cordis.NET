@@ -5,7 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Deterministic>true</Deterministic>
-    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisLevel>10.0</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Version>0.2.0-alpha.3</Version>
     <Authors>gentt1024 and Cordis.NET contributors</Authors>
@@ -22,5 +24,6 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <IsPackable Condition="'$(IsPackable)' == ''">false</IsPackable>
   </PropertyGroup>
-  <Import Project="$(MSBuildThisFileDirectory)Cordis.SourceArchive.props" Condition="Exists('$(MSBuildThisFileDirectory)Cordis.SourceArchive.props') and !Exists('$(MSBuildThisFileDirectory).git')" />
+  <Import Project="$(MSBuildThisFileDirectory)Cordis.SourceArchive.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)Cordis.SourceArchive.props') and !Exists('$(MSBuildThisFileDirectory).git')" />
 </Project>

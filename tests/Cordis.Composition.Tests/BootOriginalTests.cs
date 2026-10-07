@@ -305,7 +305,10 @@ public sealed class BootOriginalTests
                 "exiting",
                 new Plugin<object?>
                 {
+                    // Exercise root shutdown during synchronous plugin application.
+#pragma warning disable CA2012
                     Apply = (_, _) => _ = root.DisposeAsync()
+#pragma warning restore CA2012
                 });
             var context = await ApplicationBoot.BootAsync(
                 path,

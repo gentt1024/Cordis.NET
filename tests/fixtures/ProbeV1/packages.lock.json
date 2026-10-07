@@ -5,13 +5,13 @@
       "Cordis.NET.Clr": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Composition": "[0.2.0-alpha.1, )"
+          "Cordis.NET.Composition": "[0.2.0-alpha.3, )"
         }
       },
       "Cordis.NET.Composition": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.2.0-alpha.1, )",
+          "Cordis.NET.Core": "[0.2.0-alpha.3, )",
           "YamlDotNet": "[16.3.0, )"
         }
       },
@@ -21,7 +21,7 @@
       "probes.contracts": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.2.0-alpha.1, )"
+          "Cordis.NET.Core": "[0.2.0-alpha.3, )"
         }
       },
       "YamlDotNet": {

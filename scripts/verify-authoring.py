@@ -399,10 +399,10 @@ def configuration_mutations(gate: Gate):
     # Each copy is outside the checkout; the original source and contract assertions stay frozen.
     mutations = (
         ("live-binding", "ConfigObject.cs", "descriptor.IsVolatile ? schema.WithVolatile(name, project) : schema", "schema", "requires an explicit typed projection"),
-        ("ordinary-equality", "ConfigObject.cs", "!field.Descriptor.IsVolatile && !ConfigDescriptor.StrictEquals(field.Project(left), field.Project(right))", "field.Name.Length < 0", "ordinary effective change refuses live commit"),
-        ("persistence", "ConfigObject.cs", "result.Add(field.Name, field.Project(value));", "if (field.Name != \"category\") result.Add(field.Name, field.Project(value));", "complete persistence"),
-        ("revision-fence", "PluginConfigurationOperations.Edit.cs", "if (revision != expectedRevision) throw new Refusal(\"conflict\");", "if (revision.Length < 0) throw new Refusal(\"conflict\");", "profile field edit fences stale revisions"),
-        ("field-validation", "PluginConfigurationOperations.Edit.cs", "else entry.Fiber!.ValidateConfiguration(next);", "else { }", "profile field edit validates before persistence"),
+        ("ordinary-equality", "ConfigObject.cs", "!field.Descriptor.IsVolatile &&\n                !ConfigDescriptor.StrictEquals(field.Project(left), field.Project(right))", "field.Name.Length < 0", "ordinary effective change refuses live commit"),
+        ("persistence", "ConfigObject.cs", "result.Add(field.Name, field.Project(value));", "if (field.Name != \"category\")\n                result.Add(field.Name, field.Project(value));", "complete persistence"),
+        ("revision-fence", "PluginConfigurationOperations.Edit.cs", "if (revision != expectedRevision)\n                            throw new Refusal(\"conflict\");", "if (revision.Length < 0)\n                            throw new Refusal(\"conflict\");", "profile field edit fences stale revisions"),
+        ("field-validation", "PluginConfigurationOperations.Edit.cs", "else\n                            entry.Fiber!.ValidateConfiguration(next);", "else\n                        {\n                        }", "profile field edit validates before persistence"),
     )
     files = source_hashes()
     for name, production_file, before, after, expected in mutations:

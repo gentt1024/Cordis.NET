@@ -60,6 +60,8 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.13'
+      - name: Check canonical C# formatting and formatter agreement
+        run: python scripts/format.py --check
       - name: Install Native AOT prerequisites
         if: runner.os == 'Linux'
         shell: bash

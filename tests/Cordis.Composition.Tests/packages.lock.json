@@ -96,7 +96,7 @@
       "Cordis.NET.Composition": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.2.0-alpha.1, )",
+          "Cordis.NET.Core": "[0.2.0-alpha.3, )",
           "YamlDotNet": "[16.3.0, )"
         }
       },
@@ -106,14 +106,14 @@
       "probes.contracts": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.2.0-alpha.1, )"
+          "Cordis.NET.Core": "[0.2.0-alpha.3, )"
         }
       },
       "probes.plugin": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Composition": "[0.2.0-alpha.1, )",
-          "Probes.Contracts": "[0.2.0-alpha.1, )"
+          "Cordis.NET.Composition": "[0.2.0-alpha.3, )",
+          "Probes.Contracts": "[0.2.0-alpha.3, )"
         }
       },
       "YamlDotNet": {

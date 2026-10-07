@@ -152,7 +152,10 @@ public sealed class ScheduledAction<T> : IAsyncDisposable
     private readonly bool _throttle;
     private bool _noTrailing;
     private DateTimeOffset? _last;
+    // The owning effect's cleanup disposes the current timer.
+#pragma warning disable CA2213
     private ITimer? _timer;
+#pragma warning restore CA2213
     private readonly EffectHandle _effect;
     private long _generation;
     private readonly SynchronizationContext? _domain;
@@ -277,7 +280,10 @@ internal static class TimerErrors
 internal sealed class TimerTickStream : IAsyncEnumerable<long>, IAsyncEnumerator<long>
 {
     private readonly Context _context;
+    // DisposeAsync awaits StopEffectAsync, which releases the effect inside its context.
+#pragma warning disable CA2213
     private readonly EffectHandle _effect;
+#pragma warning restore CA2213
     private readonly object _gate = new();
     private TaskCompletionSource<bool>? _pending;
     private Exception? _error;
