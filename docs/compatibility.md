@@ -4,6 +4,10 @@
 
 Cordis.NET targets the pinned DeepSeek Harness vendored Cordis behavior described in [upstream](upstream.md). Compatibility is assessed per observable contract, not by package name or test count alone.
 
+## Upstream fidelity requirement
+
+Upstream fidelity is a project compatibility requirement. Evaluate changes against the fixed DSH revision in `upstream.lock.json`, its actual production callers, and their observable behavior. Check timing, ownership, lifecycle, failure and recovery boundaries, including the caller's use of the underlying mechanisms. Classify every difference as a necessary platform adaptation or an explicit project decision, and provide focused evidence for that difference. Passing tests that only establish a wrapper's internal consistency cannot, by themselves, demonstrate upstream fidelity.
+
 ## Status vocabulary
 
 - **Implemented:** the .NET behavior exists.
