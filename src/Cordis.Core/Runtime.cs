@@ -41,7 +41,10 @@ internal sealed class Runtime
         }
         catch
         {
+            // Task-backed rollback starts immediately; preserve the original synchronous exception.
+#pragma warning disable CA2012
             _ = fiber.DisposeAsync();
+#pragma warning restore CA2012
             throw;
         }
 

@@ -102,8 +102,11 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
     private readonly Dictionary<string, ClrModuleDefinition> definitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Lease> loaded = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Assembly> shared;
+    // Late callers still enter these gates to observe disposal; no WaitHandle is allocated.
+#pragma warning disable CA2213
     private readonly SemaphoreSlim gate = new(1);
     private readonly SemaphoreSlim mutation = new(1);
+#pragma warning restore CA2213
 
     private sealed class ReplacementScope
     {
@@ -248,7 +251,9 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
                 }
                 catch
                 {
+#pragma warning disable CA2016 // Rollback must finish even when replacement is canceled.
                     await gate.WaitAsync().ConfigureAwait(false);
+#pragma warning restore CA2016
                     try
                     {
                         Retire(candidate);
@@ -262,7 +267,9 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
                 }
 
                 // Once switching has begun cancellation must not abandon a live candidate.
+#pragma warning disable CA2016
                 await gate.WaitAsync().ConfigureAwait(false);
+#pragma warning restore CA2016
                 try
                 {
                     loaded[specifier] = candidate;

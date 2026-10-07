@@ -118,7 +118,10 @@ public sealed class EventsService(Context context)
             name,
             (evt, args) =>
             {
+                // Task-backed cleanup starts immediately; Once preserves synchronous dispatch.
+#pragma warning disable CA2012
                 _ = handle!.DisposeAsync();
+#pragma warning restore CA2012
                 return listener(evt, args);
             },
             options);

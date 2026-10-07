@@ -81,7 +81,10 @@ public static class DevelopmentBuildProcess
         {
             try
             {
+                // Drain output until the producer completes, including after process cancellation.
+#pragma warning disable CA2016
                 await foreach (var line in lines.Reader.ReadAllAsync())
+#pragma warning restore CA2016
                     await consume(line);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -24,7 +24,10 @@ public sealed class HmrCoordinator : IAsyncDisposable
     internal bool IsExecuting => _executing.Value;
     private Task _tail = Task.CompletedTask;
     private bool _closing;
+    // Kept usable for pending readiness callbacks and repeated disposal after cancellation.
+#pragma warning disable CA2213
     private readonly CancellationTokenSource _stopReadiness = new();
+#pragma warning restore CA2213
     private readonly Dictionary<string, ConfigWatch> _watches = new(PathComparer);
 
     private sealed record Module(Func<Task> Replace);

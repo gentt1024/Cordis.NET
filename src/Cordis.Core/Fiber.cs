@@ -13,7 +13,10 @@ public sealed class Fiber : IAsyncDisposable
     private readonly Runtime _runtime;
     private readonly Context _parent;
     private readonly List<EffectHandle> _effects = [];
+    // DisposeCoreAsync releases this handle through its internal disposal entry point.
+#pragma warning disable CA2213
     private EffectHandle? _ownership;
+#pragma warning restore CA2213
     private long _uid;
     private int _state;
     private string _epoch;
