@@ -14,12 +14,24 @@ public sealed partial class PluginConfigurationOperations
         set;
     }
 
+    private Func<ProfileCandidate, IReadOnlySet<string>?, Task<IReadOnlyList<EntryDiagnostic>>>? candidateReconcile;
+    private Func<IReadOnlySet<string>?, Task<IReadOnlyList<EntryDiagnostic>>>? candidateReconcileOwner;
+
     /// <summary>Session-owned application of the same approved composition, without re-entering its queue.</summary>
+    /// <remarks>Assignment associates this callback with the current ReconcileAsync. Replacing that legacy callback
+    /// requires explicitly assigning a candidate callback again before using product admission.</remarks>
     public Func<ProfileCandidate, IReadOnlySet<string>?, Task<IReadOnlyList<EntryDiagnostic>>>? ReconcileCandidateAsync
     {
-        get;
-        set;
+        get => candidateReconcile;
+        set
+        {
+            candidateReconcile = value;
+            candidateReconcileOwner = ReconcileAsync;
+        }
     }
+
+    private bool HasCandidateReconciliation =>
+        candidateReconcile is not null && candidateReconcileOwner == ReconcileAsync;
 
     /// <summary>Read a detached metadata editing baseline through the existing profile owner.</summary>
     public async Task<ProfileDocument> ReadProfileAsync(CancellationToken cancellationToken = default)
@@ -113,7 +125,7 @@ public sealed partial class PluginConfigurationOperations
     private async Task AdmitCandidateAsync(ProfileInputs inputs, ProfileCandidate candidate)
     {
         await inputs.VerifyAsync();
-        if (AdmitProfileAsync is not null && ReconcileAsync is not null && ReconcileCandidateAsync is null &&
+        if (AdmitProfileAsync is not null && ReconcileAsync is not null && !HasCandidateReconciliation &&
             RunExclusiveAsync is not null)
             throw new Refusal("candidate-reconciliation-required");
         if (AdmitProfileAsync is { } admit)
@@ -143,7 +155,7 @@ public sealed partial class PluginConfigurationOperations
     {
         if (RunExclusiveAsync is null)
             return [];
-        if (ReconcileCandidateAsync is { } reconcile)
+        if (HasCandidateReconciliation && ReconcileCandidateAsync is { } reconcile)
             return await reconcile(candidate, required);
         if (AdmitProfileAsync is null && ReconcileAsync is { } legacy)
             return await legacy(required);

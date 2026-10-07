@@ -7,6 +7,55 @@ namespace Cordis.Extensions.Tests;
 public sealed class ProfileSessionTests
 {
     [Fact]
+    public async Task Candidate_applies_changed_base_with_equal_patches_and_preserves_unchanged_entries()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var bundle = System.IO.Directory.CreateDirectory(Path.Combine(scenario.Directory, "empty")).FullName;
+        await File.WriteAllTextAsync(
+            Path.Combine(bundle, "package.json"),
+            "{\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
+        await File.WriteAllTextAsync(Path.Combine(bundle, "patch.yml"), "[]\n");
+        scenario.Mappings.Add("empty", bundle);
+        var stableApplies = 0;
+        scenario.Resolver.Register(
+            "stable",
+            new Plugin<object?>
+            {
+                Apply = (_, _) => stableApplies++
+            });
+        const string stable = "- id: stable\n  name: stable\n";
+        await File.AppendAllTextAsync(scenario.Config, stable);
+        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
+        var stableFiber = session.Loader.Resolve("root:stable").Fiber;
+        await scenario.ExpectAsync("initial");
+        await File.WriteAllTextAsync(scenario.Config, "- id: p\n  name: counter\n  config: approved\n" + stable);
+        string? admitted = null;
+        session.ConfigurationOperations.AdmitProfileAsync = candidate =>
+        {
+            admitted = candidate.ConfigurationJson;
+            return Task.CompletedTask;
+        };
+        var result = await session.ConfigurationOperations.SetBundleEnabledAsync("empty", true);
+        Assert.Null(result.Error);
+        Assert.Contains("approved", admitted, StringComparison.Ordinal);
+        string? first = null, refreshed = null;
+        await session.Context.RunAsync(ctx =>
+        {
+            first = ctx.Get<string>("value");
+            return Task.CompletedTask;
+        });
+        await session.RefreshAsync();
+        await session.Context.RunAsync(ctx =>
+        {
+            refreshed = ctx.Get<string>("value");
+            return Task.CompletedTask;
+        });
+        Assert.Equal(new[] { "approved", "approved" }, new[] { first, refreshed });
+        Assert.Same(stableFiber, session.Loader.Resolve("root:stable").Fiber);
+        Assert.Equal(1, stableApplies);
+    }
+
+    [Fact]
     public async Task Candidate_application_does_not_mark_a_later_source_as_already_applied()
     {
         await using var scenario = await Scenario.CreateAsync();
@@ -45,12 +94,12 @@ public sealed class ProfileSessionTests
         scenario.Mappings.Add("empty", bundle);
         await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
         var owner = session.ConfigurationOperations;
-        owner.ReconcileCandidateAsync = null;
+        var reconcile = owner.ReconcileAsync!;
         var calls = 0;
-        owner.ReconcileAsync = _ =>
+        owner.ReconcileAsync = async required =>
         {
             calls++;
-            return Task.FromResult<IReadOnlyList<EntryDiagnostic>>([]);
+            return await reconcile(required);
         };
         Assert.Null((await owner.SetBundleEnabledAsync("empty", true)).Error);
         Assert.Equal(1, calls);
@@ -59,6 +108,16 @@ public sealed class ProfileSessionTests
         owner.AdmitProfileAsync = _ => Task.CompletedTask;
         Assert.Equal("candidate-reconciliation-required", (await owner.SetBundleEnabledAsync("empty", false)).Error);
         Assert.Equal(before, await File.ReadAllTextAsync(path));
+        Assert.Equal(1, calls);
+        var candidateReconcile = owner.ReconcileCandidateAsync!;
+        var candidateCalls = 0;
+        owner.ReconcileCandidateAsync = async (candidate, required) =>
+        {
+            candidateCalls++;
+            return await candidateReconcile(candidate, required);
+        };
+        Assert.Null((await owner.SetBundleEnabledAsync("empty", false)).Error);
+        Assert.Equal(1, candidateCalls);
         Assert.Equal(1, calls);
     }
 

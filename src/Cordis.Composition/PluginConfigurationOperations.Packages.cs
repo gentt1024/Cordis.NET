@@ -379,17 +379,14 @@ public sealed partial class PluginConfigurationOperations
                     ReportPackageProgress("remove:" + name, stage);
                     cancellationToken.ThrowIfCancellationRequested();
                     var removalInputs = await CaptureProfileAsync();
+                    var raw = ParseManifest(await removalInputs.ReadAsync(ManifestPath)).Raw;
+                    (raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.Remove(name);
+                    var removalCandidate = await CreateCandidateAsync(removalInputs, new(raw));
+                    await AdmitCandidateAsync(removalInputs, removalCandidate);
                     removalInputs.PlanRemoval(name);
                     await toolchain.RemoveAsync(name, cancellationToken);
                     installed = false;
-                    await WriteManifestAsync(
-                        removalInputs,
-                        manifest =>
-                        {
-                            var raw = (EntryOptions)Data.Clone(manifest.Raw)!;
-                            (raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.Remove(name);
-                            return new(raw);
-                        });
+                    await SaveCandidateAsync(removalInputs, removalCandidate);
                     result = new(
                         "",
                         name,
