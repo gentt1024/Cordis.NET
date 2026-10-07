@@ -30,7 +30,16 @@ public sealed record PackageInspection(
 }
 
 /// <summary>A complete prepared directory. Preparing it does not select the bundle or activate code.</summary>
-public sealed record PreparedPackage(string Name, string Version, string Directory);
+public sealed record PreparedPackage(string Name, string Version, string Directory)
+{
+    /// <summary>Planned final directory for the same prepared contents. Null means publication keeps Directory.</summary>
+    /// <remarks>Wrappers preserve this plan. Publication may add only this package's mapping and must not alter its contents.</remarks>
+    public string? PublicationDirectory
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>A bounded tool output chunk or a management phase. Observers must not control operation success.</summary>
 public sealed record PackageProgress(string RequestId, string Phase, string? Output = null);

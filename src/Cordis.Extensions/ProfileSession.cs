@@ -242,6 +242,14 @@ public sealed class ProfileSession : IAsyncDisposable
                             "The profile deployment requires a host restart before configuration can be reconciled.");
                     return await ApplicationBoot.AuditAsync(session.Loader, session.required);
                 },
+                ReconcileCandidateAsync = async (candidate, requiredEntries) =>
+                {
+                    await session.RefreshCoreAsync(requiredEntries, candidate);
+                    if (session.RequiresRestart)
+                        throw new DeploymentRestartRequiredException(
+                            "The profile deployment requires a host restart before configuration can be reconciled.");
+                    return await ApplicationBoot.AuditAsync(session.Loader, session.required);
+                },
             };
             await session.Context.RunAsync(ctx =>
             {
@@ -269,14 +277,14 @@ public sealed class ProfileSession : IAsyncDisposable
     /// <summary>Serialize an explicit refresh with automatic configuration and code reloads.</summary>
     public Task RefreshAsync() => queue.RunExclusiveAsync(() => RefreshCoreAsync());
 
-    private async Task RefreshCoreAsync(IReadOnlySet<string>? editedEntries = null)
+    private async Task RefreshCoreAsync(IReadOnlySet<string>? editedEntries = null, ProfileCandidate? candidate = null)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         try
         {
             var inputs = await ProfileInputSnapshotAsync();
             var mappings = MappingSnapshot();
-            if (inputs != successfulProfileInputs || mappings != successfulMappings)
+            if (candidate is not null || inputs != successfulProfileInputs || mappings != successfulMappings)
             {
                 if (refreshDeployment is not null)
                 {
@@ -298,25 +306,27 @@ public sealed class ProfileSession : IAsyncDisposable
 
                 // Bundle selection only changes composition. An additive resolver generation
                 // can make its new code available without restarting the existing modules.
-                var refresh = await ProfileComposition.RefreshAsync(launch);
+                var refresh = candidate?.Composition ?? await ProfileComposition.RefreshAsync(launch);
                 var requiredEntries = editedEntries is null
                     ? required
                     : new HashSet<string>(
                         (required ?? new HashSet<string>()).Concat(editedEntries),
                         StringComparer.Ordinal);
                 await WarnInactiveAsync(
-                    await ApplicationBoot.ReconcileAsync(
-                        Include,
-                        ProfileComposition.Flatten(refresh.Layers),
-                        requiredEntries));
+                    candidate is null
+                        ? await ApplicationBoot.ReconcileAsync(
+                            Include,
+                            ProfileComposition.Flatten(refresh.Layers),
+                            requiredEntries)
+                        : await ApplicationBoot.ReconcileAsync(Include, candidate, requiredEntries));
                 await AcceptBundlesAsync(refresh);
-                successfulProfileInputs = inputs;
+                successfulProfileInputs = candidate is null ? inputs : null;
                 successfulMappings = mappings;
                 acceptedInstallation = new(launch.InstallationBundles, StringComparer.Ordinal);
                 acceptedLocal = new(launch.LocalBundles ?? new Dictionary<string, string>(), StringComparer.Ordinal);
             }
 
-            foreach (var include in await IncludesAsync())
+            foreach (var include in candidate is null ? await IncludesAsync() : Array.Empty<Include>())
             {
                 var text = await File.ReadAllTextAsync(include.Filename);
                 if (successfulInputs.TryGetValue(include.Filename, out var previous) && text == previous)

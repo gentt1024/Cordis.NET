@@ -266,9 +266,25 @@ public static class Profiles
         IReadOnlyDictionary<string, string>? profileBundles,
         bool userLayer,
         Action<PackageManifest>? admitBundle)
+        => await LoadAsync(
+            directory,
+            installationBundles,
+            profileBundles,
+            userLayer,
+            admitBundle,
+            PackageManifest.Read(Path.Combine(directory, "package.json")),
+            path => File.ReadAllTextAsync(path));
+
+    internal static async Task<Profile> LoadAsync(
+        string directory,
+        IReadOnlyDictionary<string, string> installationBundles,
+        IReadOnlyDictionary<string, string>? profileBundles,
+        bool userLayer,
+        Action<PackageManifest>? admitBundle,
+        PackageManifest manifest,
+        Func<string, Task<string>> read)
     {
         directory = Path.GetFullPath(directory);
-        var manifest = PackageManifest.Read(Path.Combine(directory, "package.json"));
         var bundles = new List<Bundle>();
         var selected = manifest.Bundles;
         var skipped = new List<SkippedBundle>();
@@ -279,11 +295,14 @@ public static class Profiles
                 if (!installationBundles.TryGetValue(name, out var packageDirectory) &&
                     !(profileBundles?.TryGetValue(name, out packageDirectory) ?? false))
                     throw new FileNotFoundException($"Cannot resolve profile bundle '{name}'.");
-                var bundleManifest = PackageManifest.Read(Path.Combine(packageDirectory!, "package.json"));
+                var bundleManifest = new PackageManifest(
+                    (EntryOptions)ConfigurationFile.Parse(
+                        await read(Path.Combine(packageDirectory!, "package.json")),
+                        true)!);
                 if (!bundleManifest.HasBundleDeclaration)
                     throw new FormatException($"Profile bundle '{name}' declares no dsh.bundle in its package.json.");
                 admitBundle?.Invoke(bundleManifest);
-                bundles.Add(await ReadBundleAsync(name, packageDirectory!, bundleManifest));
+                bundles.Add(await ReadBundleAsync(name, packageDirectory!, bundleManifest, read));
             }
             catch (Exception error)
             {
@@ -296,19 +315,23 @@ public static class Profiles
             Path.GetFileName(directory),
             directory,
             bundles,
-            new(userPath, userLayer ? await ReadPatchesAsync(userPath, optional: true) : []))
+            new(userPath, userLayer ? await ReadPatchesAsync(userPath, true, read) : []))
         {
             SelectedBundles = selected,
             SkippedBundles = skipped
         };
     }
 
-    internal static async Task<Bundle> ReadBundleAsync(string name, string directory, PackageManifest manifest)
+    internal static async Task<Bundle> ReadBundleAsync(
+        string name,
+        string directory,
+        PackageManifest manifest,
+        Func<string, Task<string>>? read = null)
     {
         var paths = manifest.BundlePatchFiles.Select(path => Path.GetFullPath(Path.Combine(directory, path))).ToArray();
         var layers = new List<ConfigurationLayer>();
         foreach (var path in paths)
-            layers.Add(new(path, await ReadPatchesAsync(path)));
+            layers.Add(new(path, await ReadPatchesAsync(path, false, read ?? (file => File.ReadAllTextAsync(file)))));
         // Publish only after every declared file succeeds; an earlier prefix never leaks.
         return new(name, directory, paths.FirstOrDefault() ?? "", [])
         {
@@ -328,11 +351,17 @@ public static class Profiles
     /// Reads patches async.
     /// </summary>
     public static async Task<List<EntryOptions>> ReadPatchesAsync(string path, bool optional = false)
+        => await ReadPatchesAsync(path, optional, file => File.ReadAllTextAsync(file));
+
+    internal static async Task<List<EntryOptions>> ReadPatchesAsync(
+        string path,
+        bool optional,
+        Func<string, Task<string>> read)
     {
         List<EntryOptions> patches;
         try
         {
-            patches = await ConfigurationFile.ReadEntriesAsync(path);
+            patches = ConfigurationFile.ParseEntries(await read(path), Path.GetExtension(path) == ".json");
         }
         catch (FileNotFoundException) when (optional)
         {

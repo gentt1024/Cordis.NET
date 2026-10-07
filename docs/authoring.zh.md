@@ -122,6 +122,12 @@ node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/ap
 
 ## 部署与验证边界
 
+包与 bundle 选择的产品政策通过 `session.ConfigurationOperations.AdmitProfileAsync` 设置。回调接收 `ProfileCandidate.ManifestJson`（拟保存的确切文本）、`ConfigurationJson`（不执行表达式的有效原始根条目），以及包含来源层和跳过选择的独立 `Composition` 视图。安装时，`Package` 还提供准备目录及计划发布目录，政策可在 Publish 前读取产物；其他操作中它为 null。抛出异常即拒绝。应校验库提供的候选，不再在 `IProfilePackageToolchain.PublishAsync` 中重新读 Profile 并预测另一份候选。准入期间不要重入配置操作。产品自身政策输入须保持稳定直到操作结束；此回调不冻结外部 SDK 或应用状态。`ProfileSession` 自动提供候选应用路径。
+
+用 `ReadProfileAsync` 读取 metadata 草稿基线，保留返回的 `Revision`，再以 `SaveProfileMetadataAsync(text, revision)` 提交编辑后的 JSON。保存会排在安装之后等待，以 `profile-conflict` 拒绝失效修订；保留用户草稿，由产品决定下一请求。dependencies 和 `dsh` 仍由既有包、选择和兼容操作拥有。这些方法不增加未经认证的传输入口，等待/冲突交互仍需产品接受。
+
+移动准备输出的工具链在 Prepare 返回前设置 `PreparedPackage.PublicationDirectory`；null 表示目录保持原位。包装器必须保留该值。Publish 可以将相同的相对文件内容移到该目录，并且只增加该包的映射；无关来源或映射变化属于冲突。应分别处理 `PackageChange` 的 installed/selected/application/residual，尤其是已发布后才拒绝的情况。Profile 锁协调遵守协议的写者，不保护任意编辑器保存；提交窗口边界见[兼容性](compatibility.zh.md)。
+
 | 路线 | 代码与配置 | 边界 |
 |---|---|---|
 | 静态注册、普通 JIT | 共享契约、显式注册模块；patch/profile 仍可动态变化 | 新实现代码需要更新部署应用。 |

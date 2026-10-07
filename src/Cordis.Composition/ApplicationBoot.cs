@@ -470,6 +470,26 @@ public static class ApplicationBoot
         return result;
     }
 
+    /// <summary>Apply an admitted profile candidate using its captured base source and composition.</summary>
+    public static async Task<IReadOnlyList<EntryDiagnostic>> ReconcileAsync(
+        Include include,
+        ProfileCandidate candidate,
+        IReadOnlySet<string>? required = null)
+    {
+        if (Path.GetFullPath(include.Filename) != Path.GetFullPath(candidate.BaseSource))
+            throw new ArgumentException("The candidate belongs to another configuration source.", nameof(candidate));
+        IReadOnlyList<EntryDiagnostic> result = [];
+        await include.Context.RunAsync(async _ =>
+        {
+            include.AcceptSource(candidate.BaseText);
+            result = await ReconcileCoreAsync(
+                include,
+                ProfileComposition.Flatten(candidate.Composition.Layers),
+                required);
+        });
+        return result;
+    }
+
     private static async Task<IReadOnlyList<EntryDiagnostic>> ReconcileCoreAsync(
         Include include,
         List<EntryOptions> patches,

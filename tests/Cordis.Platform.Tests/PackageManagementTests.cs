@@ -16,7 +16,7 @@ using Xunit;
 namespace Cordis.Platform.Tests;
 
 [Collection("Collectible CLR")]
-public sealed class PackageManagementTests : IAsyncLifetime
+public sealed partial class PackageManagementTests : IAsyncLifetime
 {
     private readonly string directory = Directory.CreateTempSubdirectory("cordis-package-consumer-").FullName;
     private string Feed => Path.Combine(directory, "feed");
@@ -882,7 +882,8 @@ public sealed class PackageManagementTests : IAsyncLifetime
     private async Task<Host> StartAsync(
         IEnumerable<string>? sources = null,
         DshRuntimeIdentity? runtime = null,
-        string? profileDirectory = null)
+        string? profileDirectory = null,
+        IReadOnlyDictionary<string, string>? installationBundles = null)
     {
         var root = profileDirectory is null
             ? Directory.CreateDirectory(Path.Combine(directory, Guid.NewGuid().ToString("N"))).FullName
@@ -896,10 +897,13 @@ public sealed class PackageManagementTests : IAsyncLifetime
         var resolver = new ClrModuleResolver(Path.Combine(root, "shadow"), [typeof(ConfigObject<>).Assembly]);
         var toolchain = new DotnetPluginToolchain(profile, resolver, sources ?? [Feed]);
         var launch = new ProfileLaunch(
-            await Profiles.LoadAsync(profile, new Dictionary<string, string>(), toolchain.Bundles),
+            await Profiles.LoadAsync(
+                profile,
+                installationBundles ?? new Dictionary<string, string>(),
+                toolchain.Bundles),
             root,
             [],
-            new Dictionary<string, string>(),
+            installationBundles ?? new Dictionary<string, string>(),
             toolchain.Bundles)
         {
             RuntimeIdentity = runtime,
