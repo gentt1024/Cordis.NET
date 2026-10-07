@@ -9,12 +9,12 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.2.0-alpha.3</Version>
+    <Version>0.2.0-alpha.4</Version>
     <Authors>gentt1024 and Cordis.NET contributors</Authors>
     <Description>A native .NET implementation of the pinned DeepSeek Harness Cordis model.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>dotnet;plugin-system;modularity;cordis</PackageTags>
-    <PackageReleaseNotes>Typed configuration authoring and editing, optional application package management and ASP.NET Core endpoints, application CLI invocation, and reusable client modules with shell-owned dependencies and connection recovery. Targets the unchanged fixed DSH baseline; Cordis.NET retains its own prerelease version.</PackageReleaseNotes>
+    <PackageReleaseNotes>Coordinated profile installation with immutable admitted candidates, stale-input refusal, captured configuration application, legacy reconciliation compatibility, and admission before package removal. Unified repository C# lint and canonical formatting. The fixed DSH behavior baseline is unchanged.</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/gentt1024/Cordis.NET.git</RepositoryUrl>
     <PackageProjectUrl>https://github.com/gentt1024/Cordis.NET</PackageProjectUrl>

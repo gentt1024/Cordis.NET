@@ -4,7 +4,7 @@
 
 Cordis.NET implements the DSH-maintained Cordis at a fixed revision. Its scope includes a domain-independent runtime and generic infrastructure for building, running, configuring, managing, and shipping modular applications. Core remains domain-independent; application libraries and platform adapters sit above it.
 
-Available components include lifecycle and injection, profile/bundle/patch composition, running-session coordination, configuration references, plugin enablement and deployment reconciliation, and optional CLR, Generic Host and JavaScript adapters. Current source adds typed field composition, ordered configuration edits and resets, explicit declaration exports, a NuGet/SDK package toolchain, ASP.NET Core management endpoints, application CLI commands and reusable TypeScript client modules. See the [validation record](docs/validation.md) for local acceptance and outstanding release checks, and [compatibility](docs/compatibility.md) for platform boundaries. Agent/LLM business logic, RSI goals and FSM domain logic belong to products. These capabilities are included in the `0.2.0-alpha.3` release candidate; they are not in the published `0.2.0-alpha.1` batch.
+Available components include lifecycle and injection, profile/bundle/patch composition, running-session coordination, configuration references, plugin enablement and deployment reconciliation, and optional CLR, Generic Host and JavaScript adapters. Current source adds typed field composition, ordered configuration edits and resets, explicit declaration exports, a NuGet/SDK package toolchain, ASP.NET Core management endpoints, application CLI commands and reusable TypeScript client modules. See the [validation record](docs/validation.md) for local acceptance and outstanding release checks, and [compatibility](docs/compatibility.md) for platform boundaries. Agent/LLM business logic, RSI goals and FSM domain logic belong to products. These application and authoring capabilities are available in the published `0.2.0-alpha.3` packages. The current `0.2.0-alpha.4` candidate adds coordinated profile admission and installation fixes, plus unified repository lint and formatting; it is not yet published.
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
 
@@ -29,7 +29,7 @@ dotnet add package Cordis.NET.Composition --prerelease
 dotnet tool install --global Cordis.NET.Tool --prerelease
 ```
 
-These commands select the latest published packages, including prereleases. The Composition and Probes examples use the authoring helpers described in the [release notes](CHANGELOG.md); older packages do not include them. Until that release is available on NuGet, run the examples from source through their project references. See [getting started](docs/getting-started.md) and the [authoring guide](docs/authoring.md).
+These commands select the latest published packages, including prereleases. The Composition and Probes examples use the authoring helpers described in the [release notes](CHANGELOG.md); older packages do not include them. Use source project references to exercise alpha.4 candidate behavior before its NuGet publication. See [getting started](docs/getting-started.md) and the [authoring guide](docs/authoring.md).
 
 The package IDs use the `Cordis.NET.*` prefix. CLR namespaces and assembly names remain `Cordis.*`.
 

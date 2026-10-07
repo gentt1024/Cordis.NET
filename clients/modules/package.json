@@ -1,6 +1,6 @@
 {
   "name": "@cordis-net/client-modules",
-  "version": "0.2.0-alpha.3",
+  "version": "0.2.0-alpha.4",
   "private": true,
   "type": "module",
   "description": "Fixed DSH browser module loading over Cordis, with a native Host artifact protocol",

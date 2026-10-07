@@ -2,7 +2,16 @@
 
 ## [Unreleased]
 
-## [0.2.0-alpha.3] - Unreleased
+## [0.2.0-alpha.4] - Unreleased
+
+- Added coordinated Profile/Session writes and immutable profile candidates. Installation refuses stale inputs rather than overwriting concurrent edits; publication permits only the planned package and mapping changes. Admission, persistence and application use the same candidate.
+- Applied captured base configuration when Include patches compare equal, preserved legacy reconciliation customization without admission, and required explicit candidate-aware reconciliation when admission is enabled.
+- Moved dependency-removal admission before physical package deletion. Rejection preserves the installed directory and dependency while retaining an already-approved deselection; failure results report actual installed, selected, application and residual state.
+- Unified C# style under EditorConfig, SDK Roslyn analyzers and pinned repo-local JetBrains formatting. Added read-only formatting checks and a CI gate; mechanical formatting is separate from behavior fixes.
+- Documented the coordinated-write contract and required fidelity to fixed upstream production callers and observable behavior. Direct filesystem writers are not covered by an atomic compare-and-swap guarantee.
+- Migration: consumers using product admission must coordinate saves through the existing Profile/Session owner and configure the candidate-aware reconciliation callback after any legacy callback customization. Existing consumers without admission retain the legacy callback path.
+
+## [0.2.0-alpha.3] - 2026-10-06
 
 - Corrected the Windows host-death regression to wait for asynchronous child termination while retaining its bounded lifetime and no-further-writes checks. Runtime process ownership is unchanged.
 - Reused the preceding solution test results within each verification job, binding them to the checkout, source hashes, SDK, RID and TRX bytes. Authoring contract checks remain required; standalone authoring verification still runs the solution tests.

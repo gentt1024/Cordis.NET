@@ -2,6 +2,14 @@
 
 [中文](validation.zh.md)
 
+## Profile installation and formatting, 2026-10-07
+
+PR [#9](https://github.com/gentt1024/Cordis.NET/pull/9) merged as `05fc48731f54660b326eeca1316b100f0bbcfaaf`. Its Git tree matches tested head `04da6a1f02972969f710dd60df76b4ca66146a43`. [Workflow #41](https://github.com/gentt1024/Cordis.NET/actions/runs/37601516995) passed on Windows and Ubuntu 24.04, including canonical formatting, fixed-reference verification, runtime/package/JIT/AOT checks and authoring verification. Both platforms uploaded their validated packages and evidence.
+
+Local evidence for that head includes 761 Windows tests, 30 focused Linux tests, 32 Python tests and 15 independent package-consumer cases. Isolated failures and their regressions cover stale profile writes, admitted-candidate association, equal-patch base configuration updates, legacy reconciliation customization and admission before physical package removal. The two consumers' Cordis DLLs match their inspected package bytes. This establishes the stated library contracts, not downstream application acceptance or full upstream production-caller fidelity.
+
+The preparation for `0.2.0-alpha.4` changes version metadata, internal project dependency locks and release documentation. It does not change runtime source, SDK, third-party dependencies or the fixed upstream baseline. The preceding alpha.3-versioned verification packages must not be relabeled or published as alpha.4; the final versioned batch requires its own existing CI/release gates.
+
 ## Merged application infrastructure, 2026-10-05
 
 PR [#5](https://github.com/gentt1024/Cordis.NET/pull/5) was squash-merged as `f8deed1b1a654314773ecfa8403ee7ca5d827be9`. Its source tree is identical to the reviewed head `4d57f65dad65611c4e8924b8f3764697b2f46ae5`. [Workflow #34](https://github.com/gentt1024/Cordis.NET/actions/runs/37328839303) passed on Windows and Linux at the actual PR checkout `3d4afbbf0ede45d18f34d9b9ff881455918aa3e7`, including fixed upstream comparisons, JIT/AOT, CLR deployment, packaging and independent consumers. Each platform's downloaded package batch separately passed payload/XML, commit metadata, DLL/PDB identity and checksum checks, and actual remote SourceLink retrieval.
@@ -10,7 +18,7 @@ Real browser checks covered shell-owned module identity and subpaths, default/cu
 
 The earlier Windows unknown-installation lookup failure (expected exit 3, actual 1) remains recorded. The diagnostic-only follow-up retained that assertion; a later passing matrix does not establish its root cause. Normal CLI shutdown can still report an HMR `ObjectDisposedException`; the diagnostic is not suppressed. These observations remain separate from the passed checks.
 
-`0.2.0-alpha.3` is a release candidate. Results above establish the merged implementation, not the final versioned tag or published package batch. Main and release-tag verification, final artifact binding and publication are separate stages; the earlier alpha.1 validation packages must not be uploaded as the current version batch.
+At this checkpoint, `0.2.0-alpha.3` was a release candidate; it was subsequently published on 2026-10-06. The results in this section establish the implementation checkpoint, not evidence for a later release batch. Final artifact binding and publication remain version-specific; earlier validation packages must not be uploaded under a new version.
 
 ## Application management and delivery, 2026-10-05
 
