@@ -481,11 +481,11 @@ public static class ApplicationBoot
         IReadOnlyList<EntryDiagnostic> result = [];
         await include.Context.RunAsync(async _ =>
         {
-            include.AcceptSource(candidate.BaseText);
             result = await ReconcileCoreAsync(
                 include,
                 ProfileComposition.Flatten(candidate.Composition.Layers),
-                required);
+                required,
+                candidate.BaseText);
         });
         return result;
     }
@@ -493,7 +493,8 @@ public static class ApplicationBoot
     private static async Task<IReadOnlyList<EntryDiagnostic>> ReconcileCoreAsync(
         Include include,
         List<EntryOptions> patches,
-        IReadOnlySet<string>? required)
+        IReadOnlySet<string>? required,
+        string? source = null)
     {
         var loader = include.Loader;
         // Snapshot before draining work: a failure still in flight belongs to this
@@ -508,6 +509,7 @@ public static class ApplicationBoot
             .Values.Where(s => s.Fiber is not null)
             .Select(s => (Fiber: s.Fiber!, Failed: s.Fiber!.State is FiberState.Failed or FiberState.Disposed))
             .ToArray();
+        var sourceChanged = source is not null && include.AcceptSource(source);
         if (include.Owner is { } owner)
         {
             object config;
@@ -528,11 +530,21 @@ public static class ApplicationBoot
                 config = raw;
             }
 
+            var options = include.Options;
+            var unchangedConfig = owner.Fiber?.State == FiberState.Active &&
+                ConfigDescriptor.StrictEquals(owner.Options.RawConfig, config);
             await owner.UpdateAsync(
                 new EntryOptions
                 {
                     Config = config
                 });
+            // An equal owner config skips its Include update hook, even when the captured file changed.
+            if (sourceChanged && unchangedConfig && ReferenceEquals(options, include.Options))
+                await include.UpdateOptionsAsync(
+                    options with
+                    {
+                        Patches = patches
+                    });
         }
         else
             await include.UpdateOptionsAsync(

@@ -6,6 +6,39 @@ namespace Cordis.Platform.Tests;
 
 public sealed partial class PackageManagementTests
 {
+    [Fact]
+    public async Task Removal_admits_dependency_deletion_before_deleting_the_installed_directory()
+    {
+        await using var host = await StartAsync();
+        var owner = host.Session.ConfigurationOperations;
+        Assert.Null(
+            (await owner.InstallPackageAsync(
+                host.Toolchain,
+                new("IndependentPlugin", "1.0.0", Feed),
+                "before-removal-policy",
+                true)).Error);
+        var installedDirectory = host.Toolchain.Bundles["IndependentPlugin"];
+        var admissions = 0;
+        owner.AdmitProfileAsync = candidate =>
+        {
+            admissions++;
+            if (JsonNode.Parse(candidate.ManifestJson)!["dependencies"]!["IndependentPlugin"] is null)
+                throw new InvalidOperationException("dependency removal refused");
+            return Task.CompletedTask;
+        };
+        var result = await owner.RemovePackageAsync(host.Toolchain, "IndependentPlugin");
+        Assert.Equal(2, admissions);
+        Assert.Contains("dependency removal refused", result.Diagnostic, StringComparison.Ordinal);
+        Assert.True(Directory.Exists(installedDirectory), System.Text.Json.JsonSerializer.Serialize(result));
+        Assert.True(result.Installed);
+        Assert.False(result.Selected);
+        Assert.Equal("failed", result.Application);
+        Assert.Contains(installedDirectory, result.Residuals!);
+        var manifest = JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json")))!;
+        Assert.Equal("1.0.0", manifest["dependencies"]!["IndependentPlugin"]!.GetValue<string>());
+        Assert.Empty(manifest["dsh"]!["profile"]!["bundles"]!.AsArray());
+    }
+
     [Theory]
     [InlineData("prepare", false)]
     [InlineData("admission", false)]
