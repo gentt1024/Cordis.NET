@@ -6,7 +6,7 @@ Cordis.NET is independently maintained and is not an official project of DeepSee
 
 The host supplies an authorization callback for every operation, a settings visibility policy per entry and an optional platform package toolchain. Build permission is checked separately from installation permission. The adapter does not provide accounts or login policy.
 
-See `examples/ManagedApplication` for the maintained application example and `docs/authoring.md` for configuration authoring. This package is introduced in `0.2.0-alpha.3` (currently a release candidate); it is not included in the published `0.2.0-alpha.1` batch.
+See `examples/ManagedApplication` for the maintained application example and `docs/authoring.md` for configuration authoring. This package is introduced in `0.2.0-alpha.3`; it is not included in the published `0.2.0-alpha.1` batch.
 
 `Map` exposes management reads, settings and complete configuration edits, package progress and active installation queries. Full configuration and its schema use separate `configuration-read`/`configuration-write` permissions because raw data and defaults can contain secrets. Settings reads and exports use the host's selection/redaction policy.
 

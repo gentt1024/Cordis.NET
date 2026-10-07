@@ -78,7 +78,7 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 返回的 binder 持有元数据和 validator。可卸载插件应让委托随插件存活，并释放外部保存的 binder、converter 和错误对象。没有全局元数据缓存。非数据配置仍适合直接使用 `Plugin<T>.Config`。
 
-具有 live 字段的完整 typed 数据对象推荐使用 Composition 的 `ConfigObject<T>.Create(validator).Field(...).Build()`。它将显式键、描述和投影组合为既有配置合同，不推断 POCO 成员，不改变校验或默认值。生成元数据适用时，可将 `ConfigBinding.FromJsonTypeInfo` 作为该 validator，并保持其命名/默认规则与字段声明一致。全部普通字段和保存字段都须声明。参见[配置示例](configuration-description.zh.md)及[实际手写/组合消费者](../examples/Probes/ConfigurationScenario.cs)。特殊转换和嵌套 live 路径继续使用 `ConfigSchema<T>`。此推荐用法需要 `0.2.0-alpha.3`（当前为发布候选）或更高版本，未包含在已发布的 `0.2.0-alpha.1` 包批次中。
+具有 live 字段的完整 typed 数据对象推荐使用 Composition 的 `ConfigObject<T>.Create(validator).Field(...).Build()`。它将显式键、描述和投影组合为既有配置合同，不推断 POCO 成员，不改变校验或默认值。生成元数据适用时，可将 `ConfigBinding.FromJsonTypeInfo` 作为该 validator，并保持其命名/默认规则与字段声明一致。全部普通字段和保存字段都须声明。参见[配置示例](configuration-description.zh.md)及[实际手写/组合消费者](../examples/Probes/ConfigurationScenario.cs)。特殊转换和嵌套 live 路径继续使用 `ConfigSchema<T>`。此推荐用法需要 `0.2.0-alpha.3`或更高版本，未包含在已发布的 `0.2.0-alpha.1` 包批次中。
 
 ## 外部回调与所有权
 
@@ -121,6 +121,8 @@ node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/ap
 最后一条命令在另一终端运行，只修改生成的示例制品，以验证新的内容代。向 `/stop` 发送 POST 可结束示例宿主。制品布局复用上游 web/client 声明，不可变 ESM 交付是原生适配。示例客户端仍是有界消费示例；声明导出和发现是上述独立库 API。既有作者门禁在源码与独立包消费中重复这条真实客户端链，指定时包含 Native AOT。
 
 ## 部署与验证边界
+
+下述候选准入与协调 metadata 保存 API 需要 `0.2.0-alpha.4` 或更高版本。alpha.4 当前为发布候选；已发布的 alpha.3 包不提供此合同。
 
 包与 bundle 选择的产品政策通过 `session.ConfigurationOperations.AdmitProfileAsync` 设置。回调接收 `ProfileCandidate.ManifestJson`（拟保存的确切文本）、`ConfigurationJson`（不执行表达式的有效原始根条目），以及包含来源层和跳过选择的独立 `Composition` 视图。安装时，`Package` 还提供准备目录及计划发布目录，政策可在 Publish 前读取产物；其他操作中它为 null。抛出异常即拒绝。应校验库提供的候选，不再在 `IProfilePackageToolchain.PublishAsync` 中重新读 Profile 并预测另一份候选。准入期间不要重入配置操作。产品自身政策输入须保持稳定直到操作结束；此回调不冻结外部 SDK 或应用状态。`ProfileSession` 自动提供候选应用路径。
 

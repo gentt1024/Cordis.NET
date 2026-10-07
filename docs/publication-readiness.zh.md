@@ -4,14 +4,16 @@
 
 当前源码树是可供审查的公开源码快照，包含文档、包元数据、每包 README、社区模板、公开验证摘要、许可材料和本地发布检查。
 
-仓库及包元数据固定为 `gentt1024/Cordis.NET`。已发布的 `0.2.0-alpha.1` 批次保持不变，之后的应用基础设施新增能力按 `0.2.0-alpha.3` 准备。候选版本号不代表已发布；本地验证包不授权替换已发布包。Cordis.NET 版本独立于固定 DSH tag。最终提交、版本、tag 和选定包哈希必须对应。
+仓库及包元数据固定为 `gentt1024/Cordis.NET`。`0.2.0-alpha.3` 的八个产品包均已发布，该批次及其 tag 保持不变。下一候选为 `0.2.0-alpha.4`，包含 Profile 安装协调修正与统一仓库 lint/格式规则。候选版本号不代表已发布；本地验证包不授权替换已发布包。Cordis.NET 版本独立于固定 DSH tag。最终提交、版本、tag 和选定包哈希必须对应。
+
+已合并实现通过 [PR #9 的 Windows/Linux 验证](https://github.com/gentt1024/Cordis.NET/actions/runs/37601516995)，包括作者合同和包检查。这些版本号为 alpha.3 的验证包仅证明该实现，不是 alpha.4 发布批次。新版本候选须生成自己的包及配对符号包。发行说明与回调迁移要求见[变更记录](../CHANGELOG.md)。
 
 发布白名单包含 `Cordis.NET.*` 下的 Core、Composition、Extensions、Clr、Hosting、AspNetCore、JavaScript 和 Tool，以及对应符号包。`Cordis.Example.Greeting` 参与验证，但不进入发布集合。
 
 选择发行批次前，应在最终源码上执行既有原生验证、固定源码对照、JIT/Native AOT 和隔离包消费者检查。还须检查实际 nupkg/snupkg 批次并运行其离线调试消费者：
 
 ```sh
-python scripts/package_inspection.py --directory artifacts/release-packages --version 0.2.0-alpha.3 --symbols --debug-consumer
+python scripts/package_inspection.py --directory artifacts/release-packages --version 0.2.0-alpha.4 --symbols --debug-consumer
 ```
 
 可通过 `--dotnet` 指定 SDK 可执行文件，通过 `--source-root` 指定源码 checkout 或 ZIP。符号检查将每个 DLL 绑定至对应 portable PDB，核对 SourceLink 的仓库、提交与包元数据一致，并将文档校验和与该 Git 提交的源码比较。源码 ZIP 使用匹配的 `SOURCE_SHA256.json` 提交和文件哈希。生成的 `obj` 文档必须包含校验和匹配的嵌入源码。跟踪源码不能仅因已嵌入而绕过提交检查。最终源码提交后再打包；脏源码构建可能携带旧 SourceLink 提交并在此处失败。
@@ -26,5 +28,7 @@ python scripts/package_inspection.py --directory artifacts/release-packages --ve
 2. 核实 GitHub 私密漏洞报告已启用，且 `SECURITY.md` 中的仓库链接可接收报告。
 3. 保护 `nuget-production` environment，并配置 NuGet Trusted Publishing policy：owner 为 `gentt1024`，repository 为 `Cordis.NET`，workflow 为 `release.yml`，environment 为 `nuget-production`，包范围为 `Cordis.NET.*`。
 4. 以上步骤通过后，创建已审查的预发布 tag，并发布 release workflow 生成且有哈希记录的准确包批次。
+
+alpha.4 使用 `v0.2.0-alpha.4` tag，指向最终已合并的发布准备提交。workflow 的 ref 选择器和 `tag` 输入必须选择同一个 tag。获得发布授权后，只运行一次 `release.yml`，设置 `publish=true`：先完成两平台验证，再封存 Linux 包批次，发布步骤等待既有 `nuget-production` 审批。发布作业下载并校验该产物，不重新构建。仅验证时使用 `publish=false`；已获授权的发布运行不要求先单独跑一遍仅验证流程。本次准备不会创建 tag、批准 environment 或发布包。
 
 仓库外的维护者归档保留原始交接材料、原始证据和私有开发历史。应沿用现有公开 Git 历史；这次发布准备不要求新建根提交或重写历史。应将正式基线提升与此前 lock 未变的阶段分开记录。历史交付说明不能证明最终包或发布结果。

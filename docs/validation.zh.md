@@ -2,6 +2,14 @@
 
 [English](validation.md)
 
+## Profile 安装与格式整理，2026-10-07
+
+PR [#9](https://github.com/gentt1024/Cordis.NET/pull/9) 合并为 `05fc48731f54660b326eeca1316b100f0bbcfaaf`，Git tree 与已验证 HEAD `04da6a1f02972969f710dd60df76b4ca66146a43` 相同。[workflow #41](https://github.com/gentt1024/Cordis.NET/actions/runs/37601516995) 在 Windows 和 Ubuntu 24.04 均通过，涵盖规范格式、固定参考验证、运行时/包/JIT/AOT 检查及作者合同验证。两平台均上传了已验证包和证据。
+
+该 HEAD 的本地证据包括 761 项 Windows 测试、30 项 Linux 定向测试、32 项 Python 测试及 15 项独立包消费者场景。隔离失败与对应回归覆盖旧 Profile 写回、准入候选关联、patch 等值时的基础配置更新、旧回调定制及物理删除前准入。两个消费者使用的 Cordis DLL 与已检查包内字节相同。这些证据证明所述库合同，不代表下游应用验收或完整的上游 production caller 忠实性。
+
+`0.2.0-alpha.4` 准备只修改版本元数据、内部项目依赖锁和发行文档，不修改运行时源码、SDK、第三方依赖或固定上游基线。此前版本号为 alpha.3 的验证包不能改名或作为 alpha.4 发布；最终版本批次须通过既有 CI/release 门禁。
+
 ## 已合并的应用基础设施，2026-10-05
 
 PR [#5](https://github.com/gentt1024/Cordis.NET/pull/5) 已 squash 合并为 `f8deed1b1a654314773ecfa8403ee7ca5d827be9`，源码树与已审查 HEAD `4d57f65dad65611c4e8924b8f3764697b2f46ae5` 相同。[workflow #34](https://github.com/gentt1024/Cordis.NET/actions/runs/37328839303) 在真实 PR checkout `3d4afbbf0ede45d18f34d9b9ff881455918aa3e7` 上通过 Windows/Linux 验证，涵盖固定上游对照、JIT/AOT、CLR 部署、打包与独立消费。两平台实际下载的包批次分别通过载荷/XML、提交元数据、DLL/PDB 身份与 checksum，以及真实远端 SourceLink 取源检查。
@@ -10,7 +18,7 @@ PR [#5](https://github.com/gentt1024/Cordis.NET/pull/5) 已 squash 合并为 `f8
 
 此前 Windows 的未知安装查询失败（预期退出码 3，实际为 1）仍保留。后续只增加诊断输出，保留原断言；新矩阵通过不代表已查明根因。正常 CLI 关闭仍可能报告 HMR `ObjectDisposedException`，该诊断没有被压制。这些观察与已通过的检查分别记录。
 
-`0.2.0-alpha.3` 当前为发布候选。上述结果验证已合并实现，不代表最终版本 tag 或已发布包批次。main 与 release tag 验证、最终产物绑定和发布属于后续独立阶段；此前 alpha.1 验证包不能作为当前版本批次上传。
+该检查点的 `0.2.0-alpha.3` 当时为发布候选，随后已于 2026-10-06 发布。本节结果证明该实现检查点，不是后续发布批次的证据。最终产物绑定与发布按版本分别验证；此前验证包不能以新版本号上传。
 
 ## 应用管理与交付，2026-10-05
 
