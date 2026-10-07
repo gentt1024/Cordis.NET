@@ -7,6 +7,62 @@ namespace Cordis.Extensions.Tests;
 public sealed class ProfileSessionTests
 {
     [Fact]
+    public async Task Candidate_application_does_not_mark_a_later_source_as_already_applied()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var bundle = System.IO.Directory.CreateDirectory(Path.Combine(scenario.Directory, "empty")).FullName;
+        await File.WriteAllTextAsync(
+            Path.Combine(bundle, "package.json"),
+            "{\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
+        await File.WriteAllTextAsync(Path.Combine(bundle, "patch.yml"), "[]\n");
+        scenario.Mappings.Add("empty", bundle);
+        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
+        await scenario.ExpectAsync("initial");
+        await File.WriteAllTextAsync(scenario.ProfilePatch, "- id: p\n  config: approved\n");
+        var owner = session.ConfigurationOperations;
+        var apply = owner.ReconcileCandidateAsync!;
+        owner.ReconcileCandidateAsync = async (candidate, required) =>
+        {
+            await File.WriteAllTextAsync(scenario.ProfilePatch, "- id: p\n  config: later\n");
+            return await apply(candidate, required);
+        };
+        var result = await owner.SetBundleEnabledAsync("empty", true);
+        Assert.Null(result.Error);
+        await scenario.ExpectAsync("approved");
+        await session.RefreshAsync();
+        await scenario.ExpectAsync("later");
+    }
+
+    [Fact]
+    public async Task Legacy_reconciliation_remains_available_but_product_admission_requires_candidate_support()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var bundle = System.IO.Directory.CreateDirectory(Path.Combine(scenario.Directory, "empty")).FullName;
+        await File.WriteAllTextAsync(
+            Path.Combine(bundle, "package.json"),
+            "{\"dsh\":{\"bundle\":{\"patch\":\"patch.yml\"}}}");
+        await File.WriteAllTextAsync(Path.Combine(bundle, "patch.yml"), "[]\n");
+        scenario.Mappings.Add("empty", bundle);
+        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
+        var owner = session.ConfigurationOperations;
+        owner.ReconcileCandidateAsync = null;
+        var calls = 0;
+        owner.ReconcileAsync = _ =>
+        {
+            calls++;
+            return Task.FromResult<IReadOnlyList<EntryDiagnostic>>([]);
+        };
+        Assert.Null((await owner.SetBundleEnabledAsync("empty", true)).Error);
+        Assert.Equal(1, calls);
+        var path = Path.Combine(scenario.Launch.Profile.Directory, "package.json");
+        var before = await File.ReadAllTextAsync(path);
+        owner.AdmitProfileAsync = _ => Task.CompletedTask;
+        Assert.Equal("candidate-reconciliation-required", (await owner.SetBundleEnabledAsync("empty", false)).Error);
+        Assert.Equal(before, await File.ReadAllTextAsync(path));
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
     public async Task Unreadable_compatibility_data_does_not_abort_startup_or_become_rewritable()
     {
         await using var scenario = await Scenario.CreateAsync();

@@ -79,6 +79,15 @@ public static class ProfileComposition
 {
     /// <summary>Re-read bundle/profile/home sources while retaining the launch-time overlay values.</summary>
     public static async Task<ProfileRefresh> RefreshAsync(ProfileLaunch launch)
+        => await RefreshAsync(
+            launch,
+            PackageManifest.Read(Path.Combine(launch.Profile.Directory, "package.json")),
+            path => File.ReadAllTextAsync(path));
+
+    internal static async Task<ProfileRefresh> RefreshAsync(
+        ProfileLaunch launch,
+        PackageManifest manifest,
+        Func<string, Task<string>> read)
     {
         var admission = launch.RuntimeIdentity is { } runtime
             ? DshProfilePolicy.CreateAdmission(
@@ -92,15 +101,17 @@ public static class ProfileComposition
             launch.InstallationBundles,
             launch.LocalBundles,
             false,
-            admission);
+            admission,
+            manifest,
+            read);
         var homePath = Path.Combine(launch.Home, "cordis.patch.yml");
         var layers = current
             .Bundles.SelectMany(bundle => bundle.PatchLayers)
             .Append(
                 new ConfigurationLayer(
                     launch.Profile.UserLayer.Source,
-                    await Profiles.ReadPatchesAsync(launch.Profile.UserLayer.Source, true)))
-            .Append(new ConfigurationLayer(homePath, await Profiles.ReadPatchesAsync(homePath, true)))
+                    await Profiles.ReadPatchesAsync(launch.Profile.UserLayer.Source, true, read)))
+            .Append(new ConfigurationLayer(homePath, await Profiles.ReadPatchesAsync(homePath, true, read)))
             .Concat(launch.Overlays)
             .ToList();
         // DSH's privacy opt-out is literal: even "0" and "false" disable telemetry.

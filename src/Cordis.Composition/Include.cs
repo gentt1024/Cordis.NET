@@ -105,6 +105,13 @@ public sealed class Include : EntryTree
         return true;
     }
 
+    internal void AcceptSource(string source)
+    {
+        var data = ConfigurationFile.ParseEntries(source, Path.GetExtension(Filename) == ".json");
+        content = source;
+        parsed = data;
+    }
+
     private List<EntryOptions> Patched()
     {
         var rows = EntryPatches.Apply(

@@ -398,6 +398,7 @@ public sealed partial class PluginConfigurationOperations(
             "bundle",
             async () =>
             {
+                var inputs = await CaptureProfileAsync();
                 var manifest = PackageManifest.Read(ManifestPath);
                 var previous = manifest.Bundles;
                 var info = await ReadBundleAsync(name);
@@ -408,14 +409,20 @@ public sealed partial class PluginConfigurationOperations(
                 var next = enabled
                     ? previous.Concat(previous.Contains(name) ? [] : new[] { name }).ToArray()
                     : previous.Where(item => item != name).ToArray();
+                var candidate = await CreateCandidateAsync(inputs, WithBundles(manifest, next));
+                await AdmitCandidateAsync(inputs, candidate);
                 if (!previous.SequenceEqual(next))
-                    await WriteManifestAsync(manifest, next);
+                {
+                    await SaveCandidateAsync(inputs, candidate);
+                    await inputs.VerifyAsync(savedManifest: candidate.ManifestJson);
+                }
+
                 var required = enabled && info is not null
                     ? Flatten(Profiles.Compose([new("bundle", info.Value.Patches)]))
                         .Select(row => row.Id)
                         .ToHashSet(StringComparer.Ordinal)
                     : null;
-                return (null, await ReloadAsync(required));
+                return (null, await ApplyCandidateAsync(candidate, required));
             },
             cancellationToken);
 
@@ -520,7 +527,18 @@ public sealed partial class PluginConfigurationOperations(
         return await Read(ManifestPath) + "\0" + await Read(PatchPath);
     }
 
-    private async Task WriteManifestAsync(PackageManifest manifest, IReadOnlyList<string> bundles)
+    private async Task<ProfileCandidate> WriteManifestAsync(
+        ProfileInputs inputs,
+        Func<PackageManifest, PackageManifest> change)
+    {
+        var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
+        var candidate = await CreateCandidateAsync(inputs, change(manifest));
+        await AdmitCandidateAsync(inputs, candidate);
+        await SaveCandidateAsync(inputs, candidate);
+        return candidate;
+    }
+
+    private static PackageManifest WithBundles(PackageManifest manifest, IReadOnlyList<string> bundles)
     {
         var raw = (EntryOptions)Data.Clone(manifest.Raw)!;
         if (raw.GetValueOrDefault("dsh") is not EntryOptions dsh)
@@ -528,17 +546,7 @@ public sealed partial class PluginConfigurationOperations(
         if (dsh.GetValueOrDefault("profile") is not EntryOptions profile)
             dsh["profile"] = profile = new();
         profile["bundles"] = bundles;
-        var temporary = ManifestPath + ".tmp-" + Guid.NewGuid().ToString("N");
-        try
-        {
-            await File.WriteAllTextAsync(temporary, ConfigurationFile.Write(raw, true));
-            File.Move(temporary, ManifestPath, true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-                File.Delete(temporary);
-        }
+        return new(raw);
     }
 
     private async Task<(PackageManifest Manifest, List<EntryOptions> Patches)?> ReadBundleAsync(string name)

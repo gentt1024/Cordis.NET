@@ -188,7 +188,8 @@ public sealed partial class PluginConfigurationOperations
             {
                 Name = toolchain.ResolvePackageName(request.Name)
             };
-            var manifest = PackageManifest.Read(ManifestPath);
+            var inputs = await CaptureProfileAsync();
+            var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
             installed = HasPackageDirectory(request.Name);
             selected = manifest.Bundles.Contains(request.Name);
             if ((manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.ContainsKey(
@@ -218,6 +219,7 @@ public sealed partial class PluginConfigurationOperations
                 buildApproved,
                 text => ReportPackageProgress(requestId, stage, text),
                 token);
+            inputs.PlanPublication(prepared);
             var metadata = PackageManifest.Read(Path.Combine(prepared.Directory, "package.json"));
             if (prepared.Name != request.Name || prepared.Version != request.Version || !metadata.HasBundleDeclaration)
                 throw new Refusal("invalid-prepared-package");
@@ -239,18 +241,24 @@ public sealed partial class PluginConfigurationOperations
             async Task Apply()
             {
                 ReportPackageProgress(requestId, stage);
-                await toolchain.PublishAsync(prepared);
-                installed = true;
                 var raw = (EntryOptions)Data.Clone(manifest.Raw)!;
                 if (raw.GetValueOrDefault("dependencies") is not EntryOptions dependencies)
                     raw["dependencies"] = dependencies = new();
                 dependencies[prepared.Name] = prepared.Version;
-                await WriteManifestAsync(
-                    new(raw),
-                    enabled
-                        ? manifest.Bundles.Append(prepared.Name).Distinct(StringComparer.Ordinal).ToArray()
-                        : manifest.Bundles);
+                var candidate = await CreateCandidateAsync(
+                    inputs,
+                    WithBundles(
+                        new(raw),
+                        enabled
+                            ? manifest.Bundles.Append(prepared.Name).Distinct(StringComparer.Ordinal).ToArray()
+                            : manifest.Bundles),
+                    prepared);
+                await AdmitCandidateAsync(inputs, candidate);
+                await toolchain.PublishAsync(prepared);
+                installed = true;
+                await SaveCandidateAsync(inputs, candidate, published: true);
                 selected = enabled;
+                await inputs.VerifyAsync(published: true, savedManifest: candidate.ManifestJson);
                 stage = "apply";
                 ReportPackageProgress(requestId, stage);
                 if (enabled)
@@ -258,7 +266,7 @@ public sealed partial class PluginConfigurationOperations
                     var required = Flatten(Profiles.Compose(bundle.PatchLayers))
                         .Select(row => row.Id)
                         .ToHashSet(StringComparer.Ordinal);
-                    await ReloadAsync(required);
+                    await ApplyCandidateAsync(candidate, required);
                 }
             }
 
@@ -295,6 +303,9 @@ public sealed partial class PluginConfigurationOperations
 
             if (prepared is not null && Directory.Exists(prepared.Directory) && !residuals.Contains(prepared.Directory))
                 residuals.Add(prepared.Directory);
+            if (installed && prepared?.PublicationDirectory is { } destination && Directory.Exists(destination) &&
+                !residuals.Contains(destination))
+                residuals.Add(destination);
             return new(
                 requestId,
                 request.Name,
@@ -338,8 +349,9 @@ public sealed partial class PluginConfigurationOperations
                 try
                 {
                     name = toolchain.ResolvePackageName(name);
+                    var inputs = await CaptureProfileAsync();
                     installed = HasPackageDirectory(name);
-                    selected = PackageManifest.Read(ManifestPath).Bundles.Contains(name);
+                    selected = ParseManifest(await inputs.ReadAsync(ManifestPath)).Bundles.Contains(name);
                     var info = (await ListBundlesAsync()).SingleOrDefault(row => row.Name == name);
                     if (info?.ReadOnlyReason is not null)
                         throw new Refusal(info.ReadOnlyReason);
@@ -348,10 +360,12 @@ public sealed partial class PluginConfigurationOperations
                     selected = info.Enabled;
                     if (RunExclusiveAsync is null && info.Rows.Any(row => row.EntryId is not null))
                         throw new Refusal("stop-profile");
-                    var manifest = PackageManifest.Read(ManifestPath);
-                    await WriteManifestAsync(manifest, manifest.Bundles.Where(bundle => bundle != name).ToArray());
+                    var candidate = await WriteManifestAsync(
+                        inputs,
+                        manifest => WithBundles(manifest, manifest.Bundles.Where(bundle => bundle != name).ToArray()));
                     selected = false;
-                    await ReloadAsync(null);
+                    await inputs.VerifyAsync(savedManifest: candidate.ManifestJson);
+                    await ApplyCandidateAsync(candidate, null);
                     await include.Context.RunAsync(_ =>
                     {
                         if (include
@@ -364,11 +378,18 @@ public sealed partial class PluginConfigurationOperations
                     stage = "remove";
                     ReportPackageProgress("remove:" + name, stage);
                     cancellationToken.ThrowIfCancellationRequested();
+                    var removalInputs = await CaptureProfileAsync();
+                    removalInputs.PlanRemoval(name);
                     await toolchain.RemoveAsync(name, cancellationToken);
                     installed = false;
-                    var raw = (EntryOptions)Data.Clone(PackageManifest.Read(ManifestPath).Raw)!;
-                    (raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.Remove(name);
-                    await WriteManifestAsync(new(raw), new PackageManifest(raw).Bundles);
+                    await WriteManifestAsync(
+                        removalInputs,
+                        manifest =>
+                        {
+                            var raw = (EntryOptions)Data.Clone(manifest.Raw)!;
+                            (raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.Remove(name);
+                            return new(raw);
+                        });
                     result = new(
                         "",
                         name,

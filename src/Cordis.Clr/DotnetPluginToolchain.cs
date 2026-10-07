@@ -319,7 +319,10 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                 Path.Combine(outputDirectory, "cordis.plugin.json"),
                 ConfigurationFile.Write(metadata, true),
                 cancellationToken);
-            return new(request.Name, request.Version, outputDirectory);
+            return new(request.Name, request.Version, outputDirectory)
+            {
+                PublicationDirectory = PackageDirectory(request.Name, request.Version)
+            };
         }
         catch (Exception error) when (error is not PackageToolException)
         {
