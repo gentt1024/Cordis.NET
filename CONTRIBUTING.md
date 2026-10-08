@@ -42,6 +42,10 @@ python scripts/check-docs.py
 
 Run `python scripts/verify.py` for runtime, packaging, compatibility, or release changes. Documentation-only changes need the documentation check and a focused review; they do not require every Windows, Linux, or AOT gate.
 
+PR and main-branch CI run the .NET verification and fixed upstream source tests in parallel on both platforms. Four isolated upstream jobs split the 4,800 linked-resolution matrix cases; each group remains sequential, and the first job also runs the remaining original suites. Each job discovers the complete original case list. The final `verify (windows-latest)` and `verify (ubuntu-24.04)` checks require all runtime jobs and all shards, identical source/toolchain identities within each platform, and an exact union of the discovered cases. Missing, duplicate, failed, or unexpectedly skipped cases fail the gate. The known upstream filesystem-capability skip remains explicit. Filtered-out matrix cases are not counted as executions.
+
+CI uses `verify.py --defer-upstream-source-tests` only with those required shard gates. That option retains the current .NET/DSH trace comparisons but does not independently establish original-source test coverage. The default local command and release workflow still run the full original suites. No test results are reused across CI runs. A shard can be reproduced in a fresh checkout with `python scripts/verify_upstream.py run --dsh <fixed-dsh> --origin <fixed-cordis> --shard 1` (use 1 through 4); preserve each job's `artifacts/upstream-shard-*` JSON and logs for aggregation.
+
 Keep English and Chinese partner documents synchronized when a promise, command, or code sample changes. Add third-party code only with its license and provenance. Never commit credentials, personal paths, raw local logs, or undisclosed vulnerability details.
 
 Pull requests should explain the behavior change, tests, bilingual documentation impact, and licensing impact. By contributing, you agree that your contribution is provided under the repository's MIT license.

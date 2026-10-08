@@ -46,5 +46,5 @@ export default defineConfig({
     'node-addon-require-builtin': require.resolve('node-addon-require-builtin'),
   } },
   test: { include: ['packages/{core,loader}/tests/*.spec.ts'], globals: false, testTimeout: 10000, fileParallelism: false,
-    reporters: ['default', 'json'], outputFile: resolve('artifacts/verification/original-core-reference.json') },
+    reporters: ['default', 'json'], outputFile: process.env.CORDIS_UPSTREAM_REPORT || resolve('artifacts/verification/original-core-reference.json') },
 });
