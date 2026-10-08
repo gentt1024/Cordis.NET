@@ -42,6 +42,10 @@ python scripts/check-docs.py
 
 运行时、打包、兼容性或发布改动应运行 `python scripts/verify.py`。纯文档改动只需运行文档检查并进行针对性审阅，不要求执行全部 Windows、Linux 或 AOT 门禁。
 
+PR 和主分支 CI 在两个平台分别并行运行 .NET 验证与固定上游源码测试。四个隔离任务分担 4,800 个 linked-resolution 矩阵用例，每组内仍串行执行，第一个任务还执行其余原始套件。每个任务都发现完整的原始用例清单。最终的 `verify (windows-latest)` 和 `verify (ubuntu-24.04)` 检查要求所有运行时任务及分片成功，同平台分片的源码和工具链身份一致，且执行用例的并集与发现清单精确匹配。缺失、重复、失败或意外跳过均使门禁失败。已知的上游文件系统能力跳过仍单独记录；被分片过滤排除的矩阵用例不计作已执行。
+
+CI 仅在配合上述必需分片门禁时使用 `verify.py --defer-upstream-source-tests`。此选项保留当次 .NET/DSH 轨迹差分，但自身不能证明原始源码测试覆盖。默认本地命令和发布流程仍执行完整原始套件，不跨 CI 运行复用测试结果。在新检出中可用 `python scripts/verify_upstream.py run --dsh <fixed-dsh> --origin <fixed-cordis> --shard 1` 复现分片，编号为 1 至 4；保留各任务 `artifacts/upstream-shard-*` 下的 JSON 和日志以供汇总。
+
 承诺、命令或代码示例变化时，请同步英文与中文配对文档。引入第三方代码时必须保留许可证与来源。不要提交凭据、个人路径、原始本地日志或未公开的漏洞细节。
 
 拉取请求应说明行为变化、测试、双语文档影响和许可证影响。提交贡献即表示同意按仓库 MIT 许可证提供该贡献。

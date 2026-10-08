@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: verify (${{ matrix.os }})
+  runtime:
+    name: runtime (${{ matrix.os }})
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -95,7 +95,7 @@ jobs:
         shell: bash
         run: |
           python scripts/check-docs.py
-          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/ci-packages
+          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --defer-upstream-source-tests --aot --package --package-output artifacts/ci-packages
           python scripts/verify-authoring.py --verification artifacts/verification/verification.json --aot --packages artifacts/ci-packages
       - name: Preserve validated packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -115,4 +115,90 @@ jobs:
             artifacts/clr-deployment-*/results.json
             artifacts/clr-deployment-*/*.log
           if-no-files-found: warn
+          retention-days: 14
+
+  upstream:
+    name: upstream (${{ matrix.os }}, shard ${{ matrix.shard }})
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+        shard: [1, 2, 3, 4]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+          cache: npm
+          cache-dependency-path: reference/package-lock.json
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Fetch read-only pinned references
+        shell: bash
+        run: |
+          git init ../dsh-reference
+          git -C ../dsh-reference remote add origin https://github.com/deepseek-ai/deepseek-harness.git
+          git -C ../dsh-reference fetch --depth=1 origin "$(python -c 'import json; print(json.load(open("upstream.lock.json"))["harness"]["commit"])')"
+          git -C ../dsh-reference checkout --detach FETCH_HEAD
+          git init ../upstream-cordis
+          git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
+          git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
+          git -C ../upstream-cordis checkout --detach FETCH_HEAD
+          npm ci --prefix reference --ignore-scripts
+      - name: Execute original upstream cases
+        run: python scripts/verify_upstream.py run --dsh ../dsh-reference --origin ../upstream-cordis --shard ${{ matrix.shard }}
+      - name: Preserve shard evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: upstream-${{ matrix.os }}-${{ matrix.shard }}
+          path: |
+            artifacts/upstream-shard-${{ matrix.shard }}/*.json
+            artifacts/upstream-shard-${{ matrix.shard }}/*.log
+          if-no-files-found: error
+          retention-days: 14
+
+  # Preserve the required-check names. Runtime success alone cannot satisfy them.
+  verify:
+    name: verify (${{ matrix.os }})
+    if: always()
+    needs: [runtime, upstream]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+          - os: ubuntu-24.04
+            platform: Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every runtime and upstream job
+        env:
+          RUNTIME_RESULT: ${{ needs.runtime.result }}
+          UPSTREAM_RESULT: ${{ needs.upstream.result }}
+        run: test "$RUNTIME_RESULT" = success && test "$UPSTREAM_RESULT" = success
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: upstream-${{ matrix.os }}-*
+          path: artifacts/upstream-results
+      - name: Require complete original case union
+        run: python scripts/verify_upstream.py aggregate --input artifacts/upstream-results --platform ${{ matrix.platform }}
+      - name: Preserve upstream summary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: upstream-summary-${{ matrix.os }}
+          path: artifacts/upstream-results/summary.json
+          if-no-files-found: error
           retention-days: 14

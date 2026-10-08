@@ -1,0 +1,30 @@
+{
+  "dsh": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "source": "CI run 37606973300, original-composition-reference.json; test identities are rediscovered on every run",
+  "composition": {
+    "packages/boot/app-boot/tests/app-boot.spec.ts": 85,
+    "packages/boot/app-boot/tests/compatibility-preflight.spec.ts": 28,
+    "packages/boot/app-boot/tests/config-reload.spec.ts": 10,
+    "packages/boot/app-boot/tests/linked-resolution-matrix.spec.ts": 4800,
+    "packages/boot/app-boot/tests/loader-shape.compat.spec.ts": 1,
+    "packages/boot/app-boot/tests/package-meta.spec.ts": 85,
+    "packages/boot/app-boot/tests/plugin-compatibility.spec.ts": 62,
+    "packages/boot/app-boot/tests/profile-compatibility.spec.ts": 27,
+    "packages/boot/app-boot/tests/profile-plugins.spec.ts": 6,
+    "packages/boot/app-boot/tests/profile-resolution-service.spec.ts": 7,
+    "packages/boot/app-boot/tests/profile-resolution-worker-bootstrap.spec.ts": 2,
+    "packages/boot/app-boot/tests/profile-resolution.spec.ts": 225,
+    "packages/boot/app-boot/tests/profile-sanitize.spec.ts": 5,
+    "packages/boot/app-boot/tests/profile.spec.ts": 34,
+    "packages/boot/app-boot/tests/user-patches.spec.ts": 21,
+    "packages/boot/hmr/tests/coordination.spec.ts": 12,
+    "packages/boot/hmr/tests/error.spec.ts": 9,
+    "packages/boot/hmr/tests/modules.spec.ts": 20,
+    "packages/boot/hmr/tests/profile.spec.ts": 9,
+    "packages/boot/hmr/tests/reconciliation.spec.ts": 3,
+    "packages/boot/hmr/tests/watch-config.spec.ts": 16,
+    "scripts/loader-config-diff.spec.ts": 11,
+    "scripts/loader-volatile-update.spec.ts": 26,
+    "scripts/volatile-config.spec.ts": 17
+  }
+}

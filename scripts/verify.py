@@ -255,10 +255,14 @@ def main():
     parser.add_argument("--dsh", type=Path)
     parser.add_argument("--origin", type=Path, help="Pinned Cordis source checkout containing the original Core/Loader tests")
     parser.add_argument("--upstream-test", action="append", default=[], help="Select a relevant original DSH test file; repeat for multiple files. Default retains the original suite.")
+    parser.add_argument("--defer-upstream-source-tests", action="store_true",
+                        help="CI only: require a separate upstream shard gate; keep the current .NET/DSH trace comparisons")
     parser.add_argument("--aot", action="store_true")
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--package-output", type=Path, help="Write and validate the exact package batch in this directory")
     options = parser.parse_args()
+    if options.defer_upstream_source_tests and (not options.dsh or options.upstream_test):
+        parser.error("Deferred source tests require --dsh and cannot select --upstream-test")
     rid = ("win" if os.name == "nt" else "linux" if sys.platform.startswith("linux") else "osx") + ("-arm64" if platform.machine().lower() in ("aarch64", "arm64") else "-x64")
     status = "failed"
     initial_hashes = source_hashes()
@@ -324,25 +328,32 @@ def main():
             if upgrade:
                 reference = run("dsh-upgrade", ["node", "--experimental-transform-types", runner, f"--dsh={options.dsh.resolve()}"])
                 compare("dsh-upgrade-differential", reference, upgrade_jit)
-            reference_temp = ROOT / "artifacts/reference-temp"
-            reference_temp.mkdir(exist_ok=True)
-            reference_env = dict(os.environ, CORDIS_DSH_REFERENCE=str(options.dsh.resolve()),
-                                 TEMP=str(reference_temp), TMP=str(reference_temp), TMPDIR=str(reference_temp))
-            if not upgrade:
-                run("source-excerpt-probes", ["node", "--test", "reference/probes/effects.test.mjs",
-                                               "reference/probes/acceptance-contracts.test.mjs"], env=reference_env)
-            run("original-composition", ["node", "reference/node_modules/vitest/vitest.mjs", "run", *options.upstream_test, "--config", "reference/vitest-composition.config.mjs"], env=reference_env)
-            source_reports = [(OUT / "original-composition-reference.json", options.dsh.resolve())]
-            origin = options.origin or ROOT.parent / "upstream-cordis"
-            if origin.is_dir():
-                env = dict(os.environ, CORDIS_DSH_REFERENCE=str(options.dsh.resolve()), CORDIS_ORIGIN_REFERENCE=str(origin.resolve()))
-                run("original-core-loader", ["node", "reference/node_modules/vitest/vitest.mjs", "run", "--config", "reference/vitest.config.mjs"], env=env)
-                source_reports.append((OUT / "original-core-reference.json", origin.resolve()))
-            elif options.origin:
-                raise FileNotFoundError(origin)
+            if options.defer_upstream_source_tests:
+                steps.append({"name": "upstream-source-tests", "status": "deferred-to-required-shard-gate"})
             else:
-                print("NOT RUN: original Core/Loader tests; supply --origin with the pinned test-source checkout.")
-            record_source_results(source_reports)
+                reference_temp = ROOT / "artifacts/reference-temp"
+                reference_temp.mkdir(exist_ok=True)
+                reference_env = dict(os.environ, CORDIS_DSH_REFERENCE=str(options.dsh.resolve()),
+                                     TEMP=str(reference_temp), TMP=str(reference_temp), TMPDIR=str(reference_temp))
+                for name in ("CORDIS_UPSTREAM_SELECTION", "CORDIS_UPSTREAM_REPORT"):
+                    reference_env.pop(name, None)
+                if not upgrade:
+                    run("source-excerpt-probes", ["node", "--test", "reference/probes/effects.test.mjs",
+                                                   "reference/probes/acceptance-contracts.test.mjs"], env=reference_env)
+                run("original-composition", ["node", "reference/node_modules/vitest/vitest.mjs", "run", *options.upstream_test, "--config", "reference/vitest-composition.config.mjs"], env=reference_env)
+                source_reports = [(OUT / "original-composition-reference.json", options.dsh.resolve())]
+                origin = options.origin or ROOT.parent / "upstream-cordis"
+                if origin.is_dir():
+                    env = dict(os.environ, CORDIS_DSH_REFERENCE=str(options.dsh.resolve()), CORDIS_ORIGIN_REFERENCE=str(origin.resolve()))
+                    for name in ("CORDIS_UPSTREAM_SELECTION", "CORDIS_UPSTREAM_REPORT"):
+                        env.pop(name, None)
+                    run("original-core-loader", ["node", "reference/node_modules/vitest/vitest.mjs", "run", "--config", "reference/vitest.config.mjs"], env=env)
+                    source_reports.append((OUT / "original-core-reference.json", origin.resolve()))
+                elif options.origin:
+                    raise FileNotFoundError(origin)
+                else:
+                    print("NOT RUN: original Core/Loader tests; supply --origin with the pinned test-source checkout.")
+                record_source_results(source_reports)
         else:
             print("LOCAL-ONLY: DSH differential not requested; no upstream-conformance claim.")
         if options.aot:

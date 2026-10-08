@@ -8,6 +8,8 @@ const require = createRequire(import.meta.url);
 const root = resolve(process.env.CORDIS_DSH_REFERENCE);
 const pin = JSON.parse(readFileSync(new URL('../upstream.lock.json', import.meta.url), 'utf8')).harness.commit;
 const upgrade = pin === '639ed015397290b3745d163aafe02ffee4aa3f84';
+const selection = process.env.CORDIS_UPSTREAM_SELECTION
+  ? JSON.parse(readFileSync(process.env.CORDIS_UPSTREAM_SELECTION, 'utf8')) : undefined;
 if (execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== pin) throw new Error('Unpinned DSH');
 if (execFileSync('git', ['-C', root, 'status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim()) throw new Error('DSH reference has modified tracked files');
 const local = {
@@ -51,12 +53,13 @@ export default defineConfig({
     execArgv: ['--experimental-transform-types'],
     setupFiles: [resolve('reference/native-specifier-hooks.mjs')],
     server: { deps: { external: [/vendor[/\\]/] } },
-    include: upgrade ? [
+    include: selection?.include ?? (upgrade ? [
       'scripts/loader-config-diff.spec.ts', 'scripts/loader-volatile-update.spec.ts', 'scripts/volatile-config.spec.ts',
       'packages/boot/app-boot/tests/{app-boot,compatibility-preflight,config-reload,linked-resolution-matrix,loader-shape.compat,package-meta,plugin-compatibility,profile-compatibility,profile-plugins,profile-resolution-service,profile-resolution-worker-bootstrap,profile-resolution,profile-sanitize,profile,user-patches}.spec.ts',
       'packages/boot/hmr/tests/*.spec.ts',
-    ] : ['packages/boot/app-boot/tests/*.spec.ts', 'packages/boot/hmr/tests/*.spec.ts'],
+    ] : ['packages/boot/app-boot/tests/*.spec.ts', 'packages/boot/hmr/tests/*.spec.ts']),
+    testNamePattern: selection?.testNamePattern ? new RegExp(selection.testNamePattern) : undefined,
     testTimeout: 15000, fileParallelism: false, reporters: ['default', 'json'],
-    outputFile: resolve('artifacts/verification/original-composition-reference.json'),
+    outputFile: process.env.CORDIS_UPSTREAM_REPORT || resolve('artifacts/verification/original-composition-reference.json'),
   },
 });
