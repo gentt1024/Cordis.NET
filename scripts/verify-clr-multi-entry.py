@@ -61,7 +61,7 @@ def main():
         author_project = project(author,
             '<AssemblyName>IndependentMultiEntry</AssemblyName><PackageId>IndependentMultiEntry</PackageId><Version>1.0.0-alpha</Version>',
             f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>')
-        shutil.copyfile(root / "tests/Fixtures/ClrMultiEntry/Plugin.cs", author / "Plugin.cs")
+        shutil.copyfile(root / "tests/fixtures/ClrMultiEntry/Plugin.cs", author / "Plugin.cs")
         metadata = {
             "assembly": "IndependentMultiEntry.dll", "entryType": "IndependentMultiEntry.First",
             "exports": {"./second": "IndependentMultiEntry.Second"},
@@ -93,7 +93,7 @@ def main():
             f'<PackageReference Include="Cordis.NET.Extensions" Version="{version}"/>' +
             f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>' +
             '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
-        shutil.copyfile(root / "tests/Fixtures/ClrMultiEntry/Consumer.cs", consumer / "Program.cs")
+        shutil.copyfile(root / "tests/fixtures/ClrMultiEntry/Consumer.cs", consumer / "Program.cs")
         run("consumer-run", [options.dotnet, "run", "--project", consumer_project, "-c", "Release", "--", *bundles,
             author_packages, options.packages.resolve(), options.dotnet, options.node,
             root / "scripts/multi-entry-client-consumer.mjs", tsc.resolve()])
