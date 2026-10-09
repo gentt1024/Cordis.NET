@@ -416,6 +416,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.True(interrupted.Installed);
         Assert.False(interrupted.Selected);
         Assert.True(Directory.Exists(host.Toolchain.Bundles[request.Name]));
+        Assert.Equal("applied", (await operations.SetBundleEnabledAsync(request.Name, true)).Application);
         var removed = await operations.RemovePackageAsync(host.Toolchain, request.Name.ToLowerInvariant());
         Assert.False(removed.Installed, removed.Diagnostic);
         Assert.False(removed.Selected);
@@ -428,6 +429,29 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.True(Directory.Exists(host.Toolchain.Bundles[request.Name]));
         Assert.Contains(host.Toolchain.Bundles[request.Name], removed.Residuals!);
         Assert.DoesNotContain(await operations.ListBundlesAsync(), item => item.Name == request.Name);
+        var removedManifest = await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
+            await host.Resolver.LocateAsync("nuget:independentplugin", new Uri(host.Profile + "/")));
+        var reenabled = await operations.SetBundleEnabledAsync(request.Name, true);
+        var attemptedManifest = await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json"));
+        var activeEntries = await operations.ListPluginsAsync();
+        Assert.False(
+            reenabled.Changed,
+            JsonSerializer.Serialize(
+                new
+                {
+                    reenabled,
+                    attemptedManifest,
+                    activeEntries
+                }));
+        Assert.Equal("failed", reenabled.Application);
+        Assert.Equal("removed-package", reenabled.Error);
+        Assert.Equal(
+            "removed-package",
+            (await operations.SetBundleEnabledAsync(request.Name.ToLowerInvariant(), true)).Error);
+        Assert.Equal(removedManifest, attemptedManifest);
+        Assert.Equal(removedManifest, await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json")));
+        Assert.DoesNotContain(activeEntries, entry => entry.ModuleName == "nuget:independentplugin");
         var retired = await operations.InstallPackageAsync(host.Toolchain, request, "retired", true);
         Assert.Equal("restart-required", retired.Application);
         Assert.False(retired.Installed);
@@ -901,7 +925,8 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         IEnumerable<string>? sources = null,
         DshRuntimeIdentity? runtime = null,
         string? profileDirectory = null,
-        IReadOnlyDictionary<string, string>? installationBundles = null)
+        IReadOnlyDictionary<string, string>? installationBundles = null,
+        bool enableHmr = false)
     {
         var root = profileDirectory is null
             ? Directory.CreateDirectory(Path.Combine(directory, Guid.NewGuid().ToString("N"))).FullName
@@ -928,7 +953,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName,
             ManifestLocator = toolchain.LocateManifest,
         };
-        var session = await ProfileSession.StartAsync(config, launch, resolver);
+        var session = await ProfileSession.StartAsync(config, launch, resolver, enableHmr: enableHmr);
         return new(profile, resolver, toolchain, session);
     }
 

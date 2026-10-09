@@ -388,6 +388,7 @@ public sealed partial class PluginConfigurationOperations
                     await AdmitCandidateAsync(removalInputs, removalCandidate);
                     removalInputs.PlanRemoval(name);
                     await toolchain.RemoveAsync(name, cancellationToken);
+                    removedPackages.Add(name);
                     await SaveCandidateAsync(removalInputs, removalCandidate);
                     installed = false;
                     if (launch.LocalBundles?.TryGetValue(name, out var retainedDirectory) == true &&

@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Cordis.Clr;
 using Cordis.Composition;
 using Xunit;
 
@@ -6,6 +7,117 @@ namespace Cordis.Platform.Tests;
 
 public sealed partial class PackageManagementTests
 {
+    [Fact]
+    public async Task Offline_deletion_refuses_an_active_profile_writer_then_succeeds_after_it_settles()
+    {
+        await using var host = await StartAsync();
+        var owner = host.Session.ConfigurationOperations;
+        Assert.Null(
+            (await owner.InstallPackageAsync(
+                host.Toolchain,
+                new("IndependentPlugin", "1.0.0", Feed),
+                "retained-before-writer",
+                true,
+                enabled: false)).Error);
+        var retained = host.Toolchain.Bundles["IndependentPlugin"];
+        var receipt = Path.Combine(Path.GetDirectoryName(retained)!, ".1.0.0.files.json");
+        var assembly = await File.ReadAllBytesAsync(Path.Combine(retained, "IndependentPlugin.dll"));
+        var receiptBytes = await File.ReadAllBytesAsync(receipt);
+        Assert.Null((await owner.RemovePackageAsync(host.Toolchain, "IndependentPlugin")).Error);
+
+        var document = await owner.ReadProfileAsync();
+        var manifest = JsonNode.Parse(document.ManifestJson)!;
+        manifest["description"] = "saved by the coordinated writer";
+        var admitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var proceed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        owner.AdmitProfileAsync = async _ =>
+        {
+            admitted.SetResult();
+            await proceed.Task;
+        };
+        var save = owner.SaveProfileMetadataAsync(manifest.ToJsonString(), document.Revision);
+        try
+        {
+            await admitted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            await Assert.ThrowsAnyAsync<IOException>(() => DotnetPluginToolchain.DeleteRetainedArtifactAsync(
+                host.Profile,
+                "IndependentPlugin",
+                "1.0.0"));
+            Assert.Equal(assembly, await File.ReadAllBytesAsync(Path.Combine(retained, "IndependentPlugin.dll")));
+            Assert.Equal(receiptBytes, await File.ReadAllBytesAsync(receipt));
+        }
+        finally
+        {
+            proceed.TrySetResult();
+            Assert.Null((await save).Error);
+        }
+
+        await DotnetPluginToolchain.DeleteRetainedArtifactAsync(host.Profile, "IndependentPlugin", "1.0.0");
+        Assert.False(Directory.Exists(retained));
+        Assert.False(File.Exists(receipt));
+        Assert.Equal(
+            "saved by the coordinated writer",
+            PackageManifest.Read(Path.Combine(host.Profile, "package.json")).Raw["description"]);
+    }
+
+    [Theory]
+    [InlineData("referenced")]
+    [InlineData("missing")]
+    [InlineData("unreadable")]
+    [InlineData("invalid")]
+    public async Task Offline_deletion_keeps_artifacts_without_a_readable_unreferenced_manifest(string state)
+    {
+        string profile;
+        string retained;
+        await using (var host = await StartAsync())
+        {
+            profile = host.Profile;
+            Assert.Null(
+                (await host.Session.ConfigurationOperations.InstallPackageAsync(
+                    host.Toolchain,
+                    new("IndependentPlugin", "1.0.0", Feed),
+                    "retained-before-manifest-check",
+                    true,
+                    enabled: false)).Error);
+            retained = host.Toolchain.Bundles["IndependentPlugin"];
+        }
+
+        var receipt = Path.Combine(Path.GetDirectoryName(retained)!, ".1.0.0.files.json");
+        var assembly = await File.ReadAllBytesAsync(Path.Combine(retained, "IndependentPlugin.dll"));
+        var receiptBytes = await File.ReadAllBytesAsync(receipt);
+        var manifestPath = Path.Combine(profile, "package.json");
+        if (state is "missing" or "unreadable")
+            File.Delete(manifestPath);
+        if (state == "unreadable")
+            Directory.CreateDirectory(manifestPath);
+        if (state == "invalid")
+            await File.WriteAllTextAsync(manifestPath, "{");
+
+        var failure = await Record.ExceptionAsync(() => DotnetPluginToolchain.DeleteRetainedArtifactAsync(
+            profile,
+            "IndependentPlugin",
+            "1.0.0"));
+        switch (state)
+        {
+            case "referenced":
+                Assert.IsType<InvalidOperationException>(failure);
+                Assert.Contains("still references", failure.Message, StringComparison.Ordinal);
+                break;
+            case "missing":
+                Assert.IsType<FileNotFoundException>(failure);
+                break;
+            case "unreadable":
+                Assert.IsType<UnauthorizedAccessException>(failure);
+                break;
+            case "invalid":
+                Assert.IsAssignableFrom<System.Text.Json.JsonException>(failure);
+                break;
+        }
+
+        Assert.Equal(assembly, await File.ReadAllBytesAsync(Path.Combine(retained, "IndependentPlugin.dll")));
+        Assert.Equal(receiptBytes, await File.ReadAllBytesAsync(receipt));
+    }
+
     [Fact]
     public async Task Removal_admits_dependency_deletion_before_releasing_the_runtime_mapping()
     {

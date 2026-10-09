@@ -415,8 +415,9 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     }
 
     /// <summary>Physically delete one unreferenced version after all hosts, Workers and other file consumers have stopped.</summary>
-    /// <remarks>This is an explicit offline deployment operation, not an ALC cleanup hook. The caller owns
-    /// exclusion of other consumers and profile writers. A still-recorded version is refused. Failure may
+    /// <remarks>This is an explicit offline deployment operation, not an ALC cleanup hook. It refuses an active
+    /// profile writer under the existing lock protocol. The caller excludes other consumers and uncoordinated writers.
+    /// A still-recorded version is refused. Failure may
     /// leave files and reports the retained path; no GC, automatic scan or whole-filesystem rollback occurs.</remarks>
     public static Task DeleteRetainedArtifactAsync(
         string profileDirectory,
@@ -436,8 +437,16 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         RequireOwned(directory, profile);
         var receipt = BundleFiles.ReceiptPath(directory);
         RequireOwned(receipt, profile);
+        var manifestPath = Path.Combine(profile, "package.json");
+        using var writer = new FileStream(
+            manifestPath + ".cordis-lock",
+            FileMode.OpenOrCreate,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            1,
+            FileOptions.DeleteOnClose);
         var dependencies = PackageManifest
-            .Read(Path.Combine(profile, "package.json"))
+            .Read(manifestPath)
             .Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>;
         if (dependencies?.Any(item => string.Equals(item.Key, name, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(item.Value as string, version, StringComparison.OrdinalIgnoreCase)) == true)

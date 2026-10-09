@@ -196,14 +196,14 @@ public sealed partial class PackageManagementTests
     }
 
     [Fact]
-    public async Task Package_updates_preserve_saved_selection_without_changing_running_selection()
+    public async Task Package_updates_apply_watched_selection_to_old_code_until_restart()
     {
         await PackUpdatedPluginAsync("2.0.0", "v2");
         foreach (var (initialEnabled, updateEnabled) in new[] { (true, false), (false, false), (false, true) })
         {
             string profile;
             var selected = initialEnabled || updateEnabled;
-            await using (var host = await StartAsync())
+            await using (var host = await StartAsync(enableHmr: true))
             {
                 profile = host.Profile;
                 var owner = host.Session.ConfigurationOperations;
@@ -214,6 +214,19 @@ public sealed partial class PackageManagementTests
                         "initial",
                         true,
                         enabled: initialEnabled)).Error);
+                var original = host.Toolchain.Bundles["IndependentPlugin"];
+                var watched = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                void ObserveUpdate()
+                {
+                    var manifest = PackageManifest.Read(Path.Combine(profile, "package.json"));
+                    if ((manifest.Raw["dependencies"] as IDictionary<string, object?>)?[
+                            "IndependentPlugin"] is "2.0.0" &&
+                        host.Session.SelectedBundles.Contains("IndependentPlugin") == selected)
+                        watched.TrySetResult();
+                }
+
+                host.Session.Refreshed += ObserveUpdate;
                 var update = await owner.InstallPackageAsync(
                     host.Toolchain,
                     new("IndependentPlugin", "2.0.0", Feed),
@@ -223,15 +236,55 @@ public sealed partial class PackageManagementTests
                 Assert.Null(update.Error);
                 Assert.Equal("restart-required", update.Application);
                 Assert.Equal(selected, update.Selected);
+                await watched.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                host.Session.Refreshed -= ObserveUpdate;
+                Assert.Null(host.Session.LastError);
+                Assert.Equal(original, host.Toolchain.Bundles["IndependentPlugin"]);
                 Assert.Equal(
                     selected,
                     PackageManifest.Read(Path.Combine(profile, "package.json")).Bundles.Contains("IndependentPlugin"));
                 await host.Session.Context.RunAsync(ctx =>
                 {
                     var code = ctx.Get<Func<string>>("installed-code");
-                    Assert.Equal(initialEnabled ? "v1" : null, code?.Invoke());
+                    Assert.Equal(selected ? "v1" : null, code?.Invoke());
                     return Task.CompletedTask;
                 });
+                if (updateEnabled)
+                {
+                    var snapshot = await owner.ReadConfigurationAsync("root:independentplugin");
+                    var edit = await owner.EditConfigurationFieldAsync(
+                        "root:independentplugin",
+                        ["limit"],
+                        3,
+                        snapshot.Revision);
+                    Assert.True(edit.Applied, edit.Diagnostic);
+                    await host.Session.Context.RunAsync(ctx =>
+                    {
+                        Assert.Equal("v1", ctx.Get<Func<string>>("installed-code")!());
+                        Assert.Equal(3, ctx.Get<ConfigReference<int>>("installed-limit")!.Value);
+                        return Task.CompletedTask;
+                    });
+                    Assert.Equal(
+                        "applied",
+                        (await owner.SetBundleEnabledAsync("IndependentPlugin", false)).Application);
+                    await host.Session.Context.RunAsync(ctx =>
+                    {
+                        Assert.Null(ctx.Get("installed-code"));
+                        return Task.CompletedTask;
+                    });
+                    Assert.Equal("applied", (await owner.SetBundleEnabledAsync("IndependentPlugin", true)).Application);
+                    await host.Session.Context.RunAsync(ctx =>
+                    {
+                        Assert.Equal("v1", ctx.Get<Func<string>>("installed-code")!());
+                        Assert.Equal(3, ctx.Get<ConfigReference<int>>("installed-limit")!.Value);
+                        return Task.CompletedTask;
+                    });
+                }
+
+                Assert.Equal(
+                    "2.0.0",
+                    (PackageManifest.Read(Path.Combine(profile, "package.json")).Raw["dependencies"] as
+                        IDictionary<string, object?>)?["IndependentPlugin"]);
             }
 
             await using var restarted = await StartAsync(profileDirectory: profile);
@@ -239,6 +292,8 @@ public sealed partial class PackageManagementTests
             {
                 var code = ctx.Get<Func<string>>("installed-code");
                 Assert.Equal(selected ? "v2" : null, code?.Invoke());
+                if (updateEnabled)
+                    Assert.Equal(3, ctx.Get<ConfigReference<int>>("installed-limit")!.Value);
                 return Task.CompletedTask;
             });
         }
