@@ -13,6 +13,7 @@ public sealed class Fiber : IAsyncDisposable
     private readonly Runtime _runtime;
     private readonly Context _parent;
     private readonly List<EffectHandle> _effects = [];
+    private readonly List<Exception> _cleanupErrors = [];
     // DisposeCoreAsync releases this handle through its internal disposal entry point.
 #pragma warning disable CA2213
     private EffectHandle? _ownership;
@@ -92,6 +93,12 @@ public sealed class Fiber : IAsyncDisposable
     /// Gets the error value.
     /// </summary>
     public Exception? Error => _error;
+
+    /// <summary>Cleanup failures recorded for this registration and its owned child fibers.</summary>
+    /// <remarks>Read within the owning execution domain. Ordinary disposal still reports failures and
+    /// continues sibling cleanup. Failures remain recorded across restarts because failed cleanup can
+    /// leave work outside the current effect list. Retaining these exceptions can delay CLR collection.</remarks>
+    public IReadOnlyList<Exception> CleanupErrors => Array.AsReadOnly(_cleanupErrors.ToArray());
 
     /// <summary>The activation operation that produced Error: "configuration" or "apply", or null when no activation error is retained.</summary>
     /// <remarks>This value identifies where the error occurred, regardless of its exception type. A successful activation or an update that clears Error also clears this value.</remarks>
@@ -278,6 +285,15 @@ public sealed class Fiber : IAsyncDisposable
 
     internal void RemoveEffect(EffectHandle handle) => _effects.Remove(handle);
     internal void Report(Exception error) => _runtime.Report(error);
+
+    internal void RecordCleanupError(Exception error)
+    {
+        if (!_cleanupErrors.Contains(error, ReferenceEqualityComparer.Instance))
+            _cleanupErrors.Add(error);
+        // A plugin owns its children's retirement. The shared root is not a replacement generation.
+        if (!ReferenceEquals(_parent.Fiber, this) && _parent.Fiber.Definition is not null)
+            _parent.Fiber.RecordCleanupError(error);
+    }
 
     internal void Refresh()
     {

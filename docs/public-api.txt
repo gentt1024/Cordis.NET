@@ -208,6 +208,7 @@ Cordis.Core: Cordis.Fiber : System.Object [System.IAsyncDisposable] flags=Public
   Property System.Collections.Generic.IDictionary`2[System.String,System.Object] Inject attrs= NotNull/Unknown<NotNull/NotNull,Nullable/Nullable> get=True set=False init=False
   Property System.Collections.Generic.IReadOnlyDictionary`2[System.String,System.Object] ConfigurationValues attrs= NotNull/Unknown<NotNull/NotNull,Nullable/Nullable> get=True set=False init=False
   Method System.Collections.Generic.IReadOnlyList`1[Cordis.EffectMetadata] GetEffects() attrs= params= return=NotNull/NotNull<NotNull/NotNull>
+  Property System.Collections.Generic.IReadOnlyList`1[System.Exception] CleanupErrors attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
   Property System.Exception Error attrs= Nullable/Unknown get=True set=False init=False
   Property System.Nullable`1[System.Int64] Uid attrs= Nullable/Unknown get=True set=False init=False
   Property System.Object Config attrs= Nullable/Unknown get=True set=False init=False
@@ -1084,6 +1085,21 @@ Cordis.Composition: Cordis.Composition.PluginConfigurationOperations : System.Ob
   Method System.Threading.Tasks.Task`1[System.String] CancelInstallAsync(System.String) attrs= params=requestId:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[System.String] PreviewAsync(Boolean) attrs= params=json:NotNull/NotNull optional=false [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Constructor Void .ctor(Cordis.Composition.ProfileLaunch, Cordis.Composition.Include, System.String) attrs= params=launch:NotNull/NotNull ;include:NotNull/NotNull ;ownerEntryId:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()]
+Cordis.Composition: Cordis.Composition.PluginRecoveryState : System.Enum [System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable] flags=Public, Sealed attrs=
+  Field Cordis.Composition.PluginRecoveryState Failed attrs= NotNull/NotNull readonly=False constant=2
+  Field Cordis.Composition.PluginRecoveryState NotAttempted attrs= NotNull/NotNull readonly=False constant=0
+  Field Cordis.Composition.PluginRecoveryState Succeeded attrs= NotNull/NotNull readonly=False constant=1
+  Field Int32 value__ attrs= NotNull/NotNull readonly=False
+Cordis.Composition: Cordis.Composition.PluginReplacementFailure : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property Cordis.Composition.PluginRecoveryState Recovery attrs= NotNull/Unknown get=True set=False init=False
+  Method Cordis.Composition.PluginReplacementFailure FromException(System.Exception) attrs= params=error:NotNull/NotNull  return=Nullable/Nullable
+  Property Cordis.Composition.PluginReplacementPhase Phase attrs= NotNull/Unknown get=True set=False init=False
+  Property System.Collections.Generic.IReadOnlyList`1[System.Exception] CleanupErrors attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
+  Property System.Collections.Generic.IReadOnlyList`1[System.Exception] RecoveryErrors attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
+Cordis.Composition: Cordis.Composition.PluginReplacementPhase : System.Enum [System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable] flags=Public, Sealed attrs=
+  Field Cordis.Composition.PluginReplacementPhase Activation attrs= NotNull/NotNull readonly=False constant=1
+  Field Cordis.Composition.PluginReplacementPhase Retirement attrs= NotNull/NotNull readonly=False constant=0
+  Field Int32 value__ attrs= NotNull/NotNull readonly=False
 Cordis.Composition: Cordis.Composition.PreparedPackage : System.Object [System.IEquatable`1[Cordis.Composition.PreparedPackage]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.PreparedPackage) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
