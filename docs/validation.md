@@ -162,3 +162,15 @@ python scripts/verify-authoring.py --verification artifacts/verification/verific
 python -m unittest discover -s scripts/tests -p "test_*.py" -v
 python scripts/check-docs.py
 ```
+
+## Quality repair verification, 2026-10-09
+
+The subsequent review corrected per-entry CLR dependency resolution and positional tuple Client projection, documented codec/Gateway lifecycle limits, and added independent provider-generation evidence. A second review found a delayed dependency conflict that could leave a rejected root in an existing bundle. Read-only PE inspection now checks declared, resolver-located dependencies recursively before admitting the root. Both managed and native controls verify the original entry's first actual dependency call after refusal; arbitrary dynamic loads and factory effects remain outside a rollback guarantee.
+
+At repair checkpoint `70906cf6f1511daedd4978be911daf47eafcbdf2`, Ubuntu 24.04 x64 under WSL2 passed the complete `verify.py --aot --package` and authoring gates, including fresh symbols, independent CLR package consumption, typed Remote JIT/AOT, strict TypeScript and real HTTP. Windows x64 passed 766 tests with no failures/skips and the fixed-source comparisons, but its first AOT command failed to discover the installed `vswhere` executable. That partial run is not Windows platform acceptance. Its source and failure evidence are retained; reruns must use the correctly configured native build tools.
+
+The review also verified [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) in the reference test toolchain's transitive `source-map-js` dependency. Its lock now selects patched version 1.2.2 within the existing PostCSS range. Direct tool versions, the browser module lock and the DSH behavior pin remain unchanged. This is a development-tool repair; no product remote source-map endpoint was identified.
+
+The final candidate requires a fresh frozen-source gate after that lock change, not reuse of the checkpoint above. Read the actual report's commit, initial/final source hashes, exact package hashes and status together. Source ZIPs are exported from fixed Git blobs and list generated no-Git build metadata separately. Report totals, source executions, differences and package consumers remain separate evidence. The independent CLR gate now includes nested main assemblies, both entry orders, private native calls, binary-copy identity/conflicts and delayed rejection controls. The Remote gate includes a real explicit-schema closed-tuple call and four stable-definition provider-withdrawal cases; additional tuple variants demonstrate only codec/projection support.
+
+These checks do not close the remaining generic rows in the original scope. No hosted CI, remote SourceLink retrieval, Maker execution, release, publication or deployment is implied. Raw reports and private review records stay outside tracked source; a review delivery may include a sanitized evidence manifest bound to its frozen source.

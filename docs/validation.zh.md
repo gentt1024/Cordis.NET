@@ -162,3 +162,15 @@ python scripts/verify-authoring.py --verification artifacts/verification/verific
 python -m unittest discover -s scripts/tests -p "test_*.py" -v
 python scripts/check-docs.py
 ```
+
+## 2026-10-09 质量修复验证
+
+后续审查修复按入口解析 CLR 依赖与客户端位置 tuple 投影，补正文档中的 codec/Gateway 生命周期限制，并增加独立提供者代际证据。第二轮审查发现延迟依赖冲突可能让被拒绝的根残留在已有 bundle。只读 PE 检查现于登记根之前，递归核对已声明且 resolver 可定位的依赖。managed 与 native 对照均实际执行拒绝之后原入口的首次依赖调用；任意动态加载和工厂副作用仍无事务回滚保证。
+
+在修复检查点 `70906cf6f1511daedd4978be911daf47eafcbdf2`，WSL2 内 Ubuntu 24.04 x64 完整通过 `verify.py --aot --package` 与作者链门禁，包括新包符号、独立 CLR 包消费、类型化 Remote JIT/AOT、严格 TypeScript 与真实 HTTP。Windows x64 通过 766 项测试，零失败/跳过，并通过固定源码比较，但首次 AOT 命令未发现已安装的 `vswhere` 可执行文件。该部分运行不构成 Windows 平台验收。源码与失败证据保留；重跑必须正确配置 native 构建工具。
+
+审查还确认参考测试工具链的传递依赖 `source-map-js` 存在 [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q)。锁文件现于 PostCSS 既有范围内选择修复版 1.2.2。直接工具版本、浏览器模块锁和 DSH 行为 pin 不变。这是开发工具修复；未识别到产品远程 source-map endpoint。
+
+锁变更后的最终候选需要重新冻结并运行门禁，不能沿用上述检查点。必须一起读取实际报告中的提交、运行前后源码哈希、精确包哈希与状态。源码 ZIP 从固定 Git blob 导出，另列生成的 no-Git 构建元数据。报告总数、源码执行、差分与包消费者仍属不同证据。独立 CLR 门禁现包括嵌套主程序集、两个入口顺序、私有 native 调用、binary 副本身份/冲突和延迟拒绝对照。Remote 门禁包括真实的显式 Schema 闭合 tuple 调用与四种 definition 稳定的提供者撤销场景；其他 tuple 变体只证明 codec/投影支持。
+
+这些检查不关闭原范围剩余通用行。不表示已执行 hosted CI、远端 SourceLink 获取、Maker、Release、发布或部署。原始报告与私有审查记录不进入跟踪源码；审查交付可包含绑定冻结源码的脱敏证据清单。
