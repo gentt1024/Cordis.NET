@@ -134,3 +134,31 @@ The 455 total above belongs to that historical run. Later validation derives its
 ### Reusing solution results within a verification job
 
 After `verify.py` completes successfully, `verify-authoring.py --verification artifacts/verification/verification.json` reuses that checkout's solution TRX instead of restoring, building and testing the solution again. It rejects failed or incomplete reports, changed source, a different SDK/RID/checkout, and missing or altered TRX. The authoring gate still audits required suites and runs its compiler, mutation, example, deployment and package-consumer checks. Omit `--verification` to run authoring verification independently. CI and release use this same-job path; it does not reuse another workflow's packages or authorize publication.
+
+## Module exports and native Remote continuation, 2026-10-09
+
+The unpublished source checkpoint `16440e3e0adaac65abf510038495dc7115f1cc6e` passed the full local runtime/package and authoring gates on Windows x64 and Ubuntu 24.04 x64 under WSL2, with SDK 10.0.111 and Node 24.12.0. Both platform copies and both gates have identical inventories of 467 source hashes and report unchanged source throughout execution. Linux used an isolated Git copy of the same source bytes. Subsequent changes add only these validation records and the original scope reconciliation; they do not extend the validated runtime scope. The DSH pin and package version remain unchanged; the local package batches were not published.
+
+| Evidence | Completed result and boundary |
+|---|---|
+| Release build and native tests | Zero warnings/errors. Windows: 766 passed, zero failed/skipped. Linux: 763 passed, zero failed, three Windows-only Platform cases skipped. Core 148, Composition 437, Extensions 104; Platform 77 on Windows and 74 on Linux |
+| Required full gates | `verify.py --aot --package` and `verify-authoring.py --verification ... --aot --packages ...` passed on both platforms, including existing fixed-source comparisons, management/client paths, package inspection, portable symbols and offline consumer frames |
+| Independent generated Remote author | Both platforms: a NuGet author consuming the shipped analyzer, designated `CORDISREMOTE001` compilation rejection, package-only JIT consumption, actual HTTP/NDJSON and strict TypeScript, and static Native AOT publication/execution |
+| Native contract failures and lifecycle | Actual consumers cover required/wrong/duplicate arguments, owner errors, selected Context and object lookup, provider withdrawal, last-entry definition withdrawal and stale invocation. Root nullable references, recursive non-null children, successful unary execution with an aborted signal, business-failure cancellation, and serialized cancelled-read cleanup pass under JIT/AOT |
+| Independent CLR multi-entry author | Both platforms: ten stages exercise standard NuGet/toolchain root/subpath delivery, shared assembly/ALC identity, separate configurations, failed group recovery, successful replacement with changed DTOs, actual generated HTTP clients, stale invocation rejection and final withdrawal. This dynamic CLR evidence requires the ordinary runtime |
+| Generated Client ownership | Actual pinned Cordis owns mounted methods. Disjoint contributions share a namespace; duplicate methods reject. Withdrawal, dependency cleanup, reentrant installation, same-name retirement, replacement and retained callbacks are exercised over real HTTP and controlled late carriers |
+| Independent review and source calibration | Fresh-cache package review independently reproduced and then verified the root-nullability repair with JIT and strict TS. Fixed upstream protocol/registry/loader and selected Gateway cases: 130 passed, zero failed, 102 deliberately filtered; a separate stream selection: five passed, zero failed, 43 filtered. These Windows source executions are calibration, not native assertion or uplink closure |
+| Formatting, scripts and documentation | All four formatter stages agree for the C# source; both-platform verifier self-tests passed 38 cases. Public API and paired-document checks passed |
+
+Failures remain part of the evidence: strict symbol inspection rejected source bytes not yet represented by their Git checkpoint; an isolated Linux copy first lacked repository metadata; and the multi-entry script used incorrect fixture-path casing. The corrected checkpoints and Linux paths passed the unchanged gates. Independent review exposed erased root nullable annotations and an overly strong unary cancellation check; their repaired package behavior passed on both platforms. The new TS positive check initially expected a mutable array although generated arrays were readonly; the consumer declaration was corrected without changing the production array contract.
+
+Complete source type analysis, rich Context/owned-value projections, Peer/uplink/events, complete binary attachments/wire compatibility, and migration of existing management consumers remain open in the [original scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09). Arbitrary business work or cleanup cannot be forcibly terminated; hosts must drain active Gateway iterators before closing their Cordis root. Dynamic CLR is not claimed inside Native AOT. Hosted CI, remote retrieval of SourceLink for these unpublished commits, browser rendering and Maker execution were not run. Raw platform reports and source/package hashes stay in ignored local evidence, with no machine paths committed.
+
+```console
+npm ci --prefix reference --ignore-scripts
+npm ci --prefix clients/modules --ignore-scripts
+python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --upstream-test scripts/volatile-config.spec.ts --upstream-test scripts/loader-config-diff.spec.ts --upstream-test scripts/loader-volatile-update.spec.ts --upstream-test packages/boot/app-boot/tests/profile.spec.ts --upstream-test packages/boot/app-boot/tests/user-patches.spec.ts --aot --package --package-output artifacts/typert-packages
+python scripts/verify-authoring.py --verification artifacts/verification/verification.json --aot --packages artifacts/typert-packages
+python -m unittest discover -s scripts/tests -p "test_*.py" -v
+python scripts/check-docs.py
+```

@@ -134,3 +134,31 @@ python scripts/verify-authoring.py --aot --packages artifacts/upgrade-packages
 ### 在同一验证任务内复用解决方案结果
 
 `verify.py` 成功结束后，`verify-authoring.py --verification artifacts/verification/verification.json` 复用该 checkout 的解决方案 TRX，避免再次恢复、构建和测试整个解决方案。失败或不完整报告、源码变化、不同 SDK/RID/checkout，以及缺失或改变的 TRX 都会被拒绝。authoring gate 仍审核必需测试集，并运行编译、mutation、示例、部署和包消费检查。省略 `--verification` 可独立运行完整 authoring 验证。CI 和 release 使用这一同任务复用路径，不复用其他工作流的包，也不授予发布权限。
+
+## 2026-10-09 模块导出与原生 Remote 续建
+
+未发布的源码检查点 `16440e3e0adaac65abf510038495dc7115f1cc6e` 已在 Windows x64 与 WSL2 下的 Ubuntu 24.04 x64 通过完整本地运行时/包门禁和作者链门禁，使用 SDK 10.0.111、Node 24.12.0。两平台副本与两类门禁具有完全相同的 467 项源码哈希清单，均记录执行期间源码未变。Linux 使用同一源码字节的隔离 Git 副本。后续修改只增补此验证记录和原范围对账，不扩展已验证的运行时范围。DSH pin 和包版本未变，本地包批次未发布。
+
+| 证据 | 已完成结果与边界 |
+|---|---|
+| Release 构建与原生测试 | 零警告/错误。Windows：766 通过，零失败/跳过。Linux：763 通过，零失败，跳过三个仅适用 Windows 的 Platform 用例。Core 148、Composition 437、Extensions 104；Platform 在 Windows 为 77，在 Linux 为 74 |
+| 必需完整门禁 | 两平台均通过 `verify.py --aot --package` 与 `verify-authoring.py --verification ... --aot --packages ...`，包括既有固定源码对照、管理/客户端路径、包检查、portable symbols 和离线消费者源码 frame |
+| 独立生成式 Remote 作者 | 两平台均验证：消费已交付 analyzer 的 NuGet 作者、指定 `CORDISREMOTE001` 编译拒绝、仅引用包的 JIT 消费、实际 HTTP/NDJSON 与严格 TypeScript，以及静态 Native AOT 发布/执行 |
+| 原生合同失败与生命周期 | 实际消费者覆盖必需/错误/重复参数、作者错误、选择的 Context 与对象 lookup、provider 撤销、最后一个 Entry 的定义撤销与旧调用。根可空引用、递归非空子节点、已取消信号下的成功 unary、业务失败归一取消，以及取消读取后的串行清理，均通过 JIT/AOT |
+| 独立 CLR 多 Entry 作者 | 两平台均以十个阶段验证标准 NuGet/工具链根与子路径交付、共享程序集/ALC 身份、独立配置、整组失败恢复、变更 DTO 后的成功替换、实际生成 HTTP 客户端、旧调用拒绝与最终撤销。这些动态 CLR 证据需要普通运行时 |
+| 生成客户端所有权 | 实际固定 Cordis 拥有挂载方法。互不重叠的贡献共用 namespace，重复方法拒绝。实际 HTTP 和可控迟到传输覆盖撤销、依赖清理、重入安装、同名退役、替换与保留回调 |
+| 独立审查与源码校准 | 全新缓存的独立包审查复现根空性缺陷，并以 JIT/严格 TS 验证修复。固定上游 protocol/registry/loader 与选中 Gateway：130 通过、零失败、102 项有意过滤；独立流选择：五项通过、零失败、43 项过滤。这些 Windows 源码执行用于校准，不代表原生断言或 uplink 闭合 |
+| 格式、脚本与文档 | C# 源码的四个格式阶段一致；两平台验证器自检均通过 38 个用例。公开 API 与配对文档检查通过 |
+
+失败证据仍保留：严格符号检查曾拒绝尚未对应 Git 检查点的源码字节；隔离 Linux 副本最初缺少仓库元数据；多 Entry 脚本曾使用错误的夹具路径大小写。修正后的检查点和 Linux 路径通过了未放宽的门禁。独立审查暴露根可空标注丢失和过强 unary 取消检查，修复后的包行为已在两平台通过。新 TS 正向检查最初要求可变数组，而生成数组为 readonly；修正消费者声明时未改变生产数组合同。
+
+完整源类型分析、丰富 Context/owned-value 投影、Peer/uplink/events、完整二进制 attachment/wire 兼容，以及既有管理消费者迁移，仍列在[原范围对账](development.zh.md#2026-10-09-应用基础设施范围续账)中。不能强制终止任意业务或清理；宿主必须在关闭 Cordis root 前排空活动 Gateway 枚举器。不声明 Native AOT 内动态 CLR 支持。未执行 hosted CI、这些未发布提交的远端 SourceLink 获取、浏览器渲染或 Maker 运行。原始平台报告和源码/包哈希保存在忽略的本地证据中，未提交机器路径。
+
+```console
+npm ci --prefix reference --ignore-scripts
+npm ci --prefix clients/modules --ignore-scripts
+python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --upstream-test scripts/volatile-config.spec.ts --upstream-test scripts/loader-config-diff.spec.ts --upstream-test scripts/loader-volatile-update.spec.ts --upstream-test packages/boot/app-boot/tests/profile.spec.ts --upstream-test packages/boot/app-boot/tests/user-patches.spec.ts --aot --package --package-output artifacts/typert-packages
+python scripts/verify-authoring.py --verification artifacts/verification/verification.json --aot --packages artifacts/typert-packages
+python -m unittest discover -s scripts/tests -p "test_*.py" -v
+python scripts/check-docs.py
+```
