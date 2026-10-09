@@ -1,0 +1,32 @@
+# CLR artifacts and runtime instances
+
+[中文](clr-artifacts.zh.md)
+
+Ordinary CLR startup loads a stable artifact in place. A new process or collectible `AssemblyLoadContext` does not create another bundle. Managed dependency isolation, explicitly shared contracts and the existing implementation replacement protocol remain in effect. Native libraries follow CLR and OS rules; independent ALCs do not promise independent native static state.
+
+## Standard package workflow
+
+Use `DotnetPluginToolchain` with `ProfileSession.ConfigurationOperations`. The toolchain owns acquisition, SDK preparation, complete file receipts, publication and retained deployment files. Applications supply feed selection, build approval and their usual plugin lifecycle. They do not implement a staging service.
+
+1. Build a normal plugin NuGet package with `cordis.plugin.json`, its private dependencies, resources and Worker assets. The [managed plugin example](../examples/ManagedPlugin/README.md) describes the metadata. Application data belongs outside the code directory.
+2. Create a resolver with `new ClrModuleResolver(sharedContracts: [...])` and a `DotnetPluginToolchain(profileDirectory, resolver, sources)`. Supply `toolchain.Bundles` as `ProfileLaunch.LocalBundles`, as in the [managed application](../examples/ManagedApplication/README.md).
+3. Call `InstallPackageAsync` with an exact version and build approval. Preparation publishes once into independent `.cordis/work` output. The declared plugin gets the SDK deployment dependency manifest under its own DLL basename for `AssemblyDependencyResolver`. A product wrapper may finish its metadata before returning the prepared package.
+4. Publication moves the same complete output into `.cordis/packages/<name>/<version>`, records its full file set and SHA256 hashes in the adjacent `.<version>.files.json`, verifies and registers it. The receipt is toolchain metadata outside the approved artifact tree, so product manifests need no exclusions. Existing version directories and receipts are never overwritten. Profile admission and the complete prepared/published tree comparison remain in the existing installation pipeline.
+5. Startup verifies the installed receipt and identity before registering code. Resolution loads that directory directly; subsequent resolutions reuse the module lease. Repeated processes validate but do not recopy the artifact. Incomplete, missing-receipt or changed deployments fail explicitly, without rewriting a receipt to accept altered files.
+6. Existing installed package identities are refused by this commit; restart-based package upgrades are a separate change. Same-version repeats and installation-owned replacement remain refused.
+7. `RemovePackageAsync` deselects the package, settles owned fibers and removes its profile dependency and resolver reference. CLR files remain available for retained references, delayed dependency loads, Workers and other processes. `PackageChange.Residuals` reports retained version directories, including a previous live version and a version awaiting restart; logical removal is not physical deletion. Toolchain wrappers forward `GetRetainedDirectories` to preserve that report.
+8. After every host, Worker and other consumer has stopped, call `DotnetPluginToolchain.DeleteRetainedArtifactAsync(profileDirectory, name, version)`, or `cordis delete-retained <profile> <name> <version>`. A profile still referencing that exact version is refused. The CLI also refuses a running standard CLI host. The deployment owner must exclude arbitrary external consumers and concurrent profile writers. Failures report the remaining path; no automatic scan or GC-based deletion occurs.
+
+The trust boundary is cooperative deployment, not a sandbox against code with the same filesystem privileges. Receipts detect changed files at verification points. Library operations do not subsequently overwrite or automatically delete published artifacts. A receipt does not replace publisher authentication or make hostile concurrent writes impossible.
+
+Deployments made by older toolchains without a receipt require reinstallation using this workflow, for example into a new profile or a new exact version before switching the deployment. Startup does not silently bless legacy bytes. The low-level external-directory API remains available for host-owned deployments; its owner supplies complete stable files.
+
+## Development and implementation HMR
+
+Publish a complete new output directory for each code revision using the author's normal project and targets. Keep the previous output unchanged while it is in use. Register a `ClrModuleDefinition` and use `ReplaceAsync` with the existing Loader replacement callback. The [CLR Probes example](../examples/Probes.Clr/Program.cs) demonstrates V1 and V2 in separate directories, with no runtime copies.
+
+`ClrModuleDefinition.LoadMode` defaults to `StableDirectory`. For an external development directory that must be rebuilt in place, explicitly choose `ShadowCopy`. Finish and quiesce the entire build before preparation. This option copies the complete bundle once per preparation; it does not create a consistent snapshot of a concurrent build. The source and copy must not overlap. Its scope includes private dependencies, native dependencies, Workers and resources, not only the main DLL.
+
+`ClrUnloadObservation.LoadDirectory` is the path used by the retiring instance. `ShadowDirectory` is null for stable loading. `TryDeleteShadow` never deletes a stable source. For an explicit development copy, call it only after all file consumers, including Workers, have stopped. Managed wrapper collection is an additional observation, not proof of that precondition. Native locks can still defer deletion.
+
+Business retirement, candidate activation, unload request, GC and physical deletion remain separate outcomes. Production does not force GC. Complete installed-package online upgrades and arbitrary native isolation are not added by this workflow.

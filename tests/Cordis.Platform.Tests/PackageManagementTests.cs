@@ -446,13 +446,15 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             Assert.Null(ctx.Get("installed-limit"));
             return Task.CompletedTask;
         });
-        Assert.False(Directory.Exists(host.Toolchain.Bundles[request.Name]));
-        var retired = await Assert.ThrowsAsync<DeploymentRestartRequiredException>(() =>
-            host.Toolchain.PrepareAsync(
-                nextInspection,
-                true,
-                _ => throw new InvalidOperationException("must not build")));
-        Assert.Contains("retired package identity", retired.Message);
+        Assert.True(Directory.Exists(host.Toolchain.Bundles[request.Name]));
+        Assert.Contains(host.Toolchain.Bundles[request.Name], removed.Residuals!);
+        Assert.DoesNotContain(await operations.ListBundlesAsync(), item => item.Name == request.Name);
+        var retired = await operations.InstallPackageAsync(host.Toolchain, request, "retired", true);
+        Assert.Equal("restart-required", retired.Application);
+        Assert.False(retired.Installed);
+        Assert.False(retired.Selected);
+        Assert.Contains(host.Toolchain.Bundles[request.Name], retired.Residuals!);
+        Assert.Contains("retired package identity", retired.Diagnostic);
         var unload = Assert.Single(host.Resolver.Unloads);
         Assert.True(unload.UnloadRequested);
         Assert.Null(await operations.WaitForInstallAsync("install"));
@@ -884,7 +886,12 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                 "CORDIS_TEST_AUTHORIZATION");
             Assert.True(removed.ExitCode == 0, removed.Output);
             Assert.Empty(PackageManifest.Read(Path.Combine(profile, "package.json")).Bundles);
-            Assert.False(Directory.Exists(Path.Combine(profile, ".cordis", "packages", "independentplugin", "1.0.0")));
+            var retained = Path.Combine(profile, ".cordis", "packages", "independentplugin", "1.0.0");
+            Assert.True(Directory.Exists(retained));
+            Assert.Contains("retained", removed.Output, StringComparison.OrdinalIgnoreCase);
+            var prematureDelete = await Command("delete-retained", profile, "IndependentPlugin", "1.0.0");
+            Assert.NotEqual(0, prematureDelete.ExitCode);
+            Assert.True(Directory.Exists(retained));
             var unknown = await Command(
                 "wait",
                 endpoint,
@@ -897,6 +904,10 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             host.Kill(entireProcessTree: true);
             await host.WaitForExitAsync();
             await remaining;
+            var deleted = await Command("delete-retained", profile, "IndependentPlugin", "1.0.0");
+            Assert.True(deleted.ExitCode == 0, deleted.Output);
+            Assert.False(Directory.Exists(retained));
+            Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(retained)!, ".1.0.0.files.json")));
         }
         finally
         {
@@ -977,7 +988,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
 
     public Task DisposeAsync()
     {
-        // CLR source files are separate from collectible shadow copies, whose release may follow a later GC.
+        // Fixture cleanup may be deferred while a CLR loader still holds files after an unload request.
         try
         {
             Directory.Delete(directory, recursive: true);

@@ -17,10 +17,12 @@ namespace Cordis.Platform.Tests;
 [Collection("Collectible CLR")]
 public sealed class ReplacementHostTests
 {
-    [Fact]
-    public async Task Live_host_replaces_two_entries_and_direct_fiber_without_restart()
+    [Theory]
+    [InlineData(ClrModuleLoadMode.ShadowCopy)]
+    [InlineData(ClrModuleLoadMode.StableDirectory)]
+    public async Task Live_host_replaces_two_entries_and_direct_fiber_without_restart(ClrModuleLoadMode mode)
     {
-        await using var host = await FixtureApplication.StartAsync();
+        await using var host = await FixtureApplication.StartAsync(mode);
         var pid = Environment.ProcessId;
         var old = host.Probe.Contributions.ToArray();
         var other = host.Loader.Resolve("other").Fiber;
@@ -36,6 +38,14 @@ public sealed class ReplacementHostTests
         Assert.Equal(ticks, host.Probe.History.Count(item => item.StartsWith("tick:v1:") && !item.EndsWith(":other")));
         Assert.Contains("tick:v2:direct", host.Probe.History);
         Assert.True(Assert.Single(host.Resolver.Unloads).UnloadRequested);
+        if (mode == ClrModuleLoadMode.StableDirectory)
+        {
+            var observation = Assert.Single(host.Resolver.Unloads);
+            Assert.Null(observation.ShadowDirectory);
+            Assert.Equal(Path.Combine(AppContext.BaseDirectory, "fixtures", "v1"), observation.LoadDirectory);
+            Assert.True(observation.TryDeleteShadow());
+            Assert.True(File.Exists(Path.Combine(observation.LoadDirectory, "VersionedPlugin.dll")));
+        }
     }
 
     [Fact]
@@ -82,15 +92,19 @@ public sealed class ReplacementHostTests
     }
 
     [Theory]
-    [InlineData(false, false, PluginRecoveryState.Succeeded)]
-    [InlineData(true, false, PluginRecoveryState.Failed)]
-    [InlineData(false, true, PluginRecoveryState.NotAttempted)]
+    [InlineData(false, false, PluginRecoveryState.Succeeded, ClrModuleLoadMode.ShadowCopy)]
+    [InlineData(true, false, PluginRecoveryState.Failed, ClrModuleLoadMode.ShadowCopy)]
+    [InlineData(false, true, PluginRecoveryState.NotAttempted, ClrModuleLoadMode.ShadowCopy)]
+    [InlineData(false, false, PluginRecoveryState.Succeeded, ClrModuleLoadMode.StableDirectory)]
+    [InlineData(true, false, PluginRecoveryState.Failed, ClrModuleLoadMode.StableDirectory)]
+    [InlineData(false, true, PluginRecoveryState.NotAttempted, ClrModuleLoadMode.StableDirectory)]
     public async Task Candidate_failure_requires_actual_recovery_or_scoped_host_failure_closure(
         bool failRecovery,
         bool failCandidateStop,
-        PluginRecoveryState expectedRecovery)
+        PluginRecoveryState expectedRecovery,
+        ClrModuleLoadMode mode)
     {
-        await using var host = await FixtureApplication.StartAsync();
+        await using var host = await FixtureApplication.StartAsync(mode);
         var old = host.Probe.Contributions.Where(item => item.Id != "other").ToArray();
         IPlugin? original = null;
         await host.Context.RunAsync(async _ =>
@@ -409,6 +423,7 @@ public sealed class ReplacementHostTests
         private readonly SemaphoreSlim updates = new(1, 1);
         private WebApplication application = null!;
         private volatile bool requiresIntervention;
+        private readonly ClrModuleLoadMode loadMode;
 
         public Context Context
         {
@@ -463,8 +478,9 @@ public sealed class ReplacementHostTests
             set;
         }
 
-        private FixtureApplication()
+        private FixtureApplication(ClrModuleLoadMode mode)
         {
+            loadMode = mode;
             Resolver = new ClrModuleResolver(Path.Combine(directory, "shadow"), [typeof(IRetirementService).Assembly]);
             Probe = new RetirementProbe(directory)
             {
@@ -473,11 +489,11 @@ public sealed class ReplacementHostTests
             };
         }
 
-        public static async Task<FixtureApplication> StartAsync()
+        public static async Task<FixtureApplication> StartAsync(ClrModuleLoadMode mode = ClrModuleLoadMode.ShadowCopy)
         {
-            var host = new FixtureApplication();
-            host.Resolver.Register("fixture", Definition("v1"));
-            host.Resolver.Register("other", Definition("v1"));
+            var host = new FixtureApplication(mode);
+            host.Resolver.Register("fixture", host.Definition("v1"));
+            host.Resolver.Register("other", host.Definition("v1"));
             var builder = WebApplication.CreateBuilder();
             builder.Logging.ClearProviders();
             builder.WebHost.ConfigureKestrel(server => server.Listen(IPAddress.Loopback, 0));
@@ -656,10 +672,13 @@ public sealed class ReplacementHostTests
             });
         }
 
-        private static ClrModuleDefinition Definition(string version) => new(
+        private ClrModuleDefinition Definition(string version) => new(
             Path.Combine(AppContext.BaseDirectory, "fixtures", version),
             "VersionedPlugin.dll",
-            "VersionedPlugin.RetirementEntry");
+            "VersionedPlugin.RetirementEntry")
+        {
+            LoadMode = loadMode
+        };
 
         public async ValueTask DisposeAsync()
         {

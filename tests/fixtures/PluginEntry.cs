@@ -12,6 +12,21 @@ public sealed class InvalidEntry : IClrPluginModule
     public IPlugin CreatePlugin() => null!;
 }
 
+public sealed class ImmutableEntry : IClrPluginModule
+{
+    public IPlugin CreatePlugin() => new Plugin<string>
+    {
+        Apply = (ctx, config) =>
+        {
+            var directory = Path.GetDirectoryName(typeof(ImmutableEntry).Assembly.Location)!;
+            ctx.Provide("bundle-path", directory);
+            ctx.Provide("bundle-resource", File.ReadAllText(Path.Combine(directory, "assets", "resource.txt")).Trim());
+            ctx.Provide("bundle-dependency", PrivateDependency.Value);
+            ctx.Provide("bundle-config", config);
+        }
+    };
+}
+
 public sealed record TypedMarker(string Value);
 
 public sealed record CollectibleSettings(string Value, TypedMarker? Marker = null);

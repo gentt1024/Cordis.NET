@@ -7,7 +7,7 @@ namespace Cordis.Platform.Tests;
 public sealed partial class PackageManagementTests
 {
     [Fact]
-    public async Task Removal_admits_dependency_deletion_before_deleting_the_installed_directory()
+    public async Task Removal_admits_dependency_deletion_before_releasing_the_runtime_mapping()
     {
         await using var host = await StartAsync();
         var owner = host.Session.ConfigurationOperations;
@@ -44,6 +44,7 @@ public sealed partial class PackageManagementTests
     [InlineData("admission", false)]
     [InlineData("publish", true)]
     [InlineData("publish-mapping", true)]
+    [InlineData("published-content", true)]
     [InlineData("prepared-content", false)]
     public async Task Installation_rejects_unplanned_changes_without_overwriting_them(string boundary, bool published)
     {
@@ -66,6 +67,10 @@ public sealed partial class PackageManagementTests
             toolchain.AfterPrepare = _ => Edit();
         if (boundary == "publish")
             toolchain.AfterPublish = _ => Edit();
+        if (boundary == "published-content")
+            toolchain.AfterPublish = package => File.WriteAllTextAsync(
+                Path.Combine(package.PublicationDirectory!, "changed-after-approval.txt"),
+                "unexpected");
         if (boundary == "publish-mapping")
             toolchain.AfterPublish = _ =>
             {
@@ -89,7 +94,7 @@ public sealed partial class PackageManagementTests
             true);
         Assert.Equal("profile-conflict", result.Error);
         Assert.Equal("failed", result.Application);
-        Assert.Equal(published, result.Installed);
+        Assert.False(result.Installed);
         Assert.False(result.Selected);
         Assert.Equal(published ? 1 : 0, toolchain.Publications);
         Assert.Equal(edited ?? before, await File.ReadAllTextAsync(manifestPath));
@@ -122,7 +127,12 @@ public sealed partial class PackageManagementTests
                 layer.Patches.Clear();
             return Task.CompletedTask;
         };
-        var tools = new ObservedPackageToolchain(host.Toolchain);
+        var tools = new ObservedPackageToolchain(host.Toolchain)
+        {
+            AfterPrepare = package => File.WriteAllTextAsync(
+                Path.Combine(package.Directory, "product-manifest.json"),
+                "{\"product\":\"approved\"}")
+        };
         var result = await owner.InstallPackageAsync(tools, new("IndependentPlugin", "1.0.0", Feed), "approved", true);
         Assert.True(result.Error is null, System.Text.Json.JsonSerializer.Serialize(result));
         Assert.True(result.Installed);
@@ -131,6 +141,9 @@ public sealed partial class PackageManagementTests
         Assert.False(Directory.Exists(tools.Prepared!.Directory));
         Assert.True(Directory.Exists(tools.Prepared.PublicationDirectory));
         Assert.Equal(tools.Prepared.PublicationDirectory, host.Toolchain.Bundles["IndependentPlugin"]);
+        Assert.Equal(
+            "{\"product\":\"approved\"}",
+            await File.ReadAllTextAsync(Path.Combine(tools.Prepared.PublicationDirectory!, "product-manifest.json")));
         Assert.Equal(admitted, await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json")));
         await host.Session.Context.RunAsync(ctx =>
         {
@@ -223,7 +236,7 @@ public sealed partial class PackageManagementTests
         };
         var result = await owner.RemovePackageAsync(tools, "IndependentPlugin");
         Assert.Equal("profile-conflict", result.Error);
-        Assert.False(result.Installed);
+        Assert.True(result.Installed);
         Assert.False(result.Selected);
         Assert.Equal("failed", result.Application);
         Assert.Equal(edited, await File.ReadAllTextAsync(path));
@@ -308,6 +321,7 @@ public sealed partial class PackageManagementTests
 
         public IReadOnlyList<string> Sources => inner.Sources;
         public string ResolvePackageName(string name) => inner.ResolvePackageName(name);
+        public IReadOnlyList<string> GetRetainedDirectories(string name) => inner.GetRetainedDirectories(name);
 
         public Task<IReadOnlyList<string>> VersionsAsync(
             string name,

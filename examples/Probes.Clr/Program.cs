@@ -15,31 +15,25 @@ if (args.Length != 2)
     return 2;
 }
 
-var shadowRoot = Path.Combine(Path.GetTempPath(), "cordis-probes-" + Guid.NewGuid().ToString("N"));
-var observations = await RunAsync(Path.GetFullPath(args[0]), Path.GetFullPath(args[1]), shadowRoot);
+var observations = await RunAsync(Path.GetFullPath(args[0]), Path.GetFullPath(args[1]));
 Check(observations.Length == 2 && observations.All(item => item.UnloadRequested), "both unload requests");
 for (var index = 0;index < observations.Length;index++)
 {
     // These observations contain weak references. Collection is cooperative; this host never forces GC.
     var observation = observations[index];
-    var deleted = observation.TryDeleteShadow();
     Console.WriteLine(
         $"v{index + 1}: unload requested={observation.UnloadRequested}, " +
-        $"collected={observation.IsCollected}, shadow deleted={deleted}");
-    if (!deleted)
-        Console.WriteLine($"pending shadow cleanup: {observation.ShadowDirectory}");
+        $"collected={observation.IsCollected}, artifact retained={observation.LoadDirectory}");
 }
 
-if (observations.All(item => item.ShadowDeleted))
-    Directory.Delete(shadowRoot);
 Console.WriteLine(
     "CLR probe authoring scenario passed (lifecycle cleanup and unload requests; GC completion is independent)");
 return 0;
 
-static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string secondBundle, string shadowRoot)
+static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string secondBundle)
 {
     // The host references shared contracts and the CLR adapter, never the provider implementation.
-    await using var resolver = new ClrModuleResolver(shadowRoot, [typeof(IProbeRegistry).Assembly]);
+    await using var resolver = new ClrModuleResolver([typeof(IProbeRegistry).Assembly]);
     resolver.Register("probes", Definition(firstBundle));
     await using (var root = new Context())
     {

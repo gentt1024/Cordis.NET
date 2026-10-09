@@ -83,9 +83,7 @@ internal static class ApplicationCommands
             var configuration = Path.Combine(profile, "cordis.yml");
             if (!File.Exists(configuration))
                 await File.WriteAllTextAsync(configuration, "[]\n");
-            await using var resolver = new ClrModuleResolver(
-                Path.Combine(profile, ".cordis", "shadow"),
-                [typeof(ConfigObject<>).Assembly]);
+            await using var resolver = new ClrModuleResolver([typeof(ConfigObject<>).Assembly]);
             using var toolchain = new DotnetPluginToolchain(profile, resolver, sources);
             var launch = new ProfileLaunch(
                 await Profiles.LoadAsync(profile, new Dictionary<string, string>(), toolchain.Bundles),
