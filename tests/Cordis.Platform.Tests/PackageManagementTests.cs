@@ -383,6 +383,28 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.True(alias.Installed);
         Assert.True(alias.Selected);
         Assert.DoesNotContain("prepare", phases);
+        var nextRequest = request with
+        {
+            Version = "2.0.0"
+        };
+        var update = await operations.InstallPackageAsync(host.Toolchain, nextRequest, "same-identity-v2", true);
+        Assert.Equal("already-installed", update.Error);
+        Assert.Equal(
+            "1.0.0",
+            ((IDictionary<string, object?>)PackageManifest
+                .Read(Path.Combine(host.Profile, "package.json"))
+                .Raw["dependencies"]!)[request.Name]);
+        var nextInspection = await host.Toolchain.InspectAsync(nextRequest);
+        var prepared = await host.Toolchain.PrepareAsync(
+            nextInspection,
+            true,
+            _ =>
+            {
+            });
+        var routed = await Assert.ThrowsAsync<DeploymentRestartRequiredException>(() =>
+            host.Toolchain.PublishAsync(prepared));
+        Assert.Contains("already routed", routed.Message);
+        Assert.True(Directory.Exists(prepared.Directory));
         await host.Session.Context.RunAsync(ctx =>
         {
             Assert.Equal(1, ctx.Get<ConfigReference<int>>("installed-limit")!.Value);
@@ -425,6 +447,12 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             return Task.CompletedTask;
         });
         Assert.False(Directory.Exists(host.Toolchain.Bundles[request.Name]));
+        var retired = await Assert.ThrowsAsync<DeploymentRestartRequiredException>(() =>
+            host.Toolchain.PrepareAsync(
+                nextInspection,
+                true,
+                _ => throw new InvalidOperationException("must not build")));
+        Assert.Contains("retired package identity", retired.Message);
         var unload = Assert.Single(host.Resolver.Unloads);
         Assert.True(unload.UnloadRequested);
         Assert.Null(await operations.WaitForInstallAsync("install"));

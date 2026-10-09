@@ -2,6 +2,45 @@
 
 [中文](validation.zh.md)
 
+## Cooperative replacement lifecycle, 2026-10-09
+
+The supported class is contract-compatible plugins whose owned work stops cooperatively. This repair deliberately strengthens fixed DSH HMR `639ed015397290b3745d163aafe02ffee4aa3f84`: a retirement cleanup failure prevents candidate activation instead of warning and continuing. Ordinary `Fiber.DisposeAsync` cleanup tolerance and the existing public repeated-disposal semantics remain unchanged. The package version and pinned behavior baseline are unchanged.
+
+Loader requests disposal and independently waits for each captured fiber to settle. A retained startup error rethrown by `WaitAsync` after Disposed is distinguished from new cleanup failures, matching upstream failed-candidate `allSettled` handling. `Fiber.CleanupErrors` retains failures from removed effects and owned child fibers across restart. A failed sibling does not starve other cleanup groups; existing local group semantics remain intact.
+
+Replacement preserves the original exception and attaches `PluginReplacementFailure` phase and recovery details. Unconfirmed candidate cleanup prevents recovery. Unsuccessful original-plugin recovery stops partially restored fibers. Framework `Succeeded` confirms lifecycle settlement, while the application must separately verify business readiness.
+
+The real Generic Host/Kestrel fixture uses one Context, resolver and Loader with multiple entries, a direct fiber and an unrelated entry. Application admission drains accepted work and fences services, retained callbacks, events and late commits. V2 admission opens after resolver commit; recovered V1 is verified after resolver failure rollback, then reopened. Uncertain outcomes remain closed with HTTP 503 and `RequiresIntervention`, and later replacement is refused. The application update lock covers the entire replacement through reopening or failure closure; the resolver's internal mutation lock does not coordinate later application decisions. This is application responsibility, not a complete package Update transaction or a new production readiness API.
+
+| Demonstration | Observed contract |
+|---|---|
+| Cooperative V1 → V2 | Same running Host; accepted work drains, old business stops, V2 serves HTTP, unrelated V1 remains available. |
+| Refusal before retirement | Original graph and V1 business remain unchanged. |
+| Old cleanup already running or failing | Wait for actual retirement; late cleanup failure prevents V2 activation and retains the original error. |
+| Failed V2 with successful V1 recovery | Candidate cleanup and resolver rollback finish before V1 business validation and reopening. |
+| Candidate cleanup or partial recovery failure | Affected HTTP/callback/event business remains closed. Partially restored fibers are stopped; escaped work from unconfirmed cleanup remains fenced by application admission. |
+| V2 business validation failure | The resolver/runtime split is explicit; intervention is required and further replacement is refused. |
+| Verified V2 before resolver commit | V2 is ready but the resolver still returns V1; admission remains closed until commit. |
+| Concurrent replacements | A paused after commit but before reopening retains the application lock; B waits until A finishes, then owns its own closed verification interval. |
+
+The focused inventory contains 88 .NET cases: Host/online/CLR 28 and HMR 60. The full local inventory contains 781. Executed outcomes are bound to the frozen source in the delivery verification manifest. Original TypeScript execution, .NET execution, trace comparisons and independent package consumption are separate evidence categories; their counts are not added together.
+
+Use the exact SDK in `global.json` and the fixed source checkouts in `upstream.lock.json`. Development dependencies use their lock files. Reproduce focused checks and the local complete package gate as follows; the package output must be a new empty private directory, not a publication destination.
+
+```powershell
+npm ci --prefix reference --ignore-scripts
+npm ci --prefix clients/modules --ignore-scripts
+dotnet restore Cordis.slnx --locked-mode
+dotnet build Cordis.slnx -c Release --no-restore
+dotnet test tests/Cordis.Platform.Tests/Cordis.Platform.Tests.csproj -c Release --no-build --no-restore --filter "FullyQualifiedName~ReplacementHostTests|FullyQualifiedName~OnlineReplacementProbeTests|FullyQualifiedName~ClrTests"
+dotnet test tests/Cordis.Extensions.Tests/Cordis.Extensions.Tests.csproj -c Release --no-build --no-restore --filter "FullyQualifiedName~Hmr"
+python scripts/check-docs.py
+python scripts/format.py --check
+python scripts/verify.py --dsh <pinned-dsh> --origin <pinned-cordis-origin> --upstream-test packages/boot/hmr/tests/modules.spec.ts --package --package-output <empty-private-local-directory>
+```
+
+This closeout covers Windows x64 Release/JIT. It does not exhaust thread schedules, prove arbitrary external effects reversible, or cover independent-owner disappearance during recovery or an Active restored fiber with latched cleanup failure. Linux/AOT, production product wiring, persistent package deployment, full Update concurrency and restart into V2 require separate verification. No physical ALC collection deadline is an acceptance condition; unload requests, managed collection and shadow-directory deletion remain distinct observations. Hosted CI, remote SourceLink retrieval and publication are separate gates and are not implied by local success.
+
 ## Profile installation and formatting, 2026-10-07
 
 PR [#9](https://github.com/gentt1024/Cordis.NET/pull/9) merged as `05fc48731f54660b326eeca1316b100f0bbcfaaf`. Its Git tree matches tested head `04da6a1f02972969f710dd60df76b4ca66146a43`. [Workflow #41](https://github.com/gentt1024/Cordis.NET/actions/runs/37601516995) passed on Windows and Ubuntu 24.04, including canonical formatting, fixed-reference verification, runtime/package/JIT/AOT checks and authoring verification. Both platforms uploaded their validated packages and evidence.
