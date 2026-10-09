@@ -148,3 +148,94 @@ python scripts/verify.py
 ```
 
 已执行环境与限制见[验证记录](validation.zh.md)，固定 DSH 目标与证据术语见[兼容性](compatibility.zh.md)。列出测试或部署命令本身不表示最新一次执行已完成。
+
+## 2026-10-09 模块导出与生成式 Remote 合同
+
+本次源码续建属于既有应用基础设施范围，见[范围续账](development.zh.md#2026-10-09-应用基础设施范围续账)。这不表示已发布新包批次。以下合同要求使用包含本次续建的源码构建包批次。
+
+### 一个作者包中的多个 CLR 入口
+
+保留 `cordis.plugin.json` 中既有单入口的 `assembly` 和 `entryType` 字段。可选 `exports` 对象声明同一程序集中的其他显式子路径。[独立作者 fixture](../tests/fixtures/ClrMultiEntry/Plugin.cs) 的声明如下：
+
+```json
+{
+  "assembly": "IndependentMultiEntry.dll",
+  "entryType": "IndependentMultiEntry.First",
+  "exports": {
+    "./second": "IndependentMultiEntry.Second"
+  }
+}
+```
+
+`DotnetPluginToolchain` 将包根登记为 `nuget:independentmultientry`，额外入口登记为 `nuget:independentmultientry/second`。单入口作者无需声明空导出表。静态宿主仍可通过既有 resolver 登记精确请求。模块选择与 Cordis 服务 `Provide` 是两项操作；不要求 Core 新增 `Exports` 成员，也不要求应用提供 `ApiCatalog`。
+
+`ClrModuleResolver` 将归一化 bundle 目录相同的导出装入同一 shadow copy 和可收集的程序集加载上下文。同一程序集/入口类型的别名复用插件实例，不同入口类型保留各自插件。Loader Entry 仍分别拥有 raw 配置、Fiber 激活与 effect 清理。移除一个 resolver 租约保留其他导出；最后一个租约才请求 bundle 卸载。移除 resolver 映射前应先停止相关 Fiber。卸载请求、收集与 shadow 删除仍是分别观察的结果。
+
+Resolver 默认与宿主共享 Core、Clr、Composition 合同程序集。其他合同通过 `sharedContracts` 传入宿主的精确程序集；插件私有依赖留在 bundle 内。这一身份边界也覆盖生成的 `ITypertRemoteService` 绑定及 `IClrTypertModule` 贡献。
+
+替换包含不同导出的 bundle 时，使用 `ClrModuleResolver.ReplaceAsync` 的字典重载，提供所有已登记请求，包括尚未加载的导出和别名。回调可以使用 `Loader.ReplacePluginsAsync` 转移既有 raw 配置并共同切换相关 Fiber。单入口重载继续支持一个导出及其别名。候选准备与路由发布保持单一 bundle 代际；回调副作用和产品状态不构成事务。激活失败沿用既有 Loader 恢复路径，已稳定的 Pending Fiber 仍合法。
+
+### 声明与生成原生 Remote 合同
+
+`Cordis.NET.Composition` 在 NuGet analyzer 目录内交付 Roslyn 分析器。消费该包的作者可以使用 `RemoteService` 和显式 `RemoteMethod` 属性，声明 public、顶层、非泛型 partial 类。边界类型需要显式的源生成 `JsonSerializerContext`。下面的精简声明对应[独立 Remote 作者](../tests/fixtures/TypertConsumer/Author.cs)：
+
+```csharp
+using System.Text.Json.Serialization;
+using Cordis.Composition;
+
+public sealed record EchoRequest(string Text, int Count);
+public sealed record EchoReply(string Text, int Count);
+
+[JsonSourceGenerationOptions(
+    RespectNullableAnnotations = true,
+    RespectRequiredConstructorParameters = true)]
+[JsonSerializable(typeof(EchoRequest))]
+[JsonSerializable(typeof(EchoReply))]
+public partial class RemoteJson : JsonSerializerContext;
+
+[RemoteService("sample:remote", typeof(RemoteJson), Namespace = "sample")]
+public partial class EchoService
+{
+    [RemoteMethod]
+    public Task<EchoReply> Echo(EchoRequest request) =>
+        Task.FromResult(new EchoReply(request.Text, request.Count));
+}
+```
+
+生成器产出 `EchoServiceTypert.Contribution("IndependentRemote")`、descriptor 与直接类型化调用绑定。插件仍通过 `Context.Provide` 将实际 `EchoService` 提供为 `sample:remote`。登记合同不会创建或激活服务。JSON 命名、nullable 值和构造器必需字段遵循所提供的元数据；上述两项 `Respect...` 是作者选择，不是生成器隐式默认。每个普通参数与结果类型都要声明元数据。不受支持的声明编译失败；不受支持的客户端 Schema 形状在客户端生成时失败。
+
+Remote 方法当前支持必需普通参数与 `Task<T>`，或显式 `RemoteMethod(Stream = true)` 的 `IAsyncEnumerable<T>`。可以增加最后一个 `CancellationToken` 参数传递协作取消，但不能声明默认值。显式 Context 和对象 lookup 声明具有宿主拥有的登记 API；同一 fixture 包含完整作用域与 lookup 示例。
+
+### 登记、调用与撤销合同
+
+在既有 Cordis Context 中创建 `TypertRegistry` 和 `TypertGateway`。`TypertLoader.StartAsync` 通过显式 artifact resolver 发现活跃 Loader Entry 的贡献，不扫描程序集。静态作者通过 `StaticTypertArtifactResolver.Register` 登记生成贡献工厂。动态入口可以同时实现 `IClrTypertModule.CreateTypertContribution()` 和 `IClrPluginModule.CreatePlugin()`；`ClrModuleResolver` 从同一已加载 bundle 和工厂身份提供制品。见[静态消费者](../tests/fixtures/TypertConsumer/Consumer.cs)与[多入口消费者](../tests/fixtures/ClrMultiEntry/Consumer.cs)。
+
+Typert loader 的 owner Fiber 拥有登记及其激活期导入缓存。同一精确模块请求的多个活跃 Entry 共享一项贡献；最后一个匹配 Entry 移除后撤销贡献，除非显式配置了该请求。Registry 在发布前校验贡献并拒绝冲突。Gateway 调用解析活跃 Cordis provider 并检查登记有效性；撤销定义会使保留调用失效。
+
+动态 bundle 替换时，先停止 Typert loader owner Fiber，再切换 provider Fiber。Resolver 提交新 bundle 后，创建新 owner Fiber 并启动 `TypertLoader`；替换失败并恢复旧 provider 后，同样针对旧 bundle 重建。这样释放旧 CLR `JsonTypeInfo` 和生成绑定，避免用旧元数据处理新 CLR 类型。独立多入口消费者验证这一顺序和旧调用失效。保留的贡献、客户端、服务对象或错误仍可能保留可收集代码；所有权结束后应释放这些引用。
+
+`MapCordisRemote` 将宿主授权的 `TypertGateway` 映射为原生 unary JSON 与 downlink NDJSON 路由。宿主提供授权回调。请求中断与生成客户端的 `AbortSignal` 请求协作取消；`byte[]` 结果通过 JSON base64 表达。此传输不承诺完整固定 Typert wire protocol。
+
+使用 `TypertArtifacts.GenerateClient(contribution)` 生成 `.mjs` 和 `.d.mts` 制品，与宿主使用同一 descriptor 和 Schema。生成客户端提供类型化调用及 Remote 结果/错误 envelope：
+
+```typescript
+import { createRemote, mountRemote } from "./remote.mjs";
+
+const client = createRemote("/remote");
+const echo = client["sample/Echo"];
+const result = await echo({
+  request: { Text: "hello", Count: 1 },
+});
+client.dispose();
+
+const mounted = await mountRemote(ctx, "/remote");
+await mounted.dispose();
+```
+
+这里的 `ctx` 是客户端 Cordis owner。必须 await `mountRemote`：它登记 owner 清理，并向共享 root `remote.<namespace>` 服务贡献方法。方法互不重叠的贡献可以共享该 namespace；重复方法或无关既有服务会被拒绝。撤销只移除该贡献的方法，最终撤销才移除 namespace 服务。任何一种客户端的 Dispose 都停止新调用并中断其活跃 fetch。
+
+### 消费者证据与剩余范围
+
+[多入口门禁](../scripts/verify-clr-multi-entry.py) 独立打包作者 NuGet，通过 `PackageReference` 消费，安装包根/子路径入口，并验证共享身份、独立配置、成功与失败替换、撤销、真实 HTTP 上的生成 TypeScript 调用及错误参数。独立的 [Remote 门禁](../scripts/verify-typert.py) 覆盖原生 Remote 作者链。使用最新本地包批次及所需 Node/TypeScript 依赖。平台验收以[验证记录](validation.zh.md)中已完成结果为准；这些示例本身不能证明 Windows/Linux 或 Native AOT 闭环。动态 CLR 加载要求普通运行时。
+
+剩余源类型图、丰富 Context/owned-value 图、Peer/uplink/event remotes、非协作取消及二进制 attachment 协议仍未完成。既有 PluginManager、Settings/配置与客户端管理消费者向生成 Typert 合同的迁移仍未完成。既有手写 `MapCordisService` endpoint 仍可使用，但不能据此关闭这些缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。

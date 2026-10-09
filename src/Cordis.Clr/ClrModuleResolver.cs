@@ -15,6 +15,14 @@ public interface IClrPluginModule
     IPlugin CreatePlugin();
 }
 
+/// <summary>Optional generated Typert artifact export of an explicitly named CLR module entry.</summary>
+/// <remarks>The factory runs in the same bundle load context as CreatePlugin. It does not activate a Fiber.</remarks>
+public interface IClrTypertModule
+{
+    /// <summary>Return this entry's generated package contribution.</summary>
+    TypertContribution CreateTypertContribution();
+}
+
 /// <summary>The assembly path is relative to the bundle root; the complete directory is copied.</summary>
 public sealed record ClrModuleDefinition(string BundleDirectory, string AssemblyPath, string EntryType);
 
@@ -97,10 +105,17 @@ public sealed class ClrUnloadObservation
 /// </summary>
 [RequiresDynamicCode("Loading plugin DLLs requires the ordinary CLR; use static modules in Native AOT.")]
 [RequiresUnreferencedCode("Plugin entry point types are named explicitly in external DLLs.")]
-public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
+public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver, IAsyncDisposable
 {
     private readonly Dictionary<string, ClrModuleDefinition> definitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Lease> loaded = new(StringComparer.Ordinal);
+
+    private readonly Dictionary<string, Bundle> bundles = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+    private readonly HashSet<string> replacingTargets = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
     private readonly Dictionary<string, Assembly> shared;
     // Late callers still enter these gates to observe disposal; no WaitHandle is allocated.
 #pragma warning disable CA2213
@@ -123,7 +138,12 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
     public ClrModuleResolver(string shadowRoot, IEnumerable<Assembly>? sharedContracts = null)
     {
         this.shadowRoot = Path.GetFullPath(shadowRoot);
-        shared = new[] { typeof(IPlugin).Assembly, typeof(IClrPluginModule).Assembly }
+        shared = new[]
+            {
+                typeof(IPlugin).Assembly,
+                typeof(IClrPluginModule).Assembly,
+                typeof(ITypertArtifactResolver).Assembly
+            }
             .Concat(sharedContracts ?? [])
             .Distinct()
             .ToDictionary(a => a.GetName().Name!, StringComparer.OrdinalIgnoreCase);
@@ -174,6 +194,13 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             ObjectDisposedException.ThrowIf(disposed, this);
             if (loaded.ContainsKey(specifier))
                 throw new InvalidOperationException("Use ReplaceAsync to change a loaded module.");
+            if (bundles.TryGetValue(BundleSource(definition), out var bundle) && bundle.Replacing)
+                throw new InvalidOperationException(
+                    "Cannot register another export while its CLR bundle is being replaced.");
+            if (replacingTargets.Contains(BundleSource(definition)) ||
+                definitions.TryGetValue(specifier, out var current) &&
+                bundles.TryGetValue(BundleSource(current), out var previous) && previous.Replacing)
+                throw new InvalidOperationException("Cannot change an export while its CLR bundle is being replaced.");
             definitions[specifier] = definition;
         }
         finally
@@ -194,18 +221,51 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         try
         {
             ObjectDisposedException.ThrowIf(disposed, this);
-            if (loaded.TryGetValue(specifier, out var lease))
-                return lease.Plugin!;
-            if (!definitions.TryGetValue(specifier, out var definition))
-                throw new KeyNotFoundException($"No CLR module mapping for '{specifier}'.");
-            lease = Prepare(definition);
-            loaded.Add(specifier, lease);
-            return lease.Plugin!;
+            return GetLease(specifier).Plugin!;
         }
         finally
         {
             gate.Release();
         }
+    }
+
+    async ValueTask<TypertContribution?> ITypertArtifactResolver.ResolveAsync(
+        string specifier,
+        Uri baseUri,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            var lease = GetLease(specifier);
+            var definition = definitions[specifier];
+            var key = DefinitionExport(definition);
+            if (lease.Bundle.Artifacts.TryGetValue(key, out var artifact))
+                return artifact;
+            artifact = lease.Bundle.Modules[key] is IClrTypertModule module
+                ? module.CreateTypertContribution() ??
+                throw new InvalidOperationException("The CLR Typert module returned no contribution.")
+                : null;
+            lease.Bundle.Artifacts.Add(key, artifact);
+            return artifact;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private Lease GetLease(string specifier)
+    {
+        if (loaded.TryGetValue(specifier, out var lease))
+            return lease;
+        if (!definitions.TryGetValue(specifier, out var definition))
+            throw new KeyNotFoundException($"No CLR module mapping for '{specifier}'.");
+        lease = Prepare(definition);
+        loaded.Add(specifier, lease);
+        bundles[lease.Bundle.Source] = lease.Bundle;
+        return lease;
     }
 
     /// <summary>
@@ -222,19 +282,104 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(switchFibers);
+        Dictionary<string, ClrModuleDefinition> replacements;
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            replacements = definitions.TryGetValue(specifier, out var current)
+                ? definitions
+                    .Where(pair => bundles.Comparer.Equals(BundleSource(pair.Value), BundleSource(current)) &&
+                        DefinitionExport(pair.Value) == DefinitionExport(current))
+                    .ToDictionary(pair => pair.Key, _ => definition, StringComparer.Ordinal)
+                : new Dictionary<string, ClrModuleDefinition>(StringComparer.Ordinal)
+                {
+                    [specifier] = definition
+                };
+        }
+        finally
+        {
+            gate.Release();
+        }
+
+        return await ReplaceAsync(
+                replacements,
+                pairs => switchFibers(pairs.First().Key, pairs.First().Value),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Prepare and switch every registered export of one CLR bundle in a shared candidate load context.</summary>
+    /// <remarks>All registered specifiers for the current bundle must be supplied, including unloaded exports.
+    /// The callback owns Fiber switching and recovery; only route publication is atomic. Candidate side effects
+    /// and product-wide rollback are not a transaction. Registering another alias during the callback is refused.</remarks>
+    public async ValueTask<ClrUnloadObservation> ReplaceAsync(
+        IReadOnlyDictionary<string, ClrModuleDefinition> replacements,
+        Func<IReadOnlyDictionary<IPlugin, IPlugin>, ValueTask> switchFibers,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(replacements);
+        ArgumentNullException.ThrowIfNull(switchFibers);
+        if (replacements.Count == 0)
+            throw new ArgumentException("At least one registered CLR export must be replaced.", nameof(replacements));
+        replacements = replacements.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         if (replacementScope.Value is { Active: true })
             throw new InvalidOperationException("CLR replacements cannot be nested.");
         await mutation.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            Lease previous, candidate;
+            var candidates = new Dictionary<string, Lease>(StringComparer.Ordinal);
+            var pairs = new Dictionary<IPlugin, IPlugin>(ReferenceEqualityComparer.Instance);
+            Bundle previousBundle, candidateBundle;
             await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 ObjectDisposedException.ThrowIf(disposed, this);
-                if (!loaded.TryGetValue(specifier, out previous!))
+                var first = replacements.Keys.FirstOrDefault(loaded.ContainsKey);
+                if (first is null)
                     throw new InvalidOperationException("Resolve the module before replacing it.");
-                candidate = Prepare(definition);
+                previousBundle = loaded[first].Bundle;
+                var registered = definitions
+                    .Where(pair => bundles.Comparer.Equals(BundleSource(pair.Value), previousBundle.Source))
+                    .Select(pair => pair.Key)
+                    .ToHashSet(StringComparer.Ordinal);
+                if (!registered.SetEquals(replacements.Keys))
+                    throw new InvalidOperationException(
+                        "Replace every registered export of the shared CLR bundle together.");
+                var sources = replacements.Values.Select(BundleSource).Distinct(bundles.Comparer).ToArray();
+                if (sources.Length != 1)
+                    throw new ArgumentException(
+                        "Replacement exports must belong to one candidate CLR bundle.",
+                        nameof(replacements));
+                if (bundles.TryGetValue(sources[0], out var existing) && !ReferenceEquals(existing, previousBundle))
+                    throw new InvalidOperationException(
+                        "The candidate bundle already belongs to another loaded generation.");
+                candidateBundle = null!;
+                try
+                {
+                    foreach (var (specifier, definition) in replacements)
+                    {
+                        var candidate = Prepare(definition, candidateBundle, reuseCurrent: false);
+                        candidateBundle = candidate.Bundle;
+                        candidates.Add(specifier, candidate);
+                        if (!loaded.TryGetValue(specifier, out var lease))
+                            continue;
+                        if (pairs.TryGetValue(lease.Plugin!, out var duplicate) &&
+                            !ReferenceEquals(duplicate, candidate.Plugin))
+                            throw new InvalidOperationException(
+                                "Aliases of one CLR export must retain the same replacement export.");
+                        pairs[lease.Plugin!] = candidate.Plugin!;
+                    }
+                }
+                catch
+                {
+                    foreach (var candidate in candidates.Values)
+                        Retire(candidate);
+                    throw;
+                }
+
+                previousBundle.Replacing = true;
+                replacingTargets.Add(candidateBundle.Source);
             }
             finally
             {
@@ -247,7 +392,8 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             {
                 try
                 {
-                    await switchFibers(previous.Plugin!, candidate.Plugin!).ConfigureAwait(false);
+                    await switchFibers(new System.Collections.ObjectModel.ReadOnlyDictionary<IPlugin, IPlugin>(pairs))
+                        .ConfigureAwait(false);
                 }
                 catch
                 {
@@ -256,7 +402,8 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
 #pragma warning restore CA2016
                     try
                     {
-                        Retire(candidate);
+                        foreach (var candidate in candidates.Values)
+                            Retire(candidate);
                     }
                     finally
                     {
@@ -272,9 +419,18 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
 #pragma warning restore CA2016
                 try
                 {
-                    loaded[specifier] = candidate;
-                    definitions[specifier] = definition;
-                    return Retire(previous);
+                    // A callback may import another alias of an already cached old export.
+                    var retiring =
+                        loaded.Values.Where(lease => ReferenceEquals(lease.Bundle, previousBundle)).ToArray();
+                    foreach (var (specifier, definition) in replacements)
+                        definitions[specifier] = definition;
+                    foreach (var (specifier, candidate) in candidates)
+                        loaded[specifier] = candidate;
+                    bundles[candidateBundle.Source] = candidateBundle;
+                    ClrUnloadObservation? observation = null;
+                    foreach (var lease in retiring)
+                        observation = Retire(lease) ?? observation;
+                    return observation!;
                 }
                 finally
                 {
@@ -283,6 +439,17 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             }
             finally
             {
+                await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+                try
+                {
+                    previousBundle.Replacing = false;
+                    replacingTargets.Remove(candidateBundle.Source);
+                }
+                finally
+                {
+                    gate.Release();
+                }
+
                 scope.Active = false;
                 replacementScope.Value = null;
             }
@@ -293,9 +460,23 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         }
     }
 
-    private Lease Prepare(ClrModuleDefinition definition)
+    private static string BundleSource(ClrModuleDefinition definition) =>
+        Path.TrimEndingDirectorySeparator(Path.GetFullPath(definition.BundleDirectory));
+
+    private static (string Assembly, string Entry) ExportKey(string assembly, string entry) =>
+        (OperatingSystem.IsWindows() ? assembly.ToUpperInvariant() : assembly, entry);
+
+    private static (string Assembly, string Entry) DefinitionExport(ClrModuleDefinition definition)
     {
-        var source = Path.GetFullPath(definition.BundleDirectory);
+        var source = BundleSource(definition);
+        return ExportKey(
+            Path.GetRelativePath(source, Path.GetFullPath(definition.AssemblyPath, source)),
+            definition.EntryType);
+    }
+
+    private Lease Prepare(ClrModuleDefinition definition, Bundle? bundle = null, bool reuseCurrent = true)
+    {
+        var source = BundleSource(definition);
         var shadowRelative = Path.GetRelativePath(source, shadowRoot);
         if (!Path.IsPathRooted(shadowRelative) && shadowRelative != ".." && !shadowRelative.StartsWith(
                 ".." + Path.DirectorySeparatorChar,
@@ -311,24 +492,48 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             throw new ArgumentException("The entry assembly must be inside its bundle directory.", nameof(definition));
         if (!File.Exists(main))
             throw new FileNotFoundException("The plugin entry assembly is missing.", main);
-        var destination = Path.Combine(shadowRoot, Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(destination);
-        BundleContext? context = null;
+        if (bundle is null && reuseCurrent)
+            bundles.TryGetValue(source, out bundle);
+        if (reuseCurrent && bundle is null && replacingTargets.Contains(source))
+            throw new InvalidOperationException("Cannot import the candidate CLR bundle before replacement commits.");
+        if (reuseCurrent && bundle is { Replacing: true } &&
+            !bundle.Plugins.ContainsKey(ExportKey(relative, definition.EntryType)))
+            throw new InvalidOperationException(
+                "Cannot import an uncached export while its CLR bundle is being replaced.");
+        var fresh = bundle is null;
+        var destination = bundle?.Directory ?? Path.Combine(shadowRoot, Guid.NewGuid().ToString("N"));
+        BundleContext? context = bundle?.Context;
         try
         {
-            CopyDirectory(source, destination);
+            if (fresh)
+            {
+                Directory.CreateDirectory(destination);
+                CopyDirectory(source, destination);
+            }
+
             var shadowMain = Path.Combine(destination, relative);
-            context = new BundleContext(shadowMain, shared);
-            var assembly = context.LoadFromAssemblyPath(shadowMain);
-            var type = assembly.GetType(definition.EntryType, throwOnError: true)!;
-            if (Activator.CreateInstance(type) is not IClrPluginModule module)
-                throw new InvalidOperationException(
-                    $"'{definition.EntryType}' must implement the shared IClrPluginModule contract.");
-            var plugin = module.CreatePlugin() ?? throw new InvalidOperationException("The module returned no plugin.");
-            return new Lease(context, plugin, destination);
+            context ??= new BundleContext(shadowMain, shared);
+            bundle ??= new Bundle(source, context, destination);
+            var key = ExportKey(relative, definition.EntryType);
+            if (!bundle.Plugins.TryGetValue(key, out var plugin))
+            {
+                var assembly = context.LoadFromAssemblyPath(shadowMain);
+                var type = assembly.GetType(definition.EntryType, throwOnError: true)!;
+                if (Activator.CreateInstance(type) is not IClrPluginModule module)
+                    throw new InvalidOperationException(
+                        $"'{definition.EntryType}' must implement the shared IClrPluginModule contract.");
+                plugin = module.CreatePlugin() ?? throw new InvalidOperationException("The module returned no plugin.");
+                bundle.Plugins.Add(key, plugin);
+                bundle.Modules.Add(key, module);
+            }
+
+            bundle.References++;
+            return new Lease(bundle, plugin);
         }
         catch
         {
+            if (!fresh)
+                throw;
             if (context is null)
                 Directory.Delete(destination, recursive: true);
             else
@@ -386,12 +591,20 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         }
     }
 
-    private ClrUnloadObservation Retire(Lease lease)
+    private ClrUnloadObservation? Retire(Lease lease)
     {
         lease.Plugin = null;
-        var context = lease.Context!;
-        lease.Context = null;
-        return RequestUnload(context, lease.Directory);
+        var bundle = lease.Bundle;
+        if (--bundle.References != 0)
+            return null;
+        if (bundles.TryGetValue(bundle.Source, out var current) && ReferenceEquals(bundle, current))
+            bundles.Remove(bundle.Source);
+        bundle.Plugins.Clear();
+        bundle.Modules.Clear();
+        bundle.Artifacts.Clear();
+        var context = bundle.Context!;
+        bundle.Context = null;
+        return RequestUnload(context, bundle.Directory);
     }
 
     private ClrUnloadObservation RequestUnload(BundleContext context, string directory)
@@ -457,11 +670,22 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         }
     }
 
-    private sealed class Lease(BundleContext context, IPlugin plugin, string directory)
+    private sealed class Bundle(string source, BundleContext context, string directory)
     {
+        public string Source = source;
         public BundleContext? Context = context;
-        public IPlugin? Plugin = plugin;
         public string Directory = directory;
+        public readonly Dictionary<(string Assembly, string Entry), IPlugin> Plugins = [];
+        public readonly Dictionary<(string Assembly, string Entry), IClrPluginModule> Modules = [];
+        public readonly Dictionary<(string Assembly, string Entry), TypertContribution?> Artifacts = [];
+        public int References;
+        public bool Replacing;
+    }
+
+    private sealed class Lease(Bundle bundle, IPlugin plugin)
+    {
+        public Bundle Bundle = bundle;
+        public IPlugin? Plugin = plugin;
     }
 
     private sealed class BundleContext(string main, IReadOnlyDictionary<string, Assembly> shared)

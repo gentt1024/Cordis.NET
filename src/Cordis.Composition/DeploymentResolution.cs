@@ -649,7 +649,7 @@ public sealed class DeploymentPackageResolver
 
 /// <summary>Explicit deployed module exports; does not reinterpret npm main/exports as CLR entrypoints.</summary>
 public sealed class DeploymentModuleResolver(DeploymentPackageResolver packages, IModuleResolver modules)
-    : IModuleResolver
+    : IModuleResolver, ITypertArtifactResolver
 {
     /// <summary>
     /// Gets the packages value.
@@ -672,9 +672,35 @@ public sealed class DeploymentModuleResolver(DeploymentPackageResolver packages,
     /// </summary>
     public ValueTask<IPlugin> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
     {
+        var route = ResolveRoute(specifier, baseUri);
+        return modules.ResolveAsync(route.Specifier, route.BaseUri, cancellationToken);
+    }
+
+    async ValueTask<TypertContribution?> ITypertArtifactResolver.ResolveAsync(
+        string specifier,
+        Uri baseUri,
+        CancellationToken cancellationToken)
+    {
+        if (modules is not ITypertArtifactResolver artifacts)
+            return null;
+        (string Specifier, Uri BaseUri) route;
+        try
+        {
+            route = ResolveRoute(specifier, baseUri);
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+
+        return await artifacts.ResolveAsync(route.Specifier, route.BaseUri, cancellationToken);
+    }
+
+    private (string Specifier, Uri BaseUri) ResolveRoute(string specifier, Uri baseUri)
+    {
         var name = DeploymentPackageResolver.BarePackageName(specifier);
         if (name is null)
-            return modules.ResolveAsync(specifier, baseUri, cancellationToken);
+            return (specifier, baseUri);
         var directory = packages.PackageDirectory(specifier, baseUri);
         if (directory is null)
             throw new FileNotFoundException($"Cannot resolve package '{name}' from '{baseUri}'.");
@@ -682,7 +708,7 @@ public sealed class DeploymentModuleResolver(DeploymentPackageResolver packages,
         if (!mappings.TryGetValue((DeploymentPackageResolver.Canonical(directory), subpath), out var target))
             throw new FileNotFoundException(
                 $"Package '{name}' has no deployed CLR module '{subpath}' (importer '{baseUri}').");
-        return modules.ResolveAsync(target, new Uri(Path.Combine(directory, "package.json")), cancellationToken);
+        return (target, new Uri(Path.Combine(directory, "package.json")));
     }
 
     private sealed class ModuleKeyComparer : IEqualityComparer<(string Directory, string Subpath)>

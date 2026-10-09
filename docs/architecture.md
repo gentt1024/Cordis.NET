@@ -1,5 +1,33 @@
 # Runtime ownership and platform adaptations
 
+## Typert and bundle contract ownership, 2026-10-09
+
+Module exports select plugin entries; they are separate from Cordis service provision. The CLR
+adapter shares an assembly/load-context generation across the exports of one physical bundle,
+while Loader retains each entry's configuration and Fiber. Complete bundle replacement reuses
+Loader/HMR activation and recovery. An optional CLR artifact factory follows that same resolver;
+it does not introduce a Core export table.
+
+Composition owns the native Typert declaration model, explicit JSON codecs, Fiber-owned registry,
+Loader artifact discovery and carrier-independent Remote dispatcher. A Roslyn generator shipped
+in the Composition package adapts source analysis to the pinned .NET SDK. It emits typed delegates
+and metadata factories without loading plugin assemblies or scanning their methods at runtime.
+System.Text.Json source metadata supplies schemas and serialization; the same descriptors emit
+TypeScript clients. ASP.NET Core supplies the authorized HTTP/NDJSON carrier above this layer.
+Actual visible services determine routing; a descriptor alone cannot invoke a provider.
+
+The native implementation preserves atomic registration, identity conflicts, exact-owner
+withdrawal, descriptor history and stale-call fences for the implemented subset. Invocation
+Context uses explicit providers and an asynchronous ambient call instead of JavaScript's rebound
+`this.ctx`. Collectible typed metadata belongs to its bundle generation: replacing that generation
+requires retiring and rebuilding its TypertLoader owner, or using host-shared DTO contracts.
+Neither path supplies product admission, draining or business recovery policy.
+
+This is an incremental implementation of the original application infrastructure scope. The
+native carrier is not the complete fixed Typert wire protocol. The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
+and [compatibility record](compatibility.md) distinguish verified paths from remaining type-graph,
+transport and production-consumer work; earlier HTTP management acceptance remains historical.
+
 ## ADR 001: one explicit execution domain
 
 Cordis's first activation is scheduled after the current synchronous registration segment.

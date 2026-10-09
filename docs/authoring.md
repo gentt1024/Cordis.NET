@@ -148,3 +148,94 @@ python scripts/verify.py
 ```
 
 Consult [validation](validation.md) for executed environments and limitations, and [compatibility](compatibility.md) for the fixed DSH target and evidence vocabulary. A listed test or deployment command is not by itself a claim that its latest run completed.
+
+## Module exports and generated Remote contracts, 2026-10-09
+
+This source continuation belongs to the existing application infrastructure scope; see the [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09). It does not announce a published package batch. The following contracts require a package batch built from this continuation.
+
+### Multiple CLR entries in one author package
+
+Keep the existing single-entry `assembly` and `entryType` fields in `cordis.plugin.json`. An optional `exports` object declares additional explicit subpaths in that assembly. For the [independent author fixture](../tests/fixtures/ClrMultiEntry/Plugin.cs), the declaration is:
+
+```json
+{
+  "assembly": "IndependentMultiEntry.dll",
+  "entryType": "IndependentMultiEntry.First",
+  "exports": {
+    "./second": "IndependentMultiEntry.Second"
+  }
+}
+```
+
+`DotnetPluginToolchain` registers the package root as `nuget:independentmultientry` and the additional entry as `nuget:independentmultientry/second`. Single-entry authors need no empty export table. Static hosts can continue to register exact requests through their existing resolvers. Module selection and Cordis service `Provide` remain separate operations; neither a Core `Exports` member nor an application `ApiCatalog` is required.
+
+`ClrModuleResolver` loads exports with the same normalized bundle directory in one shadow copy and collectible assembly load context. Aliases of the same assembly/entry type reuse the plugin instance; different entry types retain separate plugins. Loader entries retain their own raw configuration, Fiber activation and effect cleanup. Removing one resolver lease preserves other exports; the final lease requests bundle unload. Stop the relevant Fibers before removing their resolver mappings. Unload request, collection and shadow deletion remain separate observations.
+
+The resolver shares Core, Clr and Composition contract assemblies with the host by default. Pass other exact host contract assemblies through `sharedContracts`; private plugin dependencies stay in the bundle. This includes the identity required for generated `ITypertRemoteService` bindings and `IClrTypertModule` contributions.
+
+Replace a bundle containing distinct exports with the dictionary overload of `ClrModuleResolver.ReplaceAsync`, supplying every registered request, including unloaded exports and aliases. Its callback can use `Loader.ReplacePluginsAsync` to transfer existing raw configurations and switch the affected Fibers together. The single-entry overload remains available for one export and its aliases. Candidate preparation and route publication preserve a single bundle generation; callback effects and product state are not a transaction. Activation failure uses the existing Loader recovery path, and a settled Pending Fiber remains legal.
+
+### Declare and generate native Remote contracts
+
+`Cordis.NET.Composition` carries its Roslyn analyzer in the NuGet analyzer directory. An author consuming the package can declare a public, top-level, non-generic partial class with `RemoteService` and explicit `RemoteMethod` attributes. Supply a source-generated `JsonSerializerContext` for boundary types. This reduced declaration follows the [independent Remote author](../tests/fixtures/TypertConsumer/Author.cs):
+
+```csharp
+using System.Text.Json.Serialization;
+using Cordis.Composition;
+
+public sealed record EchoRequest(string Text, int Count);
+public sealed record EchoReply(string Text, int Count);
+
+[JsonSourceGenerationOptions(
+    RespectNullableAnnotations = true,
+    RespectRequiredConstructorParameters = true)]
+[JsonSerializable(typeof(EchoRequest))]
+[JsonSerializable(typeof(EchoReply))]
+public partial class RemoteJson : JsonSerializerContext;
+
+[RemoteService("sample:remote", typeof(RemoteJson), Namespace = "sample")]
+public partial class EchoService
+{
+    [RemoteMethod]
+    public Task<EchoReply> Echo(EchoRequest request) =>
+        Task.FromResult(new EchoReply(request.Text, request.Count));
+}
+```
+
+The generator emits `EchoServiceTypert.Contribution("IndependentRemote")`, descriptors and direct typed invocation bindings. The plugin still provides its actual `EchoService` under `sample:remote` using `Context.Provide`. Contract registration does not create or activate that service. JSON naming, nullable values and required constructor fields follow the supplied metadata; the two `Respect...` settings above are author choices, not implicit generator defaults. Declare metadata for every ordinary argument and result type. Unsupported declarations fail compilation; unsupported client schema shapes fail client generation.
+
+Remote methods currently use required ordinary parameters and `Task<T>`, or explicit `RemoteMethod(Stream = true)` with `IAsyncEnumerable<T>`. A final `CancellationToken` parameter may be included for cooperative cancellation, without a default value. Explicit Context and object lookup declarations have host-owned registration APIs; the complete scoped/lookup example is in the same fixture.
+
+### Register, call and withdraw contracts
+
+Create a `TypertRegistry` and `TypertGateway` in the existing Cordis context. `TypertLoader.StartAsync` discovers contributions for live Loader entries through an explicit artifact resolver; it does not scan assemblies. A static author uses `StaticTypertArtifactResolver.Register` with its generated contribution factory. A dynamic entry can implement `IClrTypertModule.CreateTypertContribution()` alongside `IClrPluginModule.CreatePlugin()`; `ClrModuleResolver` then supplies the artifacts from the same loaded bundle and factory identity. See the [static consumer](../tests/fixtures/TypertConsumer/Consumer.cs) and [multi-entry consumer](../tests/fixtures/ClrMultiEntry/Consumer.cs).
+
+The Typert loader's owner Fiber owns registrations and its activation-lifetime import cache. Multiple live entries of one exact module request share a contribution; removing the last matching entry withdraws it unless that request was explicitly configured. Registry registration validates the contribution before publishing it and rejects conflicts. Gateway calls resolve the live Cordis provider and check registration validity; withdrawing a definition invalidates retained invocations.
+
+For dynamic bundle replacement, stop the Typert loader owner Fiber before switching provider Fibers. After the resolver commits the new bundle, start a fresh owner Fiber and `TypertLoader`; after failed replacement and old-provider recovery, do the same against the old bundle. This releases old CLR `JsonTypeInfo` and generated bindings instead of reusing them with new CLR types. The independent multi-entry consumer demonstrates this ordering and old invocation rejection. Retained contributions, clients, service objects or errors can still keep collectible code alive; release them when their ownership ends.
+
+`MapCordisRemote` maps a host-authorized `TypertGateway` to native unary JSON and downlink NDJSON routes. The host supplies the authorization callback. Request abort and generated-client `AbortSignal` request cooperative cancellation; `byte[]` results use JSON base64. This carrier does not promise the complete pinned Typert wire protocol.
+
+Generate `.mjs` and `.d.mts` artifacts with `TypertArtifacts.GenerateClient(contribution)`. The result uses the same descriptors and schemas as the host. Generated clients expose typed calls and the Remote result/error envelope:
+
+```typescript
+import { createRemote, mountRemote } from "./remote.mjs";
+
+const client = createRemote("/remote");
+const echo = client["sample/Echo"];
+const result = await echo({
+  request: { Text: "hello", Count: 1 },
+});
+client.dispose();
+
+const mounted = await mountRemote(ctx, "/remote");
+await mounted.dispose();
+```
+
+Here `ctx` is the client Cordis owner. Await `mountRemote`: it registers owner cleanup and contributes methods to the shared root `remote.<namespace>` service. Contributions with disjoint methods can share that namespace; duplicate methods or an unrelated existing service are refused. Withdrawal removes only that contribution's methods, and final withdrawal removes the namespace service. Disposing either client stops admission and aborts its active fetches.
+
+### Consumer evidence and remaining scope
+
+The [multi-entry gate](../scripts/verify-clr-multi-entry.py) independently packs an author package, consumes it through `PackageReference`, installs its root/subpath entries and exercises shared identity, separate configurations, failed and successful replacement, withdrawal, generated TypeScript calls over real HTTP and invalid arguments. The separate [Remote gate](../scripts/verify-typert.py) covers the native Remote author chain. Use a fresh local package batch and the required Node/TypeScript dependencies. Platform acceptance remains governed by the completed results in [validation](validation.md); these examples alone do not establish Windows/Linux or Native AOT closure. Dynamic CLR loading requires the ordinary runtime.
+
+The remaining source type graph, rich Context/owned-value graph, Peer/uplink/event remotes, non-cooperative cancellation and binary attachment protocol remain open scope. Migration of existing PluginManager, Settings/configuration and client management consumers to generated Typert contracts remains open. Existing handwritten `MapCordisService` endpoints are still usable, but do not close those gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
