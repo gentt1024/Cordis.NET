@@ -197,11 +197,33 @@ public static class TypertArtifacts
                     "integer" or "number" => "number",
                     "boolean" => "boolean",
                     "null" => "null",
-                    "array" => "ReadonlyArray<" +
-                        (node.TryGetProperty("items", out var items) ? Render(items) : "unknown") + ">",
+                    "array" => ArrayType(node),
                     "object" => ObjectType(node),
                     _ => throw new NotSupportedException("Unsupported schema type " + value),
                 }));
+        }
+
+        string ArrayType(JsonElement node)
+        {
+            var hasItems = node.TryGetProperty("items", out var items);
+            if (!node.TryGetProperty("prefixItems", out var prefix))
+                return "ReadonlyArray<" + (hasItems ? Render(items) : "unknown") + ">";
+            var count = prefix.GetArrayLength();
+            var minimum = node.TryGetProperty("minItems", out var minItems) ? minItems.GetInt32() : 0;
+            int? maximum = node.TryGetProperty("maxItems", out var maxItems) ? maxItems.GetInt32() : null;
+            if (hasItems && items.ValueKind == JsonValueKind.False)
+                maximum = Math.Min(maximum ?? count, count);
+            if (minimum < 0 || minimum > count || maximum is < 0 || maximum < minimum || maximum > count)
+                throw new NotSupportedException(
+                    "Tuple projection requires a minimum within its prefix and no finite tail length limit.");
+            var length = maximum ?? count;
+            var elements = Enumerable
+                .Range(0, length)
+                .Select(index => index < minimum ? Render(prefix[index]) : "(" + Render(prefix[index]) + ")?")
+                .ToList();
+            if (maximum is null)
+                elements.Add("...Array<" + (hasItems ? Render(items) : "unknown") + ">");
+            return "readonly [" + string.Join(", ", elements) + "]";
         }
 
         string ObjectType(JsonElement node)

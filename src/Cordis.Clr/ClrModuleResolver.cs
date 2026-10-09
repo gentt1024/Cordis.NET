@@ -1,6 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Runtime.Loader;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Cordis.Composition;
 
@@ -103,6 +106,16 @@ public sealed class ClrUnloadObservation
 /// Explicit module mapping for ordinary CLR deployments. The owner must stop all fibers before
 /// disposing this resolver. It neither discovers packages nor restores NuGet at runtime.
 /// </summary>
+/// <remarks>
+/// Entries from one normalized bundle directory share a shadow copy and collectible load context.
+/// Each loaded main assembly contributes a dependency resolver and private managed directory. Resolution
+/// checks all registered roots; the same path or byte-identical copies reuse identity. Before adding a root,
+/// read-only inspection rejects declared, resolver-located managed and P/Invoke binary conflicts, including
+/// transitively referenced managed images and already selected dependencies. Arbitrary dynamic loading and
+/// factory side effects are not a rollback transaction. Explicit shared contracts and framework fallback
+/// retain their existing rules; unresolved native libraries retain CLR/OS lookup. This is a conservative
+/// binary identity rule, not an ABI compatibility check. Retained references can prevent cooperative unload.
+/// </remarks>
 [RequiresDynamicCode("Loading plugin DLLs requires the ordinary CLR; use static modules in Native AOT.")]
 [RequiresUnreferencedCode("Plugin entry point types are named explicitly in external DLLs.")]
 public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver, IAsyncDisposable
@@ -512,12 +525,12 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
             }
 
             var shadowMain = Path.Combine(destination, relative);
-            context ??= new BundleContext(shadowMain, shared);
+            context ??= new BundleContext(shared);
             bundle ??= new Bundle(source, context, destination);
             var key = ExportKey(relative, definition.EntryType);
             if (!bundle.Plugins.TryGetValue(key, out var plugin))
             {
-                var assembly = context.LoadFromAssemblyPath(shadowMain);
+                var assembly = context.LoadEntry(shadowMain);
                 var type = assembly.GetType(definition.EntryType, throwOnError: true)!;
                 if (Activator.CreateInstance(type) is not IClrPluginModule module)
                     throw new InvalidOperationException(
@@ -688,12 +701,168 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         public IPlugin? Plugin = plugin;
     }
 
-    private sealed class BundleContext(string main, IReadOnlyDictionary<string, Assembly> shared)
+    private sealed class BundleContext(IReadOnlyDictionary<string, Assembly> shared)
         : AssemblyLoadContext($"Cordis:{Guid.NewGuid():N}", isCollectible: true)
     {
         private static readonly HashSet<string> FrameworkAssemblies = ReadFrameworkAssemblies();
-        private readonly AssemblyDependencyResolver resolver = new(main);
-        private readonly string directory = Path.GetDirectoryName(main)!;
+        private readonly object dependencyGate = new();
+        private readonly List<DependencyRoot> roots = [];
+        private readonly Dictionary<string, string> managedPaths = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> nativePaths = new(PathComparer);
+
+        private static readonly StringComparer PathComparer =
+            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+        private sealed class DependencyRoot(string main)
+        {
+            public string Main
+            {
+                get;
+            } = main;
+
+            public AssemblyName Name
+            {
+                get;
+            } = AssemblyName.GetAssemblyName(main);
+
+            public AssemblyDependencyResolver Resolver
+            {
+                get;
+            } = new(main);
+
+            private readonly string directory = Path.GetDirectoryName(main)!;
+
+            public string? ResolveManaged(AssemblyName name)
+            {
+                if (string.Equals(Name.Name, name.Name, StringComparison.OrdinalIgnoreCase))
+                    return Main;
+                var path = Resolver.ResolveAssemblyToPath(name);
+                if (path is not null)
+                    return path;
+                var local = Path.Combine(directory, name.Name + ".dll");
+                return File.Exists(local) ? local : null;
+            }
+        }
+
+        public Assembly LoadEntry(string main)
+        {
+            string path;
+            lock (dependencyGate)
+            {
+                var root = roots.Find(root => PathComparer.Equals(root.Main, main));
+                if (root is null)
+                {
+                    root = new DependencyRoot(main);
+                    var candidates = roots.Append(root).ToArray();
+                    // The CLR can reuse a loaded assembly without calling Load again.
+                    foreach (var selected in managedPaths)
+                    {
+                        var name = AssemblyName.GetAssemblyName(selected.Value);
+                        SelectPath(
+                            candidates
+                                .Select(candidate =>
+                                    candidate.ResolveManaged(name))
+                                .Append(selected.Value),
+                            "managed",
+                            selected.Key);
+                    }
+
+                    foreach (var selected in nativePaths)
+                        SelectPath(
+                            candidates
+                                .Select(candidate =>
+                                    candidate.Resolver.ResolveUnmanagedDllToPath(selected.Key))
+                                .Append(selected.Value),
+                            "native",
+                            selected.Key);
+                    CheckDeclarations(candidates);
+                    path = SelectPath(
+                        candidates.Select(candidate => candidate.ResolveManaged(root.Name)),
+                        "managed",
+                        root.Name.Name!)!;
+                    roots.Add(root);
+                    managedPaths.TryAdd(root.Name.Name!, path);
+                }
+                else
+                    path = managedPaths[root.Name.Name!];
+            }
+
+            return LoadFromAssemblyPath(path);
+        }
+
+        private void CheckDeclarations(IReadOnlyList<DependencyRoot> candidates)
+        {
+            var pending = new Stack<string>(candidates.Select(root => root.Main));
+            var visited = new HashSet<string>(PathComparer);
+            while (pending.TryPop(out var path))
+            {
+                if (!visited.Add(path))
+                    continue;
+                using var stream = File.OpenRead(path);
+                using var image = new PEReader(stream);
+                var metadata = image.GetMetadataReader();
+                foreach (var handle in metadata.AssemblyReferences)
+                {
+                    var reference = metadata.GetAssemblyReference(handle);
+                    var name = new AssemblyName
+                    {
+                        Name = metadata.GetString(reference.Name),
+                        Version = reference.Version,
+                        CultureName = metadata.GetString(reference.Culture),
+                    };
+                    if (shared.ContainsKey(name.Name!))
+                        continue;
+                    var key = metadata.GetBlobBytes(reference.PublicKeyOrToken);
+                    if ((reference.Flags & AssemblyFlags.PublicKey) != 0)
+                        name.SetPublicKey(key);
+                    else
+                        name.SetPublicKeyToken(key);
+                    var dependency = SelectPath(
+                        candidates.Select(root => root.ResolveManaged(name)),
+                        "managed",
+                        name.Name!);
+                    if (dependency is not null)
+                        pending.Push(dependency);
+                }
+
+                foreach (var handle in metadata.MethodDefinitions)
+                {
+                    var method = metadata.GetMethodDefinition(handle);
+                    if ((method.Attributes & MethodAttributes.PinvokeImpl) == 0)
+                        continue;
+                    var import = method.GetImport();
+                    var name = metadata.GetString(metadata.GetModuleReference(import.Module).Name);
+                    SelectPath(
+                        candidates.Select(root => root.Resolver.ResolveUnmanagedDllToPath(name)),
+                        "native",
+                        name);
+                }
+            }
+        }
+
+        private static string? SelectPath(IEnumerable<string?> candidates, string kind, string name)
+        {
+            string? selected = null;
+            foreach (var candidate in candidates.OfType<string>().Distinct(PathComparer))
+            {
+                if (selected is null)
+                {
+                    selected = candidate;
+                    continue;
+                }
+
+                using var first = File.OpenRead(selected);
+                using var second = File.OpenRead(candidate);
+                if (!SHA256.HashData(first).AsSpan().SequenceEqual(SHA256.HashData(second)))
+                {
+                    var message = $"Conflicting {kind} dependency '{name}' in the CLR bundle: " +
+                        $"'{selected}' and '{candidate}' contain different binaries.";
+                    throw kind == "managed" ? new FileLoadException(message) : new DllNotFoundException(message);
+                }
+            }
+
+            return selected;
+        }
 
         private static HashSet<string> ReadFrameworkAssemblies()
         {
@@ -783,12 +952,15 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         {
             if (shared.TryGetValue(assemblyName.Name!, out var contract))
                 return contract;
-            var path = resolver.ResolveAssemblyToPath(assemblyName);
-            if (path is null)
+            string? path;
+            lock (dependencyGate)
             {
-                var local = Path.Combine(directory, assemblyName.Name + ".dll");
-                if (File.Exists(local))
-                    path = local;
+                path = SelectPath(
+                    roots.Select(root => root.ResolveManaged(assemblyName)),
+                    "managed",
+                    assemblyName.Name!);
+                if (path is not null)
+                    managedPaths.TryAdd(assemblyName.Name!, path);
             }
 
             if (path is not null)
@@ -802,7 +974,17 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
 
         protected override nint LoadUnmanagedDll(string unmanagedDllName)
         {
-            var path = resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
+            string? path;
+            lock (dependencyGate)
+            {
+                path = SelectPath(
+                    roots.Select(root => root.Resolver.ResolveUnmanagedDllToPath(unmanagedDllName)),
+                    "native",
+                    unmanagedDllName);
+                if (path is not null)
+                    nativePaths.TryAdd(unmanagedDllName, path);
+            }
+
             return path is null ? 0 : LoadUnmanagedDllFromPath(path);
         }
     }

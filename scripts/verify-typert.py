@@ -60,6 +60,7 @@ def main():
         author, author_project = project("Author", "<PackageId>IndependentRemote</PackageId><Version>1.0.0-alpha</Version>",
             f'<PackageReference Include="Cordis.NET.Composition" Version="{version}"/>')
         shutil.copyfile(root / "tests/fixtures/TypertConsumer/Author.cs", author / "Author.cs")
+        shutil.copyfile(root / "tests/fixtures/TypertConsumer/TupleContract.cs", author / "TupleContract.cs")
         run("author-pack", [options.dotnet, "pack", author_project, "-c", "Release", "-o", author_feed])
         # A compiler failure guards the source contract, using the shipped analyzer.
         (author / "Invalid.cs").write_text('using Cordis.Composition;\n'
@@ -71,6 +72,7 @@ def main():
             f'<PackageReference Include="IndependentRemote" Version="1.0.0-alpha"/><PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>'
             '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
         shutil.copyfile(root / "tests/fixtures/TypertConsumer/Consumer.cs", consumer / "Program.cs")
+        shutil.copyfile(root / "tests/fixtures/TypertConsumer/LifetimeCases.cs", consumer / "LifetimeCases.cs")
         generated = options.output / "generated"
         run("consumer-jit", [options.dotnet, "run", "--project", consumer_project, "-c", "Release", "--", generated])
         runtime = root / "artifacts/client-modules"

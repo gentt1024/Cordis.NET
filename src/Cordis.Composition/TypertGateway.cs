@@ -73,7 +73,14 @@ public sealed record TypertRemoteResult(bool Ok, JsonElement? Value, TypertRemot
 /// <summary>Carrier-independent Remote dispatch over live Cordis services and generated Typert contracts.</summary>
 public sealed class TypertGateway(Context caller, TypertRegistry registry)
 {
-    /// <summary>Invoke one unary method, with exact arguments, live providers and a generation check after awaits.</summary>
+    /// <summary>Invoke one unary method with exact arguments and current service and provider registrations.</summary>
+    /// <remarks>
+    /// The native adapter checks registration generations after successful provider resolution and before
+    /// encoding a successful business result. Withdrawal does not abort a resolver or business method already
+    /// running. Cancellation is cooperative: an aborted signal alone does not change a successful business
+    /// result, while a business failure under that signal becomes gateway/cancelled. Preparation failures
+    /// retain their own error mapping. These generation fences are a native validity adaptation.
+    /// </remarks>
     public async Task<TypertRemoteResult> InvokeAsync(
         string endpoint,
         JsonElement arguments,
@@ -124,7 +131,15 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
         }
     }
 
-    /// <summary>Iterate a downlink stream. Each move runs in the Context domain; early disposal cancels the native method.</summary>
+    /// <summary>Iterate a downlink stream in its invocation Context, checking native validity before and after successful reads.</summary>
+    /// <remarks>
+    /// Early disposal sends cooperative cancellation. Cancellation races a pending read, but cleanup must
+    /// first settle that read before calling DisposeAsync in the invocation Context. A business read or
+    /// cleanup that never finishes can keep disposal pending; cancellation does not forcibly terminate it.
+    /// Cleanup failures propagate from enumeration. The host must release and await or drain all active
+    /// iterators before closing the Cordis root. Service and provider withdrawal do not actively abort
+    /// an in-flight read; generation checks reject obsolete successful values before encoding them.
+    /// </remarks>
     public async IAsyncEnumerable<TypertRemoteResult> StreamAsync(
         string endpoint,
         JsonElement arguments,

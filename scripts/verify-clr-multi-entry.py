@@ -1,12 +1,109 @@
 """Consume a local Cordis package batch through an independently packed multi-entry author bundle."""
 import argparse
 import json
+import glob
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import sys
 import xml.etree.ElementTree as ET
+
+
+def verify_multi_assembly(options, root, directory, version, project, run):
+    fixture = root / "tests/fixtures/ClrMultiAssembly"
+    reference = f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>'
+
+    def author(name, assembly, source, constants="", dependency=None):
+        folder = directory / name
+        references = reference if source not in ("Private.cs", "Bridge.cs") else ""
+        if dependency:
+            references += f'<ProjectReference Include="{dependency}"/>'
+        path = project(folder, f'<AssemblyName>{assembly}</AssemblyName>' +
+            f'<DefineConstants>{constants}</DefineConstants>', references)
+        shutil.copyfile(fixture / source, folder / source)
+        return path
+
+    private_first = author("PrivateFirst", "BundlePrivate", "Private.cs")
+    private_second = author("PrivateSecond", "BundlePrivate", "Private.cs", "SECOND")
+    bridge = author("Bridge", "BundleBridge", "Bridge.cs", dependency=private_first)
+    managed = [
+        author("PlainA", "BundleA", "ManagedEntry.cs"),
+        author("PrivateA", "BundleA", "ManagedEntry.cs", "PRIVATE", private_first),
+        author("FirstB", "BundleB", "ManagedEntry.cs", "PRIVATE", private_first),
+        author("SecondB", "BundleB", "ManagedEntry.cs", "PRIVATE", private_second),
+        author("DelayedA", "BundleA", "ManagedEntry.cs", "PRIVATE;BRIDGE;DELAYED", bridge),
+        author("BridgeB", "BundleB", "ManagedEntry.cs", "PRIVATE;BRIDGE", bridge),
+    ]
+    if os.name == "nt":
+        constants = "WINDOWS"
+        native_name = "CordisBundleNative.dll"
+        system = Path(os.environ["SystemRoot"]) / "System32"
+        native_files = [system / "version.dll", system / "winmm.dll"]
+        native_bytes = [path.read_bytes() for path in native_files]
+    elif sys.platform.startswith("linux"):
+        constants = ""
+        native_name = "libCordisBundleNative.so"
+        matches = sorted(glob.glob("/lib/*/libm.so.6") + glob.glob("/usr/lib/*/libm.so.6") +
+                         glob.glob("/lib/libm.so.6") + glob.glob("/usr/lib/libm.so.6"))
+        if not matches:
+            raise RuntimeError("The private native CLR fixture requires an installed libm.so.6.")
+        native_bytes = [Path(matches[0]).read_bytes()]
+        # ELF loading ignores trailing data; both variants must pass a real cos invocation.
+        native_bytes.append(native_bytes[0] + b"Cordis native binary conflict fixture\n")
+    else:
+        raise RuntimeError("The private native CLR fixture supports Windows and Linux.")
+    native = [
+        author("NativeFirst", "NativeFirst", "NativeEntry.cs", constants),
+        author("NativeSecond", "NativeSecond", "NativeEntry.cs", constants + ";SECOND"),
+        author("NativeDelayed", "NativeFirst", "NativeEntry.cs", constants + ";DELAYED"),
+    ]
+    outputs = {}
+    for path in [*managed, *native]:
+        output = directory / (path.stem + "-output")
+        run("multi-assembly-" + path.stem + "-build", [options.dotnet, "build", path, "-c", "Release", "-o", output])
+        outputs[path.stem] = output
+    bundles = directory / "multi-assembly-bundles"
+
+    def copy_entry(bundle, subdirectory, source, assembly, private=True, native_index=None):
+        target = bundles / bundle / subdirectory
+        target.mkdir(parents=True)
+        for extension in (".dll", ".deps.json"):
+            shutil.copyfile(outputs[source] / (assembly + extension), target / (assembly + extension))
+        private_file = outputs[source] / "BundlePrivate.dll"
+        if private and private_file.exists():
+            shutil.copyfile(private_file, target / private_file.name)
+        bridge_file = outputs[source] / "BundleBridge.dll"
+        if bridge_file.exists():
+            shutil.copyfile(bridge_file, target / bridge_file.name)
+        if native_index is not None:
+            (target / native_name).write_bytes(native_bytes[native_index])
+            deps_path = target / (assembly + ".deps.json")
+            deps = json.loads(deps_path.read_text(encoding="utf-8"))
+            libraries = deps["targets"][deps["runtimeTarget"]["name"]]
+            entry = next(key for key in libraries if key.startswith(assembly + "/"))
+            libraries[entry]["native"] = {native_name: {}}
+            deps_path.write_text(json.dumps(deps), encoding="utf-8")
+
+    for bundle, first, second in [("order", "PlainA", "FirstB"), ("same", "PrivateA", "FirstB"),
+                                  ("conflict", "PrivateA", "SecondB"), ("missing", "PlainA", "FirstB")]:
+        copy_entry(bundle, "a", first, "BundleA")
+        copy_entry(bundle, "b", second, "BundleB", private=bundle != "missing")
+    copy_entry("native-same", "a", "NativeFirst", "NativeFirst", native_index=0)
+    copy_entry("native-same", "b", "NativeFirst", "NativeFirst", native_index=0)
+    copy_entry("native-conflict", "a", "NativeFirst", "NativeFirst", native_index=0)
+    copy_entry("native-conflict", "b", "NativeSecond", "NativeSecond", native_index=1)
+    copy_entry("late-managed", "a", "DelayedA", "BundleA")
+    copy_entry("late-managed", "b", "BridgeB", "BundleB")
+    shutil.copyfile(outputs["SecondB"] / "BundlePrivate.dll", bundles / "late-managed/b/BundlePrivate.dll")
+    copy_entry("late-native", "a", "NativeDelayed", "NativeFirst", native_index=0)
+    copy_entry("late-native", "b", "NativeSecond", "NativeSecond", native_index=1)
+    consumer = directory / "MultiAssemblyConsumer"
+    consumer_project = project(consumer, '<OutputType>Exe</OutputType>', reference)
+    shutil.copyfile(fixture / "Consumer.cs", consumer / "Program.cs")
+    run("multi-assembly-consumer-run", [options.dotnet, "run", "--project", consumer_project,
+        "-c", "Release", "--", bundles])
 
 
 def main():
@@ -16,10 +113,12 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--node", default="node")
     parser.add_argument("--tsc", type=Path, help="Path to the existing TypeScript compiler CLI.")
+    parser.add_argument("--multi-assembly-only", action="store_true",
+                        help="Run only the nested CLR assembly/dependency package consumer.")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     tsc = options.tsc or root / "clients/modules/node_modules/typescript/bin/tsc"
-    if not tsc.is_file():
+    if not options.multi_assembly_only and not tsc.is_file():
         parser.error("TypeScript compiler not found; install the client module dependencies or provide --tsc.")
     version = ET.parse(root / "Directory.Build.props").findtext(".//Version")
     directory = Path(tempfile.mkdtemp(prefix="cordis-multi-entry-consumer-"))
@@ -57,6 +156,9 @@ def main():
         return path
 
     try:
+        verify_multi_assembly(options, root, directory, version, project, run)
+        if options.multi_assembly_only:
+            return 0
         author = directory / "Author"
         author_project = project(author,
             '<AssemblyName>IndependentMultiEntry</AssemblyName><PackageId>IndependentMultiEntry</PackageId><Version>1.0.0-alpha</Version>',

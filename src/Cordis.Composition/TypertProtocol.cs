@@ -87,7 +87,11 @@ public sealed class RemoteLookupAttribute(string key, string wire, Type wireType
     } = wireType;
 }
 
-/// <summary>Compiler-independent, strict boundary codec using explicitly supplied JSON type metadata.</summary>
+/// <summary>Compiler-independent input validation and serialization using explicitly supplied JSON type metadata.</summary>
+/// <remarks>
+/// The native schema subset validates decoded inputs. Encoding uses the supplied serializer metadata without
+/// a second schema admission check. This codec does not implement an arbitrary Typert wire protocol.
+/// </remarks>
 public abstract class TypertCodec
 {
     /// <summary>Gets the stable declaration identity used to match dependency providers.</summary>
@@ -97,18 +101,36 @@ public abstract class TypertCodec
     }
 
     /// <summary>Gets the codec's JSON Schema projection.</summary>
+    /// <remarks>
+    /// JSON metadata codecs prepare and cache this projection lazily. Access rejects unsupported schema
+    /// keywords or references with NotSupportedException; references must resolve within the same schema.
+    /// </remarks>
     public abstract JsonElement Schema
     {
         get;
     }
 
     /// <summary>Validate and decode a JSON boundary value.</summary>
+    /// <remarks>
+    /// JSON metadata codecs prepare Schema on first use, validate the native schema subset, then deserialize.
+    /// Invalid input throws JsonException; unsupported schema features throw NotSupportedException. A nullable
+    /// codec still prepares its inner schema before accepting null. Recursive validation is bounded.
+    /// </remarks>
     public abstract object? Decode(JsonElement value);
 
     /// <summary>Encode a native boundary value.</summary>
+    /// <remarks>
+    /// JSON metadata codecs serialize with their supplied metadata; they do not prepare Schema or apply
+    /// input validation to the result. Invalid native values and serialization failures propagate to the caller.
+    /// </remarks>
     public abstract JsonElement Encode(object? value);
 
     /// <summary>Create an AOT-compatible codec from source-generated JSON metadata and an optional explicit schema.</summary>
+    /// <remarks>
+    /// The optional schema is cloned at creation. Without it, Schema is exported from metadata on first access.
+    /// Creation does not validate schema support; Schema or Decode performs that lazy check. The metadata must
+    /// describe both the native input and serialization result. Encode does not validate its schema projection.
+    /// </remarks>
     public static TypertCodec Create<T>(JsonTypeInfo<T> metadata, string? typeSymbol = null, JsonElement? schema = null)
     {
         ArgumentNullException.ThrowIfNull(metadata);
@@ -116,6 +138,11 @@ public abstract class TypertCodec
     }
 
     /// <summary>Create a nullable reference boundary codec, preserving source nullability erased by JSON type metadata.</summary>
+    /// <remarks>
+    /// This wraps Create with an explicit null alternative and rebases local schema references. Schema support
+    /// is checked lazily, including when Decode receives null. Encode retains the inner serializer's behavior
+    /// and does not perform a result schema admission check.
+    /// </remarks>
     public static TypertCodec CreateNullable<T>(
         JsonTypeInfo<T> metadata,
         string? typeSymbol = null,

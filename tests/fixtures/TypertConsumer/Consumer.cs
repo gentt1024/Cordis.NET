@@ -68,6 +68,7 @@ await root.RunAsync(async ctx =>
     contracts = await TypertLoader.StartAsync(ctx, loader, registry, artifactResolver);
 });
 var artifact = TypertArtifacts.GenerateClient(contribution);
+TupleContract.Verify(contribution);
 try
 {
     TypertArtifacts.GenerateClient(
@@ -84,6 +85,12 @@ catch (ArgumentException)
 Directory.CreateDirectory(args[0]);
 await File.WriteAllTextAsync(Path.Combine(args[0], "remote.mjs"), artifact.Module);
 await File.WriteAllTextAsync(Path.Combine(args[0], "remote.d.mts"), artifact.Declaration);
+foreach (var (name, contract) in TupleContract.ClientContracts(contribution))
+{
+    await File.WriteAllTextAsync(Path.Combine(args[0], name + ".mjs"), contract.Module);
+    await File.WriteAllTextAsync(Path.Combine(args[0], name + ".d.mts"), contract.Declaration);
+}
+
 foreach (var method in new[] { "Echo", "Failure" })
 {
     var part = TypertArtifacts.GenerateClient(
@@ -139,6 +146,12 @@ static void Require(bool condition, string message)
 static void Error(TypertRemoteResult result, string code) => Require(
     !result.Ok && result.Error?.Code == code,
     "Expected " + code + ", got " + result.Error?.Code);
+
+await LifetimeCases.VerifyAsync();
+var tuple = await gateway.InvokeAsync("sample/Tuple", Json("{\"value\":[\"tuple\",4]}"));
+Require(tuple.Ok && tuple.Value!.Value[1].GetInt32() == 4, "Typed tuple call failed.");
+foreach (var value in new[] { "[4,\"tuple\"]", "[\"tuple\"]", "[\"tuple\",4,true]" })
+    Error(await gateway.InvokeAsync("sample/Tuple", Json("{\"value\":" + value + "}")), "gateway/input-invalid");
 
 var echo = await gateway.InvokeAsync("sample/Echo", Json("{\"request\":{\"Text\":\"hello\",\"Count\":3}}"));
 Require(echo.Ok && echo.Value!.Value.GetProperty("Text").GetString() == "hello", "Typed echo failed.");

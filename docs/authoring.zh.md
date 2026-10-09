@@ -173,6 +173,10 @@ python scripts/verify.py
 
 Resolver 默认与宿主共享 Core、Clr、Composition 合同程序集。其他合同通过 `sharedContracts` 传入宿主的精确程序集；插件私有依赖留在 bundle 内。这一身份边界也覆盖生成的 `ITypertRemoteService` 绑定及 `IClrTypertModule` 贡献。
 
+显式 resolver 登记可以选择同一 bundle 目录下不同的主程序集。每个主程序集在加载前登记自身依赖 resolver 与目录，私有 managed/native 查询全部已登记根。同一路径或字节完全相同的副本复用一个依赖；同一依赖名称的不同 binary 会被拒绝，包括新增入口本可直接复用已加载程序集的情况。这是保守的原生 bundle 规则，不是 ABI 或程序集版本兼容算法。依赖 resolver 未定位的 native 库保留 CLR/OS 查找行为。[多程序集 fixture](../tests/fixtures/ClrMultiAssembly/Consumer.cs) 检查两个入口顺序和实际私有 native 调用。
+
+登记依赖根前，resolver 读取 managed 引用与 P/Invoke 声明，递归沿 resolver 定位的 managed 文件检查候选路径，不执行工厂。因此即使原入口尚未调用依赖，也能检查已声明且可定位的冲突；已选择过的依赖也会检查。任意动态加载与工厂副作用不构成可回滚事务。
+
 替换包含不同导出的 bundle 时，使用 `ClrModuleResolver.ReplaceAsync` 的字典重载，提供所有已登记请求，包括尚未加载的导出和别名。回调可以使用 `Loader.ReplacePluginsAsync` 转移既有 raw 配置并共同切换相关 Fiber。单入口重载继续支持一个导出及其别名。候选准备与路由发布保持单一 bundle 代际；回调副作用和产品状态不构成事务。激活失败沿用既有 Loader 恢复路径，已稳定的 Pending Fiber 仍合法。
 
 ### 声明与生成原生 Remote 合同
@@ -206,6 +210,8 @@ public partial class EchoService
 
 根可空引用标注（例如 `string?` 参数或 `Task<string?>` 结果）由 Roslyn 通过 `TypertCodec.CreateNullable` 传入，因为运行时 JSON 类型元数据会丢失这些标注。codec 增加 null 分支并迁移局部 Schema 引用，保留非空递归子节点。因此生成声明对这些边界暴露 `string | null`。这不代表已完成嵌套泛型空性分析，也不为 Gateway 增加结果 Schema 校验。
 
+`TypertCodec` 在首次使用 `Schema` 或 `Decode` 时延迟准备并检查 Schema，可空输入也会执行检查。Decode 校验已支持的原生子集，再反序列化；Encode 使用所提供元数据序列化，不准备或校验结果 Schema。不受支持的 Schema 特性明确失败。客户端投影将 `prefixItems` 保留为 readonly tuple，支持有界可选前缀、嵌套局部引用及无界的类型化或 unknown 尾部。超出前缀的最小长度、有限的尾部长度上限会被拒绝。[tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) 向生成 binding 提供显式 Schema，区分真实闭合 tuple HTTP 调用与仅 codec/投影的变体证据；它不证明 Roslyn 推断 CLR tuple 类型或完整源类型图。
+
 Remote 方法当前支持必需普通参数与 `Task<T>`，或显式 `RemoteMethod(Stream = true)` 的 `IAsyncEnumerable<T>`。可以增加最后一个 `CancellationToken` 参数传递协作取消，但不能声明默认值。显式 Context 和对象 lookup 声明具有宿主拥有的登记 API；同一 fixture 包含完整作用域与 lookup 示例。
 
 ### 登记、调用与撤销合同
@@ -213,6 +219,8 @@ Remote 方法当前支持必需普通参数与 `Task<T>`，或显式 `RemoteMeth
 在既有 Cordis Context 中创建 `TypertRegistry` 和 `TypertGateway`。`TypertLoader.StartAsync` 通过显式 artifact resolver 发现活跃 Loader Entry 的贡献，不扫描程序集。静态作者通过 `StaticTypertArtifactResolver.Register` 登记生成贡献工厂。动态入口可以同时实现 `IClrTypertModule.CreateTypertContribution()` 和 `IClrPluginModule.CreatePlugin()`；`ClrModuleResolver` 从同一已加载 bundle 和工厂身份提供制品。见[静态消费者](../tests/fixtures/TypertConsumer/Consumer.cs)与[多入口消费者](../tests/fixtures/ClrMultiEntry/Consumer.cs)。
 
 Typert loader 的 owner Fiber 拥有登记及其激活期导入缓存。同一精确模块请求的多个活跃 Entry 共享一项贡献；最后一个匹配 Entry 移除后撤销贡献，除非显式配置了该请求。Registry 在发布前校验贡献并拒绝冲突。Gateway 调用解析活跃 Cordis provider 并检查登记有效性；撤销定义会使保留调用失效。
+
+原生 Gateway 还在成功解析提供者之后、编码成功业务结果或流条目之前检查提供者代际。撤销 Service、lookup 或 Context 提供者不会主动中止已运行的工作；即使生成 definition 仍活跃，旧提供者的成功结果也会被拒绝。[独立生命周期用例](../tests/fixtures/TypertConsumer/LifetimeCases.cs) 在实际异步边界停住各提供者、完成替换，同时检查旧成功被拒绝与当前提供者可调用。这些检查属于原生有效性适配，不是产品退休或排空政策。
 
 动态 bundle 替换时，先停止 Typert loader owner Fiber，再切换 provider Fiber。Resolver 提交新 bundle 后，创建新 owner Fiber 并启动 `TypertLoader`；替换失败并恢复旧 provider 后，同样针对旧 bundle 重建。这样释放旧 CLR `JsonTypeInfo` 和生成绑定，避免用旧元数据处理新 CLR 类型。独立多入口消费者验证这一顺序和旧调用失效。保留的贡献、客户端、服务对象或错误仍可能保留可收集代码；所有权结束后应释放这些引用。
 

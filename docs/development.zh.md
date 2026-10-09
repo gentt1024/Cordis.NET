@@ -134,3 +134,9 @@ Roslyn 还通过 `TypertCodec.CreateNullable` 提供根引用可空注解，因�
 两平台独立 Remote NuGet 作者/消费者均通过七步：作者打包、指定编译拒绝、仅包引用 JIT、Client 运行时构建、实际 HTTP 与严格 TypeScript 和固定 Cordis 挂载、静态 Native AOT 发布及 native 执行。独立 CLR 包通过十个阶段，覆盖标准工具链多 Entry 交付、共享程序集/ALC 身份、分别配置、组级失败恢复、带 DTO 变更的成功替换、生成 HTTP 客户端、旧调用拒绝及撤销。八个 Cordis.NET 包与 Greeting 示例的检查/符号/离线消费者及既有 Client 源码路径通过；验证脚本自测在两平台各通过 38 项。详细结果与限制见[验收记录](validation.zh.md#2026-10-09-模块导出与原生-remote-续建)。
 
 后续改动仅添加包括本范围续账在内的文档验收记录；报告验证上述检查点，不证明之后的运行时变更。未关闭行继续保持未关闭，本次验收不宣称整个 Typert 子系统完成。Windows/Linux、静态 JIT/AOT、动态 CLR 和 TypeScript 证据分开记录；不宣称 Native AOT 内动态加载 CLR。未执行 Hosted CI、远端 SourceLink 获取或 Maker 运行。未执行 NuGet 发布、GitHub Release、版本升级或部署。
+
+### 既有验收之后的质量续作
+
+后续有界质量审查发现，共享 CLR bundle 只使用第一主程序集的依赖根，客户端 Schema 投影则丢弃了 tuple 的 `prefixItems`。两者是既有公开能力中的实现缺陷。修复增加按入口登记的依赖根与确定性的私有 binary 冲突拒绝，并保留位置 tuple 类型，对不支持的长度明确拒绝。独立包 fixture 保留修复前对照，检查两个 CLR 入口顺序、实际 native 依赖及类型化 tuple 消费。
+
+审查还发现公开 XML 缺少生命周期限制，提供者代际检查的证据也不完整。Codec 文档现区分延迟输入 Schema 校验与结果序列化；Gateway 文档说明撤销、协作取消、串行流清理与 root 关闭边界。独立的仅包引用用例保留活跃 definition，分别替换 unary Service、等待中的 lookup、Context 和 downlink 提供者。最新[验证记录](validation.zh.md)将已完成检查绑定到精确源码及包批次。这些修正承接原范围；上述通用未完成职责仍未实现，不改写历史验收。

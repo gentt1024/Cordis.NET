@@ -96,6 +96,10 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 
 ### 未闭合范围与证据边界
 
+后续质量修复在共享 CLR bundle 内保留每个主程序集的依赖根并拒绝冲突的私有 binary，避免只依赖第一入口的 resolver 或 CLR 已加载程序集缓存。字节相同的副本可以共享身份。这项显式 .NET 规则不推导上游 ABI 兼容算法。原生 Schema 投影也保留位置 tuple 合同，不再丢弃 `prefixItems`；不支持的长度约束会拒绝生成。这些修复不增加完整源类型分析。
+
+提供者代际检查独立于 definition 撤销验证：等待中的 unary Service、lookup、Context 和 downlink 操作保留活跃 descriptor，同时替换其提供者。撤销本身不会中止这些操作；旧成功结果由原生代际检查拒绝。JSON codec 输入校验、结果序列化与流清理限制分别在公开 API 和[作者指南](authoring.zh.md)中说明。修复后的精确源码与包检查点以最新验证记录为准；早期平台结果只适用于其记录的检查点。
+
 完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流与 event remotes 及完整二进制 attachment 协议仍未实现。PluginManager、Settings/配置与客户端管理生产消费者向生成合同的迁移仍未完成。既有配置 Schema 导出、手写 `MapCordisService` 与 HTTP/SSE 管理保留当前合同，不能据此计为已完成 Typert 消费者。
 
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。

@@ -7,6 +7,10 @@ import { pathToFileURL } from 'node:url'
 const [base, directory, runtime] = process.argv.slice(2)
 const { createRemote, mountRemote } = await import(pathToFileURL(resolve(directory, 'remote.mjs')))
 const client = createRemote(base)
+assert.deepEqual(await client['sample/Tuple']({ value: ['tuple', 4] }), { ok: true, value: ['tuple', 4] })
+for (const value of [[4, 'tuple'], ['tuple'], ['tuple', 4, true]]) {
+  assert.equal((await client['sample/Tuple']({ value })).error.code, 'gateway/input-invalid')
+}
 const echo = await client['sample/Echo']({ request: { Text: 'typescript', Count: 4 } })
 assert.deepEqual(echo, { ok: true, value: { Text: 'typescript', Count: 4 } })
 assert.deepEqual(await client['sample/NullableEcho']({ text: null }), { ok: true, value: null })
@@ -165,6 +169,14 @@ await iterator.return()
 await writeFile(resolve(directory, 'consumer.mts'), `import { createRemote } from './remote.mjs'
 const remote = createRemote('http://localhost/remote')
 async function call() {
+  const tuple = await remote['sample/Tuple']({value:['tuple',4]})
+  if (tuple.ok) { const value: readonly [string, number] = tuple.value; void value }
+  // @ts-expect-error Tuple positions retain their declared types.
+  remote['sample/Tuple']({value:[4,'tuple']})
+  // @ts-expect-error Both tuple positions are required.
+  remote['sample/Tuple']({value:['tuple']})
+  // @ts-expect-error A closed tuple cannot include a tail.
+  remote['sample/Tuple']({value:['tuple',4,true]})
   const result = await remote['sample/Echo']({request:{Text:'typed', Count:1}})
   if (result.ok) { const count: number = result.value.Count; void count }
   const nullable = await remote['sample/NullableEcho']({text:null})
@@ -186,5 +198,30 @@ async function call() {
 }
 void call
 `)
-execFileSync(process.execPath, [resolve('clients/modules/node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', resolve(directory, 'consumer.mts')], { stdio: 'inherit' })
+await writeFile(resolve(directory, 'tuple-consumer.mts'), `import { createRemote as nested } from './tuple-nested.mjs'
+import { createRemote as optional } from './tuple-optional.mjs'
+import { createRemote as rest } from './tuple-rest.mjs'
+import { createRemote as open } from './tuple-open.mjs'
+async function call() {
+  const result = await nested('')['sample/Tuple']({value:['tuple',[4,true]]})
+  if (result.ok) { const value: readonly [string, readonly [number, boolean]] = result.value; void value }
+  // @ts-expect-error Nested reference tuples retain positional types.
+  nested('')['sample/Tuple']({value:['tuple',[true,4]]})
+  optional('')['sample/Tuple']({value:['tuple']})
+  optional('')['sample/Tuple']({value:['tuple',4]})
+  // @ts-expect-error The required prefix remains required.
+  optional('')['sample/Tuple']({value:[]})
+  // @ts-expect-error Optional means omitted, not any type or null.
+  optional('')['sample/Tuple']({value:['tuple',null]})
+  rest('')['sample/Tuple']({value:['tuple',true,false]})
+  // @ts-expect-error Rest elements retain their declared type.
+  rest('')['sample/Tuple']({value:['tuple',4]})
+  open('')['sample/Tuple']({value:[]})
+  open('')['sample/Tuple']({value:['tuple',null,{}]})
+  // @ts-expect-error An omitted minItems does not erase prefix types when present.
+  open('')['sample/Tuple']({value:[4]})
+}
+void call
+`)
+execFileSync(process.execPath, [resolve('clients/modules/node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', resolve(directory, 'consumer.mts'), resolve(directory, 'tuple-consumer.mts')], { stdio: 'inherit' })
 console.log('PASS generated TypeScript declarations, real HTTP/stream/error/lookup/scope/cancellation/binary projection and pinned Cordis mount withdrawal with stale callbacks')

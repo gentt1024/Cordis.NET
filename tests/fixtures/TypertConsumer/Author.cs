@@ -21,11 +21,24 @@ public sealed record TreeNode(string Value, TreeNode[] Children);
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(byte[]))]
 [JsonSerializable(typeof(TreeNode))]
+[JsonSerializable(typeof(JsonElement))]
 public partial class RemoteJson : JsonSerializerContext;
 
 [RemoteService("sample:remote", typeof(RemoteJson), Namespace = "sample")]
 public partial class EchoService
 {
+    public int LookupCalls
+    {
+        get;
+        private set;
+    }
+
+    public int ScopedCalls
+    {
+        get;
+        private set;
+    }
+
     public TaskCompletionSource Entered
     {
         get;
@@ -62,6 +75,9 @@ public partial class EchoService
     public Task<EchoReply> Echo(EchoRequest request) => Task.FromResult(new EchoReply(request.Text, request.Count));
 
     [RemoteMethod]
+    public Task<JsonElement> Tuple(JsonElement value) => Task.FromResult(value);
+
+    [RemoteMethod]
     public Task<string?> NullableEcho(string? text) => Task.FromResult(text);
 
     [RemoteMethod]
@@ -89,12 +105,18 @@ public partial class EchoService
     }
 
     [RemoteMethod(Context = "@scope/example")]
-    public Task<string> Scoped(string text) =>
-        Task.FromResult(TypertInvocation.Current!.Context.Metadata["prefix"] + ":" + text);
+    public Task<string> Scoped(string text)
+    {
+        ScopedCalls++;
+        return Task.FromResult(TypertInvocation.Current!.Context.Metadata["prefix"] + ":" + text);
+    }
 
     [RemoteMethod]
-    public Task<string> Lookup([RemoteLookup("@scope/document", "documentId", typeof(string))] Document document) =>
-        Task.FromResult(document.Title);
+    public Task<string> Lookup([RemoteLookup("@scope/document", "documentId", typeof(string))] Document document)
+    {
+        LookupCalls++;
+        return Task.FromResult(document.Title);
+    }
 
     [RemoteMethod(Stream = true)]
     public async IAsyncEnumerable<int> Count(int count, [EnumeratorCancellation] CancellationToken signal)
@@ -141,5 +163,6 @@ public static class AuthorModule
         Apply = (context, _) => context.Provide("sample:remote", service)
     };
 
-    public static TypertContribution Contribution() => EchoServiceTypert.Contribution("IndependentRemote");
+    public static TypertContribution Contribution() =>
+        TupleContract.Apply(EchoServiceTypert.Contribution("IndependentRemote"));
 }
