@@ -12,16 +12,26 @@ dotnet = os.environ.get("DOTNET_HOST_PATH", "dotnet")
 directory = Path(tempfile.mkdtemp(prefix="cordis-cli-invocation-"))
 project = directory / "InvocationConsumer.csproj"
 references = "".join(f'<Reference Include="Cordis.{name}"><HintPath>{escape(str(ROOT / "src" / ("Cordis." + name) / "bin/Release/net10.0" / ("Cordis." + name + ".dll")))}</HintPath></Reference>' for name in ("Core", "Composition", "Clr"))
-project.write_text(f'<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup><ItemGroup>{references}</ItemGroup></Project>')
+references += f'<Reference Include="YamlDotNet"><HintPath>{escape(str(ROOT / "tools/Cordis.Cli/bin/Release/net10.0/YamlDotNet.dll"))}</HintPath></Reference>'
+project.write_text(f'<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup><ItemGroup>{references}</ItemGroup></Project>')
 (directory / "NuGet.Config").write_text('<configuration><packageSources><clear /></packageSources></configuration>')
 (directory / "Directory.Build.props").write_text('<Project />')
 (directory / "Directory.Build.targets").write_text('<Project />')
 shutil.copyfile(ROOT / "tests/fixtures/InvocationConsumer/Module.cs", directory / "Module.cs")
+(directory / "Program.cs").write_text('''using Cordis.Clr;
+using Cordis.Composition;
+await using var resolver = new ClrModuleResolver();
+using var tools = new DotnetPluginToolchain(args[0], resolver, []);
+await tools.PublishAsync(new PreparedPackage("Invocation", "1.0.0", args[1]));
+''')
 subprocess.run([dotnet, "build", str(project), "-c", "Release", "--configfile", str(directory / "NuGet.Config")], cwd=directory, check=True)
 profile = directory / "profile"
-bundle = profile / ".cordis/packages/invocation/1.0.0"
+bundle = profile / ".cordis/work/invocation"
 shutil.copytree(directory / "bin/Release/net10.0", bundle)
 (bundle / "cordis.plugin.json").write_text(json.dumps({"assembly": "InvocationConsumer.dll", "entryType": "Module"}))
+(bundle / "package.json").write_text(json.dumps({"name": "Invocation", "version": "1.0.0"}))
+(profile / "package.json").write_text(json.dumps({"name": "invocation-profile", "dependencies": {}}))
+subprocess.run([dotnet, str(directory / "bin/Release/net10.0/InvocationConsumer.dll"), str(profile), str(bundle)], cwd=directory, check=True)
 (profile / "package.json").write_text(json.dumps({"name": "invocation-profile", "dependencies": {"Invocation": "1.0.0"}}))
 (profile / "cordis.yml").write_text('- id: app\n  name: nuget:invocation\n')
 cli = ROOT / "tools/Cordis.Cli/bin/Release/net10.0/Cordis.Cli.dll"
