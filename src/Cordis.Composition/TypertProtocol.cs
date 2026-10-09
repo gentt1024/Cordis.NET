@@ -115,6 +115,104 @@ public abstract class TypertCodec
         return new TypedCodec<T>(metadata, typeSymbol ?? metadata.Type.FullName ?? metadata.Type.Name, schema?.Clone());
     }
 
+    /// <summary>Create a nullable reference boundary codec, preserving source nullability erased by JSON type metadata.</summary>
+    public static TypertCodec CreateNullable<T>(
+        JsonTypeInfo<T> metadata,
+        string? typeSymbol = null,
+        JsonElement? schema = null)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        return new NullableCodec(
+            Create(metadata, typeSymbol ?? (metadata.Type.FullName ?? metadata.Type.Name) + "?", schema));
+    }
+
+    private sealed class NullableCodec(TypertCodec inner) : TypertCodec
+    {
+        private JsonElement? schema;
+        public override string TypeSymbol => inner.TypeSymbol;
+        public override JsonElement Schema => schema ??= ExportSchema();
+
+        public override object? Decode(JsonElement value)
+        {
+            _ = inner.Schema;
+            return value.ValueKind == JsonValueKind.Null ? null : inner.Decode(value);
+        }
+
+        public override JsonElement Encode(object? value) => inner.Encode(value);
+
+        private JsonElement ExportSchema()
+        {
+            using var buffer = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(buffer))
+            {
+                writer.WriteStartObject();
+                writer.WriteStartArray("anyOf");
+                WriteSchema(writer, inner.Schema);
+                writer.WriteStartObject();
+                writer.WriteString("type", "null");
+                writer.WriteEndObject();
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+
+            using var document = JsonDocument.Parse(buffer.ToArray());
+            return document.RootElement.Clone();
+        }
+
+        private static void WriteSchema(Utf8JsonWriter writer, JsonElement value)
+        {
+            if (value.ValueKind != JsonValueKind.Object)
+            {
+                value.WriteTo(writer);
+                return;
+            }
+
+            writer.WriteStartObject();
+            foreach (var field in value.EnumerateObject())
+            {
+                writer.WritePropertyName(field.Name);
+                switch (field.Name)
+                {
+                    case "$ref":
+                        writer.WriteStringValue("#/anyOf/0" + field.Value.GetString()![1..]);
+                        break;
+                    case "properties":
+                    case "$defs":
+                    case "definitions":
+                        writer.WriteStartObject();
+                        foreach (var child in field.Value.EnumerateObject())
+                        {
+                            writer.WritePropertyName(child.Name);
+                            WriteSchema(writer, child.Value);
+                        }
+
+                        writer.WriteEndObject();
+                        break;
+                    case "items":
+                    case "additionalProperties":
+                    case "not":
+                        WriteSchema(writer, field.Value);
+                        break;
+                    case "allOf":
+                    case "anyOf":
+                    case "oneOf":
+                    case "prefixItems":
+                        writer.WriteStartArray();
+                        foreach (var child in field.Value.EnumerateArray())
+                            WriteSchema(writer, child);
+                        writer.WriteEndArray();
+                        break;
+                    default:
+                        field.Value.WriteTo(writer);
+                        break;
+                }
+            }
+
+            writer.WriteEndObject();
+        }
+    }
+
     private sealed class TypedCodec<T>(JsonTypeInfo<T> metadata, string symbol, JsonElement? explicitSchema)
         : TypertCodec
     {

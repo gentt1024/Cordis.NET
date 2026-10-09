@@ -202,7 +202,9 @@ public partial class EchoService
 }
 ```
 
-生成器产出 `EchoServiceTypert.Contribution("IndependentRemote")`、descriptor 与直接类型化调用绑定。插件仍通过 `Context.Provide` 将实际 `EchoService` 提供为 `sample:remote`。登记合同不会创建或激活服务。JSON 命名、nullable 值和构造器必需字段遵循所提供的元数据；上述两项 `Respect...` 是作者选择，不是生成器隐式默认。每个普通参数与结果类型都要声明元数据。不受支持的声明编译失败；不受支持的客户端 Schema 形状在客户端生成时失败。
+生成器产出 `EchoServiceTypert.Contribution("IndependentRemote")`、descriptor 与直接类型化调用绑定。插件仍通过 `Context.Provide` 将实际 `EchoService` 提供为 `sample:remote`。登记合同不会创建或激活服务。JSON 命名、成员空性和构造器必需字段遵循所提供的元数据；上述两项 `Respect...` 是作者选择，不是生成器隐式默认。每个普通参数与结果类型都要声明元数据。不受支持的声明编译失败；不受支持的客户端 Schema 形状在客户端生成时失败。
+
+根可空引用标注（例如 `string?` 参数或 `Task<string?>` 结果）由 Roslyn 通过 `TypertCodec.CreateNullable` 传入，因为运行时 JSON 类型元数据会丢失这些标注。codec 增加 null 分支并迁移局部 Schema 引用，保留非空递归子节点。因此生成声明对这些边界暴露 `string | null`。这不代表已完成嵌套泛型空性分析，也不为 Gateway 增加结果 Schema 校验。
 
 Remote 方法当前支持必需普通参数与 `Task<T>`，或显式 `RemoteMethod(Stream = true)` 的 `IAsyncEnumerable<T>`。可以增加最后一个 `CancellationToken` 参数传递协作取消，但不能声明默认值。显式 Context 和对象 lookup 声明具有宿主拥有的登记 API；同一 fixture 包含完整作用域与 lookup 示例。
 
@@ -214,7 +216,9 @@ Typert loader 的 owner Fiber 拥有登记及其激活期导入缓存。同一�
 
 动态 bundle 替换时，先停止 Typert loader owner Fiber，再切换 provider Fiber。Resolver 提交新 bundle 后，创建新 owner Fiber 并启动 `TypertLoader`；替换失败并恢复旧 provider 后，同样针对旧 bundle 重建。这样释放旧 CLR `JsonTypeInfo` 和生成绑定，避免用旧元数据处理新 CLR 类型。独立多入口消费者验证这一顺序和旧调用失效。保留的贡献、客户端、服务对象或错误仍可能保留可收集代码；所有权结束后应释放这些引用。
 
-`MapCordisRemote` 将宿主授权的 `TypertGateway` 映射为原生 unary JSON 与 downlink NDJSON 路由。宿主提供授权回调。请求中断与生成客户端的 `AbortSignal` 请求协作取消；`byte[]` 结果通过 JSON base64 表达。此传输不承诺完整固定 Typert wire protocol。
+`MapCordisRemote` 将宿主授权的 `TypertGateway` 映射为原生 unary JSON 与 downlink NDJSON 路由。宿主提供授权回调。请求中断与生成客户端的 `AbortSignal` 传递取消信号；`byte[]` 结果通过 JSON base64 表达。Host unary 将信号传给绑定，只在已取消时归一业务失败，不强制中止成功的业务执行。Downlink 读取与取消竞争，之后的清理先等待未完成的原生读取，再在其调用 Context 中释放枚举器。业务或清理始终不结束时，调用可能无法终止，与固定流清理边界一致。此传输不承诺完整固定 Typert wire protocol。
+
+关闭 Cordis root 前，应先释放或排空活动 Gateway 枚举器。枚举器清理需要重新进入该执行域，已关闭的 root 无法执行清理。
 
 使用 `TypertArtifacts.GenerateClient(contribution)` 生成 `.mjs` 和 `.d.mts` 制品，与宿主使用同一 descriptor 和 Schema。生成客户端提供类型化调用及 Remote 结果/错误 envelope：
 
@@ -238,4 +242,4 @@ await mounted.dispose();
 
 [多入口门禁](../scripts/verify-clr-multi-entry.py) 独立打包作者 NuGet，通过 `PackageReference` 消费，安装包根/子路径入口，并验证共享身份、独立配置、成功与失败替换、撤销、真实 HTTP 上的生成 TypeScript 调用及错误参数。独立的 [Remote 门禁](../scripts/verify-typert.py) 覆盖原生 Remote 作者链。使用最新本地包批次及所需 Node/TypeScript 依赖。平台验收以[验证记录](validation.zh.md)中已完成结果为准；这些示例本身不能证明 Windows/Linux 或 Native AOT 闭环。动态 CLR 加载要求普通运行时。
 
-剩余源类型图、丰富 Context/owned-value 图、Peer/uplink/event remotes、非协作取消及二进制 attachment 协议仍未完成。既有 PluginManager、Settings/配置与客户端管理消费者向生成 Typert 合同的迁移仍未完成。既有手写 `MapCordisService` endpoint 仍可使用，但不能据此关闭这些缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
+剩余源类型图、丰富 Context/owned-value 图、Peer/uplink/event remotes 及二进制 attachment 协议仍未完成。既有 PluginManager、Settings/配置与客户端管理消费者向生成 Typert 合同的迁移仍未完成。既有手写 `MapCordisService` endpoint 仍可使用，但不能据此关闭这些缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。

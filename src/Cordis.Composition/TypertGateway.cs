@@ -66,10 +66,6 @@ public sealed record TypertRemoteResult(bool Ok, JsonElement? Value, TypertRemot
     public static TypertRemoteResult Failure(Exception error) => error switch
     {
         RemoteError remote => new(false, null, new(remote.Code, remote.Message, remote.Details)),
-        OperationCanceledException => new(
-            false,
-            null,
-            new("gateway/cancelled", "The Remote call was cancelled.", null)),
         _ => new(false, null, new("gateway/internal", error.Message, null)),
     };
 }
@@ -88,7 +84,7 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
         {
             await caller.RunAsync(async _ =>
             {
-                var prepared = await PrepareAsync(endpoint, arguments, cancellationToken);
+                var prepared = await PrepareAsync(endpoint, arguments);
                 if (prepared.Descriptor.IsStream)
                     throw Fault("gateway/signature-invalid", endpoint, "A stream method requires the stream carrier.");
                 if (!prepared.Binding.Methods.TryGetValue(prepared.Descriptor.Method, out var invoke))
@@ -98,7 +94,25 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
                         "The active binding has no method for this descriptor.");
                 object? value;
                 using (TypertInvocation.Enter(new(prepared.Receiver, endpoint, cancellationToken)))
-                    value = await invoke(prepared.Service, prepared.Arguments, cancellationToken);
+                {
+                    try
+                    {
+                        value = await invoke(prepared.Service, prepared.Arguments, cancellationToken);
+                    }
+                    catch (Exception error) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw Fault("gateway/cancelled", endpoint, "The Remote invocation was cancelled.", error);
+                    }
+                    catch (OperationCanceledException error)
+                    {
+                        throw Fault(
+                            "gateway/internal",
+                            endpoint,
+                            "The Remote invocation failed without cancellation.",
+                            error);
+                    }
+                }
+
                 prepared.Check();
                 result = Encode(prepared.Descriptor, value);
             });
@@ -119,12 +133,13 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         Prepared? prepared = null;
         IAsyncEnumerator<object?>? iterator = null;
+        Task<bool>? pendingMove = null;
         Exception? failure = null;
         try
         {
             await caller.RunAsync(async _ =>
             {
-                prepared = await PrepareAsync(endpoint, arguments, lifetime.Token);
+                prepared = await PrepareAsync(endpoint, arguments);
                 if (!prepared.Descriptor.IsStream ||
                     !prepared.Binding.Streams.TryGetValue(prepared.Descriptor.Method, out var invoke))
                     throw Fault("gateway/signature-invalid", endpoint, "This endpoint has no active stream binding.");
@@ -155,8 +170,14 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
                     await caller.RunAsync(async _ =>
                     {
                         prepared!.Check();
+                        lifetime.Token.ThrowIfCancellationRequested();
                         using (TypertInvocation.Enter(new(prepared.Receiver, endpoint, lifetime.Token)))
-                            moved = await iterator!.MoveNextAsync();
+                        {
+                            pendingMove = iterator!.MoveNextAsync().AsTask();
+                            moved = await pendingMove.WaitAsync(lifetime.Token);
+                            pendingMove = null;
+                        }
+
                         prepared.Check();
                         if (moved)
                             item = Encode(prepared.Descriptor, iterator!.Current);
@@ -164,12 +185,20 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
                 }
                 catch (Exception error)
                 {
-                    item = TypertRemoteResult.Failure(error);
+                    failure = error is OperationCanceledException && lifetime.IsCancellationRequested
+                        ? Fault(
+                            "gateway/cancelled",
+                            endpoint,
+                            "The Remote stream was cancelled.",
+                            error)
+                        : error;
                 }
 
+                if (failure is not null)
+                    break;
                 if (item is not null)
                     yield return item;
-                if (!moved || item?.Ok == false)
+                if (!moved)
                     yield break;
             }
         }
@@ -185,15 +214,30 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
                     await caller.RunAsync(async _ =>
                     {
                         using (TypertInvocation.Enter(new(prepared!.Receiver, endpoint, lifetime.Token)))
+                        {
+                            if (pendingMove is not null)
+                            {
+                                try
+                                {
+                                    await pendingMove;
+                                }
+                                catch (Exception)
+                                {
+                                }
+                            }
+
                             await iterator.DisposeAsync();
+                        }
                     });
             }
         }
+
+        if (failure is not null)
+            yield return TypertRemoteResult.Failure(failure);
     }
 
-    private async Task<Prepared> PrepareAsync(string endpoint, JsonElement arguments, CancellationToken token)
+    private async Task<Prepared> PrepareAsync(string endpoint, JsonElement arguments)
     {
-        token.ThrowIfCancellationRequested();
         var descriptor = registry.GetLocal(endpoint) ?? throw Fault(
             registry.HasSeenLocal(endpoint) ? "gateway/definition-unavailable" : "gateway/invocation-unavailable",
             endpoint,
@@ -202,7 +246,6 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
         var descriptorToken = registry.LocalToken(endpoint);
         checks.Add(() =>
         {
-            token.ThrowIfCancellationRequested();
             if (!ReferenceEquals(descriptorToken, registry.LocalToken(endpoint)))
                 throw Fault(
                     "gateway/definition-unavailable",

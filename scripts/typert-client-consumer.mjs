@@ -9,6 +9,13 @@ const { createRemote, mountRemote } = await import(pathToFileURL(resolve(directo
 const client = createRemote(base)
 const echo = await client['sample/Echo']({ request: { Text: 'typescript', Count: 4 } })
 assert.deepEqual(echo, { ok: true, value: { Text: 'typescript', Count: 4 } })
+assert.deepEqual(await client['sample/NullableEcho']({ text: null }), { ok: true, value: null })
+assert.deepEqual(await client['sample/NullableEcho']({ text: 'present' }), { ok: true, value: 'present' })
+assert.deepEqual(await client['sample/ReturnsNull']({}), { ok: true, value: null })
+assert.deepEqual(await client['sample/NullableTree']({ tree: null }), { ok: true, value: null })
+const tree = { Value: 'root', Children: [{ Value: 'leaf', Children: [] }] }
+assert.deepEqual(await client['sample/NullableTree']({ tree }), { ok: true, value: tree })
+assert.equal((await client['sample/NullableTree']({ tree: { Value: 'root', Children: [null] } })).error.code, 'gateway/input-invalid')
 assert.equal((await client['sample/Echo']({ request: { Text: 'invalid' } })).error.code, 'gateway/input-invalid')
 const failure = await client['sample/Failure']({ text: 'owner error' })
 assert.equal(failure.error.code, 'sample/refused')
@@ -160,6 +167,18 @@ const remote = createRemote('http://localhost/remote')
 async function call() {
   const result = await remote['sample/Echo']({request:{Text:'typed', Count:1}})
   if (result.ok) { const count: number = result.value.Count; void count }
+  const nullable = await remote['sample/NullableEcho']({text:null})
+  if (nullable.ok) { const text: string | null = nullable.value; void text }
+  const nullResult = await remote['sample/ReturnsNull']({})
+  if (nullResult.ok) {
+    // @ts-expect-error A nullable result must be narrowed before use as a string.
+    const text: string = nullResult.value; void text
+  }
+  const nullTree = await remote['sample/NullableTree']({tree:null})
+  if (nullTree.ok) { const node: {Value:string, Children:readonly unknown[]} | null = nullTree.value; void node }
+  remote['sample/NullableTree']({tree:{Value:'root',Children:[{Value:'leaf',Children:[]}]}})
+  // @ts-expect-error Nullable root must not make recursive children nullable.
+  remote['sample/NullableTree']({tree:{Value:'root',Children:[null]}})
   // @ts-expect-error Count is a required number in the generated source contract.
   remote['sample/Echo']({request:{Text:'bad', Count:'one'}})
   // @ts-expect-error Missing business argument must fail client compilation.

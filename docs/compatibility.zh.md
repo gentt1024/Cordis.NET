@@ -84,17 +84,19 @@ Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 P
 
 ### 原生 Typert 合同与传输
 
-本次续建提供 Roslyn 作者生成器、编译器无关 descriptor、System.Text.Json 元数据 codec 与 Schema、Fiber 拥有的 registry、显式 artifact resolver 的 Loader 集成、Gateway，以及生成的 TypeScript 模块/声明制品。生成器在 `Cordis.NET.Composition` 的 analyzer 目录内交付。这覆盖显式声明的原生 Remote 边界，不等同于固定 TypeScript 编译器的完整源类型图。显式 JSON 元数据及其命名、nullable 与必需字段选项定义原生数据合同。公开声明与包消费者见[作者指南](authoring.zh.md#2026-10-09-模块导出与生成式-remote-合同)。
+本次续建提供 Roslyn 作者生成器、编译器无关 descriptor、System.Text.Json 元数据 codec 与 Schema、Fiber 拥有的 registry、显式 artifact resolver 的 Loader 集成、Gateway，以及生成的 TypeScript 模块/声明制品。生成器在 `Cordis.NET.Composition` 的 analyzer 目录内交付。这覆盖显式声明的原生 Remote 边界，不等同于固定 TypeScript 编译器的完整源类型图。显式 JSON 元数据及其命名、成员空性与必需字段选项定义原生数据合同。Roslyn 通过 `TypertCodec.CreateNullable` 补入运行时丢失的根可空引用标注；其可空 Schema 投影保留非空递归子节点。结果保留固定调用语义，不增加 Schema 准入。公开声明与包消费者见[作者指南](authoring.zh.md#2026-10-09-模块导出与生成式-remote-合同)。
 
 `IClrTypertModule` 从插件工厂所在的同一已加载 CLR bundle 导出贡献。Typert 导入按 owner Fiber 激活期缓存。动态 HMR 必须在 provider 替换前退役该 owner，在提交后或失败恢复旧 provider 后重启。这样释放旧生成 delegate 与 CLR 序列化类型；仅有类型名相同，不能让旧贡献适配替换后的新程序集。登记有效性同时阻止撤销后的旧调用。Registry 元数据不代替 Cordis 服务权威或产品政策。
 
 原生 Gateway 支持直接调用、显式登记的 Context 选择/对象 lookup、Remote 错误、协作取消、downlink 流及 JSON base64 字节结果。ASP.NET 传输使用 HTTP JSON/NDJSON，由宿主提供 endpoint 授权。生成 TypeScript `createRemote` 消费该传输；异步 `mountRemote` 等待 owner 登记，将互不重叠的方法装入共享 root `remote.<namespace>` 服务，并按贡献撤销。这些是显式平台适配，不承诺完整固定 Typert wire protocol。
 
+Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号已取消而被拒绝，已取消信号下的业务失败则成为 `gateway/cancelled`。Downlink 读取与信号竞争，完成清理后才暴露失败。原生枚举器必须先结束未完成的读取再释放；迟到读取错误会被观察，不替换取消结果，释放错误仍是清理失败。固定 Host 和此适配都不承诺强制终止始终不结束的业务或清理。提供者/定义撤销后的检查属于单独的原生代际适配，不是上游活动调用中止机制。
+
 客户端安装串行修改 namespace，并在该队列之外等待同名 provider 退役，使依赖清理能继续。重复方法在发布前拒绝。同步 `internal/service` observer 在发布时抛错，保留固定 Cordis provider 的失败行为：即使挂载拒绝，仍可能留下已提供的 namespace。适配层不承诺任意 observer 的回滚；应先修复该 observer 并退役其 owner，再重试。
 
 ### 未闭合范围与证据边界
 
-完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流与 event remotes、非协作取消及完整二进制 attachment 协议仍未实现。PluginManager、Settings/配置与客户端管理生产消费者向生成合同的迁移仍未完成。既有配置 Schema 导出、手写 `MapCordisService` 与 HTTP/SSE 管理保留当前合同，不能据此计为已完成 Typert 消费者。
+完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流与 event remotes 及完整二进制 attachment 协议仍未实现。PluginManager、Settings/配置与客户端管理生产消费者向生成合同的迁移仍未完成。既有配置 Schema 导出、手写 `MapCordisService` 与 HTTP/SSE 管理保留当前合同，不能据此计为已完成 Typert 消费者。
 
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
 

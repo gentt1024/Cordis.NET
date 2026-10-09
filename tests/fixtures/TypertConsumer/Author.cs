@@ -12,12 +12,15 @@ public sealed record EchoReply(string Text, int Count);
 
 public sealed record Document(string Title);
 
+public sealed record TreeNode(string Value, TreeNode[] Children);
+
 [JsonSourceGenerationOptions(RespectNullableAnnotations = true, RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(EchoRequest))]
 [JsonSerializable(typeof(EchoReply))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(byte[]))]
+[JsonSerializable(typeof(TreeNode))]
 public partial class RemoteJson : JsonSerializerContext;
 
 [RemoteService("sample:remote", typeof(RemoteJson), Namespace = "sample")]
@@ -29,6 +32,16 @@ public partial class EchoService
     } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public TaskCompletionSource Release
+    {
+        get;
+    } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource StreamEntered
+    {
+        get;
+    } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource StreamRelease
     {
         get;
     } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -47,6 +60,18 @@ public partial class EchoService
 
     [RemoteMethod]
     public Task<EchoReply> Echo(EchoRequest request) => Task.FromResult(new EchoReply(request.Text, request.Count));
+
+    [RemoteMethod]
+    public Task<string?> NullableEcho(string? text) => Task.FromResult(text);
+
+    [RemoteMethod]
+    public Task<string?> ReturnsNull() => Task.FromResult<string?>(null);
+
+    [RemoteMethod]
+    public Task<string> UnrequestedCancellation() => Task.FromException<string>(new OperationCanceledException());
+
+    [RemoteMethod]
+    public Task<TreeNode?> NullableTree(TreeNode? tree) => Task.FromResult(tree);
 
     [RemoteMethod]
     public Task<string> Failure(string text)
@@ -91,6 +116,22 @@ public partial class EchoService
 
     [RemoteMethod]
     public Task<byte[]> Binary(string text) => Task.FromResult(System.Text.Encoding.UTF8.GetBytes(text));
+
+    [RemoteMethod(Stream = true)]
+    public async IAsyncEnumerable<string> BlockedStream([EnumeratorCancellation] CancellationToken signal)
+    {
+        try
+        {
+            StreamEntered.TrySetResult();
+            await StreamRelease.Task;
+            yield return "late";
+        }
+        finally
+        {
+            StreamDisposed++;
+            StreamDisposalContext = TypertInvocation.Current?.Endpoint;
+        }
+    }
 }
 
 public static class AuthorModule

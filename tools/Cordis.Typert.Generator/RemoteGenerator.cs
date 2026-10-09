@@ -95,7 +95,11 @@ public sealed class RemoteGenerator : IIncrementalGenerator
             }
 
             string Codec(ITypeSymbol symbol) =>
-                "global::Cordis.Composition.TypertCodec.Create((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" +
+                "global::Cordis.Composition.TypertCodec." +
+                (symbol.IsReferenceType && symbol.NullableAnnotation == NullableAnnotation.Annotated
+                    ? "CreateNullable"
+                    : "Create") +
+                "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" +
                 TypeName(symbol) + ">)" +
                 TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
                 Literal(symbol.ToDisplayString()) + ")";
