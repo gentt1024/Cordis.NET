@@ -13,7 +13,7 @@
 3. 以明确版本和构建授权调用 `InstallPackageAsync`。准备阶段一次性发布到独立 `.cordis/work` 输出；为声明的插件按其 DLL basename 提供 SDK 部署依赖清单，供 `AssemblyDependencyResolver` 使用。产品包装器可在返回准备结果之前补齐自己的元数据。
 4. 发布将同一份完整输出移动到 `.cordis/packages/<name>/<version>`，在旁置 `.<version>.files.json` 中记录完整文件集合与 SHA256，再校验并注册。这份记录属于工具链元数据，位于已批准制品树之外，产品清单不需要排除项。既有版本目录和记录都不覆盖；Profile 准入与完整准备/发布文件树比较继续使用原安装流水线。
 5. 启动先验证安装制品的清单和身份，再注册代码。装载直接使用这个目录；后续 Resolve 复用 lease。新进程重新验证，不重新复制。缺失记录、不完整或被修改的部署明确失败，不会重写清单来接受变化。
-6. 本提交仍拒绝已安装包身份的安装请求；重启生效的包升级是独立变更。同版本重复请求和 installation-owned 替换仍拒绝。
+6. 升级已安装的 profile 自有包会准备并持久化新版本，然后报告 `restart-required`；本进程保留旧代码路由。重启读取保存的版本。同版本重复请求和 installation-owned 替换仍拒绝。新版本启动失败不意味着自动回退旧版本。
 7. `RemovePackageAsync` 取消选择、等待所属 fibers 结束，并解除 profile 依赖与 resolver 引用。CLR 文件仍保留给旧引用、延迟依赖、Worker 和其他进程。`PackageChange.Residuals` 返回保留版本目录，包括仍运行的旧版本和等待重启的新版本；逻辑移除不等于物理删除。工具链包装器应转发 `GetRetainedDirectories`，以保留完整报告。
 8. 所有宿主、Worker 和其他消费者停止后，调用 `DotnetPluginToolchain.DeleteRetainedArtifactAsync(profileDirectory, name, version)`，或 `cordis delete-retained <profile> <name> <version>`。Profile 仍引用该精确版本时拒绝；CLI 还会拒绝正在运行的标准 CLI 宿主。部署方负责排除任意外部消费者和并发 profile 写入。失败报告剩余路径；不自动扫描，不根据 GC 删除。
 

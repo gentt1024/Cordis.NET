@@ -341,9 +341,6 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     {
         cancellationToken.ThrowIfCancellationRequested();
         ValidateIdentity(package.Name, package.Version);
-        if (bundles.ContainsKey(package.Name))
-            throw new DeploymentRestartRequiredException(
-                "This process already routed the package identity; replace through CLR HMR or restart.");
         RequireOwned(package.Directory, workDirectory);
         var destination = PackageDirectory(package.Name, package.Version);
         var receipt = BundleFiles.ReceiptPath(destination);
@@ -363,7 +360,11 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             Directory.Move(package.Directory, destination);
             published = true;
             BundleFiles.Record(destination);
-            Register(package.Name, destination);
+            // Existing routes stay bound to their running version until a fresh resolver reads the saved dependency.
+            if (!bundles.ContainsKey(package.Name))
+                Register(package.Name, destination);
+            else
+                BundleFiles.Verify(destination);
         }
         catch (Exception error)
         {

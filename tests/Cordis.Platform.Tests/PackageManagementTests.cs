@@ -56,6 +56,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                     {
                         if (limit < 0) throw new InvalidOperationException("independent apply failure");
                         ctx.Provide("installed-limit", ctx.Fiber.GetConfigReference<int>("limit"));
+                        ctx.Provide("installed-code", (Func<string>)(() => "v1"));
                     },
                 };
             }
@@ -383,28 +384,6 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.True(alias.Installed);
         Assert.True(alias.Selected);
         Assert.DoesNotContain("prepare", phases);
-        var nextRequest = request with
-        {
-            Version = "2.0.0"
-        };
-        var update = await operations.InstallPackageAsync(host.Toolchain, nextRequest, "same-identity-v2", true);
-        Assert.Equal("already-installed", update.Error);
-        Assert.Equal(
-            "1.0.0",
-            ((IDictionary<string, object?>)PackageManifest
-                .Read(Path.Combine(host.Profile, "package.json"))
-                .Raw["dependencies"]!)[request.Name]);
-        var nextInspection = await host.Toolchain.InspectAsync(nextRequest);
-        var prepared = await host.Toolchain.PrepareAsync(
-            nextInspection,
-            true,
-            _ =>
-            {
-            });
-        var routed = await Assert.ThrowsAsync<DeploymentRestartRequiredException>(() =>
-            host.Toolchain.PublishAsync(prepared));
-        Assert.Contains("already routed", routed.Message);
-        Assert.True(Directory.Exists(prepared.Directory));
         await host.Session.Context.RunAsync(ctx =>
         {
             Assert.Equal(1, ctx.Get<ConfigReference<int>>("installed-limit")!.Value);

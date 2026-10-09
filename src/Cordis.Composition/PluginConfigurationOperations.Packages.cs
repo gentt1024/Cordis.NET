@@ -69,6 +69,7 @@ public sealed partial class PluginConfigurationOperations
 
     /// <summary>Install a prepared platform package and select it through this profile's existing coordination.</summary>
     /// <remarks>The request ID must be unique while active. Cancellation is admitted until publication starts.
+    /// Existing profile identities save the new version for restart without reconciling the live composition.
     /// Completed results are not retained. Hosts must authorize build execution independently from version exemptions.</remarks>
     public Task<PackageChange> InstallPackageAsync(
         IProfilePackageToolchain toolchain,
@@ -192,8 +193,12 @@ public sealed partial class PluginConfigurationOperations
             var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
             installed = HasPackageDirectory(request.Name);
             selected = manifest.Bundles.Contains(request.Name);
-            if ((manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.ContainsKey(
-                    request.Name) == true || launch.InstallationBundles.ContainsKey(request.Name))
+            var dependenciesBefore = manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>;
+            var updating = dependenciesBefore?.ContainsKey(request.Name) == true ||
+                launch.LocalBundles?.ContainsKey(request.Name) == true;
+            if ((dependenciesBefore?.TryGetValue(request.Name, out var installedVersion) == true &&
+                    Equals(installedVersion, request.Version)) ||
+                launch.InstallationBundles.ContainsKey(request.Name))
                 throw new Refusal("already-installed");
             ReportPackageProgress(requestId, stage);
             var inspection = await toolchain.InspectAsync(request, token);
@@ -257,8 +262,10 @@ public sealed partial class PluginConfigurationOperations
                 await toolchain.PublishAsync(prepared);
                 await SaveCandidateAsync(inputs, candidate, published: true);
                 installed = true;
-                selected = enabled;
+                selected = enabled || manifest.Bundles.Contains(request.Name);
                 await inputs.VerifyAsync(published: true, savedManifest: candidate.ManifestJson);
+                if (updating)
+                    return;
                 stage = "apply";
                 ReportPackageProgress(requestId, stage);
                 if (enabled)
@@ -280,7 +287,7 @@ public sealed partial class PluginConfigurationOperations
                 stage,
                 installed,
                 selected,
-                RunExclusiveAsync is null ? "restart-required" : "applied");
+                updating || RunExclusiveAsync is null ? "restart-required" : "applied");
         }
         catch (Exception error)
         {
