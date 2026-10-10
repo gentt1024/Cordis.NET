@@ -141,6 +141,13 @@ public sealed class HmrCoordinator : IAsyncDisposable
     /// <summary>
     /// Watches config.
     /// </summary>
+    /// <remarks>
+    /// Registration propagates path and watcher activation failures. Matching change and deletion
+    /// events queue a refresh without reading the changed file's metadata. Alias resolution failures
+    /// are reported through <see cref="Warning"/> and <see cref="Error"/>; later events can recover.
+    /// Disposing the watch stops new refreshes. Outside a coordinator transaction, disposal also
+    /// waits for any refresh already in progress.
+    /// </remarks>
     public IAsyncDisposable WatchConfig(string filename, Func<Task> refresh, bool refreshExisting = true)
     {
         var path = ResolvePath(filename, readAttributes);
@@ -584,13 +591,26 @@ public sealed class HmrCoordinator : IAsyncDisposable
 
         private void Check(string path)
         {
-            // Parent creation can contain an already-populated subtree.
-            var canonical = CanonicalPath(path);
-            if (PathComparer.Equals(canonical, filename) || filename.StartsWith(
-                    canonical + Path.DirectorySeparatorChar,
-                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                Signal();
+            lock (_sync)
+                if (_closed)
+                    return;
+            try
+            {
+                // An unlink event must not depend on metadata for the file being removed.
+                var full = Path.GetFullPath(path);
+                if (Matches(full) || Matches(ResolvePath(full, owner.readAttributes)))
+                    Signal();
+            }
+            catch (Exception error)
+            {
+                owner.Report(error);
+            }
         }
+
+        private bool Matches(string path) =>
+            PathComparer.Equals(path, filename) || filename.StartsWith(
+                path + Path.DirectorySeparatorChar,
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
         private void Signal()
         {

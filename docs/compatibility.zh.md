@@ -70,6 +70,8 @@ HTTP 管理授权与执行使用同一个端点资源。插件/bundle 启停使�
 
 ## 证据
 
+配置 watch 事件首先匹配规范化事件路径，与固定 HMR watcher 一致。匹配的修改、删除及祖先目录创建无需读取变化文件的属性，直接排队刷新。原生别名解析保留为后备路径；失败通过现有 warning/error 通道报告原异常，后续事件仍可恢复。rename 的两个路径分别处理。初始注册仍拒绝不可访问路径，已关闭的 watch 忽略排队事件。
+
 Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 Prepare 前读取的 manifest 覆盖后续编辑。这是原生适配：固定 DSH 成功路径在 `selectBundle` 重读，但没有提供完整产品候选批准合同。两者都不保证能对忽略协作锁的任意编辑器执行条件替换。
 
 `PluginConfigurationOperations.AdmitProfileAsync` 接收库持有的不可变 manifest 文本和原始根配置候选，组合仍使用现有 Profile/Include 逻辑。修改分离的 composition 视图不会改变保存候选。安装与 bundle 选择在发布/持久化前准入，并通过 `ProfileSession` 应用该候选；移除分别准入其持久步骤，其中删除依赖候选在工具解除运行时映射前准入。CLR 制品保留并单独报告，直至显式离线删除。拒绝第二步时，包保持已安装、已取消选择。重复选择仍在重新应用前准入。普通消费可以省略准入。仅使用旧 `ReconcileAsync` 的宿主在未启用产品准入时保留原回调；启用产品准入时必须支持候选 reconciliation，不能静默退回重新读盘组合。
