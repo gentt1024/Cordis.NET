@@ -254,7 +254,10 @@ public sealed class OnlineReplacementProbeTests
             new(
                 Path.Combine(AppContext.BaseDirectory, "fixtures", version),
                 "VersionedPlugin.dll",
-                "VersionedPlugin.RetirementEntry");
+                "VersionedPlugin.RetirementEntry")
+            {
+                LoadMode = ClrModuleLoadMode.ShadowCopy
+            };
 
         public async ValueTask DisposeAsync()
         {

@@ -62,7 +62,10 @@ public sealed class BootCollectionTests
             new ClrModuleDefinition(
                 Path.Combine(AppContext.BaseDirectory, "fixtures", "probe-v1"),
                 "ProbePlugin.dll",
-                "Cordis.ProbeFixture.FailingEntry"));
+                "Cordis.ProbeFixture.FailingEntry")
+            {
+                LoadMode = ClrModuleLoadMode.ShadowCopy
+            });
         Context? root = null;
         try
         {

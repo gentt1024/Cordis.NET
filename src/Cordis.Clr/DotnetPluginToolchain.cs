@@ -57,8 +57,9 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                 if (version is not string exactVersion || !ValidIdentity(name, exactVersion))
                     continue;
                 var directory = PackageDirectory(name, exactVersion);
-                if (!File.Exists(Path.Combine(directory, "cordis.plugin.json")))
+                if (!Directory.Exists(directory))
                     continue;
+                RequireOwned(directory, this.profileDirectory);
                 Register(name, directory);
             }
     }
@@ -319,6 +320,11 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                 Path.Combine(outputDirectory, "cordis.plugin.json"),
                 ConfigurationFile.Write(metadata, true),
                 cancellationToken);
+            // ADR starts from the declared plugin DLL, not the SDK's preparation project.
+            File.Copy(
+                Path.Combine(outputDirectory, "PluginDeployment.deps.json"),
+                Path.Combine(outputDirectory, Path.ChangeExtension(assembly, ".deps.json")),
+                overwrite: true);
             return new(request.Name, request.Version, outputDirectory)
             {
                 PublicationDirectory = PackageDirectory(request.Name, request.Version)
@@ -335,22 +341,30 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     {
         cancellationToken.ThrowIfCancellationRequested();
         ValidateIdentity(package.Name, package.Version);
-        if (bundles.ContainsKey(package.Name))
-            throw new DeploymentRestartRequiredException(
-                "This process already routed the package identity; replace through CLR HMR or restart.");
         RequireOwned(package.Directory, workDirectory);
         var destination = PackageDirectory(package.Name, package.Version);
-        if (Directory.Exists(destination))
+        var receipt = BundleFiles.ReceiptPath(destination);
+        RequireOwned(destination, packagesDirectory);
+        if (Directory.Exists(destination) || File.Exists(destination))
             throw new PackageToolException(
                 "A deployment directory already exists; inspect its residual state before retrying.",
                 destination);
+        if (File.Exists(receipt) || Directory.Exists(receipt))
+            throw new PackageToolException(
+                "A deployment receipt already exists; inspect its residual state before retrying.",
+                receipt);
         var published = false;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             Directory.Move(package.Directory, destination);
             published = true;
-            Register(package.Name, destination);
+            BundleFiles.Record(destination);
+            // Existing routes stay bound to their running version until a fresh resolver reads the saved dependency.
+            if (!bundles.ContainsKey(package.Name))
+                Register(package.Name, destination);
+            else
+                BundleFiles.Verify(destination);
         }
         catch (Exception error)
         {
@@ -374,12 +388,23 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         RequireOwned(directory, packagesDirectory);
         await resolver.RemoveAsync(ModuleName(name), cancellationToken);
         retired.Add(name);
-        Directory.Delete(directory, recursive: true);
-        // Keep the route reserved for the life of this resolver. Removing it from ProfileSession's map would change its generation.
+        // Keep both artifact and route: other processes, lazy loads and Workers may still use the files.
     }
 
     private void Register(string name, string directory)
     {
+        BundleFiles.Verify(directory);
+        var identity = PackageManifest.Read(Path.Combine(directory, "package.json"));
+        if (!string.Equals(
+                identity.Raw.GetValueOrDefault("name") as string,
+                name,
+                StringComparison.OrdinalIgnoreCase) ||
+            identity.Raw.GetValueOrDefault("version") is not string version ||
+            !string.Equals(
+                Path.GetFullPath(directory),
+                PackageDirectory(name, version),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            throw new InvalidDataException("The deployed package identity differs from its version directory.");
         var metadata = (EntryOptions)ConfigurationFile.Parse(
             File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
             true)!;
@@ -387,6 +412,86 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             ModuleName(name),
             new(directory, RequiredString(metadata, "assembly"), RequiredString(metadata, "entryType")));
         bundles.Add(name, directory);
+    }
+
+    /// <summary>Physically delete one unreferenced version after all hosts, Workers and other file consumers have stopped.</summary>
+    /// <remarks>This is an explicit offline deployment operation, not an ALC cleanup hook. It refuses an active
+    /// profile writer under the existing lock protocol. The caller excludes other consumers and uncoordinated writers.
+    /// A still-recorded version is refused. Failure may
+    /// leave files and reports the retained path; no GC, automatic scan or whole-filesystem rollback occurs.</remarks>
+    public static Task DeleteRetainedArtifactAsync(
+        string profileDirectory,
+        string name,
+        string version,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateIdentity(name, version);
+        var profile = Path.GetFullPath(profileDirectory);
+        var directory = Path.Combine(
+            profile,
+            ".cordis",
+            "packages",
+            name.ToLowerInvariant(),
+            version.ToLowerInvariant());
+        RequireOwned(directory, profile);
+        var receipt = BundleFiles.ReceiptPath(directory);
+        RequireOwned(receipt, profile);
+        var manifestPath = Path.Combine(profile, "package.json");
+        using var writer = new FileStream(
+            manifestPath + ".cordis-lock",
+            FileMode.OpenOrCreate,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            1,
+            FileOptions.DeleteOnClose);
+        var manifest = PackageManifest.Read(manifestPath).Raw;
+        if (manifest.TryGetValue("dependencies", out var declaration))
+        {
+            if (declaration is not IDictionary<string, object?> dependencies)
+                throw new FormatException("Profile dependencies must be an object when declared.");
+            foreach (var (dependencyName, dependencyValue) in dependencies)
+            {
+                if (!string.Equals(dependencyName, name, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (dependencyValue is not string dependencyVersion)
+                    throw new FormatException("The package dependency must declare a version string.");
+                if (string.Equals(dependencyVersion, version, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("The profile still references this package version.");
+            }
+        }
+
+        try
+        {
+            if (File.Exists(directory))
+                throw new IOException("The retained artifact path is not a directory.");
+            if (Directory.Exists(directory))
+            {
+                BundleFiles.ValidateTree(directory);
+                Directory.Delete(directory, recursive: true);
+            }
+
+            File.Delete(receipt);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw new PackageToolException(
+                error.Message,
+                Directory.Exists(directory) || File.Exists(directory) ? directory : receipt);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> GetRetainedDirectories(string name)
+    {
+        ValidateIdentity(name, "0.0.0");
+        var directory = Path.Combine(packagesDirectory, name.ToLowerInvariant());
+        RequireOwned(directory, profileDirectory);
+        return Directory.Exists(directory)
+            ? Directory.GetDirectories(directory).Order(StringComparer.Ordinal).ToArray()
+            : [];
     }
 
     private async Task<byte[]> AcquireAsync(PackageRequest request, CancellationToken token)

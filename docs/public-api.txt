@@ -903,6 +903,7 @@ Cordis.Composition: Cordis.Composition.IExpressionEvaluator :  [] flags=Public, 
 Cordis.Composition: Cordis.Composition.IModuleResolver :  [] flags=Public, ClassSemanticsMask, Abstract, BeforeFieldInit attrs=
   Method System.Threading.Tasks.ValueTask`1[Cordis.IPlugin] ResolveAsync(System.String, System.Uri, System.Threading.CancellationToken) attrs= params=specifier:NotNull/NotNull ;baseUri:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
 Cordis.Composition: Cordis.Composition.IProfilePackageToolchain :  [] flags=Public, ClassSemanticsMask, Abstract, BeforeFieldInit attrs=
+  Method System.Collections.Generic.IReadOnlyList`1[System.String] GetRetainedDirectories(System.String) attrs= params=name:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
   Property System.Collections.Generic.IReadOnlyList`1[System.String] Sources attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
   Method System.String ResolvePackageName(System.String) attrs= params=name:NotNull/NotNull  return=NotNull/NotNull
   Method System.Threading.Tasks.Task PublishAsync(Cordis.Composition.PreparedPackage, System.Threading.CancellationToken) attrs= params=package:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
@@ -1401,6 +1402,7 @@ Cordis.Clr: Cordis.Clr.ClrModuleDefinition : System.Object [System.IEquatable`1[
   Method Boolean Equals(Cordis.Clr.ClrModuleDefinition) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
   Method Cordis.Clr.ClrModuleDefinition <Clone>$() attrs= params= return=NotNull/NotNull
+  Property Cordis.Clr.ClrModuleLoadMode LoadMode attrs= NotNull/NotNull get=True set=True init=True
   Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
   Property System.String AssemblyPath attrs= NotNull/NotNull get=True set=True init=True
   Property System.String BundleDirectory attrs= NotNull/NotNull get=True set=True init=True
@@ -1408,6 +1410,10 @@ Cordis.Clr: Cordis.Clr.ClrModuleDefinition : System.Object [System.IEquatable`1[
   Method System.String ToString() attrs= params= return=NotNull/NotNull
   Constructor Void .ctor(System.String, System.String, System.String) attrs= params=BundleDirectory:NotNull/NotNull ;AssemblyPath:NotNull/NotNull ;EntryType:NotNull/NotNull
   Method Void Deconstruct(System.String ByRef, System.String ByRef, System.String ByRef) attrs= params=BundleDirectory:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];AssemblyPath:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];EntryType:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Clr: Cordis.Clr.ClrModuleLoadMode : System.Enum [System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable] flags=Public, Sealed attrs=
+  Field Cordis.Clr.ClrModuleLoadMode ShadowCopy attrs= NotNull/NotNull readonly=False constant=1
+  Field Cordis.Clr.ClrModuleLoadMode StableDirectory attrs= NotNull/NotNull readonly=False constant=0
+  Field Int32 value__ attrs= NotNull/NotNull readonly=False
 Cordis.Clr: Cordis.Clr.ClrModuleResolver : System.Object [Cordis.Composition.IModuleResolver,System.IAsyncDisposable] flags=Public, Sealed, BeforeFieldInit attrs=[System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute("Loading plugin DLLs requires the ordinary CLR; use static modules in Native AOT.")],[System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute("Plugin entry point types are named explicitly in external DLLs.")]
   Property System.Collections.Generic.IReadOnlyList`1[Cordis.Clr.ClrUnloadObservation] Unloads attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
   Method System.Threading.Tasks.ValueTask DisposeAsync() attrs= params= return=NotNull/NotNull
@@ -1415,6 +1421,7 @@ Cordis.Clr: Cordis.Clr.ClrModuleResolver : System.Object [Cordis.Composition.IMo
   Method System.Threading.Tasks.ValueTask`1[Cordis.Clr.ClrUnloadObservation] ReplaceAsync(System.String, Cordis.Clr.ClrModuleDefinition, System.Func`3[Cordis.IPlugin,Cordis.IPlugin,System.Threading.Tasks.ValueTask], System.Threading.CancellationToken) attrs= params=specifier:NotNull/NotNull ;definition:NotNull/NotNull ;switchFibers:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull,NotNull/NotNull> ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.ValueTask`1[Cordis.IPlugin] ResolveAsync(System.String, System.Uri, System.Threading.CancellationToken) attrs= params=specifier:NotNull/NotNull ;baseUri:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.ValueTask`1[System.String] LocateAsync(System.String, System.Uri) attrs= params=specifier:NotNull/NotNull ;baseUri:NotNull/NotNull  return=NotNull/NotNull<Nullable/Nullable>
+  Constructor Void .ctor(System.Collections.Generic.IEnumerable`1[System.Reflection.Assembly]) attrs= params=sharedContracts:Nullable/Nullable<NotNull/NotNull> optional=null [System.Runtime.InteropServices.OptionalAttribute()]
   Constructor Void .ctor(System.String, System.Collections.Generic.IEnumerable`1[System.Reflection.Assembly]) attrs= params=shadowRoot:NotNull/NotNull ;sharedContracts:Nullable/Nullable<NotNull/NotNull> optional=null [System.Runtime.InteropServices.OptionalAttribute()]
   Method Void Register(System.String, Cordis.Clr.ClrModuleDefinition) attrs= params=specifier:NotNull/NotNull ;definition:NotNull/NotNull  return=NotNull/NotNull
 Cordis.Clr: Cordis.Clr.ClrUnloadObservation : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
@@ -1422,7 +1429,8 @@ Cordis.Clr: Cordis.Clr.ClrUnloadObservation : System.Object [] flags=Public, Sea
   Property Boolean ShadowDeleted attrs= NotNull/Unknown get=True set=False init=False
   Method Boolean TryDeleteShadow() attrs= params= return=NotNull/NotNull
   Property Boolean UnloadRequested attrs= NotNull/NotNull get=True set=False init=False
-  Property System.String ShadowDirectory attrs= NotNull/Unknown get=True set=False init=False
+  Property System.String LoadDirectory attrs= NotNull/Unknown get=True set=False init=False
+  Property System.String ShadowDirectory attrs= Nullable/Unknown get=True set=False init=False
   Property System.String UnloadError attrs= Nullable/Nullable get=True set=False init=False
   Property System.WeakReference LoadContext attrs= NotNull/Unknown get=True set=False init=False
 Cordis.Clr: Cordis.Clr.DevelopmentBuildLine : System.Object [System.IEquatable`1[Cordis.Clr.DevelopmentBuildLine]] flags=Public, Sealed, BeforeFieldInit attrs=
@@ -1440,9 +1448,11 @@ Cordis.Clr: Cordis.Clr.DevelopmentBuildProcess : System.Object [] flags=Public, 
 Cordis.Clr: Cordis.Clr.DotnetPluginToolchain : System.Object [Cordis.Composition.IProfilePackageToolchain,System.IDisposable] flags=Public, Sealed, BeforeFieldInit attrs=[System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute("NuGet plugin deployment uses the ordinary CLR; Native AOT applications must republish static plugins.")],[System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute("External plugin entry types are explicitly named in package metadata.")]
   Method Cordis.Composition.PackageManifest LocateManifest(System.String, System.Uri) attrs= params=specifier:NotNull/NotNull ;parent:NotNull/NotNull  return=Nullable/Nullable
   Property System.Collections.Generic.IReadOnlyDictionary`2[System.String,System.String] Bundles attrs= NotNull/Unknown<NotNull/NotNull,NotNull/NotNull> get=True set=False init=False
+  Method System.Collections.Generic.IReadOnlyList`1[System.String] GetRetainedDirectories(System.String) attrs= params=name:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
   Property System.Collections.Generic.IReadOnlyList`1[System.String] Sources attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
   Method System.String NormalizeCompatibilityPackageName(System.String) attrs= params=name:NotNull/NotNull  return=NotNull/NotNull
   Method System.String ResolvePackageName(System.String) attrs= params=name:NotNull/NotNull  return=NotNull/NotNull
+  Method System.Threading.Tasks.Task DeleteRetainedArtifactAsync(System.String, System.String, System.String, System.Threading.CancellationToken) attrs= params=profileDirectory:NotNull/NotNull ;name:NotNull/NotNull ;version:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
   Method System.Threading.Tasks.Task PublishAsync(Cordis.Composition.PreparedPackage, System.Threading.CancellationToken) attrs= params=package:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
   Method System.Threading.Tasks.Task RemoveAsync(System.String, System.Threading.CancellationToken) attrs= params=name:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
   Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageInspection] InspectAsync(Cordis.Composition.PackageRequest, System.Threading.CancellationToken) attrs= params=request:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>

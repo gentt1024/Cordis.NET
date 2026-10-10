@@ -29,7 +29,7 @@ dotnet run --project examples/Probes.Clr/Probes.Clr.csproj -c Release -- tests/f
 
 两个参数都是包含 `ProbePlugin.dll` 及其依赖的 bundle 目录。宿主将自身实际使用的契约程序集传给 `ClrModuleResolver`，加载 V1、激活两个消费者、用 V2 替换 V1，并验证两个消费者均重新取得 caller-bound 视图。释放一个消费者只移除它自己的贡献；释放另一个后，根停止前注册表为空。显式 `ClrModuleDefinition` 使用 `Cordis.ProbeFixture.Entry`；夹具中的其他入口类型用于负向测试。
 
-生命周期清理后，宿主请求卸载，并分别报告回收与影子文件删除。它从不强制 GC。退出码零表示贡献断言、生命周期清理和卸载请求成功；退出时 `collected=False` 或 `shadow deleted=False` 仍可能是正常结果。待清理的临时影子目录会打印出来，供后续清理。宿主不在运行时还原包，部署后也不依赖源码仓库：普通发布宿主，并传入两个预先准备的 bundle 目录即可。这条 CLR 路线要求普通运行时，不支持 Native AOT。[部署测试](../tests/Cordis.Platform.Tests/ProbeDeploymentTests.cs)另外使用仅限测试的强制 GC 验证最终回收。
+宿主直接加载两个完整稳定目录，在生命周期清理和卸载请求后仍保留它们，不强制 GC，也不删除代码目录。退出码零表示贡献断言、生命周期清理和卸载请求成功，回收可以仍在等待。普通发布宿主并传入两个准备好的目录即可，运行时不还原包，也不依赖源码仓库。这条 CLR 路线要求普通运行时，不支持 Native AOT。[制品工作流](clr-artifacts.zh.md)说明库管理的安装与离线删除。[部署测试](../tests/Cordis.Platform.Tests/ProbeDeploymentTests.cs)另外保留显式影子复制覆盖及仅限测试的 GC 观察。
 
 ## 选择最小而有用的作者写法
 
@@ -126,7 +126,7 @@ node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/ap
 
 包与 bundle 选择的产品政策通过 `session.ConfigurationOperations.AdmitProfileAsync` 设置。回调接收 `ProfileCandidate.ManifestJson`（拟保存的确切文本）、`ConfigurationJson`（不执行表达式的有效原始根条目），以及包含来源层和跳过选择的独立 `Composition` 视图。安装时，`Package` 还提供准备目录及计划发布目录，政策可在 Publish 前读取产物；其他操作中它为 null。抛出异常即拒绝。应校验库提供的候选，不再在 `IProfilePackageToolchain.PublishAsync` 中重新读 Profile 并预测另一份候选。准入期间不要重入配置操作。产品自身政策输入须保持稳定直到操作结束；此回调不冻结外部 SDK 或应用状态。`ProfileSession` 自动提供候选应用路径。
 
-若定制 `ReconcileAsync`，应在其后设置 `ReconcileCandidateAsync`，明确提供与该定制对应的候选应用。只替换旧回调会在无准入时保持旧行为；启用准入时不会悄悄批准未绑定候选的应用。删除依赖的准入先于物理删除，拒绝时可以保留已单独批准的取消选择。
+若定制 `ReconcileAsync`，应在其后设置 `ReconcileCandidateAsync`，明确提供与该定制对应的候选应用。只替换旧回调会在无准入时保持旧行为；启用准入时不会悄悄批准未绑定候选的应用。删除依赖的准入先于工具链解除运行时映射，拒绝时可以保留已单独批准的取消选择。CLR 制品保留到所有消费者停止后的显式离线删除。
 
 用 `ReadProfileAsync` 读取 metadata 草稿基线，保留返回的 `Revision`，再以 `SaveProfileMetadataAsync(text, revision)` 提交编辑后的 JSON。保存会排在安装之后等待，以 `profile-conflict` 拒绝失效修订；保留用户草稿，由产品决定下一请求。dependencies 和 `dsh` 仍由既有包、选择和兼容操作拥有。这些方法不增加未经认证的传输入口，等待/冲突交互仍需产品接受。
 

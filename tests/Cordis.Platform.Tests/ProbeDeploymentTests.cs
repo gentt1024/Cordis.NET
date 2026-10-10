@@ -198,5 +198,8 @@ public sealed class ProbeDeploymentTests
         new(
             Path.Combine(AppContext.BaseDirectory, "fixtures", "probe-" + version),
             "ProbePlugin.dll",
-            "Cordis.ProbeFixture.Entry");
+            "Cordis.ProbeFixture.Entry")
+        {
+            LoadMode = ClrModuleLoadMode.ShadowCopy
+        };
 }
