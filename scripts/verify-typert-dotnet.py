@@ -227,24 +227,32 @@ def main():
             run("caller-aot-publish", [dotnet, "publish", caller_project, "-c", "Release", "-p:PublishAot=true", "-o", source / "native"])
         for mode in ("jit", "aot") if options.aot else ("jit",):
             ready = queue.Queue()
-            process = subprocess.Popen([str(dotnet), str(host / "bin/Release/net10.0/Host.dll"), str(source / ("profile-" + mode)), str(bundle)],
-                cwd=source, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
-            def wait_ready():
-                for line in process.stdout:
-                    if line.startswith("READY "):
-                        ready.put(line.strip()[6:])
-                        return
-                ready.put(None)
-            threading.Thread(target=wait_ready, daemon=True).start()
-            try:
-                address = ready.get(timeout=60)
-                assert address and address.startswith("http://127.0.0.1:"), address
-                command = [dotnet, caller / "bin/Release/net10.0/Caller.dll", address] if mode == "jit" else [source / "native" / ("Caller.exe" if os.name == "nt" else "Caller"), address]
-                run("typed-settings-" + mode, command)
-            finally:
-                process.kill()
-                process.wait(timeout=30)
-                (output / ("host-" + mode + ".log")).write_text(process.stdout.read() + process.stderr.read(), encoding="utf-8")
+            stdout_lines = []
+            with (output / ("host-" + mode + ".log")).open("w", encoding="utf-8") as host_log:
+                process = subprocess.Popen([str(dotnet), str(host / "bin/Release/net10.0/Host.dll"), str(source / ("profile-" + mode)), str(bundle)],
+                    cwd=source, env=env, stdout=subprocess.PIPE, stderr=host_log, text=True, encoding="utf-8")
+                def wait_ready():
+                    announced = False
+                    for line in process.stdout:
+                        stdout_lines.append(line)
+                        if not announced and line.startswith("READY "):
+                            ready.put(line.strip()[6:])
+                            announced = True
+                    if not announced:
+                        ready.put(None)
+                reader = threading.Thread(target=wait_ready, daemon=True)
+                reader.start()
+                try:
+                    address = ready.get(timeout=60)
+                    assert address and address.startswith("http://127.0.0.1:"), address
+                    command = [dotnet, caller / "bin/Release/net10.0/Caller.dll", address] if mode == "jit" else [source / "native" / ("Caller.exe" if os.name == "nt" else "Caller"), address]
+                    run("typed-settings-" + mode, command)
+                finally:
+                    process.kill()
+                    process.wait(timeout=30)
+                    reader.join(timeout=30)
+                    assert not reader.is_alive(), "Host output reader did not retire."
+                    host_log.write("".join(stdout_lines))
         status = "requested-checks-passed"
     finally:
         (output / "results.json").write_text(json.dumps({"status": status, "steps": steps, "independentSourceDirectory": str(source),
