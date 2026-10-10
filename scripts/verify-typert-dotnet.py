@@ -132,6 +132,9 @@ def main():
         response = projection_author / "obj/Release/net10.0/cordis-typert"
 
         def extract_projection(service, destination, source_response=None, defines=""):
+            # Retain analysis facts for a shape rejected by the ordinary runtime generator.
+            if service == "optional":
+                defines = "CORDIS_MODEL_OPTIONAL"
             run(service + "-source-extract", [dotnet, compiler, "--roslyn-directory", roslyn, "extract",
                 "--project-directory", projection_author, "--sources", source_response or response / "sources.rsp", "--references", response / "references.rsp",
                 "--assembly-name", "ProjectionAuthor", "--language-version", "14.0", "--nullable", "enable", "--defines", defines,
