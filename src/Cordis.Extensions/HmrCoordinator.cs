@@ -145,6 +145,9 @@ public sealed class HmrCoordinator : IAsyncDisposable
     /// Registration propagates path and watcher activation failures. Matching change and deletion
     /// events queue a refresh without reading the changed file's metadata. Alias resolution failures
     /// are reported through <see cref="Warning"/> and <see cref="Error"/>; later events can recover.
+    /// An existing target parent is watched without its subdirectories; missing ancestors require
+    /// recursive observation. A native buffer overflow reports the original error and queues a
+    /// refresh because individual change notifications may have been lost.
     /// Disposing the watch stops new refreshes. Outside a coordinator transaction, disposal also
     /// waits for any refresh already in progress.
     /// </remarks>
@@ -571,7 +574,7 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 _watcher = created;
             }
 
-            _watcher.IncludeSubdirectories = true;
+            _watcher.IncludeSubdirectories = !PathComparer.Equals(directory, Path.GetDirectoryName(filename));
             _watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite;
             _watcher.Changed += OnChange;
             _watcher.Created += OnChange;
@@ -581,13 +584,24 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 Check(e.FullPath);
                 Check(e.OldFullPath);
             };
-            _watcher.Error += (_, e) => owner.Report(e.GetException());
+            _watcher.Error += OnError;
             owner.ActivateWatcher(_watcher);
             if (refreshExisting && File.Exists(filename))
                 Signal();
         }
 
         private void OnChange(object sender, FileSystemEventArgs e) => Check(e.FullPath);
+
+        private void OnError(object sender, ErrorEventArgs e)
+        {
+            lock (_sync)
+                if (_closed)
+                    return;
+            var error = e.GetException();
+            owner.Report(error);
+            if (error is InternalBufferOverflowException)
+                Signal();
+        }
 
         private void Check(string path)
         {

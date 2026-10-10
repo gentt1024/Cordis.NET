@@ -704,6 +704,82 @@ public sealed class HmrWatchTests
         }
     }
 
+    [Fact]
+    public async Task Existing_configuration_parent_does_not_probe_sdk_subdirectory_changes()
+    {
+        var directory = Directory.CreateTempSubdirectory("cordis-hmr-config-depth-");
+        try
+        {
+            var target = Path.Combine(directory.FullName, "plugins.yml");
+            var child = Path.Combine(
+                Directory.CreateDirectory(Path.Combine(directory.FullName, "sdk")).FullName,
+                "output.tmp");
+            await File.WriteAllTextAsync(target, "before");
+            int childReads = 0;
+            await using var hmr = new HmrCoordinator(
+                readAttributes: path =>
+                {
+                    if (path == child)
+                        Interlocked.Increment(ref childReads);
+                    return File.GetAttributes(path);
+                });
+            var refreshed = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using var watch = hmr.WatchConfig(
+                target,
+                async () => refreshed.TrySetResult(await File.ReadAllTextAsync(target)),
+                refreshExisting: false);
+            await File.WriteAllTextAsync(child, "sdk output");
+            await File.WriteAllTextAsync(target, "after");
+            Assert.Equal("after", await refreshed.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.Equal(0, Volatile.Read(ref childReads));
+        }
+        finally
+        {
+            directory.Delete(true);
+        }
+    }
+
+    [Fact]
+    public async Task Configuration_buffer_overflow_reports_original_error_and_recovers_without_another_change()
+    {
+        var directory = Directory.CreateTempSubdirectory("cordis-hmr-config-overflow-");
+        try
+        {
+            var target = Path.Combine(directory.FullName, "plugins.yml");
+            await File.WriteAllTextAsync(target, "before");
+            ControlledWatcher? native = null;
+            await using var hmr = new HmrCoordinator(path => native = new(path));
+            var warnings = new List<object?>();
+            var errors = new List<Exception>();
+            hmr.Warning += warnings.Add;
+            hmr.Error += errors.Add;
+            var values = Channel.CreateUnbounded<string>();
+            await using var watch = hmr.WatchConfig(
+                target,
+                async () => values.Writer.TryWrite(await File.ReadAllTextAsync(target)),
+                refreshExisting: false);
+            native!.EnableRaisingEvents = false;
+            await File.WriteAllTextAsync(target, "after");
+            var overflow = new InternalBufferOverflowException("lost configuration events");
+            native.Fail(overflow);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            Assert.Equal("after", await values.Reader.ReadAsync(timeout.Token));
+            Assert.Same(overflow, Assert.Single(warnings));
+            Assert.Same(overflow, Assert.Single(errors));
+            await watch.DisposeAsync();
+            await File.WriteAllTextAsync(target, "closed");
+            native.Fail(overflow);
+            await hmr.RunExclusiveAsync(() => Task.CompletedTask);
+            Assert.False(values.Reader.TryRead(out _));
+            Assert.Single(warnings);
+            Assert.Single(errors);
+        }
+        finally
+        {
+            directory.Delete(true);
+        }
+    }
+
     private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private sealed class ControlledWatcher(string directory) : FileSystemWatcher(directory)
