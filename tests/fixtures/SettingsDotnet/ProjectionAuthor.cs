@@ -59,6 +59,76 @@ public sealed class NullableValue
 [JsonSerializable(typeof(NullableValue))]
 public partial class NullableJson : JsonSerializerContext;
 
+[RemoteService("numericDefaults", typeof(NumericJson), Namespace = "numericDefaults")]
+public sealed partial class NumericService
+{
+    [RemoteMethod("value")]
+    public Task<NumericDefaults> Value(NumericDefaults input) => Task.FromResult(input);
+}
+
+public sealed class NumericDefaults
+{
+    public float? Ratio
+    {
+        get;
+        set;
+    } = 1.25f;
+
+    public decimal? Amount
+    {
+        get;
+        set;
+    } = 0.1m;
+
+    public float? EmptyRatio
+    {
+        get;
+        set;
+    } = null;
+
+    public decimal? EmptyAmount
+    {
+        get;
+        set;
+    } = null;
+}
+
+[JsonSerializable(typeof(NumericDefaults))]
+public partial class NumericJson : JsonSerializerContext;
+
+[RemoteService("helperCollision", typeof(HelperCollisionJson), Namespace = "helperCollision")]
+public sealed partial class HelperCollisionService
+{
+    [RemoteMethod("Value")]
+    public Task<HelperCollisions> Value(HelperCollisions input) => Task.FromResult(input);
+}
+
+public sealed record HelperCollisions(
+    ClientCollision Client,
+    JsonCollisionJson Json,
+    CarrierCollisionCarrierJson Carrier,
+    DemoClientFailure Failure,
+    ArgsCollisionValueArgs Args,
+    RequestCollisionValueRequest Request,
+    ResponseCollisionValueResponse Response);
+
+public sealed record ClientCollision(int Count);
+
+public sealed record JsonCollisionJson(int Count);
+
+public sealed record CarrierCollisionCarrierJson(int Count);
+
+public sealed record DemoClientFailure(int Count);
+
+public sealed record ArgsCollisionValueArgs(int Count);
+
+public sealed record RequestCollisionValueRequest(int Count);
+
+public sealed record ResponseCollisionValueResponse(int Count);
+
+[JsonSerializable(typeof(HelperCollisions))]
+public partial class HelperCollisionJson : JsonSerializerContext;
+
 [RemoteService("readonly", typeof(ReadonlyJson), Namespace = "readonly")]
 public sealed partial class ReadonlyService
 {

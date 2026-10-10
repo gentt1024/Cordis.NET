@@ -12,15 +12,22 @@ internal static class LifetimeCases
         await using var root = new Context();
         var registry = new TypertRegistry(root);
         var gateway = new TypertGateway(root, registry);
-        var service = new EchoService();
+        var service = new ContextualEchoService();
         Fiber provider = null!;
+        EffectHandle serviceRegistration = null!;
+
+        Plugin<object?> ProviderPlugin() => new()
+        {
+            Apply = (ctx, _) => serviceRegistration = ctx.Provide("sample:remote", service)
+        };
+
         var definitions = new Dictionary<string, TypertInvocationDescriptor>();
         await root.RunAsync(async ctx =>
         {
             registry.Register(ctx, AuthorModule.Contribution());
             foreach (var method in new[] { "Hold", "Lookup", "Scoped", "BlockedStream" })
                 definitions.Add(method, registry.GetLocal("sample/" + method)!);
-            provider = ctx.Plugin(AuthorModule.Create(service));
+            provider = ctx.Plugin(ProviderPlugin());
             await provider.WaitAsync();
         });
 
@@ -32,33 +39,104 @@ internal static class LifetimeCases
                     "The stable definition changed during provider withdrawal: " + method);
         }
 
-        async Task ReplaceServiceAsync()
+        async Task ReplaceServiceAsync(bool reuseObject = false)
         {
             await root.RunAsync(async ctx =>
             {
                 DefinitionsStayActive();
                 await provider.DisposeAsync();
-                service = new EchoService();
-                provider = ctx.Plugin(AuthorModule.Create(service));
+                if (!reuseObject)
+                    service = new ContextualEchoService();
+                provider = ctx.Plugin(ProviderPlugin());
                 await provider.WaitAsync();
                 DefinitionsStayActive();
             });
         }
 
         var oldService = service;
-        var unary = gateway.InvokeAsync("sample/Hold", Json("{\"text\":\"old\"}"));
-        await oldService.Entered.Task.WaitAsync(Limit);
-        try
+        foreach (var mutation in new[] { "different-object", "same-object", "same-fiber", "notify", "contextual-read" })
         {
             await ReplaceServiceAsync();
-            Require(!unary.IsCompleted, "Service withdrawal actively completed a running unary call.");
-        }
-        finally
-        {
-            oldService.Release.TrySetResult();
+            oldService = service;
+            var oldProvider = provider;
+            var reentered = false;
+            var unary = gateway.InvokeAsync("sample/Hold", Json("{\"text\":\"old\"}"));
+            await oldService.Entered.Task.WaitAsync(Limit);
+            try
+            {
+                switch (mutation)
+                {
+                    case "different-object":
+                    case "same-object":
+                        await ReplaceServiceAsync(mutation == "same-object");
+                        Require(!ReferenceEquals(oldProvider, provider), "The provider Fiber did not change.");
+                        Require(
+                            ReferenceEquals(oldService, service) == (mutation == "same-object"),
+                            "The replacement did not exercise the selected object identity.");
+                        break;
+                    case "same-fiber":
+                        await root.RunAsync(async _ =>
+                        {
+                            await serviceRegistration.DisposeAsync();
+                            serviceRegistration = provider.Context.Provide("sample:remote", service);
+                        });
+                        break;
+                    case "notify":
+                        await root.RunAsync(ctx =>
+                        {
+                            provider.Context.Reflect.Set("sample:remote", service);
+                            provider.Context.Reflect.Notify("sample:remote");
+                            ctx.Isolate("sample:remote").Provide("sample:remote", new EchoService());
+                            return Task.CompletedTask;
+                        });
+                        break;
+                    case "contextual-read":
+                        await root.RunAsync(_ =>
+                        {
+                            service.ReadAction = () =>
+                            {
+                                service.ReadAction = null;
+                                var cleanup = serviceRegistration.DisposeAsync();
+                                Require(cleanup.IsCompletedSuccessfully, "Reentrant provider cleanup did not settle.");
+                                cleanup.GetAwaiter().GetResult();
+                                serviceRegistration = provider.Context.Provide("sample:remote", service);
+                                reentered = true;
+                            };
+                            return Task.CompletedTask;
+                        });
+                        break;
+                }
+
+                if (mutation is "same-fiber" or "notify" or "contextual-read")
+                    Require(
+                        ReferenceEquals(oldProvider, provider),
+                        "An entry-only change replaced the provider Fiber.");
+                await root.RunAsync(_ =>
+                {
+                    DefinitionsStayActive();
+                    Require(!unary.IsCompleted, "Provider mutation actively completed a running unary call.");
+                    return Task.CompletedTask;
+                });
+            }
+            finally
+            {
+                oldService.Release.TrySetResult();
+            }
+
+            var completed = await unary.WaitAsync(Limit);
+            if (mutation == "notify")
+                Require(
+                    completed.Ok && completed.Value!.Value.GetString() == "old",
+                    "Notification retired a live registration.");
+            else
+                Error(completed, "gateway/service-unavailable");
+            if (mutation == "contextual-read")
+                Require(reentered, "The result check did not exercise contextual service reentry.");
+            var current = await gateway.InvokeAsync("sample/NullableEcho", Json("{\"text\":\"fresh\"}"));
+            Require(current.Ok && current.Value!.Value.GetString() == "fresh", "The current service is unavailable.");
+            Console.WriteLine("PASS unary registration: " + mutation);
         }
 
-        Error(await unary.WaitAsync(Limit), "gateway/service-unavailable");
         var fresh = await gateway.InvokeAsync("sample/NullableEcho", Json("{\"text\":\"fresh\"}"));
         Require(fresh.Ok && fresh.Value!.Value.GetString() == "fresh", "The replacement service is unavailable.");
 
@@ -212,4 +290,19 @@ internal static class LifetimeCases
     private static void Error(TypertRemoteResult result, string code) => Require(
         !result.Ok && result.Error?.Code == code,
         "Expected " + code + ", got " + result.Error?.Code);
+
+    private sealed class ContextualEchoService : EchoService, IContextualService
+    {
+        public Action? ReadAction
+        {
+            get;
+            set;
+        }
+
+        public object ForContext(Context context)
+        {
+            ReadAction?.Invoke();
+            return this;
+        }
+    }
 }

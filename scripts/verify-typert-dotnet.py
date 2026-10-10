@@ -121,15 +121,33 @@ def main():
         assert hashlib.sha256(generated.read_bytes()).hexdigest() == generated_hash
 
         # Projection regressions exercise real SDK analysis and shipped tools independently of Settings.
-        projection_author, projection_project = project("ProjectionAuthor", '<CordisTypertService>primitives</CordisTypertService>', composition)
+        projection_author, projection_project = project("ProjectionAuthor",
+            '<PackageId>IndependentProjection.Provider</PackageId><Version>1.0.0-alpha</Version>'
+            '<CordisTypertService>numericDefaults</CordisTypertService>', composition)
         shutil.copyfile(root / "tests/fixtures/SettingsDotnet/ProjectionAuthor.cs", projection_author / "Author.cs")
-        run("projection-author-build", [dotnet, "build", projection_project, "-c", "Release"])
+        run("projection-author-pack", [dotnet, "pack", projection_project, "-c", "Release", "-o", feed])
         sdk = run("selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
         compiler = source / "cache/cordis.net.composition" / version / "tools/net10.0/typert/Cordis.Typert.Compiler.dll"
         roslyn = dotnet.parent / "sdk" / sdk / "Roslyn/bincore"
-        projection, projection_caller = project("ProjectionCaller", '<OutputType>Exe</OutputType>', composition)
-        shutil.copyfile(root / "tests/fixtures/SettingsDotnet/ProjectionCaller.cs", projection / "Program.cs")
         response = projection_author / "obj/Release/net10.0/cordis-typert"
+        numeric_model = response / "numericDefaults.cordis.typert.json"
+        shutil.copyfile(numeric_model, output / "numeric-authored-model.json")
+        with zipfile.ZipFile(feed / "IndependentProjection.Provider.1.0.0-alpha.nupkg") as archive:
+            assert archive.read("cordis/typert/numericDefaults.cordis.typert.json") == numeric_model.read_bytes()
+        numeric_contracts, numeric_contracts_project = project("NumericContracts",
+            '<PackageId>IndependentProjection.Contracts</PackageId><Version>1.0.0-alpha</Version>'
+            '<CordisTypertService>numericDefaults</CordisTypertService>'
+            '<CordisTypertClientModel>numericDefaults.cordis.typert.json</CordisTypertClientModel>'
+            '<CordisTypertClientNamespace>Caller.Edges</CordisTypertClientNamespace>'
+            '<CordisTypertClientName>NumericDefaultsClient</CordisTypertClientName>', composition,
+            '<ItemGroup><None Include="numericDefaults.cordis.typert.json" Pack="true" PackagePath="cordis/typert/"/></ItemGroup>')
+        shutil.copyfile(numeric_model, numeric_contracts / "numericDefaults.cordis.typert.json")
+        run("numeric-model-only-contracts-pack", [dotnet, "pack", numeric_contracts_project, "-c", "Release", "-o", feed])
+        shutil.copyfile(numeric_contracts / "obj/Release/net10.0/cordis-typert/NumericDefaultsClient.Generated.g.cs",
+            output / "numeric-precompile-generated.g.cs")
+        projection, projection_caller = project("ProjectionCaller", '<OutputType>Exe</OutputType>', composition +
+            '<PackageReference Include="IndependentProjection.Contracts" Version="1.0.0-alpha"/>')
+        shutil.copyfile(root / "tests/fixtures/SettingsDotnet/ProjectionCaller.cs", projection / "Program.cs")
 
         def extract_projection(service, destination, source_response=None, defines=""):
             # Retain analysis facts for a shape rejected by the ordinary runtime generator.
@@ -183,6 +201,52 @@ def main():
                     facts = json.loads(artifact.read_text(encoding="utf-8"))
                     argument = facts["services"][0]["methods"][0]["parameters"][0]
                     assert argument["optional"] and argument["default"]["json"] == "7"
+        helper_model = projection_author / "helper-collision.model.json"
+        extract_projection("helperCollision", helper_model)
+        shutil.copyfile(helper_model, output / "helper-collision-model.json")
+        helper_contracts, helper_contracts_project = project("HelperContracts",
+            '<CordisTypertService>helperCollision</CordisTypertService>'
+            '<CordisTypertClientModel>helper-collision.model.json</CordisTypertClientModel>'
+            '<CordisTypertClientNamespace>Caller.Edges</CordisTypertClientNamespace>'
+            '<CordisTypertClientName>DemoClient</CordisTypertClientName>', composition)
+        shutil.copyfile(helper_model, helper_contracts / "helper-collision.model.json")
+        stale_helper = helper_contracts / "obj/Release/net10.0/cordis-typert/DemoClient.Generated.g.cs"
+        stale_helper.parent.mkdir(parents=True)
+        stale_helper.write_text("stale generated output", encoding="utf-8")
+        helper_rejection = run("helper-model-only-contracts-rejected",
+            [dotnet, "pack", helper_contracts_project, "-c", "Release", "-o", feed], True)
+        assert not stale_helper.exists(), "Rejected contract build retained a stale source"
+        named_diagnostic = b"Caller type names collide at 'DemoClientFailure'" in helper_rejection
+        csharp_collision = b"CS0101" in helper_rejection
+        assert named_diagnostic, helper_rejection
+        assert not csharp_collision, "Collision reached C# compilation instead of projection refusal"
+        helper_rejections = [{"entryPoint": "pre-CoreCompile", "clientName": "DemoClient",
+            "collisionName": "DemoClientFailure", "exitCode": steps[-1]["exitCode"], "expectedFailure": True,
+            "staleOutputRemoved": not stale_helper.exists(), "namedDiagnosticObserved": named_diagnostic,
+            "csharpCollisionDiagnosticObserved": csharp_collision}]
+        for client_name, collision_name in (
+                ("ClientCollision", "ClientCollision"),
+                ("JsonCollision", "JsonCollisionJson"),
+                ("CarrierCollision", "CarrierCollisionCarrierJson"),
+                ("DemoClient", "DemoClientFailure"),
+                ("ArgsCollision", "ArgsCollisionValueArgs"),
+                ("RequestCollision", "RequestCollisionValueRequest"),
+                ("ResponseCollision", "ResponseCollisionValueResponse")):
+            target = projection / (client_name + ".Generated.g.cs")
+            target.write_text("stale generated output", encoding="utf-8")
+            rejected = run("helper-" + client_name + "-rejected",
+                [dotnet, compiler, "--roslyn-directory", roslyn, "emit-dotnet", "--model", helper_model,
+                 "--namespace", "Caller.Edges", "--service", "helperCollision", "--client", client_name,
+                 "--output", target], True)
+            assert not target.exists(), "Type-name collision retained a stale source"
+            named_diagnostic = ("Caller type names collide at '" + collision_name + "'").encode() in rejected
+            assert named_diagnostic, rejected
+            assert b"data type " in rejected and b"generated " in rejected, rejected
+            helper_rejections.append({"entryPoint": "emit-dotnet", "clientName": client_name,
+                "collisionName": collision_name, "exitCode": steps[-1]["exitCode"], "expectedFailure": True,
+                "staleOutputRemoved": not target.exists(), "namedDiagnosticObserved": named_diagnostic})
+        (output / "helper-collision-rejections.json").write_text(
+            json.dumps(helper_rejections, indent=2) + "\n", encoding="utf-8")
         optional_before = json.loads((projection_author / "optional.model.json").read_text(encoding="utf-8"))
         optional_source = (projection_author / "Author.cs").read_text(encoding="utf-8")
         (projection_author / "Author.cs").write_text(optional_source.replace("int limit = 7", "int limit = 8"), encoding="utf-8")
@@ -197,6 +261,9 @@ def main():
         assert json.loads(altered.read_text(encoding="utf-8"))["contractIdentity"] != nullable_before["contractIdentity"]
         (projection_author / "Author.cs").write_text(original_projection, encoding="utf-8")
         run("projection-caller-jit", [dotnet, "run", "--project", projection_caller, "-c", "Release"])
+        projection_assets = json.loads((projection / "obj/project.assets.json").read_text(encoding="utf-8"))
+        assert not any(name.startswith("IndependentProjection.Provider/") for name in projection_assets["libraries"])
+        assert not list((projection / "bin").rglob("ProjectionAuthor.dll"))
         if options.aot:
             run("projection-caller-aot-publish", [dotnet, "publish", projection_caller, "-c", "Release", "-p:PublishAot=true", "-o", source / "projection-native"])
             run("projection-caller-aot", [source / "projection-native" / ("ProjectionCaller.exe" if os.name == "nt" else "ProjectionCaller")])

@@ -112,6 +112,8 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 
 提供者代际检查独立于 definition 撤销验证：等待中的 unary Service、lookup、Context 和 downlink 操作保留活跃 descriptor，同时替换其提供者。撤销本身不会中止这些操作；旧成功结果由原生代际检查拒绝。JSON codec 输入校验、结果序列化与流清理限制分别在公开 API 和[作者指南](authoring.zh.md)中说明。修复后的精确源码与包检查点以最新验证记录为准；早期平台结果只适用于其记录的检查点。
 
+Service 有效性同时使用既有 Core 注册身份和返回的服务值。重新提供同一个对象，包括在同一个 Fiber 内重提供，都会形成不同注册，使此前的调用准入失效。同值 `Set`、普通 `Notify` 和无关隔离 realm 的变化保持该准入。值查询先于最后的身份检查，因为 contextual service tracing 可以同步重入并替换注册。不透明身份仅在 Core 与 Composition 内部使用，不新增公开 API、服务 registry 或持久代数。未完成调用可以保留其注册及 provider，直至结束，仍遵循既有 CLR 协作寿命边界。
+
 完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流与 event remotes 及完整二进制 attachment 协议仍未实现。PluginManager、Settings/配置与客户端管理生产消费者向生成合同的迁移仍未完成。既有配置 Schema 导出、手写 `MapCordisService` 与 HTTP/SSE 管理保留当前合同，不能据此计为已完成 Typert 消费者。
 
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
@@ -126,6 +128,8 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 现有由 descriptor 形成的 `TypertTypeModel` 仍是有界的旧摘要，新制品不从它反推。普通构建先将源事实与制品比较，再保留现有 descriptor generator。该 conformance 桥在独立提取与 .NET 投影继续建设时保留已成立的 runtime/TS 路径，不宣称所有 emitter 或运行时类型 registry 已消费完整新模型。
 
 .NET emitter 当前投影直接普通 unary 方法及支持的数据 record/class。实际覆盖包含 bool、string、integer、array、只读 list 接口、JsonElement、可空成员、必需构造器/init 成员、命名/ignore 策略和选定空状态注解。只读数据成员、record struct、数据继承、多态/自定义 converter 和更丰富 Remote 形状保留事实或诊断后被该投影拒绝；不宣称完整 C# 或 TS 类型系统等价。JSON 策略不能省略必填 carrier 参数字段，包括显式 null 和默认值。
+
+常量投影保留可空基本数值初始化值，包括 float/decimal 字面量后缀和显式 null，不改变模型格式。写入调用者源码前，emitter 检查目标 namespace 中全部投影 DTO、生成 client、JSON context、failure 和逐方法 envelope 的类型名。冲突明确标出双方来源后拒绝；拒绝时删除拥有的旧输出，不把冲突推迟到 C# 编译。
 
 生成客户端复用原生 HTTP 结果信封和 RemoteError。DTO/抛错 API 是 .NET 适配；TS 保持独立输出，沿用既有结果 API 与 carrier。compiler 只使用所选 SDK Roslyn、STJ 和既有框架传输，本次没有选入新的 NuGet 依赖。
 

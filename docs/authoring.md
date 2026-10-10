@@ -279,6 +279,8 @@ A separate contract package can consume a copy of that artifact without referenc
 
 The target writes ordinary DTO/client source before `CoreCompile`, so STJ sees it in the same compilation. Same-round source-generator output cannot serve as STJ input. Generated source is owned by `Clean`; identical incremental emission preserves its bytes and timestamp. This opt-in command-line build is the verified boundary; first-build IDE/design-time integration still needs separate evidence. The selected SDK must provide the matching Roslyn assemblies; the package does not redistribute them.
 
+Nullable float and decimal constant initializers retain their authored types and defaults. An absent JSON member keeps its initializer; explicit null replaces it. Caller DTOs share the selected target namespace with generated helper types. A conflicting name, such as `DemoClientFailure` when `CordisTypertClientName` is `DemoClient`, is rejected before compilation with both origins in the diagnostic. Choose a distinct DTO or client name; the emitter does not silently rename public types and removes its previous generated output when it refuses a projection.
+
 ```csharp
 using var http = new HttpClient();
 using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));

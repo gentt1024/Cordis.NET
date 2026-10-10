@@ -279,6 +279,8 @@ await mounted.dispose();
 
 target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。生成源码由 `Clean` 管理；相同输入的增量输出保持字节和时间戳。已验证边界是这条显式启用的命令行构建路径；IDE/design-time 首次构建仍需单独证据。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
 
+可空 float/decimal 常量初始化值保留作者类型与默认值。缺少 JSON 成员时保留初始化值，显式 null 则替换它。调用者 DTO 与生成的辅助类型共享所选目标 namespace。名称冲突会在编译前被拒绝，诊断标明双方来源，例如 `CordisTypertClientName` 为 `DemoClient` 时的 `DemoClientFailure`。应选择不同的 DTO 或 client 名称；emitter 不会静默重命名公开类型，拒绝投影时会删除其此前生成的输出。
+
 ```csharp
 using var http = new HttpClient();
 using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
