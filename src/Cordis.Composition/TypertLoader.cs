@@ -37,7 +37,8 @@ public sealed class StaticTypertArtifactResolver : ITypertArtifactResolver
 
 /// <summary>Discover and reconcile generated artifacts against live Loader entries.</summary>
 /// <remarks>One contribution per exact module request is owned by this loader's Fiber. Multiple live entries share it;
-/// removal of the final entry withdraws it. Resolution results are cached only for this activation, matching the pinned loader's restart boundary.</remarks>
+/// removal of the final entry withdraws it. Resolution results are cached for this activation unless the caller
+/// explicitly suspends selected requests at a native module-generation boundary.</remarks>
 public sealed class TypertLoader
 {
     private readonly Context context;
@@ -47,7 +48,10 @@ public sealed class TypertLoader
     private readonly HashSet<string> configured;
     private readonly Dictionary<string, EffectHandle> registered = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Task<TypertContribution?>> artifacts = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Task> pending = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Import> pending = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, long> generations = new(StringComparer.Ordinal);
+    private readonly HashSet<string> suspended = new(StringComparer.Ordinal);
+    private readonly HashSet<string> mutating = new(StringComparer.Ordinal);
     private readonly HashSet<string> dirty = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource lifetime = new();
     private readonly CancellationToken cancellationToken;
@@ -72,6 +76,9 @@ public sealed class TypertLoader
             {
                 active = false;
                 dirty.Clear();
+                foreach (var import in pending.Values)
+                    import.Completion.TrySetResult();
+                pending.Clear();
                 try
                 {
                     lifetime.Cancel();
@@ -147,9 +154,149 @@ public sealed class TypertLoader
         {
             if (queued is { } flush)
                 await flush;
-            await Task.WhenAll(pending.Values.Select(task => ObserveAsync(task, Report)).ToArray());
+            await Task.WhenAll(pending.Values.Select(import => ObserveAsync(import.Completion.Task, Report)).ToArray());
             if (dirty.Count != 0)
                 await Task.WhenAll(Flush(Report));
+        }
+    }
+
+    /// <summary>Withdraw selected exact Loader requests and invalidate their cached artifacts and pending imports.</summary>
+    /// <remarks>Call after candidate preparation and before retiring affected plugins. Unfinished resolver code is
+    /// detached, not awaited or forcibly stopped. Same-request reentry from registration or withdrawal observers
+    /// throws InvalidOperationException.</remarks>
+    public Task SuspendAsync(IEnumerable<string> specifiers)
+    {
+        var names = SelectNames(specifiers);
+        return context.RunAsync(_ =>
+        {
+            EnsureLifecycleAccess(names);
+            return SuspendCoreAsync(names);
+        });
+    }
+
+    /// <summary>Reload selected exact Loader requests after the caller confirms route commit or successful recovery.</summary>
+    /// <remarks>Registration failures propagate and withdraw the selected batch. A concurrent suspension invalidates
+    /// this operation; it cannot revive a newer generation. Same-request observer reentry throws InvalidOperationException.</remarks>
+    public Task ResumeAsync(IEnumerable<string> specifiers)
+    {
+        var names = SelectNames(specifiers);
+        return context.RunAsync(async owner =>
+        {
+            EnsureLifecycleAccess(names);
+            var captured = names.ToDictionary(name => name, Generation, StringComparer.Ordinal);
+            foreach (var name in names)
+            {
+                suspended.Remove(name);
+                dirty.Remove(name);
+            }
+
+            try
+            {
+                var tasks = new List<Task>();
+                foreach (var name in names)
+                    if (ProcessOne(name) is { } task)
+                        tasks.Add(task);
+                // Observe every completion even when one failure closes and detaches the remaining imports.
+                _ = ObserveAsync(Task.WhenAll(tasks), static _ => { });
+                var remaining = new List<Task>(tasks);
+                while (remaining.Count != 0)
+                {
+                    var settled = await Task.WhenAny(remaining);
+                    remaining.Remove(settled);
+                    await settled;
+                }
+                if (!active || names.Any(name => Generation(name) != captured[name] || suspended.Contains(name)))
+                    throw new OperationCanceledException("Typert resume was superseded by another lifecycle operation.");
+            }
+            catch
+            {
+                try
+                {
+                    await SuspendCoreAsync(names.Where(name => Generation(name) == captured[name]).ToArray());
+                }
+                catch (Exception error)
+                {
+                    Report(error);
+                }
+
+                throw;
+            }
+        });
+    }
+
+    private async Task SuspendCoreAsync(IReadOnlyList<string> names)
+    {
+        var withdrawals = new List<(string Name, EffectHandle Registration)>();
+        foreach (var name in names)
+        {
+            suspended.Add(name);
+            generations[name] = Generation(name) + 1;
+            artifacts.Remove(name);
+            dirty.Remove(name);
+            if (pending.Remove(name, out var import))
+                import.Completion.TrySetResult();
+            if (registered.Remove(name, out var registration))
+                withdrawals.Add((name, registration));
+        }
+
+        mutating.UnionWith(names);
+        Exception? primary = null;
+        try
+        {
+            foreach (var (_, registration) in withdrawals)
+            {
+                try
+                {
+                    await registration.DisposeAsync();
+                }
+                catch (Exception error)
+                {
+                    primary ??= error;
+                }
+            }
+        }
+        finally
+        {
+            mutating.ExceptWith(names);
+        }
+
+        if (primary is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(primary).Throw();
+    }
+
+    private static string[] SelectNames(IEnumerable<string> specifiers)
+    {
+        ArgumentNullException.ThrowIfNull(specifiers);
+        var names = specifiers.Distinct(StringComparer.Ordinal).ToArray();
+        foreach (var name in names)
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return names;
+    }
+
+    private void EnsureLifecycleAccess(IReadOnlyList<string> names)
+    {
+        if (!active)
+            throw new InvalidOperationException("The Typert loader activation has ended.");
+        if (names.Any(mutating.Contains))
+            throw new InvalidOperationException("Typert lifecycle operations cannot reenter a request's registration or withdrawal.");
+    }
+
+    private long Generation(string name) => generations.GetValueOrDefault(name);
+
+    private bool IsCurrent(string name, Import import) =>
+        active && Generation(name) == import.Generation && !suspended.Contains(name) &&
+        ReferenceEquals(pending.GetValueOrDefault(name), import);
+
+    private async Task WithdrawAsync(string name, EffectHandle registration)
+    {
+        mutating.Add(name);
+        try
+        {
+            await registration.DisposeAsync();
+        }
+        finally
+        {
+            mutating.Remove(name);
         }
     }
 
@@ -187,30 +334,34 @@ public sealed class TypertLoader
         if (!Qualifies(name))
         {
             if (registered.Remove(name, out var registration))
-                return registration.DisposeAsync().AsTask();
+                return WithdrawAsync(name, registration);
             return null;
         }
 
-        if (registered.ContainsKey(name) || pending.ContainsKey(name))
+        if (registered.ContainsKey(name))
             return null;
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        pending.Add(name, completion.Task);
-        _ = LoadAndRegisterAsync(name, completion);
-        return completion.Task;
+        if (pending.TryGetValue(name, out var existing))
+            return existing.Completion.Task;
+        var import = new Import(Generation(name));
+        pending.Add(name, import);
+        _ = LoadAndRegisterAsync(name, import);
+        return import.Completion.Task;
     }
 
-    private async Task LoadAndRegisterAsync(string name, TaskCompletionSource completion)
+    private async Task LoadAndRegisterAsync(string name, Import import)
     {
+        var completion = import.Completion;
         try
         {
             if (!artifacts.TryGetValue(name, out var loading))
             {
                 loading = resolver.ResolveAsync(name, loader.BaseUri, cancellationToken).AsTask();
-                artifacts.Add(name, loading);
+                if (IsCurrent(name, import))
+                    artifacts.Add(name, loading);
             }
 
             var contribution = await loading;
-            if (!active || !Qualifies(name) || registered.ContainsKey(name))
+            if (!IsCurrent(name, import) || !Qualifies(name) || registered.ContainsKey(name))
             {
                 completion.TrySetResult();
                 return;
@@ -222,7 +373,23 @@ public sealed class TypertLoader
                     throw new InvalidOperationException($"Configured Typert package '{name}' exports no artifact.");
             }
             else
-                registered.Add(name, registry.Register(context, contribution));
+            {
+                EffectHandle registration;
+                mutating.Add(name);
+                try
+                {
+                    registration = registry.Register(context, contribution);
+                }
+                finally
+                {
+                    mutating.Remove(name);
+                }
+
+                if (IsCurrent(name, import))
+                    registered.Add(name, registration);
+                else
+                    await WithdrawAsync(name, registration);
+            }
 
             completion.TrySetResult();
         }
@@ -232,18 +399,22 @@ public sealed class TypertLoader
         }
         catch (Exception error)
         {
-            completion.TrySetException(error);
+            if (IsCurrent(name, import))
+                completion.TrySetException(error);
+            else
+                completion.TrySetResult();
         }
         finally
         {
-            pending.Remove(name);
+            if (ReferenceEquals(pending.GetValueOrDefault(name), import))
+                pending.Remove(name);
         }
     }
 
-    private bool Qualifies(string name) => configured.Contains(name) || loader
+    private bool Qualifies(string name) => !suspended.Contains(name) && (configured.Contains(name) || loader
         .Entries()
         .Any(entry =>
-            entry.Options.Name == name && entry.Fiber is { Uid: not null } && !entry.Disabled);
+            entry.Options.Name == name && entry.Fiber is { Uid: not null } && !entry.Disabled));
 
     private void Report(Exception error)
     {
@@ -272,5 +443,11 @@ public sealed class TypertLoader
     private sealed class Cleanup(Func<Task> cleanup) : IAsyncDisposable
     {
         public ValueTask DisposeAsync() => new(cleanup());
+    }
+
+    private sealed class Import(long generation)
+    {
+        public long Generation { get; } = generation;
+        public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 }

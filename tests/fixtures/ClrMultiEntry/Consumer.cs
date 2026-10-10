@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.Loader;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Cordis;
 using Cordis.Clr;
 using Cordis.Composition;
@@ -205,21 +206,42 @@ await installedRoot.RunAsync(async context =>
     await installedLoader.WaitAsync();
     var registry = new TypertRegistry(context);
     context.Provide("typert", registry);
+    var unaffectedService = new UnaffectedRemote();
+    var unaffectedOwner = context.Plugin(new Plugin<object?>
+    {
+        Apply = (owner, _) => owner.Provide("unaffected.remote", unaffectedService)
+    });
+    await unaffectedOwner.WaitAsync();
+    var artifactResolver = new FixtureArtifacts(installedResolver);
     TypertLoader? artifacts = null;
     var contractPlugin = new Plugin<object?>
     {
         ApplyAsync = async (owner, _) =>
-            artifacts = await TypertLoader.StartAsync(owner, installedLoader, registry, installedResolver)
+            artifacts = await TypertLoader.StartAsync(owner, installedLoader, registry, artifactResolver, ["unaffected"])
     };
     var contractOwner = context.Plugin(contractPlugin);
     await contractOwner.WaitAsync();
     var gateway = new TypertGateway(context, registry);
+    var unaffectedDescriptor = registry.GetLocal("unaffected/Value");
+    var unaffectedPackage = registry.GetPackage("unaffected");
+    using var emptyArguments = JsonDocument.Parse("{}");
+    async Task VerifyUnaffectedAsync()
+    {
+        var call = await gateway.InvokeAsync("unaffected/Value", emptyArguments.RootElement);
+        if (!ReferenceEquals(unaffectedDescriptor, registry.GetLocal("unaffected/Value")) ||
+            !ReferenceEquals(unaffectedPackage, registry.GetPackage("unaffected")) ||
+            !ReferenceEquals(unaffectedService, context.Get("unaffected.remote")) ||
+            unaffectedOwner.State != FiberState.Active || !call.Ok || call.Value!.Value.GetInt32() != 41)
+            throw new InvalidOperationException("Scoped contract replacement disturbed an independent contribution or its owner.");
+    }
+
+    await VerifyUnaffectedAsync();
     if (!ReferenceEquals(context.Get("first.identity"), context.Get("second.identity")) ||
         context.Get("first.identity") is null || (int)context.Get("second.value")! != 11 ||
         toolchain.LocateManifest("nuget:independentmultientry/second", new Uri("file:///")) is null)
         throw new InvalidOperationException(
             "The standard NuGet toolchain did not deliver the declared secondary export.");
-    if (registry.ListLocal().Count != 3 || registry.GetSchema("multi-entry.first#int") is null)
+    if (registry.ListLocal().Count != 4 || registry.GetSchema("multi-entry.first#int") is null)
         throw new InvalidOperationException(
             "The same dynamic bundle did not export its compiler-generated descriptors and schema.");
     using var arguments = JsonDocument.Parse("{\"request\":{\"delta\":2}}");
@@ -282,13 +304,14 @@ await installedRoot.RunAsync(async context =>
     var staleCall = gateway.InvokeAsync("first/Wait", arguments.RootElement);
     await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
     var typedTarget = args[2];
+    var affectedRequests = new[] { "nuget:independentmultientry", "nuget:independentmultientry/second" };
     await using var typedHmr = new HmrCoordinator();
     var installedAssembly = Path.Combine(toolchain.Bundles["IndependentMultiEntry"], "IndependentMultiEntry.dll");
     typedHmr.RegisterModule(
         installedAssembly,
         async () =>
         {
-            var retired = false;
+            var suspended = false;
             try
             {
                 await installedResolver.ReplaceAsync(
@@ -305,19 +328,39 @@ await installedRoot.RunAsync(async context =>
                     },
                     async pairs =>
                     {
-                        await contractOwner.DisposeAsync();
-                        retired = true;
+                        await artifacts!.SuspendAsync(affectedRequests);
+                        suspended = true;
+                        if (registry.GetLocal("first/Echo") is not null || registry.GetLocal("second/Echo") is not null)
+                            throw new InvalidOperationException("Affected contracts remained callable at retirement.");
+                        await VerifyUnaffectedAsync();
                         await installedLoader.ReplacePluginsAsync(pairs);
                     });
             }
-            finally
+            catch (Exception error)
             {
-                if (retired)
+                if (suspended && PluginReplacementFailure.FromException(error)?.Recovery == PluginRecoveryState.Succeeded)
                 {
-                    contractOwner = context.Plugin(contractPlugin);
-                    await contractOwner.WaitAsync();
+                    try
+                    {
+                        await artifacts!.ResumeAsync(affectedRequests);
+                    }
+                    catch (Exception recoveryError)
+                    {
+                        try
+                        {
+                            Console.Error.WriteLine("Contract recovery failed: " + recoveryError.Message);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
                 }
+
+                throw;
             }
+
+            await artifacts!.ResumeAsync(affectedRequests);
+            await VerifyUnaffectedAsync();
         });
     await RejectAsync(
         () => typedHmr.NotifyChangedAsync(installedAssembly),
@@ -328,6 +371,9 @@ await installedRoot.RunAsync(async context =>
         throw new InvalidOperationException("An old invocation survived generated contract withdrawal and recovery.");
     if (!(await gateway.InvokeAsync("second/Echo", arguments.RootElement)).Ok)
         throw new InvalidOperationException("Typed Remote was not restored after failed bundle replacement.");
+    await VerifyUnaffectedAsync();
+    var originalCodec = registry.GetLocal("first/Echo")!.Parameters[0].Codec;
+    var originalModel = registry.GetPackage("multi-entry.first")!.Model;
     typedTarget = args[1];
     await typedHmr.NotifyChangedAsync(installedAssembly);
     firstCall = await gateway.InvokeAsync("first/Echo", arguments.RootElement);
@@ -336,6 +382,11 @@ await installedRoot.RunAsync(async context =>
         secondCall.Value!.Value.GetInt32() != 213)
         throw new InvalidOperationException(
             "Replacement reused old CLR DTO codecs or failed to reload generated contracts.");
+    if (ReferenceEquals(originalCodec, registry.GetLocal("first/Echo")!.Parameters[0].Codec) ||
+        ReferenceEquals(originalModel, registry.GetPackage("multi-entry.first")!.Model) ||
+        contractOwner.State != FiberState.Active)
+        throw new InvalidOperationException("Scoped replacement did not refresh its codec/model under the existing contract owner.");
+    await VerifyUnaffectedAsync();
     await installedLoader.UpdateAsync(
         "one",
         new EntryOptions
@@ -348,8 +399,9 @@ await installedRoot.RunAsync(async context =>
         throw new InvalidOperationException("Withdrawing one entry failed to withdraw only its Remote definition.");
     await installedLoader.Root.UpdateAsync([]);
     await artifacts.WaitForIdleAsync();
-    if (registry.ListLocal().Count != 0 || (await gateway.InvokeAsync("second/Echo", arguments.RootElement)).Ok)
+    if (registry.ListLocal().Count != 1 || (await gateway.InvokeAsync("second/Echo", arguments.RootElement)).Ok)
         throw new InvalidOperationException("The final entry withdrawal left a generated Remote definition live.");
+    await VerifyUnaffectedAsync();
     var unloads = installedResolver.Unloads.Count;
     await toolchain.RemoveAsync("IndependentMultiEntry");
     await RejectAsync(
@@ -375,3 +427,23 @@ static async Task RejectAsync(Func<Task> action, string message)
 
     throw new InvalidOperationException("Expected rejection: " + message);
 }
+
+sealed class FixtureArtifacts(ITypertArtifactResolver modules) : ITypertArtifactResolver
+{
+    private readonly TypertContribution unaffected = TypertArtifacts.Contribution("unaffected", "host",
+        [new("unaffected#Value", "unaffected.remote", "unaffected", "Value", [],
+            TypertCodec.Create(UnaffectedJson.Default.Int32))]);
+
+    public ValueTask<TypertContribution?> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default) =>
+        specifier == "unaffected" ? ValueTask.FromResult<TypertContribution?>(unaffected) : modules.ResolveAsync(specifier, baseUri, cancellationToken);
+}
+
+sealed class UnaffectedRemote : ITypertRemoteService
+{
+    public TypertRemoteBinding TypertRemote { get; } = new("unaffected.remote", "unaffected",
+        new Dictionary<string, TypertUnaryInvoker> { ["Value"] = (_, _, _) => Task.FromResult<object?>(41) },
+        new Dictionary<string, TypertStreamInvoker>());
+}
+
+[JsonSerializable(typeof(int))]
+partial class UnaffectedJson : JsonSerializerContext;

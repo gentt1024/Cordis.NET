@@ -1463,6 +1463,8 @@ Cordis.Composition: Cordis.Composition.TypertJson : System.Text.Json.Serializati
   Constructor Void .ctor() attrs= params=
   Constructor Void .ctor(System.Text.Json.JsonSerializerOptions) attrs= params=options:NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertLoader : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method System.Threading.Tasks.Task ResumeAsync(System.Collections.Generic.IEnumerable`1[System.String]) attrs= params=specifiers:NotNull/NotNull<NotNull/NotNull>  return=NotNull/NotNull
+  Method System.Threading.Tasks.Task SuspendAsync(System.Collections.Generic.IEnumerable`1[System.String]) attrs= params=specifiers:NotNull/NotNull<NotNull/NotNull>  return=NotNull/NotNull
   Method System.Threading.Tasks.Task WaitForIdleAsync() attrs= params= return=NotNull/NotNull
   Method System.Threading.Tasks.Task`1[Cordis.Composition.TypertLoader] StartAsync(Cordis.Context, Cordis.Composition.Loader, Cordis.Composition.TypertRegistry, Cordis.Composition.ITypertArtifactResolver, System.Collections.Generic.IEnumerable`1[System.String]) attrs= params=context:NotNull/NotNull ;loader:NotNull/NotNull ;registry:NotNull/NotNull ;resolver:NotNull/NotNull ;packages:Nullable/Nullable<NotNull/NotNull> optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
 Cordis.Composition: Cordis.Composition.TypertLookupDefinition : System.Object [System.IEquatable`1[Cordis.Composition.TypertLookupDefinition]] flags=Public, Sealed, BeforeFieldInit attrs=

@@ -222,7 +222,7 @@ Typert loader 的 owner Fiber 拥有登记及其激活期导入缓存。同一�
 
 原生 Gateway 还在成功解析提供者之后、编码成功业务结果或流条目之前检查提供者代际。撤销 Service、lookup 或 Context 提供者不会主动中止已运行的工作；即使生成 definition 仍活跃，旧提供者的成功结果也会被拒绝。[独立生命周期用例](../tests/fixtures/TypertConsumer/LifetimeCases.cs) 在实际异步边界停住各提供者、完成替换，同时检查旧成功被拒绝与当前提供者可调用。这些检查属于原生有效性适配，不是产品退休或排空政策。
 
-动态 bundle 替换时，先停止 Typert loader owner Fiber，再切换 provider Fiber。Resolver 提交新 bundle 后，创建新 owner Fiber 并启动 `TypertLoader`；替换失败并恢复旧 provider 后，同样针对旧 bundle 重建。这样释放旧 CLR `JsonTypeInfo` 和生成绑定，避免用旧元数据处理新 CLR 类型。独立多入口消费者验证这一顺序和旧调用失效。保留的贡献、客户端、服务对象或错误仍可能保留可收集代码；所有权结束后应释放这些引用。
+动态 bundle 替换时保留 Typert loader owner，在候选准备完成后、切换 provider Fiber 前，向 `SuspendAsync` 传入受影响的精确 Loader 请求名称。Deployment 路由提供别名时，这些名称可能与 CLR resolver 键不同。Resolver 返回并提交后，对这些请求调用 `ResumeAsync`。失败时，仅当 `PluginReplacementFailure.Recovery` 确认为 `Succeeded` 才恢复，否则保持该作用域暂停。恢复传播登记异常，并在失败时撤销所选批次。登记或撤销观察者对同一请求重入生命周期操作会被拒绝。暂停脱离未完成导入，不强制停止 resolver 代码；保留的任务在结束前仍可能保留旧代码。独立多入口消费者验证无关包的贡献身份和调用保持不变、替换后 CLR codec 更新、恢复顺序及旧调用失效。保留的贡献、客户端、服务对象或错误仍可能保留可收集代码；所有权结束后应释放这些引用。
 
 `MapCordisRemote` 将宿主授权的 `TypertGateway` 映射为原生 unary JSON 与 downlink NDJSON 路由。宿主提供授权回调。请求中断与生成客户端的 `AbortSignal` 传递取消信号；`byte[]` 结果通过 JSON base64 表达。Host unary 将信号传给绑定，只在已取消时归一业务失败，不强制中止成功的业务执行。Downlink 读取与取消竞争，之后的清理先等待未完成的原生读取，再在其调用 Context 中释放枚举器。业务或清理始终不结束时，调用可能无法终止，与固定流清理边界一致。此传输不承诺完整固定 Typert wire protocol。
 
