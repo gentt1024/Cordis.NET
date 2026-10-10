@@ -223,3 +223,10 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 实际流水线为：C# 源声明与有效编译输入 → 独立可序列化模型 → 仅模型合同包 → CoreCompile 前 DTO/client/context → STJ 元数据 → 真实 Settings HTTP 调用。普通 `ISettingsDescribeProvider` 仍直接作为 Service 消费。既有运行时绑定和 TS emitter 经源/制品 conformance 桥保留，尚未全部迁移到独立模型。JSON Schema 和 RPC descriptor 是投影，不是 authored model 的事实来源。
 
 已证明的模型切片保留作者成员/构造器关系、C#/JSON required、空状态注解、支持的常量与可选默认值、XML 作者说明及编译选项。分析事实与调用方投影支持分开；不支持的可选调用、readonly 数据、record struct 和规范化方法名称冲突明确拒绝，避免静默丢失语义。完整图组合、全部后端及原范围剩余基础设施项仍开放；不新建总规划或选定第三方依赖。
+
+
+### 已确认审查缺陷修复，2026-10-10
+
+原范围仅追加 `a9b53d2fce5e1e611599098d87b46fa6300c9618` 的 R1/R2/R3 修复状态。Gateway 内部身份复用已有注册 entry，Core 不新增公共 API、registry 或 RPC 依赖。可空数值事实继续来自作者模型，仅修正字面量发射。DTO/辅助类型共用名称预检，不另建命名系统。Windows 全门禁还暴露配置事件属性读取失败；事件匹配按固定 HMR 的词法路径投递，原生别名失败沿用现有诊断并可恢复。
+
+见[已完成的修复验证](validation.zh.md#typert-修复验证2026-10-10)。真实 Settings 消费、独立 TS/Web、CLR 身份及原错误/寿命边界继续分别验证。早先有界验收和失败不改写。类型图、后端、协议、Settings、lookup 时序及生产消费者开放项仍开放；本次不构成完整 Typert 或新增依赖验收。
