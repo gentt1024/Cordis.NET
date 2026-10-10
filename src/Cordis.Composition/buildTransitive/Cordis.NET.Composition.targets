@@ -1,0 +1,52 @@
+<Project>
+  <PropertyGroup>
+    <CordisTypertCompiler Condition="'$(CordisTypertCompiler)' == ''">$(MSBuildThisFileDirectory)../tools/net10.0/typert/Cordis.Typert.Compiler.dll</CordisTypertCompiler>
+    <CordisTypertDotnetHost Condition="'$(CordisTypertDotnetHost)' == '' and '$(DotNetHostPath)' != ''">$(DotNetHostPath)</CordisTypertDotnetHost>
+    <CordisTypertDotnetHost Condition="'$(CordisTypertDotnetHost)' == ''">dotnet</CordisTypertDotnetHost>
+    <_CordisTypertBaseIntermediate Condition="'$(BaseIntermediateOutputPath)' != ''">$(BaseIntermediateOutputPath)</_CordisTypertBaseIntermediate>
+    <_CordisTypertBaseIntermediate Condition="'$(_CordisTypertBaseIntermediate)' == ''">obj/</_CordisTypertBaseIntermediate>
+    <CordisTypertOutputDirectory Condition="'$(CordisTypertOutputDirectory)' == ''">$(_CordisTypertBaseIntermediate)$(Configuration)/$(TargetFramework)/cordis-typert/</CordisTypertOutputDirectory>
+    <CordisTypertModelPath Condition="'$(CordisTypertModelPath)' == ''">$(CordisTypertOutputDirectory)$(CordisTypertService).cordis.typert.json</CordisTypertModelPath>
+    <CordisTypertClientNamespace Condition="'$(CordisTypertClientNamespace)' == ''">$(RootNamespace).Remote</CordisTypertClientNamespace>
+    <CordisTypertClientName Condition="'$(CordisTypertClientName)' == ''">RemoteClient</CordisTypertClientName>
+    <CordisTypertClientSource>$(CordisTypertOutputDirectory)$(CordisTypertClientName).Generated.g.cs</CordisTypertClientSource>
+    <_CordisTypertLanguageVersion Condition="'$(LangVersion)' != ''">$(LangVersion)</_CordisTypertLanguageVersion>
+    <_CordisTypertLanguageVersion Condition="'$(_CordisTypertLanguageVersion)' == ''">default</_CordisTypertLanguageVersion>
+    <_CordisTypertNullable Condition="'$(Nullable)' != ''">$(Nullable)</_CordisTypertNullable>
+    <_CordisTypertNullable Condition="'$(_CordisTypertNullable)' == ''">disable</_CordisTypertNullable>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(CordisTypertService)' != '' and '$(CordisTypertClientModel)' == ''">
+    <None Include="$(CordisTypertModelPath)" Pack="true" PackagePath="cordis/typert/" Visible="false" />
+    <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+  </ItemGroup>
+  <!-- The source generator cannot supply STJ input in its own generation round. -->
+  <Target Name="CordisTypertExtractModel" BeforeTargets="CoreCompile"
+          DependsOnTargets="ResolveReferences;GenerateGlobalUsings;GenerateAssemblyInfo"
+          Condition="'$(CordisTypertService)' != '' and '$(CordisTypertClientModel)' == '' and '$(DesignTimeBuild)' != 'true'">
+    <MakeDir Directories="$(CordisTypertOutputDirectory)" />
+    <ItemGroup>
+      <_CordisTypertSources Include="@(Compile)" />
+      <_CordisTypertSources Remove="$(CordisTypertClientSource)" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)sources.rsp" Lines="@(_CordisTypertSources->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)references.rsp" Lines="@(ReferencePath->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; extract --project-directory &quot;$(MSBuildProjectDirectory)&quot; --sources &quot;$(CordisTypertOutputDirectory)sources.rsp&quot; --references &quot;$(CordisTypertOutputDirectory)references.rsp&quot; --assembly-name &quot;$(AssemblyName)&quot; --language-version &quot;$(_CordisTypertLanguageVersion)&quot; --nullable &quot;$(_CordisTypertNullable)&quot; --defines &quot;$(DefineConstants)&quot; --allow-unsafe &quot;$(AllowUnsafeBlocks)&quot; --check-overflow &quot;$(CheckForOverflowUnderflow)&quot; --output-kind &quot;$(OutputType)&quot; --platform &quot;$(PlatformTarget)&quot; --optimize &quot;$(Optimize)&quot; --service &quot;$(CordisTypertService)&quot; --output &quot;$(CordisTypertModelPath)&quot;" />
+    <ItemGroup>
+      <AdditionalFiles Include="$(CordisTypertModelPath)" />
+      <FileWrites Include="$(CordisTypertModelPath);$(CordisTypertOutputDirectory)sources.rsp;$(CordisTypertOutputDirectory)references.rsp" />
+    </ItemGroup>
+  </Target>
+  <Target Name="CordisTypertEmitDotnetClient" BeforeTargets="CoreCompile"
+          DependsOnTargets="ResolveReferences"
+          Condition="'$(CordisTypertClientModel)' != '' and '$(DesignTimeBuild)' != 'true'">
+    <MakeDir Directories="$(CordisTypertOutputDirectory)" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --namespace &quot;$(CordisTypertClientNamespace)&quot; --service &quot;$(CordisTypertService)&quot; --client &quot;$(CordisTypertClientName)&quot; --output &quot;$(CordisTypertClientSource)&quot;" />
+    <ItemGroup>
+      <Compile Remove="$(CordisTypertClientSource)" />
+      <Compile Include="$(CordisTypertClientSource)" />
+      <FileWrites Include="$(CordisTypertClientSource)" />
+    </ItemGroup>
+  </Target>
+</Project>

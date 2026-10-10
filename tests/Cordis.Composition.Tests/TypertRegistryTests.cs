@@ -7,6 +7,35 @@ namespace Cordis.Composition.Tests;
 public sealed class TypertRegistryTests
 {
     [Fact]
+    public async Task Discovered_loader_builtin_is_not_an_artifact_but_explicit_configuration_still_fails()
+    {
+        await using var root = new Context();
+        var registry = new TypertRegistry(root);
+        var artifacts = new StaticTypertArtifactResolver();
+        artifacts.Register(
+            "cordis:group",
+            () => throw new InvalidOperationException("Builtin reached a module resolver."));
+        Loader loader = null!;
+        await root.RunAsync(async context =>
+        {
+            loader = new(context, new StaticModuleResolver());
+            await loader.CreateAsync(
+                new()
+                {
+                    Id = "group",
+                    Name = "cordis:group",
+                    Config = new List<EntryOptions>()
+                });
+            await loader.WaitAsync();
+            await TypertLoader.StartAsync(context, loader, registry, artifacts);
+        });
+        var failure = await Assert.ThrowsAsync<AggregateException>(() => root.RunAsync(async context =>
+            await TypertLoader.StartAsync(context, loader, registry, artifacts, ["cordis:group"])));
+        var cause = Assert.IsType<InvalidOperationException>(Assert.Single(failure.InnerExceptions));
+        Assert.Equal("Configured Typert package 'cordis:group' exports no artifact.", cause.Message);
+    }
+
+    [Fact]
     public async Task Contributions_reject_atomic_conflicts_and_withdraw_with_their_actual_fiber()
     {
         await using var root = new Context();
@@ -176,9 +205,11 @@ public sealed class TypertRegistryTests
         {
             Apply = (owner, _) => owner.Provide("user:independent", new ConstantRemote("independent", 17))
         };
-        var modules = new StaticModuleResolver().Register(
-            "package",
-            packagePlugin).Register("independent", independentPlugin);
+        var modules = new StaticModuleResolver()
+            .Register(
+                "package",
+                packagePlugin)
+            .Register("independent", independentPlugin);
         var artifacts = new StaticTypertArtifactResolver();
         var factoryCalls = 0;
         var contribution = new TypertContribution("package", [Descriptor()]);
@@ -189,12 +220,18 @@ public sealed class TypertRegistryTests
                 factoryCalls++;
                 return contribution;
             });
-        artifacts.Register("independent", () => new("independent", [Descriptor() with
-        {
-            Id = "independent#add",
-            Service = "user:independent",
-            Namespace = "independent"
-        }]));
+        artifacts.Register(
+            "independent",
+            () => new(
+                "independent",
+                [
+                    Descriptor() with
+                    {
+                        Id = "independent#add",
+                        Service = "user:independent",
+                        Namespace = "independent"
+                    }
+                ]));
         Loader loader = null!;
         TypertLoader typert = null!;
         await root.RunAsync(ctx =>
@@ -214,11 +251,12 @@ public sealed class TypertRegistryTests
                 Id = "second",
                 Name = "package"
             });
-        await loader.CreateAsync(new()
-        {
-            Id = "independent",
-            Name = "independent"
-        });
+        await loader.CreateAsync(
+            new()
+            {
+                Id = "independent",
+                Name = "independent"
+            });
         await root.RunAsync(async ctx => typert = await TypertLoader.StartAsync(ctx, loader, registry, artifacts));
         var independentFiber = loader.Resolve("independent").Fiber;
         TypertInvocationDescriptor independentDescriptor = null!;
@@ -263,13 +301,23 @@ public sealed class TypertRegistryTests
             return Task.CompletedTask;
         });
         value = "generation two";
-        contribution = new("package", "host", [new("Result", () => Json("{\"type\":\"string\"}"))],
+        contribution = new(
+            "package",
+            "host",
+            [new("Result", () => Json("{\"type\":\"string\"}"))],
             new([new("user:counter", "Counter", [], [new("Result", "export type Result = string;")])], [], []),
-            [Descriptor() with { Result = TypertCodec.Create(TypertRegistryJson.Default.String) }]);
-        await loader.ReplacePluginAsync(packagePlugin, new Plugin<object?>
-        {
-            Apply = (owner, _) => owner.Provide("user:counter", new ConstantRemote("counter", value))
-        });
+            [
+                Descriptor() with
+                {
+                    Result = TypertCodec.Create(TypertRegistryJson.Default.String)
+                }
+            ]);
+        await loader.ReplacePluginAsync(
+            packagePlugin,
+            new Plugin<object?>
+            {
+                Apply = (owner, _) => owner.Provide("user:counter", new ConstantRemote("counter", value))
+            });
         await typert.ResumeAsync(["package"]);
         Assert.Equal("generation two", (await gateway.InvokeAsync("counter/add", Json("{}"))).Value!.Value.GetString());
         Assert.Equal(17, (await gateway.InvokeAsync("independent/add", Json("{}"))).Value!.Value.GetInt32());
@@ -277,7 +325,9 @@ public sealed class TypertRegistryTests
         {
             Assert.Same(independentFiber, loader.Resolve("independent").Fiber);
             Assert.Same(independentDescriptor, registry.GetLocal("independent/add"));
-            Assert.Equal("export type Result = string;", Assert.Single(Assert.Single(registry.GetPackage("package")!.Model.Services).Types).Declaration);
+            Assert.Equal(
+                "export type Result = string;",
+                Assert.Single(Assert.Single(registry.GetPackage("package")!.Model.Services).Types).Declaration);
             Assert.Equal("string", registry.ResolveSchema("package#Result").GetProperty("type").GetString());
             Assert.Equal(2, factoryCalls);
             return Task.CompletedTask;
@@ -296,14 +346,24 @@ public sealed class TypertRegistryTests
         var resolver = new SequencedResolver();
         await root.RunAsync(async ctx =>
         {
-            loader = new(ctx, new StaticModuleResolver().Register("package", new Plugin<object?> { Apply = (_, _) => { } }));
+            loader = new(
+                ctx,
+                new StaticModuleResolver().Register(
+                    "package",
+                    new Plugin<object?>
+                    {
+                        Apply = (_, _) =>
+                        {
+                        }
+                    }));
             typert = await TypertLoader.StartAsync(ctx, loader, registry, resolver);
         });
-        await loader.CreateAsync(new()
-        {
-            Id = "entry",
-            Name = "package"
-        });
+        await loader.CreateAsync(
+            new()
+            {
+                Id = "entry",
+                Name = "package"
+            });
         await resolver.FirstEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         var oldIdle = root.RunAsync(_ => typert.WaitForIdleAsync());
         await typert.SuspendAsync(["package"]);
@@ -376,16 +436,19 @@ public sealed class TypertRegistryTests
         EffectHandle observer = null!;
         await root.RunAsync(ctx =>
         {
-            observer = registry.Subscribe(ctx, change =>
-            {
-                if (change.Key == "counter/first")
-                    reentries.Add(typert.SuspendAsync(["first"]));
-            });
+            observer = registry.Subscribe(
+                ctx,
+                change =>
+                {
+                    if (change.Key == "counter/first")
+                        reentries.Add(typert.SuspendAsync(["first"]));
+                });
             return Task.CompletedTask;
         });
         var resuming = typert.ResumeAsync(names);
         await resolver.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => resuming.WaitAsync(TimeSpan.FromSeconds(5)));
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            resuming.WaitAsync(TimeSpan.FromSeconds(5)));
         Assert.Contains("endpoint 'counter/first' is already registered", error.Message);
         Assert.False(resolver.Resolved.Task.IsCompleted);
         Assert.Equal(2, reentries.Count);
@@ -498,14 +561,41 @@ public sealed class TypertRegistryTests
     private sealed class SequencedResolver : ITypertArtifactResolver
     {
         private int calls;
-        public TaskCompletionSource FirstEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource SecondEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource ThirdEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource<TypertContribution?> First { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource<TypertContribution?> Second { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource<TypertContribution?> Third { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public ValueTask<TypertContribution?> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
+        public TaskCompletionSource FirstEntered
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource SecondEntered
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource ThirdEntered
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<TypertContribution?> First
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<TypertContribution?> Second
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<TypertContribution?> Third
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ValueTask<TypertContribution?> ResolveAsync(
+            string specifier,
+            Uri baseUri,
+            CancellationToken cancellationToken = default)
         {
             if (++calls == 1)
             {
@@ -531,10 +621,21 @@ public sealed class TypertRegistryTests
             get;
             set;
         }
-        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource<TypertContribution?> Resolved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public ValueTask<TypertContribution?> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
+        public TaskCompletionSource Entered
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<TypertContribution?> Resolved
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ValueTask<TypertContribution?> ResolveAsync(
+            string specifier,
+            Uri baseUri,
+            CancellationToken cancellationToken = default)
         {
             if (specifier != "pending" || !Hold)
                 return immediate.ResolveAsync(specifier, baseUri, cancellationToken);
@@ -548,8 +649,13 @@ public sealed class TypertRegistryTests
         public TypertRemoteBinding TypertRemote
         {
             get;
-        } = new("user:" + name, name,
-            new Dictionary<string, TypertUnaryInvoker> { ["add"] = (_, _, _) => Task.FromResult<object?>(value) },
+        } = new(
+            "user:" + name,
+            name,
+            new Dictionary<string, TypertUnaryInvoker>
+            {
+                ["add"] = (_, _, _) => Task.FromResult<object?>(value)
+            },
             new Dictionary<string, TypertStreamInvoker>());
     }
 }

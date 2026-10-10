@@ -390,6 +390,8 @@ def main():
                 "--packages", package_dir, "--output", OUT / "clr-multi-entry"])
             run("typert-package-consumer", [sys.executable, "scripts/verify-typert.py", "--dotnet", shutil.which("dotnet"),
                 "--packages", package_dir, "--output", OUT / "typert-consumer", *(["--aot"] if options.aot else [])])
+            run("typert-dotnet-settings", [sys.executable, "scripts/verify-typert-dotnet.py", "--dotnet", shutil.which("dotnet"),
+                "--packages", package_dir, "--output", OUT / "typert-dotnet-settings", *(["--aot"] if options.aot else [])])
         if git_checkout():
             run("whitespace", ["git", "diff", "--check"])
         else:

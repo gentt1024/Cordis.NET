@@ -197,7 +197,11 @@ public sealed class TypertLoader
                     if (ProcessOne(name) is { } task)
                         tasks.Add(task);
                 // Observe every completion even when one failure closes and detaches the remaining imports.
-                _ = ObserveAsync(Task.WhenAll(tasks), static _ => { });
+                _ = ObserveAsync(
+                    Task.WhenAll(tasks),
+                    static _ =>
+                    {
+                    });
                 var remaining = new List<Task>(tasks);
                 while (remaining.Count != 0)
                 {
@@ -205,8 +209,10 @@ public sealed class TypertLoader
                     remaining.Remove(settled);
                     await settled;
                 }
+
                 if (!active || names.Any(name => Generation(name) != captured[name] || suspended.Contains(name)))
-                    throw new OperationCanceledException("Typert resume was superseded by another lifecycle operation.");
+                    throw new OperationCanceledException(
+                        "Typert resume was superseded by another lifecycle operation.");
             }
             catch
             {
@@ -278,7 +284,8 @@ public sealed class TypertLoader
         if (!active)
             throw new InvalidOperationException("The Typert loader activation has ended.");
         if (names.Any(mutating.Contains))
-            throw new InvalidOperationException("Typert lifecycle operations cannot reenter a request's registration or withdrawal.");
+            throw new InvalidOperationException(
+                "Typert lifecycle operations cannot reenter a request's registration or withdrawal.");
     }
 
     private long Generation(string name) => generations.GetValueOrDefault(name);
@@ -355,7 +362,10 @@ public sealed class TypertLoader
         {
             if (!artifacts.TryGetValue(name, out var loading))
             {
-                loading = resolver.ResolveAsync(name, loader.BaseUri, cancellationToken).AsTask();
+                // Loader imports its builtins directly, without a module/artifact resolver.
+                loading = name.StartsWith("cordis:", StringComparison.Ordinal) && loader.Builtins.ContainsKey(name[7..])
+                    ? Task.FromResult<TypertContribution?>(null)
+                    : resolver.ResolveAsync(name, loader.BaseUri, cancellationToken).AsTask();
                 if (IsCurrent(name, import))
                     artifacts.Add(name, loading);
             }
@@ -447,7 +457,14 @@ public sealed class TypertLoader
 
     private sealed class Import(long generation)
     {
-        public long Generation { get; } = generation;
-        public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public long Generation
+        {
+            get;
+        } = generation;
+
+        public TaskCompletionSource Completion
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 }

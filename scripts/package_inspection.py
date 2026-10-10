@@ -76,6 +76,13 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
                 assert "tools/net10.0/any/Cordis.Core.dll" in entries, identity
             if identity == "Cordis.NET.Clr":
                 assert "buildTransitive/Cordis.NET.Clr.targets" in entries, identity
+            if identity == "Cordis.NET.Composition":
+                assert "analyzers/dotnet/cs/Cordis.Typert.Generator.dll" in entries, identity
+                assert "buildTransitive/Cordis.NET.Composition.targets" in entries, identity
+                for asset in ("Cordis.Typert.Compiler.dll", "Cordis.Typert.Compiler.deps.json", "Cordis.Typert.Compiler.runtimeconfig.json"):
+                    assert "tools/net10.0/typert/" + asset in entries, (identity, asset)
+                assert "cordis/typert/settingsController.cordis.typert.json" in entries, identity
+                assert not any(PurePosixPath(name).name.startswith("Microsoft.CodeAnalysis") for name in entries), identity
 
             assert any(name.startswith("LICENSES/") for name in entries), package
             assert not any(set(PurePosixPath(name).parts) & {"node_modules", "obj", "reference-materials", ".git"} for name in entries), package
@@ -85,6 +92,9 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
             assert symbol_package.is_file(), (identity, "missing matching snupkg")
             with zipfile.ZipFile(symbol_package) as symbols:
                 assert f"{folder}/{assembly}.pdb" in symbols.namelist(), (identity, "missing product portable PDB")
+                if identity == "Cordis.NET.Composition":
+                    for path in ("analyzers/dotnet/cs/Cordis.Typert.Generator.pdb", "tools/net10.0/typert/Cordis.Typert.Compiler.pdb"):
+                        assert path in symbols.namelist(), (identity, "missing native generator/compiler portable PDB", path)
 
     expected = set(PACKAGE_LAYOUTS)
     assert found == expected, (found, expected)

@@ -354,7 +354,7 @@ public static class ConfigurationSchemaExporter
         }
     }
 
-    private static bool TryJson(object? value, out JsonNode? result)
+    internal static bool TryJson(object? value, out JsonNode? result)
     {
         result = null;
         switch (value)

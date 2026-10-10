@@ -251,3 +251,44 @@ await mounted.dispose();
 [多入口门禁](../scripts/verify-clr-multi-entry.py) 独立打包作者 NuGet，通过 `PackageReference` 消费，安装包根/子路径入口，并验证共享身份、独立配置、成功与失败替换、撤销、真实 HTTP 上的生成 TypeScript 调用及错误参数。独立的 [Remote 门禁](../scripts/verify-typert.py) 覆盖原生 Remote 作者链。使用最新本地包批次及所需 Node/TypeScript 依赖。平台验收以[验证记录](validation.zh.md)中已完成结果为准；这些示例本身不能证明 Windows/Linux 或 Native AOT 闭环。动态 CLR 加载要求普通运行时。
 
 剩余源类型图、丰富 Context/owned-value 图、Peer/uplink/event remotes 及二进制 attachment 协议仍未完成。既有 PluginManager、Settings/配置与客户端管理消费者向生成 Typert 合同的迁移仍未完成。既有手写 `MapCordisService` endpoint 仍可使用，但不能据此关闭这些缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
+
+
+## 原生作者模型与 .NET 消费者，2026-10-10
+
+普通 Plugin、Service 与 Config 继续在进程内使用。Remote 是面向其他环境消费者的可选边界。C# 作者继续使用现有 Remote 标记和显式 STJ context；设置 `CordisTypertService` 后，该项目才启用源模型提取。Composition 提供 SDK compiler 工具与构建 target；这条路径不需要 Node 或 TypeScript。
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>settingsController</CordisTypertService>
+</PropertyGroup>
+```
+
+构建会在作者包内发布 `cordis/typert/settingsController.cordis.typert.json`。该版本化、编译器无关制品保存声明与序列化事实，不从 RPC descriptor 反推。普通 Remote generator 将其与当前编译逐项比较，旧源事实以 `CORDISREMOTE002` 拒绝。引用声明使用 CLR 元数据及相邻 XML 文档；元数据中不可得的源码初始化值或 getter 实现不会被重建。完整的引用模型组合仍待建设。
+
+独立合同包可以消费该制品的副本，无需引用提供者实现：
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>settingsController</CordisTypertService>
+  <CordisTypertClientModel>settingsController.cordis.typert.json</CordisTypertClientModel>
+  <CordisTypertClientNamespace>IndependentSettings.Client</CordisTypertClientNamespace>
+  <CordisTypertClientName>SettingsClient</CordisTypertClientName>
+  <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+</PropertyGroup>
+```
+
+target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。生成源码由 `Clean` 管理；相同输入的增量输出保持字节和时间戳。已验证边界是这条显式启用的命令行构建路径；IDE/design-time 首次构建仍需单独证据。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
+
+```csharp
+using var http = new HttpClient();
+using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
+var view = await remote.DescribeAsync();
+```
+
+HttpClient 由调用者拥有。直接 unary 调用返回类型化值或抛出既有 `RemoteError`，保留 owner 错误码及独立 JSON details；这是对现有结果信封的原生适配。客户端 Dispose 停止新调用、取消自己的传输请求并拒绝迟到成功结果，不 Dispose 借用的 HttpClient，也不承诺强制终止 Host。
+
+生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsDescribeProvider`。`ProfileSettingsDescribeProvider` 在一个既有 profile 事务内读取所有 host 选择的 namespace，发布脱敏 live 值和移除 defaults 的 Schemastery 声明，区分真实 JSON null 与省略的 secret，并将原生投影诊断保留在固定响应之外。namespace/页面策略、可写和文档存在事实由 host 提供。本适配不提供 base/user 重建或固定上游的单调 revision：可选层省略，revision 保留既有原生字符串。
+
+[独立 .NET Settings 门禁](../scripts/verify-typert-dotnet.py) 打包作者与合同包，再于仓库外构建仅依赖包的调用者。调用者不引用提供者实现，关闭 reflection fallback 并使用静态 metadata。门禁覆盖类型化 describe、脱敏、provider 缺失/失败、重试、已持视图失效重读、definition 撤销/重注册、局部 suspend 和借用客户端所有权；基础类型根、null/default 参数、空状态注解及拒绝不支持投影另有用例。`--aot` 验证静态调用者；动态 CLR Host 仍属于普通运行时边界。正式平台结果以[验证记录](validation.zh.md)中的确切完成检查点为准。
+
+该路径覆盖直接普通 unary 客户端和实际验证的 Settings 数据形状。完整 Settings 写入/editor、PluginManager/客户端管理迁移、富图、完整源类型分析及从新模型生成 TS 仍未完成。已有 TS/Web 输出继续可用并单独验收。

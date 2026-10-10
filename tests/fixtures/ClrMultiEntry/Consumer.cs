@@ -207,17 +207,23 @@ await installedRoot.RunAsync(async context =>
     var registry = new TypertRegistry(context);
     context.Provide("typert", registry);
     var unaffectedService = new UnaffectedRemote();
-    var unaffectedOwner = context.Plugin(new Plugin<object?>
-    {
-        Apply = (owner, _) => owner.Provide("unaffected.remote", unaffectedService)
-    });
+    var unaffectedOwner = context.Plugin(
+        new Plugin<object?>
+        {
+            Apply = (owner, _) => owner.Provide("unaffected.remote", unaffectedService)
+        });
     await unaffectedOwner.WaitAsync();
     var artifactResolver = new FixtureArtifacts(installedResolver);
     TypertLoader? artifacts = null;
     var contractPlugin = new Plugin<object?>
     {
         ApplyAsync = async (owner, _) =>
-            artifacts = await TypertLoader.StartAsync(owner, installedLoader, registry, artifactResolver, ["unaffected"])
+            artifacts = await TypertLoader.StartAsync(
+                owner,
+                installedLoader,
+                registry,
+                artifactResolver,
+                ["unaffected"])
     };
     var contractOwner = context.Plugin(contractPlugin);
     await contractOwner.WaitAsync();
@@ -225,6 +231,7 @@ await installedRoot.RunAsync(async context =>
     var unaffectedDescriptor = registry.GetLocal("unaffected/Value");
     var unaffectedPackage = registry.GetPackage("unaffected");
     using var emptyArguments = JsonDocument.Parse("{}");
+
     async Task VerifyUnaffectedAsync()
     {
         var call = await gateway.InvokeAsync("unaffected/Value", emptyArguments.RootElement);
@@ -232,7 +239,8 @@ await installedRoot.RunAsync(async context =>
             !ReferenceEquals(unaffectedPackage, registry.GetPackage("unaffected")) ||
             !ReferenceEquals(unaffectedService, context.Get("unaffected.remote")) ||
             unaffectedOwner.State != FiberState.Active || !call.Ok || call.Value!.Value.GetInt32() != 41)
-            throw new InvalidOperationException("Scoped contract replacement disturbed an independent contribution or its owner.");
+            throw new InvalidOperationException(
+                "Scoped contract replacement disturbed an independent contribution or its owner.");
     }
 
     await VerifyUnaffectedAsync();
@@ -338,7 +346,8 @@ await installedRoot.RunAsync(async context =>
             }
             catch (Exception error)
             {
-                if (suspended && PluginReplacementFailure.FromException(error)?.Recovery == PluginRecoveryState.Succeeded)
+                if (suspended && PluginReplacementFailure.FromException(error)?.Recovery ==
+                    PluginRecoveryState.Succeeded)
                 {
                     try
                     {
@@ -385,7 +394,8 @@ await installedRoot.RunAsync(async context =>
     if (ReferenceEquals(originalCodec, registry.GetLocal("first/Echo")!.Parameters[0].Codec) ||
         ReferenceEquals(originalModel, registry.GetPackage("multi-entry.first")!.Model) ||
         contractOwner.State != FiberState.Active)
-        throw new InvalidOperationException("Scoped replacement did not refresh its codec/model under the existing contract owner.");
+        throw new InvalidOperationException(
+            "Scoped replacement did not refresh its codec/model under the existing contract owner.");
     await VerifyUnaffectedAsync();
     await installedLoader.UpdateAsync(
         "one",
@@ -434,18 +444,40 @@ static async Task RejectAsync(Func<Task> action, string message)
 
 sealed class FixtureArtifacts(ITypertArtifactResolver modules) : ITypertArtifactResolver
 {
-    private readonly TypertContribution unaffected = TypertArtifacts.Contribution("unaffected", "host",
-        [new("unaffected#Value", "unaffected.remote", "unaffected", "Value", [],
-            TypertCodec.Create(UnaffectedJson.Default.Int32))]);
+    private readonly TypertContribution unaffected = TypertArtifacts.Contribution(
+        "unaffected",
+        "host",
+        [
+            new(
+                "unaffected#Value",
+                "unaffected.remote",
+                "unaffected",
+                "Value",
+                [],
+                TypertCodec.Create(UnaffectedJson.Default.Int32))
+        ]);
 
-    public ValueTask<TypertContribution?> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default) =>
-        specifier == "unaffected" ? ValueTask.FromResult<TypertContribution?>(unaffected) : modules.ResolveAsync(specifier, baseUri, cancellationToken);
+    public ValueTask<TypertContribution?> ResolveAsync(
+        string specifier,
+        Uri baseUri,
+        CancellationToken cancellationToken = default) =>
+        specifier == "unaffected"
+            ? ValueTask.FromResult<TypertContribution?>(unaffected)
+            : modules.ResolveAsync(specifier, baseUri, cancellationToken);
 }
 
 sealed class UnaffectedRemote : ITypertRemoteService
 {
-    public TypertRemoteBinding TypertRemote { get; } = new("unaffected.remote", "unaffected",
-        new Dictionary<string, TypertUnaryInvoker> { ["Value"] = (_, _, _) => Task.FromResult<object?>(41) },
+    public TypertRemoteBinding TypertRemote
+    {
+        get;
+    } = new(
+        "unaffected.remote",
+        "unaffected",
+        new Dictionary<string, TypertUnaryInvoker>
+        {
+            ["Value"] = (_, _, _) => Task.FromResult<object?>(41)
+        },
         new Dictionary<string, TypertStreamInvoker>());
 }
 

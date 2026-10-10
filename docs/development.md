@@ -205,3 +205,12 @@ Native `ReadSettingsAsync` and `ReadSettingsSchemasAsync` reuse real ProfileSess
 This ordering is a continuation of the existing task table, not a second roadmap. Complete model/metadata publication, richer Context/owned-value graphs, Peer/uplink/events, binary attachments and generated PluginManager/Settings/client-management consumption remain mission gaps. Product replacement acceptance and FSM permissions/basis/receipts stay product-owned. WPF, Avalonia, Godot .NET and Blazor are intended consumers, but target-framework, analyzer-host, browser and export compatibility still need named evidence.
 
 This review changed documentation only. No merge, runtime/API change, dependency installation or new platform acceptance occurred. The original scope receives an append-only record; earlier acceptance remains unchanged. Documentation checks do not establish the proposed no-Node .NET consumer or the merged CLR/Typert behavior.
+
+
+## Implementation continuation, 2026-10-10
+
+The fixed-main integration and scoped lifecycle repair are independent checkpoints. The multi-entry consumer now verifies stable artifact retention after route withdrawal, rather than requiring deletion contrary to main. Its unchanged-B assertion also rejects the actual old whole-owner restart after a successful V2 call. Historical acceptance records remain unchanged.
+
+The next implementation adds an independent SDK-extracted native model, packaged compiler/build target, source-fact conformance bridge and model-only typed .NET caller. Production Settings describe reads all selected namespaces at one existing profile checkpoint. The ordinary provider remains usable without RPC. Generated caller source enters before CoreCompile; STJ sees complete DTOs/context, with reflection fallback disabled in the independent consumer. The [new gate](../scripts/verify-typert-dotnet.py) belongs to `verify.py --package`; TS/Web gates remain separate.
+
+This closes only the named native source/Settings slice once its exact frozen package/platform evidence passes. It does not close the complete type graph, referenced-model composition, all generator backends or all Settings operations. Remaining PluginManager/client-management migration and scope/lookup, stream, cancellation, binary and richer protocol rows retain their own evidence requirements. WPF, Avalonia, Godot .NET and Blazor remain intended consumers whose framework/host constraints need separate verification. No new overall plan, release or dependency-selection acceptance is introduced.
