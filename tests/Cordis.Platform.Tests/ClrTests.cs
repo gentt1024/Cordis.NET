@@ -403,7 +403,12 @@ public sealed class ClrTests
             sharedDependency is null
                 ? [typeof(IVersionedService).Assembly]
                 : [typeof(IVersionedService).Assembly, sharedDependency]);
-        resolver.Register("fixture", new(source, "VersionedPlugin.dll", "VersionedPlugin.Entry"));
+        resolver.Register(
+            "fixture",
+            new(source, "VersionedPlugin.dll", "VersionedPlugin.Entry")
+            {
+                LoadMode = ClrModuleLoadMode.ShadowCopy
+            });
         await context.RunAsync(async ctx =>
         {
             ctx.Provide("trace", new List<string>());
@@ -550,7 +555,7 @@ public sealed class ClrTests
         Assert.True(failed.UnloadRequested);
         Assert.Equal(2, trace.Count(item => item == "stop:bad-v2"));
         // Both failed-candidate streams are closed before the callback failure escapes.
-        var locks = Directory.GetFiles(failed.ShadowDirectory, "resource-*.lock");
+        var locks = Directory.GetFiles(Assert.IsType<string>(failed.ShadowDirectory), "resource-*.lock");
         Assert.Equal(2, locks.Length);
         foreach (var filename in locks)
         {
@@ -745,7 +750,40 @@ public sealed class ClrTests
         new(
             Path.Combine(AppContext.BaseDirectory, "fixtures", version),
             "VersionedPlugin.dll",
-            "VersionedPlugin.Entry");
+            "VersionedPlugin.Entry")
+        {
+            LoadMode = ClrModuleLoadMode.ShadowCopy
+        };
+
+    [Fact]
+    public async Task Default_loading_reuses_stable_files_and_never_deletes_the_source()
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "fixtures", "v1");
+        var shadow = Path.Combine(Path.GetTempPath(), "cordis-unused-shadow-" + Guid.NewGuid().ToString("N"));
+        await using var resolver = new ClrModuleResolver(shadow);
+        resolver.Register("stable", new(source, "VersionedPlugin.dll", "VersionedPlugin.ImmutableEntry"));
+        await using (var context = new Context())
+        {
+            await context.RunAsync(async ctx =>
+            {
+                var plugin = await resolver.ResolveAsync("stable", new Uri("file:///"));
+                Assert.Same(plugin, await resolver.ResolveAsync("stable", new Uri("file:///")));
+                await ctx.Plugin(plugin, "configuration").WaitAsync();
+                Assert.Equal(source, ctx.Get<string>("bundle-path"));
+                Assert.Equal("shadow-copied-resource", ctx.Get<string>("bundle-resource"));
+                Assert.Equal("private-bundle-dependency", ctx.Get<string>("bundle-dependency"));
+                Assert.Equal("configuration", ctx.Get<string>("bundle-config"));
+            });
+        }
+
+        await resolver.DisposeAsync();
+        var observation = Assert.Single(resolver.Unloads);
+        Assert.Equal(source, observation.LoadDirectory);
+        Assert.Null(observation.ShadowDirectory);
+        Assert.True(observation.TryDeleteShadow());
+        Assert.True(File.Exists(Path.Combine(source, "VersionedPlugin.dll")));
+        Assert.False(Directory.Exists(shadow));
+    }
 
     [Fact]
     public async Task Explicit_map_does_not_discover_or_accept_external_entry_paths()

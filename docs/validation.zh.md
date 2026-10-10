@@ -2,6 +2,45 @@
 
 [English](validation.md)
 
+## 合作式替换生命周期，2026-10-09
+
+支持范围是契约兼容、所拥有工作能够合作式停止的插件。本修补有意加强固定 DSH HMR `639ed015397290b3745d163aafe02ffee4aa3f84` 的门槛：退休清理失败时拒绝激活候选，而非警告后继续。普通 `Fiber.DisposeAsync` 清理容错和公开 disposer 既有重复调用语义不变，包版本与固定行为基线不变。
+
+Loader 请求释放后，独立等待每个已捕获 fiber 的生命周期结束。`WaitAsync` 在 Disposed 后重新抛出的历史启动错误与新的清理失败分开处理，对应 upstream 失败候选的 `allSettled` 路径。`Fiber.CleanupErrors` 跨重启保留此前移除的 effect 和所拥有子 fiber 的清理失败。失败的兄弟不会阻止其他清理组，既有局部分组语义保留。
+
+替换保留原异常，并附加 `PluginReplacementFailure` 阶段及恢复结果。候选清理不能确认时不恢复旧插件；旧插件恢复失败时停止部分恢复的 fiber。框架 `Succeeded` 确认生命周期已完成，应用仍须另外验证业务就绪。
+
+真实 Generic Host/Kestrel 夹具在同一 Context、resolver 和 Loader 内覆盖多个 Entry、直接 fiber 及无关 Entry。应用准入负责排空已接受工作，并约束服务、保留回调、事件和迟到提交。V2 在 resolver 提交后才开放；恢复 V1 时先等待 resolver 完成失败回退，再核验并开放。不确定结果保持 HTTP 503 与 `RequiresIntervention`，拒绝后续替换。应用更新锁覆盖完整替换直到开放或失败关闭；resolver 内部修改锁不协调应用随后作出的决定。这是应用责任，不是完整包 Update 事务或新增生产 readiness API。
+
+| 演示 | 可观察合同 |
+|---|---|
+| 合作式 V1 → V2 | 同一运行中 Host；已接受工作排空，旧业务停止，HTTP 提供 V2，无关 V1 仍可用。 |
+| 退休前拒绝 | 原图及 V1 业务不变。 |
+| 旧清理已开始或失败 | 等待实际退休；迟到清理失败阻止 V2 激活并保留原异常。 |
+| V2 失败、V1 恢复成功 | 候选清理及 resolver 回退完成后才核验 V1 业务并开放。 |
+| 候选清理或部分恢复失败 | 受影响 HTTP／回调／事件业务保持关闭。部分恢复的 fiber 被停止；清理不能确认的残存工作仍由应用准入围栏约束。 |
+| V2 业务校验失败 | 明确暴露 resolver／运行图分叉，要求人工处理并拒绝后续替换。 |
+| V2 已验证、resolver 未提交 | V2 就绪但 resolver 仍返回 V1；提交前入口保持关闭。 |
+| 并发替换 | A 在提交后、开放前暂停时仍持应用锁；B 等待 A 完成后才拥有自己的关闭校验区间。 |
+
+定向清单包含 88 项 .NET 用例：Host／在线／CLR 28 项和 HMR 60 项；本地完整清单包含 781 项。实际执行结果在交付验证清单中绑定冻结源码。原始 TypeScript 执行、.NET 执行、trace 差分和独立包消费是分别报告的证据类别，数量不相加。
+
+使用 `global.json` 的精确 SDK 和 `upstream.lock.json` 的固定源码 checkout；开发依赖使用各自锁文件。以下命令复现定向检查及本地完整包门禁。包输出必须是新的空私有目录，不是发布目的地。
+
+```powershell
+npm ci --prefix reference --ignore-scripts
+npm ci --prefix clients/modules --ignore-scripts
+dotnet restore Cordis.slnx --locked-mode
+dotnet build Cordis.slnx -c Release --no-restore
+dotnet test tests/Cordis.Platform.Tests/Cordis.Platform.Tests.csproj -c Release --no-build --no-restore --filter "FullyQualifiedName~ReplacementHostTests|FullyQualifiedName~OnlineReplacementProbeTests|FullyQualifiedName~ClrTests"
+dotnet test tests/Cordis.Extensions.Tests/Cordis.Extensions.Tests.csproj -c Release --no-build --no-restore --filter "FullyQualifiedName~Hmr"
+python scripts/check-docs.py
+python scripts/format.py --check
+python scripts/verify.py --dsh <pinned-dsh> --origin <pinned-cordis-origin> --upstream-test packages/boot/hmr/tests/modules.spec.ts --package --package-output <empty-private-local-directory>
+```
+
+本轮覆盖 Windows x64 Release/JIT，不穷尽线程调度、不证明任意外部副作用可逆，也不覆盖恢复期间独立 owner 消失或 Active 恢复 fiber 已记录清理异常。Linux/AOT、生产产品接线、包持久部署、完整 Update 并发及重启 V2 需要独立验证。ALC 物理回收时限不是验收条件；卸载请求、托管对象回收及影子目录删除仍是不同观察。Hosted CI、远端 SourceLink 获取和发布是独立门槛，不能由本地成功推定。
+
 ## Profile 安装与格式整理，2026-10-07
 
 PR [#9](https://github.com/gentt1024/Cordis.NET/pull/9) 合并为 `05fc48731f54660b326eeca1316b100f0bbcfaaf`，Git tree 与已验证 HEAD `04da6a1f02972969f710dd60df76b4ca66146a43` 相同。[workflow #41](https://github.com/gentt1024/Cordis.NET/actions/runs/37601516995) 在 Windows 和 Ubuntu 24.04 均通过，涵盖规范格式、固定参考验证、运行时/包/JIT/AOT 检查及作者合同验证。两平台均上传了已验证包和证据。

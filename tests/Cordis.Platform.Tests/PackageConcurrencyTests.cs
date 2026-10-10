@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Cordis.Clr;
 using Cordis.Composition;
 using Xunit;
 
@@ -7,7 +8,169 @@ namespace Cordis.Platform.Tests;
 public sealed partial class PackageManagementTests
 {
     [Fact]
-    public async Task Removal_admits_dependency_deletion_before_deleting_the_installed_directory()
+    public async Task Offline_deletion_refuses_an_active_profile_writer_then_succeeds_after_it_settles()
+    {
+        await using var host = await StartAsync();
+        var owner = host.Session.ConfigurationOperations;
+        Assert.Null(
+            (await owner.InstallPackageAsync(
+                host.Toolchain,
+                new("IndependentPlugin", "1.0.0", Feed),
+                "retained-before-writer",
+                true,
+                enabled: false)).Error);
+        var retained = host.Toolchain.Bundles["IndependentPlugin"];
+        var receipt = Path.Combine(Path.GetDirectoryName(retained)!, ".1.0.0.files.json");
+        var assembly = await File.ReadAllBytesAsync(Path.Combine(retained, "IndependentPlugin.dll"));
+        var receiptBytes = await File.ReadAllBytesAsync(receipt);
+        Assert.Null((await owner.RemovePackageAsync(host.Toolchain, "IndependentPlugin")).Error);
+
+        var document = await owner.ReadProfileAsync();
+        var manifest = JsonNode.Parse(document.ManifestJson)!;
+        manifest["description"] = "saved by the coordinated writer";
+        var admitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var proceed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        owner.AdmitProfileAsync = async _ =>
+        {
+            admitted.SetResult();
+            await proceed.Task;
+        };
+        var save = owner.SaveProfileMetadataAsync(manifest.ToJsonString(), document.Revision);
+        try
+        {
+            await admitted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            await Assert.ThrowsAnyAsync<IOException>(() => DotnetPluginToolchain.DeleteRetainedArtifactAsync(
+                host.Profile,
+                "IndependentPlugin",
+                "1.0.0"));
+            Assert.Equal(assembly, await File.ReadAllBytesAsync(Path.Combine(retained, "IndependentPlugin.dll")));
+            Assert.Equal(receiptBytes, await File.ReadAllBytesAsync(receipt));
+        }
+        finally
+        {
+            proceed.TrySetResult();
+            Assert.Null((await save).Error);
+        }
+
+        await DotnetPluginToolchain.DeleteRetainedArtifactAsync(host.Profile, "IndependentPlugin", "1.0.0");
+        Assert.False(Directory.Exists(retained));
+        Assert.False(File.Exists(receipt));
+        Assert.Equal(
+            "saved by the coordinated writer",
+            PackageManifest.Read(Path.Combine(host.Profile, "package.json")).Raw["description"]);
+    }
+
+    [Theory]
+    [InlineData("referenced")]
+    [InlineData("missing")]
+    [InlineData("unreadable")]
+    [InlineData("invalid")]
+    [InlineData("dependencies-array")]
+    [InlineData("dependencies-null")]
+    [InlineData("dependency-object")]
+    [InlineData("dependencies-absent")]
+    public async Task Offline_deletion_requires_readable_unreferenced_dependency_declarations(string state)
+    {
+        string profile;
+        string retained;
+        await using (var host = await StartAsync())
+        {
+            profile = host.Profile;
+            Assert.Null(
+                (await host.Session.ConfigurationOperations.InstallPackageAsync(
+                    host.Toolchain,
+                    new("IndependentPlugin", "1.0.0", Feed),
+                    "retained-before-manifest-check",
+                    true,
+                    enabled: false)).Error);
+            retained = host.Toolchain.Bundles["IndependentPlugin"];
+        }
+
+        var receipt = Path.Combine(Path.GetDirectoryName(retained)!, ".1.0.0.files.json");
+        var payload = Directory
+            .GetFiles(retained, "*", SearchOption.AllDirectories)
+            .ToDictionary(file => Path.GetRelativePath(retained, file), File.ReadAllBytes);
+        var receiptBytes = await File.ReadAllBytesAsync(receipt);
+        var manifestPath = Path.Combine(profile, "package.json");
+        if (state is "missing" or "unreadable")
+            File.Delete(manifestPath);
+        if (state == "unreadable")
+            Directory.CreateDirectory(manifestPath);
+        if (state == "invalid")
+            await File.WriteAllTextAsync(manifestPath, "{");
+        if (state == "dependencies-array")
+            await File.WriteAllTextAsync(manifestPath, """{"dependencies":[{"IndependentPlugin":"1.0.0"}]}""");
+        if (state == "dependencies-null")
+            await File.WriteAllTextAsync(manifestPath, """{"dependencies":null}""");
+        if (state == "dependency-object")
+            await File.WriteAllTextAsync(
+                manifestPath,
+                """{"dependencies":{"IndependentPlugin":{"version":"1.0.0"}}}""");
+        if (state == "dependencies-absent")
+            await File.WriteAllTextAsync(manifestPath, "{}");
+        var manifestBytes = File.Exists(manifestPath) ? await File.ReadAllBytesAsync(manifestPath) : null;
+
+        var failure = await Record.ExceptionAsync(() => DotnetPluginToolchain.DeleteRetainedArtifactAsync(
+            profile,
+            "IndependentPlugin",
+            "1.0.0"));
+        switch (state)
+        {
+            case "referenced":
+                Assert.IsType<InvalidOperationException>(failure);
+                Assert.Contains("still references", failure.Message, StringComparison.Ordinal);
+                break;
+            case "missing":
+                Assert.IsType<FileNotFoundException>(failure);
+                break;
+            case "unreadable":
+                Assert.IsType<UnauthorizedAccessException>(failure);
+                break;
+            case "invalid":
+                Assert.IsAssignableFrom<System.Text.Json.JsonException>(failure);
+                break;
+            case "dependencies-array":
+            case "dependencies-null":
+            case "dependency-object":
+                Assert.True(
+                    failure is FormatException,
+                    $"Expected an invalid declaration refusal for {state}; error={failure}; " +
+                    $"payload exists={Directory.Exists(retained)}; receipt exists={File.Exists(receipt)}.");
+                break;
+            case "dependencies-absent":
+                Assert.Null(failure);
+                break;
+        }
+
+        if (state == "dependencies-absent")
+        {
+            Assert.False(Directory.Exists(retained));
+            Assert.False(File.Exists(receipt));
+        }
+        else
+        {
+            Assert.Equal(
+                payload.Keys.Order(StringComparer.Ordinal),
+                Directory
+                    .GetFiles(retained, "*", SearchOption.AllDirectories)
+                    .Select(file => Path.GetRelativePath(retained, file))
+                    .Order(StringComparer.Ordinal));
+            foreach (var (file, bytes) in payload)
+                Assert.Equal(bytes, await File.ReadAllBytesAsync(Path.Combine(retained, file)));
+            Assert.Equal(receiptBytes, await File.ReadAllBytesAsync(receipt));
+        }
+
+        if (manifestBytes is not null)
+            Assert.Equal(manifestBytes, await File.ReadAllBytesAsync(manifestPath));
+        else
+        {
+            Assert.False(File.Exists(manifestPath));
+            Assert.Equal(state == "unreadable", Directory.Exists(manifestPath));
+        }
+    }
+
+    [Fact]
+    public async Task Removal_admits_dependency_deletion_before_releasing_the_runtime_mapping()
     {
         await using var host = await StartAsync();
         var owner = host.Session.ConfigurationOperations;
@@ -44,6 +207,7 @@ public sealed partial class PackageManagementTests
     [InlineData("admission", false)]
     [InlineData("publish", true)]
     [InlineData("publish-mapping", true)]
+    [InlineData("published-content", true)]
     [InlineData("prepared-content", false)]
     public async Task Installation_rejects_unplanned_changes_without_overwriting_them(string boundary, bool published)
     {
@@ -66,6 +230,10 @@ public sealed partial class PackageManagementTests
             toolchain.AfterPrepare = _ => Edit();
         if (boundary == "publish")
             toolchain.AfterPublish = _ => Edit();
+        if (boundary == "published-content")
+            toolchain.AfterPublish = package => File.WriteAllTextAsync(
+                Path.Combine(package.PublicationDirectory!, "changed-after-approval.txt"),
+                "unexpected");
         if (boundary == "publish-mapping")
             toolchain.AfterPublish = _ =>
             {
@@ -89,7 +257,7 @@ public sealed partial class PackageManagementTests
             true);
         Assert.Equal("profile-conflict", result.Error);
         Assert.Equal("failed", result.Application);
-        Assert.Equal(published, result.Installed);
+        Assert.False(result.Installed);
         Assert.False(result.Selected);
         Assert.Equal(published ? 1 : 0, toolchain.Publications);
         Assert.Equal(edited ?? before, await File.ReadAllTextAsync(manifestPath));
@@ -122,7 +290,12 @@ public sealed partial class PackageManagementTests
                 layer.Patches.Clear();
             return Task.CompletedTask;
         };
-        var tools = new ObservedPackageToolchain(host.Toolchain);
+        var tools = new ObservedPackageToolchain(host.Toolchain)
+        {
+            AfterPrepare = package => File.WriteAllTextAsync(
+                Path.Combine(package.Directory, "product-manifest.json"),
+                "{\"product\":\"approved\"}")
+        };
         var result = await owner.InstallPackageAsync(tools, new("IndependentPlugin", "1.0.0", Feed), "approved", true);
         Assert.True(result.Error is null, System.Text.Json.JsonSerializer.Serialize(result));
         Assert.True(result.Installed);
@@ -131,6 +304,9 @@ public sealed partial class PackageManagementTests
         Assert.False(Directory.Exists(tools.Prepared!.Directory));
         Assert.True(Directory.Exists(tools.Prepared.PublicationDirectory));
         Assert.Equal(tools.Prepared.PublicationDirectory, host.Toolchain.Bundles["IndependentPlugin"]);
+        Assert.Equal(
+            "{\"product\":\"approved\"}",
+            await File.ReadAllTextAsync(Path.Combine(tools.Prepared.PublicationDirectory!, "product-manifest.json")));
         Assert.Equal(admitted, await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json")));
         await host.Session.Context.RunAsync(ctx =>
         {
@@ -223,7 +399,7 @@ public sealed partial class PackageManagementTests
         };
         var result = await owner.RemovePackageAsync(tools, "IndependentPlugin");
         Assert.Equal("profile-conflict", result.Error);
-        Assert.False(result.Installed);
+        Assert.True(result.Installed);
         Assert.False(result.Selected);
         Assert.Equal("failed", result.Application);
         Assert.Equal(edited, await File.ReadAllTextAsync(path));
@@ -308,6 +484,7 @@ public sealed partial class PackageManagementTests
 
         public IReadOnlyList<string> Sources => inner.Sources;
         public string ResolvePackageName(string name) => inner.ResolvePackageName(name);
+        public IReadOnlyList<string> GetRetainedDirectories(string name) => inner.GetRetainedDirectories(name);
 
         public Task<IReadOnlyList<string>> VersionsAsync(
             string name,

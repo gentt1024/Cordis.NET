@@ -69,6 +69,7 @@ public sealed partial class PluginConfigurationOperations
 
     /// <summary>Install a prepared platform package and select it through this profile's existing coordination.</summary>
     /// <remarks>The request ID must be unique while active. Cancellation is admitted until publication starts.
+    /// Existing profile identities save the new version for restart without reconciling the live composition.
     /// Completed results are not retained. Hosts must authorize build execution independently from version exemptions.</remarks>
     public Task<PackageChange> InstallPackageAsync(
         IProfilePackageToolchain toolchain,
@@ -192,8 +193,12 @@ public sealed partial class PluginConfigurationOperations
             var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
             installed = HasPackageDirectory(request.Name);
             selected = manifest.Bundles.Contains(request.Name);
-            if ((manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.ContainsKey(
-                    request.Name) == true || launch.InstallationBundles.ContainsKey(request.Name))
+            var dependenciesBefore = manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>;
+            var updating = dependenciesBefore?.ContainsKey(request.Name) == true ||
+                launch.LocalBundles?.ContainsKey(request.Name) == true;
+            if ((dependenciesBefore?.TryGetValue(request.Name, out var installedVersion) == true &&
+                    Equals(installedVersion, request.Version)) ||
+                launch.InstallationBundles.ContainsKey(request.Name))
                 throw new Refusal("already-installed");
             ReportPackageProgress(requestId, stage);
             var inspection = await toolchain.InspectAsync(request, token);
@@ -255,10 +260,12 @@ public sealed partial class PluginConfigurationOperations
                     prepared);
                 await AdmitCandidateAsync(inputs, candidate);
                 await toolchain.PublishAsync(prepared);
-                installed = true;
                 await SaveCandidateAsync(inputs, candidate, published: true);
-                selected = enabled;
+                installed = true;
+                selected = enabled || manifest.Bundles.Contains(request.Name);
                 await inputs.VerifyAsync(published: true, savedManifest: candidate.ManifestJson);
+                if (updating)
+                    return;
                 stage = "apply";
                 ReportPackageProgress(requestId, stage);
                 if (enabled)
@@ -280,7 +287,7 @@ public sealed partial class PluginConfigurationOperations
                 stage,
                 installed,
                 selected,
-                RunExclusiveAsync is null ? "restart-required" : "applied");
+                updating || RunExclusiveAsync is null ? "restart-required" : "applied");
         }
         catch (Exception error)
         {
@@ -288,24 +295,20 @@ public sealed partial class PluginConfigurationOperations
             var residuals = new List<string>();
             if (launch.LocalBundles?.TryGetValue(request.Name, out var published) == true &&
                 Directory.Exists(published))
-            {
-                installed = true;
                 residuals.Add(published);
-            }
 
-            if (error is PackageToolException tool && Directory.Exists(tool.Directory))
+            if (error is PackageToolException tool && (Directory.Exists(tool.Directory) || File.Exists(tool.Directory)))
             {
                 if (!residuals.Contains(tool.Directory))
                     residuals.Add(tool.Directory);
-                if (stage == "install" && tool.Published)
-                    installed = true;
             }
 
             if (prepared is not null && Directory.Exists(prepared.Directory) && !residuals.Contains(prepared.Directory))
                 residuals.Add(prepared.Directory);
-            if (installed && prepared?.PublicationDirectory is { } destination && Directory.Exists(destination) &&
+            if (prepared?.PublicationDirectory is { } destination && Directory.Exists(destination) &&
                 !residuals.Contains(destination))
                 residuals.Add(destination);
+            var retentionDiagnostic = CollectRetainedDirectories(toolchain, request.Name, residuals);
             return new(
                 requestId,
                 request.Name,
@@ -316,7 +319,7 @@ public sealed partial class PluginConfigurationOperations
                 error is Refusal refusal ? refusal.Code :
                 cancelled ? "cancelled" :
                 error is PackageToolException { TimedOut: true } ? "tool-timeout" : "operation-error",
-                error.Message,
+                error.Message + retentionDiagnostic,
                 residuals.AsReadOnly())
             {
                 ToolExitCode = (error as PackageToolException)?.ExitCode
@@ -385,21 +388,32 @@ public sealed partial class PluginConfigurationOperations
                     await AdmitCandidateAsync(removalInputs, removalCandidate);
                     removalInputs.PlanRemoval(name);
                     await toolchain.RemoveAsync(name, cancellationToken);
-                    installed = false;
+                    removedPackages[name] = toolchain.ResolvePackageName;
                     await SaveCandidateAsync(removalInputs, removalCandidate);
+                    installed = false;
+                    if (launch.LocalBundles?.TryGetValue(name, out var retainedDirectory) == true &&
+                        Directory.Exists(retainedDirectory))
+                        residuals.Add(retainedDirectory);
+                    var retentionDiagnostic = CollectRetainedDirectories(toolchain, name, residuals);
                     result = new(
                         "",
                         name,
                         stage,
                         false,
                         false,
-                        RunExclusiveAsync is null ? "restart-required" : "applied");
+                        RunExclusiveAsync is null ? "restart-required" : "applied",
+                        Diagnostic: residuals.Count == 0 && retentionDiagnostic is null
+                            ? null
+                            : "Removed from the profile. Deployment files are retained until all consumers stop and explicit physical removal completes." +
+                            retentionDiagnostic,
+                        Residuals: residuals.AsReadOnly());
                 }
                 catch (Exception error)
                 {
                     if (launch.LocalBundles?.TryGetValue(name, out var directory) == true &&
                         Directory.Exists(directory))
                         residuals.Add(directory);
+                    var retentionDiagnostic = CollectRetainedDirectories(toolchain, name, residuals);
                     result = new(
                         "",
                         name,
@@ -408,7 +422,7 @@ public sealed partial class PluginConfigurationOperations
                         selected,
                         error is OperationCanceledException ? "cancelled" : "failed",
                         error is Refusal refusal ? refusal.Code : "operation-error",
-                        error.Message,
+                        error.Message + retentionDiagnostic,
                         residuals.AsReadOnly());
                 }
                 finally
@@ -421,8 +435,27 @@ public sealed partial class PluginConfigurationOperations
     }
 
     private bool HasPackageDirectory(string name) =>
-        (launch.LocalBundles?.TryGetValue(name, out var local) == true && Directory.Exists(local)) ||
-        (launch.InstallationBundles.TryGetValue(name, out var installed) && Directory.Exists(installed));
+        (PackageManifest.Read(ManifestPath).Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)
+        ?.ContainsKey(name) == true || launch.InstallationBundles.ContainsKey(name);
+
+    private static string? CollectRetainedDirectories(
+        IProfilePackageToolchain toolchain,
+        string name,
+        List<string> residuals)
+    {
+        try
+        {
+            foreach (var directory in toolchain.GetRetainedDirectories(name))
+                if (!residuals.Contains(directory))
+                    residuals.Add(directory);
+            return null;
+        }
+        catch (Exception error)
+        {
+            // Diagnostics must not replace the operation's durable outcome or original failure.
+            return " Retained-directory inspection was incomplete: " + error.Message;
+        }
+    }
 
     private void ReportPackageProgress(string requestId, string phase, string? output = null)
     {

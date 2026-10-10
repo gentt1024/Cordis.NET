@@ -271,7 +271,8 @@ public sealed partial class PluginConfigurationOperations
             var expectedLocal = new Dictionary<string, string>(Launch.LocalBundles!, StringComparer.Ordinal);
             if (removal is { } removed && source.LocalBundles?.ContainsKey(removed) != true)
                 expectedLocal.Remove(removed);
-            if (published && publication is { } package && source.LocalBundles is not null)
+            if (published && publication is { } package && source.LocalBundles is not null &&
+                !expectedLocal.ContainsKey(package.Name))
                 expectedLocal.Add(package.Name, Path.GetFullPath(package.PublicationDirectory ?? package.Directory));
             if (Map(source.InstallationBundles) != Map(Launch.InstallationBundles) ||
                 Map(source.LocalBundles) != Map(expectedLocal) ||

@@ -1,5 +1,7 @@
 # Cordis.NET.Tool
 
+CLR startup uses installed files directly. Package upgrades prepare and save the new version, then require a host restart. Removal retains deployment files. After stopping every host, Worker and other consumer, use `cordis delete-retained <profile> <package> <version>` to physically delete an unreferenced version and its receipt. See the [artifact workflow](../../docs/clr-artifacts.md).
+
 ```console
 dotnet tool install --global Cordis.NET.Tool --prerelease
 ```

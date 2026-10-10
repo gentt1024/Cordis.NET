@@ -632,6 +632,75 @@ public sealed class PluginManagerOriginalTests
         Assert.Equal(true, preview.Single(row => row.Id == "managed").Disabled);
     }
 
+    [Fact]
+    public async Task RemovedPackageDoesNotBlockDistinctCaseSensitiveHostBundle()
+    {
+        await using var f = new Fixture();
+        var removedDirectory = await f.Bundle("Example", []);
+        var retainedDirectory = Path.Combine(f.DirectoryPath, "retained-output");
+        Directory.Move(removedDirectory, retainedDirectory);
+        f.Packages["Example"] = retainedDirectory;
+        f.Installation["example"] = await f.Bundle(
+            "example",
+            [
+                new()
+                {
+                    ["insert"] = new[]
+                    {
+                        new EntryOptions
+                        {
+                            Id = "case-sensitive",
+                            Name = "managed"
+                        }
+                    }
+                }
+            ],
+            dependency: false);
+        await f.Start();
+
+        var removed = await f.Manager.RemovePackageAsync(new RetainingToolchain(), "Example");
+        Assert.Null(removed.Error);
+        Assert.False(removed.Installed);
+        var manifest = await File.ReadAllTextAsync(f.ManifestPath);
+        Assert.Equal("removed-package", (await f.Manager.SetBundleEnabledAsync("Example", true)).Error);
+        Assert.Equal(manifest, await File.ReadAllTextAsync(f.ManifestPath));
+
+        var enabled = await f.Manager.SetBundleEnabledAsync("example", true);
+        Assert.Null(enabled.Error);
+        Assert.Equal("applied", enabled.Application);
+        Assert.Contains("example", f.Manifest.Bundles);
+        Assert.DoesNotContain("Example", f.Manifest.Bundles);
+        Assert.Contains(
+            f.Include.Loader.Entries(),
+            entry => entry.Options.Id == "case-sensitive" && entry.Fiber is not null);
+    }
+
+    private sealed class RetainingToolchain : IProfilePackageToolchain
+    {
+        public IReadOnlyList<string> Sources => [];
+
+        public Task<IReadOnlyList<string>> VersionsAsync(
+            string name,
+            string source,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<PackageInspection> InspectAsync(
+            PackageRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<PreparedPackage> PrepareAsync(
+            PackageInspection inspection,
+            bool buildApproved,
+            Action<string> output,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task PublishAsync(PreparedPackage package, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task RemoveAsync(string name, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
     private static void EqualRows(string expected, object actual) =>
         Assert.True(Data.DeepEquals(ConfigurationFile.ParseEntries(expected), actual));
 

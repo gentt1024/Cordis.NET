@@ -509,6 +509,7 @@ public sealed class HmrModuleTests
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => hmr.NotifyChangedAsync("plugin.dll"));
         Assert.Equal("replacement failed", error.Message);
         Assert.Contains(errors, item => item.Message == "restore failed");
+        Assert.Equal(PluginRecoveryState.Failed, PluginReplacementFailure.FromException(error)!.Recovery);
     }
 
     [Fact]
@@ -556,9 +557,11 @@ public sealed class HmrModuleTests
         Assert.Equal(0, notifications);
         await root.RunAsync(ctx =>
         {
-            Assert.Same(loader.Resolve("row").Fiber, Assert.Single(ctx.Registry.Get(original)!.Fibers));
+            Assert.Null(ctx.Registry.Get(original));
             return Task.CompletedTask;
         });
+        Assert.Equal(PluginRecoveryState.Failed, PluginReplacementFailure.FromException(primary)!.Recovery);
+        Assert.Equal(FiberState.Disposed, loader.Resolve("row").Fiber!.State);
         Assert.False(loader.Resolve("row").Disabled);
     }
 
@@ -620,7 +623,7 @@ public sealed class HmrModuleTests
     }
 
     [Fact]
-    public async Task Import_failure_leaves_the_old_fiber_and_disposer_warning_allows_a_later_success()
+    public async Task Import_failure_preserves_the_graph_but_retirement_failure_refuses_replacement()
     {
         var warnings = new List<Exception>();
         await using var root = new Context(warnings.Add);
@@ -647,11 +650,14 @@ public sealed class HmrModuleTests
         Assert.Empty(warnings);
         Assert.Equal(0, notifications);
         hmr.RegisterModule("plugin.dll", () => loader.ReplacePluginAsync(original, replacement));
-        await hmr.NotifyChangedAsync("plugin.dll");
+        Assert.Same(cleanup, await Assert.ThrowsAsync<IOException>(() => hmr.NotifyChangedAsync("plugin.dll")));
         Assert.Same(cleanup, Assert.Single(warnings));
-        Assert.Equal(1, applies);
-        Assert.Equal(1, notifications);
-        Assert.Equal(FiberState.Active, loader.Resolve("row").Fiber!.State);
+        Assert.Equal(0, applies);
+        Assert.Equal(0, notifications);
+        Assert.Equal(FiberState.Disposed, loader.Resolve("row").Fiber!.State);
+        var failure = PluginReplacementFailure.FromException(cleanup)!;
+        Assert.Equal(PluginReplacementPhase.Retirement, failure.Phase);
+        Assert.Equal(PluginRecoveryState.NotAttempted, failure.Recovery);
     }
 
     [Fact]
@@ -680,6 +686,130 @@ public sealed class HmrModuleTests
         await hmr.NotifyChangedAsync(["dependency.dll", "framework.dll"]);
         Assert.Equal(1, replacements);
         Assert.Equal(1, restarts);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Replacement_observes_owned_and_previously_removed_cleanup_failures(
+        bool nested,
+        bool disposedEarlier)
+    {
+        await using var root = new Context();
+        var failure = new IOException("owned cleanup refused");
+        EffectHandle? effect = null;
+        var cleaned = false;
+        var child = new Plugin<string>
+        {
+            Apply = (ctx, _) => effect = ctx.Effect(() => (Action)(() => throw failure))
+        };
+        var original = new Plugin<string>
+        {
+            ApplyAsync = async (ctx, value) =>
+            {
+                ctx.Effect(() => (Action)(() => cleaned = true));
+                if (nested)
+                    await ctx.Plugin(child, value).WaitAsync();
+                else
+                    effect = ctx.Effect(() => (Action)(() => throw failure));
+            }
+        };
+        var activated = false;
+        var candidate = new Plugin<string>
+        {
+            Apply = (_, _) => activated = true
+        };
+        var loader = await MountAsync(root, original, "entry");
+        if (disposedEarlier)
+            Assert.Same(failure, await Assert.ThrowsAsync<IOException>(async () => await effect!.DisposeAsync()));
+        Assert.Same(
+            failure,
+            await Assert.ThrowsAsync<IOException>(() => loader.ReplacePluginAsync(original, candidate)));
+        Assert.True(cleaned);
+        Assert.False(activated);
+        Assert.Equal(PluginReplacementPhase.Retirement, PluginReplacementFailure.FromException(failure)!.Phase);
+        Assert.Equal(FiberState.Disposed, loader.Resolve("row").Fiber!.State);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Replacement_waits_for_captured_fiber_cleanup_started_by_another_caller(bool failCleanup)
+    {
+        await using var root = new Context();
+        var firstEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanupFailure = new IOException("asynchronous old cleanup failed");
+        var original = new Plugin<string>
+        {
+            Apply = (ctx, id) => ctx.Effect(() => new AsyncCleanup(async () =>
+            {
+                (id == "first" ? firstEntered : secondEntered).TrySetResult();
+                await (id == "first" ? firstRelease : secondRelease).Task;
+                if (id == "second" && failCleanup)
+                    throw cleanupFailure;
+            }))
+        };
+        var activated = new List<string>();
+        var candidate = new Plugin<string>
+        {
+            Apply = (_, id) => activated.Add(id)
+        };
+        var loader = await MountAsync(root, original, "first");
+        await loader.CreateAsync(
+            new()
+            {
+                Id = "second",
+                Name = "plugin",
+                Config = "second"
+            });
+        await loader.WaitAsync();
+        var first = loader.Resolve("row").Fiber!;
+        var second = loader.Resolve("second").Fiber!;
+        var replacing = loader.ReplacePluginAsync(original, candidate);
+        try
+        {
+            await firstEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var otherDisposal = second.DisposeAsync().AsTask();
+            await secondEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            // The public repeat stays single-shot while the captured lifecycle is still running.
+            await second.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+            firstRelease.TrySetResult();
+            await first.WaitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            await Assert.ThrowsAsync<TimeoutException>(() => replacing.WaitAsync(TimeSpan.FromMilliseconds(250)));
+            Assert.False(otherDisposal.IsCompleted);
+            Assert.Empty(activated);
+            secondRelease.TrySetResult();
+            await otherDisposal.WaitAsync(TimeSpan.FromSeconds(5));
+            if (failCleanup)
+            {
+                Assert.Same(cleanupFailure, await Assert.ThrowsAsync<IOException>(() => replacing));
+                var outcome = PluginReplacementFailure.FromException(cleanupFailure)!;
+                Assert.Equal(PluginReplacementPhase.Retirement, outcome.Phase);
+                Assert.Equal(PluginRecoveryState.NotAttempted, outcome.Recovery);
+                Assert.Contains(cleanupFailure, outcome.CleanupErrors);
+                Assert.Empty(activated);
+            }
+            else
+            {
+                await replacing.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.Equal(["first", "second"], activated);
+            }
+        }
+        finally
+        {
+            firstRelease.TrySetResult();
+            secondRelease.TrySetResult();
+        }
+    }
+
+    private sealed class AsyncCleanup(Func<Task> cleanup) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync() => new(cleanup());
     }
 
     private static async Task<Loader> MountAsync(

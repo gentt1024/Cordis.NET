@@ -80,6 +80,7 @@ public sealed partial class PluginConfigurationOperations(
     string? ownerEntryId = null)
 {
     private readonly SemaphoreSlim mutation = new(1, 1);
+    private readonly Dictionary<string, Func<string, string>> removedPackages = new(StringComparer.Ordinal);
 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> managementBundles =
         new(StringComparer.Ordinal);
@@ -398,6 +399,11 @@ public sealed partial class PluginConfigurationOperations(
             "bundle",
             async () =>
             {
+                var exactMapping = launch.InstallationBundles.Keys.Contains(name, StringComparer.Ordinal) ||
+                    (launch.LocalBundles?.Keys.Contains(name, StringComparer.Ordinal) ?? false);
+                if (removedPackages.ContainsKey(name) || (!exactMapping && removedPackages.Any(removed =>
+                        string.Equals(removed.Key, removed.Value(name), StringComparison.Ordinal))))
+                    throw new Refusal("removed-package");
                 var inputs = await CaptureProfileAsync();
                 var manifest = PackageManifest.Read(ManifestPath);
                 var previous = manifest.Bundles;

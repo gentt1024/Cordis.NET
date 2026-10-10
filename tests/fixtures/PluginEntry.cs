@@ -12,6 +12,21 @@ public sealed class InvalidEntry : IClrPluginModule
     public IPlugin CreatePlugin() => null!;
 }
 
+public sealed class ImmutableEntry : IClrPluginModule
+{
+    public IPlugin CreatePlugin() => new Plugin<string>
+    {
+        Apply = (ctx, config) =>
+        {
+            var directory = Path.GetDirectoryName(typeof(ImmutableEntry).Assembly.Location)!;
+            ctx.Provide("bundle-path", directory);
+            ctx.Provide("bundle-resource", File.ReadAllText(Path.Combine(directory, "assets", "resource.txt")).Trim());
+            ctx.Provide("bundle-dependency", PrivateDependency.Value);
+            ctx.Provide("bundle-config", config);
+        }
+    };
+}
+
 public sealed record TypedMarker(string Value);
 
 public sealed record CollectibleSettings(string Value, TypedMarker? Marker = null);
@@ -158,5 +173,138 @@ public sealed class Entry : IClrPluginModule
         public string Version => Entry.Version;
         public string Resource => resource;
         public string Dependency => PrivateDependency.Value;
+    }
+}
+
+public sealed class RetirementEntry : IClrPluginModule
+{
+#if VERSION_BAD
+    private const string Version = "bad-v2";
+#elif VERSION_TWO
+    private const string Version = "v2";
+#else
+    private const string Version = "v1";
+#endif
+
+    public IPlugin CreatePlugin() => new Plugin<string>
+    {
+        Inject = ["retirement-probe"],
+        Apply = (ctx, id) =>
+        {
+            var probe = ctx.Get<RetirementProbe>("retirement-probe")!;
+            if (Version == "v1" && id == "b" && probe.FailRecovery)
+                throw new InvalidOperationException("V1 recovery refused");
+            var service = new RetirementService(probe, id);
+            ctx.Effect(() => (IAsyncDisposable)service);
+            ctx.Provide("retirement-" + id, service);
+            if (Version == "bad-v2" && id == "b")
+                throw new InvalidOperationException("retirement candidate activation failed");
+        }
+    };
+
+    private sealed class RetirementService : IRetirementService
+    {
+        private readonly RetirementProbe probe;
+        private readonly string id;
+        private readonly object gate = new();
+        private readonly FileStream? resource;
+        private bool accepting = true;
+        private Task<string>? active;
+
+        public RetirementService(RetirementProbe probe, string id)
+        {
+            this.probe = probe;
+            this.id = id;
+            if (probe.ExclusiveResources)
+                resource = File.Open(
+                    Path.Combine(probe.ResourceDirectory, id + ".lock"),
+                    FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite,
+                    FileShare.None);
+            probe.Tick += OnTick;
+            probe.History.Enqueue("start:" + Version + ":" + id);
+            probe.Contributions.Enqueue(new(Version, id, this));
+        }
+
+        public string VerifyReady()
+        {
+            lock (gate)
+            {
+                ObjectDisposedException.ThrowIf(!accepting || resource is { CanRead: false }, this);
+                return Version;
+            }
+        }
+
+        public string Execute()
+        {
+            lock (gate)
+            {
+                ObjectDisposedException.ThrowIf(
+                    !accepting || !probe.PerformBusiness(id, () => probe.History.Enqueue("call:" + Version + ":" + id)),
+                    this);
+                return Version;
+            }
+        }
+
+        public Task<string> ExecuteAsync()
+        {
+            lock (gate)
+            {
+                ObjectDisposedException.ThrowIf(
+                    !accepting || !probe.PerformBusiness(
+                        id,
+                        () =>
+                        {
+                        }),
+                    this);
+                return active = RunCallAsync();
+            }
+        }
+
+        private async Task<string> RunCallAsync()
+        {
+            probe.Entered.TrySetResult();
+            await probe.Release.Task;
+            ObjectDisposedException.ThrowIf(
+                !probe.CompleteBusiness(id, () => probe.History.Enqueue("drained:" + Version + ":" + id)),
+                this);
+            return Version;
+        }
+
+        public Action CaptureCallback() => () => Execute();
+
+        private void OnTick()
+        {
+            lock (gate)
+                if (accepting)
+                    probe.PerformBusiness(id, () => probe.History.Enqueue("tick:" + Version + ":" + id));
+        }
+
+        public void CloseAdmission()
+        {
+            lock (gate)
+                accepting = false;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Version == "v1" && id == "a" && probe.FailStop)
+                throw new InvalidOperationException("old generation refused to stop");
+            if (Version == "bad-v2" && id == "b" && probe.FailCandidateStop)
+                throw new InvalidOperationException("candidate generation refused to stop");
+            CloseAdmission();
+            probe.Tick -= OnTick;
+            probe.Stopping.TrySetResult();
+            try
+            {
+                if (active is not null)
+                    await active;
+            }
+            finally
+            {
+                resource?.Dispose();
+                probe.History.Enqueue("stop:" + Version + ":" + id);
+            }
+        }
     }
 }

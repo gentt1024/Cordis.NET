@@ -219,6 +219,7 @@ public sealed class EffectHandle : IAsyncDisposable
         }
         catch (Exception error)
         {
+            _owner.RecordCleanupError(error);
             _cleanup!.TrySetException(error);
         }
         finally

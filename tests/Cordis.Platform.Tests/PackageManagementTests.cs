@@ -56,6 +56,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                     {
                         if (limit < 0) throw new InvalidOperationException("independent apply failure");
                         ctx.Provide("installed-limit", ctx.Fiber.GetConfigReference<int>("limit"));
+                        ctx.Provide("installed-code", (Func<string>)(() => "v1"));
                     },
                 };
             }
@@ -339,8 +340,21 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     [Fact]
     public async Task Independent_nuget_plugin_installs_updates_configuration_and_removes_through_session()
     {
-        await using var host = await StartAsync();
+        var hostBundle = Directory.CreateDirectory(Path.Combine(directory, "host-owned-bundle")).FullName;
+        await File.WriteAllTextAsync(
+            Path.Combine(hostBundle, "package.json"),
+            """{"name":"@scope/host","dsh":{"bundle":{"patch":"patch.yml"}}}""");
+        await File.WriteAllTextAsync(Path.Combine(hostBundle, "patch.yml"), "[]\n");
+        await using var host = await StartAsync(
+            installationBundles: new Dictionary<string, string>
+            {
+                ["@scope/host"] = hostBundle
+            });
         var unload = await RunLifecycleAsync(host);
+        var enabled = await host.Session.ConfigurationOperations.SetBundleEnabledAsync("@scope/host", true);
+        Assert.Null(enabled.Error);
+        Assert.Equal("applied", enabled.Application);
+        Assert.Contains("@scope/host", PackageManifest.Read(Path.Combine(host.Profile, "package.json")).Bundles);
         for (var attempt = 0;attempt < 12 && !unload.IsCollected;attempt++)
         {
             GC.Collect();
@@ -415,6 +429,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.True(interrupted.Installed);
         Assert.False(interrupted.Selected);
         Assert.True(Directory.Exists(host.Toolchain.Bundles[request.Name]));
+        Assert.Equal("applied", (await operations.SetBundleEnabledAsync(request.Name, true)).Application);
         var removed = await operations.RemovePackageAsync(host.Toolchain, request.Name.ToLowerInvariant());
         Assert.False(removed.Installed, removed.Diagnostic);
         Assert.False(removed.Selected);
@@ -424,7 +439,38 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             Assert.Null(ctx.Get("installed-limit"));
             return Task.CompletedTask;
         });
-        Assert.False(Directory.Exists(host.Toolchain.Bundles[request.Name]));
+        Assert.True(Directory.Exists(host.Toolchain.Bundles[request.Name]));
+        Assert.Contains(host.Toolchain.Bundles[request.Name], removed.Residuals!);
+        Assert.DoesNotContain(await operations.ListBundlesAsync(), item => item.Name == request.Name);
+        var removedManifest = await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
+            await host.Resolver.LocateAsync("nuget:independentplugin", new Uri(host.Profile + "/")));
+        var reenabled = await operations.SetBundleEnabledAsync(request.Name, true);
+        var attemptedManifest = await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json"));
+        var activeEntries = await operations.ListPluginsAsync();
+        Assert.False(
+            reenabled.Changed,
+            JsonSerializer.Serialize(
+                new
+                {
+                    reenabled,
+                    attemptedManifest,
+                    activeEntries
+                }));
+        Assert.Equal("failed", reenabled.Application);
+        Assert.Equal("removed-package", reenabled.Error);
+        Assert.Equal(
+            "removed-package",
+            (await operations.SetBundleEnabledAsync(request.Name.ToLowerInvariant(), true)).Error);
+        Assert.Equal(removedManifest, attemptedManifest);
+        Assert.Equal(removedManifest, await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json")));
+        Assert.DoesNotContain(activeEntries, entry => entry.ModuleName == "nuget:independentplugin");
+        var retired = await operations.InstallPackageAsync(host.Toolchain, request, "retired", true);
+        Assert.Equal("restart-required", retired.Application);
+        Assert.False(retired.Installed);
+        Assert.False(retired.Selected);
+        Assert.Contains(host.Toolchain.Bundles[request.Name], retired.Residuals!);
+        Assert.Contains("retired package identity", retired.Diagnostic);
         var unload = Assert.Single(host.Resolver.Unloads);
         Assert.True(unload.UnloadRequested);
         Assert.Null(await operations.WaitForInstallAsync("install"));
@@ -856,7 +902,12 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                 "CORDIS_TEST_AUTHORIZATION");
             Assert.True(removed.ExitCode == 0, removed.Output);
             Assert.Empty(PackageManifest.Read(Path.Combine(profile, "package.json")).Bundles);
-            Assert.False(Directory.Exists(Path.Combine(profile, ".cordis", "packages", "independentplugin", "1.0.0")));
+            var retained = Path.Combine(profile, ".cordis", "packages", "independentplugin", "1.0.0");
+            Assert.True(Directory.Exists(retained));
+            Assert.Contains("retained", removed.Output, StringComparison.OrdinalIgnoreCase);
+            var prematureDelete = await Command("delete-retained", profile, "IndependentPlugin", "1.0.0");
+            Assert.NotEqual(0, prematureDelete.ExitCode);
+            Assert.True(Directory.Exists(retained));
             var unknown = await Command(
                 "wait",
                 endpoint,
@@ -869,6 +920,10 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             host.Kill(entireProcessTree: true);
             await host.WaitForExitAsync();
             await remaining;
+            var deleted = await Command("delete-retained", profile, "IndependentPlugin", "1.0.0");
+            Assert.True(deleted.ExitCode == 0, deleted.Output);
+            Assert.False(Directory.Exists(retained));
+            Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(retained)!, ".1.0.0.files.json")));
         }
         finally
         {
@@ -883,7 +938,8 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         IEnumerable<string>? sources = null,
         DshRuntimeIdentity? runtime = null,
         string? profileDirectory = null,
-        IReadOnlyDictionary<string, string>? installationBundles = null)
+        IReadOnlyDictionary<string, string>? installationBundles = null,
+        bool enableHmr = false)
     {
         var root = profileDirectory is null
             ? Directory.CreateDirectory(Path.Combine(directory, Guid.NewGuid().ToString("N"))).FullName
@@ -910,7 +966,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName,
             ManifestLocator = toolchain.LocateManifest,
         };
-        var session = await ProfileSession.StartAsync(config, launch, resolver);
+        var session = await ProfileSession.StartAsync(config, launch, resolver, enableHmr: enableHmr);
         return new(profile, resolver, toolchain, session);
     }
 
@@ -949,7 +1005,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
 
     public Task DisposeAsync()
     {
-        // CLR source files are separate from collectible shadow copies, whose release may follow a later GC.
+        // Fixture cleanup may be deferred while a CLR loader still holds files after an unload request.
         try
         {
             Directory.Delete(directory, recursive: true);

@@ -878,7 +878,9 @@ public sealed class Loader : EntryTree
             .Any(entry => entry.Initializing is not null ||
                 entry.Fiber?.State is FiberState.Loading or FiberState.Unloading);
 
-    /// <summary>Replace all loader-owned roots for a module after a CLR candidate is prepared.</summary>
+    /// <summary>Replace a prepared module only after its owned cleanup completes without failure.</summary>
+    /// <remarks>Original exceptions carry PluginReplacementFailure details. The caller owns admission,
+    /// business-quiescence verification and failure closure; disposal cannot stop untracked plugin work.</remarks>
     public Task ReplacePluginAsync(IPlugin previous, IPlugin replacement) =>
         ReplacePluginsAsync(
             new Dictionary<IPlugin, IPlugin>(ReferenceEqualityComparer.Instance)
@@ -911,78 +913,108 @@ public sealed class Loader : EntryTree
             foreach (var row in rows)
                 if (row.Entry is not null)
                     row.Entry.Removing = true;
-            foreach (var row in rows)
-            {
-                try
-                {
-                    await row.Fiber.DisposeAsync();
-                }
-                catch (Exception error)
-                {
-                    ReportReplacementFailure(error);
-                }
-            }
-
-            var activated = new List<(Fiber Fiber, Entry? Entry)>();
             try
             {
-                foreach (var row in rows)
+                var retirementErrors = await StopReplacementFibersAsync(rows.Select(row => row.Fiber));
+                if (retirementErrors.Count != 0)
                 {
-                    if (row.Parent.Fiber.Uid is null)
-                        continue;
-                    var fiber = row.Parent.Plugin(row.Replacement, row.Raw);
-                    activated.Add((fiber, row.Entry));
-                    if (row.Entry is not null)
-                        row.Entry.Fiber = fiber;
+                    var primary = retirementErrors[0];
+                    new PluginReplacementFailure(
+                        PluginReplacementPhase.Retirement,
+                        PluginRecoveryState.NotAttempted,
+                        retirementErrors,
+                        []).Attach(primary);
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(primary).Throw();
                 }
 
-                await Task.WhenAll(activated.Select(row => row.Fiber.WaitAsync()));
-            }
-            catch
-            {
-                foreach (var row in activated)
+                var activated = new List<(Fiber Fiber, Entry? Entry)>();
+                try
                 {
-                    try
+                    foreach (var row in rows)
                     {
-                        await row.Fiber.DisposeAsync();
-                    }
-                    catch (Exception error)
-                    {
-                        ReportReplacementFailure(error);
-                    }
-                }
-
-                var restored = new List<Fiber>();
-                foreach (var row in rows)
-                {
-                    if (row.Parent.Fiber.Uid is null)
-                        continue;
-                    try
-                    {
-                        var fiber = row.Parent.Plugin(row.Previous, row.Raw);
-                        restored.Add(fiber);
+                        if (row.Parent.Fiber.Uid is null)
+                            continue;
+                        var fiber = row.Parent.Plugin(row.Replacement, row.Raw);
+                        activated.Add((fiber, row.Entry));
                         if (row.Entry is not null)
                             row.Entry.Fiber = fiber;
                     }
-                    catch (Exception error)
-                    {
-                        ReportReplacementFailure(error);
-                    }
-                }
 
-                foreach (var fiber in restored)
+                    await Task.WhenAll(activated.Select(row => row.Fiber.WaitAsync()));
+                }
+                catch (Exception primary)
                 {
-                    try
+                    var cleanupErrors = await StopReplacementFibersAsync(activated.Select(row => row.Fiber));
+                    var recoveryErrors = new List<Exception>();
+                    var recovery = PluginRecoveryState.NotAttempted;
+                    // A candidate with unconfirmed cleanup must not overlap a newly restored V1.
+                    if (cleanupErrors.Count == 0)
                     {
-                        await fiber.WaitAsync();
-                    }
-                    catch (Exception error)
-                    {
-                        ReportReplacementFailure(error);
-                    }
-                }
+                        var restored = new List<Fiber>();
+                        foreach (var row in rows)
+                        {
+                            if (row.Parent.Fiber.Uid is null)
+                            {
+                                if (!rows.Any(candidate => ReferenceEquals(candidate.Fiber, row.Parent.Fiber)))
+                                {
+                                    var error = new InvalidOperationException(
+                                        "The original plugin owner is no longer live.");
+                                    recoveryErrors.Add(error);
+                                    ReportReplacementFailure(error);
+                                }
 
-                throw;
+                                continue;
+                            }
+
+                            try
+                            {
+                                var fiber = row.Parent.Plugin(row.Previous, row.Raw);
+                                restored.Add(fiber);
+                                if (row.Entry is not null)
+                                    row.Entry.Fiber = fiber;
+                            }
+                            catch (Exception error)
+                            {
+                                recoveryErrors.Add(error);
+                                ReportReplacementFailure(error);
+                            }
+                        }
+
+                        foreach (var fiber in restored)
+                        {
+                            try
+                            {
+                                await fiber.WaitAsync();
+                                if (fiber.State != FiberState.Active)
+                                    throw new InvalidOperationException($"Recovery left a fiber {fiber.State}.");
+                                if (fiber.CleanupErrors.Count != 0)
+                                {
+                                    recoveryErrors.AddRange(fiber.CleanupErrors);
+                                    foreach (var error in fiber.CleanupErrors)
+                                        ReportReplacementFailure(error);
+                                }
+                            }
+                            catch (Exception error)
+                            {
+                                recoveryErrors.Add(error);
+                                ReportReplacementFailure(error);
+                            }
+                        }
+
+                        recovery = recoveryErrors.Count == 0
+                            ? PluginRecoveryState.Succeeded
+                            : PluginRecoveryState.Failed;
+                        if (recovery == PluginRecoveryState.Failed)
+                            cleanupErrors.AddRange(await StopReplacementFibersAsync(restored));
+                    }
+
+                    new PluginReplacementFailure(
+                        PluginReplacementPhase.Activation,
+                        recovery,
+                        cleanupErrors,
+                        recoveryErrors).Attach(primary);
+                    throw;
+                }
             }
             finally
             {
@@ -991,6 +1023,47 @@ public sealed class Loader : EntryTree
                         row.Entry.Removing = false;
             }
         });
+    }
+
+    private async Task<List<Exception>> StopReplacementFibersAsync(IEnumerable<Fiber> fibers)
+    {
+        var failures = new List<Exception>();
+        foreach (var fiber in fibers)
+        {
+            Exception? disposalError = null;
+            try
+            {
+                await fiber.DisposeAsync();
+            }
+            catch (Exception error)
+            {
+                disposalError = error;
+                ReportReplacementFailure(error);
+            }
+
+            // As in fixed HMR, requesting disposal and joining lifecycle settlement are separate.
+            // A repeated public disposer may return before an earlier caller's cleanup finishes.
+            try
+            {
+                await fiber.WaitAsync();
+            }
+            catch (Exception error) when (fiber.State == FiberState.Disposed && ReferenceEquals(error, fiber.Error))
+            {
+                // Wait rethrows retained startup errors after settlement. Candidate retirement
+                // follows upstream's allSettled path; these are not new cleanup failures.
+            }
+            catch (Exception error)
+            {
+                failures.Add(error);
+                ReportReplacementFailure(error);
+            }
+
+            failures.AddRange(fiber.CleanupErrors);
+            if (disposalError is not null && !failures.Contains(disposalError, ReferenceEqualityComparer.Instance))
+                failures.Add(disposalError);
+        }
+
+        return failures;
     }
 
     private void ReportReplacementFailure(Exception error)

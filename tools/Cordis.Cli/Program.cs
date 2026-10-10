@@ -1,4 +1,35 @@
 using Cordis.Composition;
+using Cordis.Clr;
+
+if (args.Length > 0 && args[0] == "delete-retained")
+{
+    if (args.Length != 4)
+    {
+        Console.Error.WriteLine(
+            "Usage: cordis delete-retained <profile> <package> <version>. Stop all hosts and Workers first.");
+        return 2;
+    }
+
+    try
+    {
+        var profile = Path.GetFullPath(args[1]);
+        using var ownership = new FileStream(
+            Path.Combine(profile, ".cordis", "host.lock"),
+            FileMode.OpenOrCreate,
+            FileAccess.ReadWrite,
+            FileShare.None);
+        await DotnetPluginToolchain.DeleteRetainedArtifactAsync(profile, args[2], args[3]);
+        Console.WriteLine("Retained package files removed: " + args[2] + "@" + args[3]);
+        return 0;
+    }
+    catch (Exception error)
+    {
+        Console.Error.WriteLine(error.Message);
+        if (error is PackageToolException tool)
+            Console.Error.WriteLine("Retained path: " + tool.Directory);
+        return 1;
+    }
+}
 
 if (args.Length > 0 && args[0] == "run")
     return await ApplicationCommands.RunAsync(args[1..]);

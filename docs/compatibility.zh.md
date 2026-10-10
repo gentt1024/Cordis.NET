@@ -39,14 +39,26 @@ Cordis.NET 不执行任意服务端 TypeScript 插件。JavaScript 原型、抛�
 
 部署解析代在既有包映射和本地映射之外接受显式外部链接根。每一代捕获链接的真实目标；撤下根只停止其调用者的路由，不卸载保留的模块。同名链接改指另一目标需要重启，即使中间曾撤下该根。链接的 peer 声明从当前祖先 manifest 读取；私有依赖查找仍由宿主提供，CLR 导出仍使用显式映射。这不安装 Node loader，也不模拟 Node exports、包自引用、CommonJS/ESM 差异或 worker 传播。
 
-HMR 等待候选生命周期完成；缺失服务时 fiber 可以停在 Pending。激活失败恢复原插件，后续清理、恢复或诊断观察者失败不会覆盖原始错误。保留的配置引用停留在该代最后提交的值，替换与恢复的 fiber 获得全新引用。若引用的泛型值类型属于可回收 bundle，宿主保留该引用也会保留 bundle，直到释放引用。CLR bundle 的私有托管依赖从影子副本或显式共享的宿主契约解析；无关的默认上下文程序集不能补齐缺失私有依赖。框架程序集仍使用运行时，原生库查找保留 CLR/操作系统的加载规则。
+HMR 等待候选生命周期完成；缺失服务时 fiber 可以停在 Pending。激活失败仅在候选清理成功后尝试恢复；后续清理、恢复或诊断观察者失败不会覆盖原始错误。保留的配置引用停留在该代最后提交的值，替换与恢复的 fiber 获得全新引用。若引用的泛型值类型属于可回收 bundle，宿主保留该引用也会保留 bundle，直到释放引用。CLR bundle 的私有托管依赖从稳定制品目录、显式请求的开发副本或显式共享的宿主契约解析；无关的默认上下文程序集不能补齐缺失私有依赖。框架程序集仍使用运行时，原生库查找保留 CLR/操作系统的加载规则。
 
-协作式卸载观察者错误通过 `ClrUnloadObservation.UnloadError` 的文本快照暴露，不保留异常实例或其可回收类型。`UnloadRequested` 记录一次尝试，`IsCollected` 观察托管加载上下文包装对象的回收。`Unloading` handler 抛错可能中止底层释放；即使包装对象已回收，影子 DLL 仍可能被锁定。宿主必须修复或移除失败的 handler，在仍持有实际上下文时显式再次请求 `Unload()`；适配器不会自动重试。影子目录删除是独立结果，保留引用或中断的释放仍可能阻止删除。
+2026-10-09 的 replacement 安全修补有意适配固定 DSH HMR 的“警告后继续”路径。普通 `Fiber.DisposeAsync` 仍报告异常并继续兄弟清理，保留既有 effect 局部分组语义。`Fiber.CleanupErrors` 记录清理失败，包括此前移除的 effect 及所拥有的子 fiber；重启后仍保留失败，因为逸出的工作可能继续存在。旧代清理出现任何失败时，replacement 拒绝激活候选。抛出的原异常携带 `PluginReplacementFailure`，包含阶段、清理异常和 `NotAttempted`/`Succeeded`/`Failed` 恢复结果。候选清理不能确认时不恢复 V1；V1 恢复失败时继续停止已部分恢复的 fiber。`Succeeded` 表示框架确认候选清理及原 fiber 激活为 Active，不证明任意业务副作用已逆转。诊断观察者抛错不能把替换失败变成成功。
+
+Replacement 请求释放后，独立等待已捕获 fiber 的生命周期结束，对照固定 HMR 的 `registry.delete` 后调用 `fiber.await`。非根、具有所有权的 fiber 重复释放仍保持单次语义，不能证明先前清理已经完成。清理失败候选时，`WaitAsync` 在达到 Disposed 后仍可能重新抛出保留的启动错误；该已知启动错误与清理失败分开处理，对应 upstream 恢复路径的 `allSettled`。等待过程中记录的真实清理失败仍阻止提交候选或恢复 V1。
+
+在线支持范围是契约兼容、所拥有工作能够合作式安全停止的插件。应用负责兼容准入、退休前关闭新业务入口、排空已接受工作，以及为保留回调、事件和迟到提交设置权限围栏。退休前拒绝可以保留 V1；退休失败可能已部分停止旧代，不得描述为工作图原状保留。除非真实 V1 业务就绪及失败 V2 的退休都已验证，否则应用必须保持受影响范围关闭，并使迟到业务权限失效。任意 resolver callback 的异常若没有结果信息，同样不提供恢复保证。单凭 `Context.DisposeAsync`、旧 resolver 映射、卸载请求或 ALC 存活／回收，均不能证明这些业务结果。完整包在线 Update 和更新并发事务不属于此次实现替换修补；下述独立包安装路径支持更新后重启生效；[验证记录](validation.zh.md) 给出真实 Host 夹具与剩余限制。
+
+Host 夹具在受影响业务入口保持关闭时检查插件就绪，不持有准入锁调用插件代码。V2 只有在整个 resolver replacement 成功返回、映射完成提交后才开放入口。恢复 V1 时，先等待 resolver 完成失败候选回退，再核验业务并开放；仍重新抛出原替换异常。这些是应用操作，没有新增生产 readiness API。若 Loader 已成功切换后业务校验失败，resolver callback 失败会保留旧映射，但不能恢复旧运行图。夹具明确将该范围标记为需要人工处理，保持 HTTP／回调／事件业务关闭，并拒绝后续替换，包括已经排队的调用。它不声称 V1 已恢复，也不自动修复分叉。实际应用必须实现同样的关闭状态责任，或在恢复服务前另行证明恢复完成。
+
+并发 Host 替换必须由应用协调，锁覆盖整个替换过程，包括 resolver 返回后的就绪核验、重新开放或失败关闭。夹具使用一把异步更新锁覆盖该范围。resolver 只串行化自身修改，不串行化应用随后作出的业务准入决定。此协调不实现完整包 Update 事务。
+
+协作式卸载观察者错误通过 `ClrUnloadObservation.UnloadError` 的文本快照暴露，不保留异常实例或其可回收类型。`UnloadRequested` 记录一次尝试，`IsCollected` 观察托管加载上下文包装对象的回收。`Unloading` handler 抛错可能中止底层释放；即使包装对象已回收，DLL 仍可能被锁定。宿主必须修复或移除失败的 handler，在仍持有实际上下文时显式再次请求 `Unload()`；适配器不会自动重试。物理删除是独立结果，保留引用或中断的释放仍可能阻止删除。
+
+[CLR 制品工作流](clr-artifacts.zh.md)默认使用稳定目录。工具链仅移动一次完成的工作输出，在已批准制品树之外保存完整性记录，启动时验证，并在逻辑移除后保留文件。创建 ALC 不复制制品，ALC 回收也不赋予删除权限。显式 `ShadowCopy` 仍用于完整静止、之后必须原地重建的开发输出。不承诺每个 ALC 独立 native 静态状态。没有记录的旧部署需显式重新安装，不会被静默重封。
 
 patch 来源读取、字段编辑和 Settings 来源判定均将 falsey `insert`（包括 `null` 和 `false`）视为普通覆盖，遵循固定 Include 的应用规则。固定 ConfigEditor 使用 undefined 或字段存在性判断；此处恢复继承有意遵循 Include，确保 SET 回继承配置后移除有效覆盖，后续 base 更新可以继续继承。真实 insert、无关字段及源码注释沿用既有编辑合同。
 
 
-可选 NuGet 工具链将批准绑定到已检查的根归档，SDK 准备仅使用宿主选定的来源。批准覆盖整次 MSBuild 调用，包括依赖 targets；它不是逐依赖哈希批准系统，也不是沙箱。Windows 工具进程使用创建时绑定 Job（Windows 10 / Windows Server 2016 及以后），记录所有权后恢复执行，同时确认进程树及管道排空。Linux 使用独立进程组。取消会停止该组；宿主异常退出可能留下仍运行的进程组。后继操作拒绝未解决的运行记录，直到明确停止旧组并确认终止。保留或无法判定的记录需要明确恢复；诊断保留真实失败阶段和残留目录。动态包身份替换/重装可能需要新 resolver；静态 AOT 应用通过重新发布改变代码。
+可选 NuGet 工具链将批准绑定到已检查的根归档，SDK 准备仅使用宿主选定的来源。批准覆盖整次 MSBuild 调用，包括依赖 targets；它不是逐依赖哈希批准系统，也不是沙箱。Windows 工具进程使用创建时绑定 Job（Windows 10 / Windows Server 2016 及以后），记录所有权后恢复执行，同时确认进程树及管道排空。Linux 使用独立进程组。取消会停止该组；宿主异常退出可能留下仍运行的进程组。后继操作拒绝未解决的运行记录，直到明确停止旧组并确认终止。保留或无法判定的记录需要明确恢复；诊断保留真实失败阶段和残留目录。更新已安装的 Profile 自有 NuGet 包时，工具链准备并准入新版本，将完整输出移动到独立版本目录，并保存下一次启动使用的版本及选择。操作返回 `restart-required`，当前 resolver 路由和插件 fiber 继续使用旧版本，与固定 DSH 的已安装包边界一致。同版本重装及安装目录自有包的替换仍被拒绝。已有目标目录绝不覆盖；准备、准入及保存前检测到的发布冲突保留原先保存的版本并报告残留输出。这不是文件系统事务，也不自动清理旧版本。已退休身份仍需新 resolver 才可重装；静态 AOT 应用通过重新发布改变代码。
 
 安装检查已捕获的包声明在 SDK 准备前准入，停用安装也不例外。`PackageInspection.ManifestJson` 是与 archive hash 同源的不可变快照；无法提前检查声明的适配器可以省略它，保留准备后 manifest 准入。.NET 工具链始终捕获根包声明，在准备前及 restore 后检查根包 hash，并保留准备后 manifest 准入。构建批准不授予版本豁免。
 
@@ -60,11 +72,11 @@ HTTP 管理授权与执行使用同一个端点资源。插件/bundle 启停使�
 
 Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 Prepare 前读取的 manifest 覆盖后续编辑。这是原生适配：固定 DSH 成功路径在 `selectBundle` 重读，但没有提供完整产品候选批准合同。两者都不保证能对忽略协作锁的任意编辑器执行条件替换。
 
-`PluginConfigurationOperations.AdmitProfileAsync` 接收库持有的不可变 manifest 文本和原始根配置候选，组合仍使用现有 Profile/Include 逻辑。修改分离的 composition 视图不会改变保存候选。安装与 bundle 选择在发布/持久化前准入，并通过 `ProfileSession` 应用该候选；移除分别准入其持久步骤，其中删除依赖候选在工具删除包目录前准入。拒绝第二步时，包保持已安装、已取消选择。重复选择仍在重新应用前准入。普通消费可以省略准入。仅使用旧 `ReconcileAsync` 的宿主在未启用产品准入时保留原回调；启用产品准入时必须支持候选 reconciliation，不能静默退回重新读盘组合。
+`PluginConfigurationOperations.AdmitProfileAsync` 接收库持有的不可变 manifest 文本和原始根配置候选，组合仍使用现有 Profile/Include 逻辑。修改分离的 composition 视图不会改变保存候选。安装与 bundle 选择在发布/持久化前准入，并通过 `ProfileSession` 应用该候选；移除分别准入其持久步骤，其中删除依赖候选在工具解除运行时映射前准入。CLR 制品保留并单独报告，直至显式离线删除。拒绝第二步时，包保持已安装、已取消选择。重复选择仍在重新应用前准入。普通消费可以省略准入。仅使用旧 `ReconcileAsync` 的宿主在未启用产品准入时保留原回调；启用产品准入时必须支持候选 reconciliation，不能静默退回重新读盘组合。
 
 即使 owner 配置比较相等，捕获的基础数据变化也会进入既有 Include 更新；未变化条目保留原 fiber。候选回调与赋值时的旧回调关联。宿主随后只替换 `ReconcileAsync` 时，未启用准入的操作仍执行该定制；启用准入则拒绝，直到宿主明确为此接线设置候选应用回调。
 
-读集记录完整 Profile manifest、基础配置、选中 bundle 的 manifest/patch、Profile/Home patch、兼容输入、启动 overlays 及部署映射。Prepare 后记录准备目录中的相对文件名和内容哈希。声明的 `PublicationDirectory` 允许同一目录内容不变地移动，并增加该包自己的本地映射；其他映射与来源保持不变。已批准 manifest 的替换是另一项计划内写入。发布后也区分这些变化与冲突。发布后冲突可以返回 installed=true、selected=false、failed 及保留的部署目录；更晚的应用失败可以保留已保存选择。不增加自动合并、重放或整个运行世界回滚，既有取消、安装等待和工具链归属继续有效。
+读集记录完整 Profile manifest、基础配置、选中 bundle 的 manifest/patch、Profile/Home patch、兼容输入、启动 overlays 及部署映射。Prepare 后记录准备目录中的相对文件名和内容哈希。声明的 `PublicationDirectory` 允许同一目录内容不变地移动，并增加新身份自己的本地映射。更新时保留已有运行时映射，候选则使用准备好的新版本组合；其他映射与来源保持不变。已批准 manifest 的替换是另一项计划内写入。发布后也区分这些变化与冲突。首次安装发布后但依赖尚未保存的冲突返回 installed=false、selected=false、failed 及保留的部署目录；更晚的应用失败可以保留已保存选择。不增加自动合并、重放或整个运行世界回滚，既有取消、安装等待和工具链归属继续有效。
 
 在线 metadata 编辑使用同一所有者的 `ReadProfileAsync` 与 `SaveProfileMetadataAsync`。保存先等待已有 mutation，再核对原修订；不能修改管理入口拥有的 dependencies 或 `dsh` 政策/选择。宿主决定怎样呈现等待、草稿和冲突，不代替产品同意缩减作者体验。低层 `PackageManifest.Write` 和静态维护函数仍要求调用者排除并发，或在离线 Profile 使用。所有受支持的并发写者必须遵守同一 Profile 锁协议和队列顺序。指纹检查检测已观察到的变化，不能关闭最后比较到 rename 之间非协作写者的竞态。产品自身政策输入和后续运行时/插件副作用不构成新的全局事务。后续协作请求独立于本次安装提交，最终 Profile 可以合法地不同。
 
@@ -78,7 +90,7 @@ Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 P
 
 固定 Loader 的模块导入和默认导出归一化独立于服务 `Provide` 选择插件入口。原生适配使用显式 CLR 入口类型：既有包根 `assembly`/`entryType` 元数据继续有效，可选 `exports` 将包子路径映射到同一程序集中的入口类型。不增加 Core 导出表，也不要求单入口插件声明空表。
 
-归一化 bundle 目录相同的请求共享 shadow copy、程序集身份与可收集加载上下文。Resolver 租约按请求拥有，生命周期与配置仍按 Loader Fiber 拥有。最后一个租约移除时请求卸载；保留引用与 unload observer 失败可能延迟收集或 shadow 删除。Core、Clr、Composition 默认作为共享合同程序集；其他合同需要宿主显式选择。无关默认上下文程序集不能满足插件私有依赖。
+归一化 bundle 目录相同的请求共享物理加载模式、程序集身份与可收集加载上下文。稳定加载保留原文件；显式 ShadowCopy 共享一个开发副本。同一已加载 bundle 的入口混用加载模式时，在导入新增入口之前拒绝。Resolver 租约按请求拥有，生命周期与配置仍按 Loader Fiber 拥有。最后一个租约移除时请求卸载；保留引用与 unload observer 失败可能延迟收集或 shadow 删除。Core、Clr、Composition 默认作为共享合同程序集；其他合同需要宿主显式选择。无关默认上下文程序集不能满足插件私有依赖。
 
 `ClrModuleResolver.ReplaceAsync` 的整组重载要求提供 bundle 的每个已登记请求，包括别名及尚未加载的导出。它准备单一候选代际并共同提交路由。`Loader.ReplacePluginsAsync` 复用既有 Fiber 稳定与恢复语义，Pending 仍合法。回调拥有 teardown 与恢复。原子路由发布不表示候选副作用回滚或产品全局事务。合同 descriptor 不新增统一替换准入算法。
 

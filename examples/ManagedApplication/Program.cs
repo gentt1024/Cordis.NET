@@ -44,9 +44,7 @@ if (!File.Exists(Path.Combine(profile, "package.json")))
 var configuration = Path.Combine(profile, "cordis.yml");
 if (!File.Exists(configuration))
     await File.WriteAllTextAsync(configuration, "[]\n");
-await using var resolver = new ClrModuleResolver(
-    Path.Combine(profile, ".cordis", "shadow"),
-    [typeof(ConfigObject<>).Assembly]);
+await using var resolver = new ClrModuleResolver([typeof(ConfigObject<>).Assembly]);
 using var packages = new DotnetPluginToolchain(profile, resolver, [feed]);
 var launch = new ProfileLaunch(
     await Profiles.LoadAsync(profile, clientPackages, packages.Bundles),

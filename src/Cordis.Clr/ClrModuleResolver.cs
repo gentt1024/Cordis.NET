@@ -26,14 +26,42 @@ public interface IClrTypertModule
     TypertContribution CreateTypertContribution();
 }
 
-/// <summary>The assembly path is relative to the bundle root; the complete directory is copied.</summary>
-public sealed record ClrModuleDefinition(string BundleDirectory, string AssemblyPath, string EntryType);
+/// <summary>Controls the physical files used by an independent collectible load context.</summary>
+public enum ClrModuleLoadMode
+{
+    /// <summary>Loads the complete bundle in place; its owner retains unchanged files for all consumers.</summary>
+    StableDirectory,
+
+    /// <summary>Copies a complete, quiescent bundle for callers that must subsequently rebuild its source.</summary>
+    ShadowCopy
+}
+
+/// <summary>The assembly path is relative to the bundle root.</summary>
+public sealed record ClrModuleDefinition(string BundleDirectory, string AssemblyPath, string EntryType)
+{
+    /// <summary>
+    /// Defaults to StableDirectory. The directory owner must retain every file,
+    /// without modification, for all managed, native, resource and worker uses, including delayed loads.
+    /// A directory name or version is not verification. The resolver never deletes caller-owned files.
+    /// </summary>
+    public ClrModuleLoadMode LoadMode
+    {
+        get;
+        init;
+    } = ClrModuleLoadMode.StableDirectory;
+}
 
 /// <summary>Unload request, garbage collection and shadow deletion are independently observable.</summary>
 public sealed class ClrUnloadObservation
 {
-    internal ClrUnloadObservation(WeakReference context, string directory) =>
-        (LoadContext, ShadowDirectory) = (context, directory);
+    internal ClrUnloadObservation(WeakReference context, string directory, string? shadowDirectory) =>
+        (LoadContext, LoadDirectory, ShadowDirectory) = (context, directory, shadowDirectory);
+
+    /// <summary>The directory used for loading; its owner determines its retention lifetime.</summary>
+    public string LoadDirectory
+    {
+        get;
+    }
 
     /// <summary>
     /// Gets the load context value.
@@ -44,9 +72,9 @@ public sealed class ClrUnloadObservation
     }
 
     /// <summary>
-    /// Gets the shadow directory value.
+    /// The resolver-owned copy, or null when loading a stable source directory.
     /// </summary>
-    public string ShadowDirectory
+    public string? ShadowDirectory
     {
         get;
     }
@@ -73,13 +101,17 @@ public sealed class ClrUnloadObservation
     public bool IsCollected => !LoadContext.IsAlive;
 
     /// <summary>
-    /// Gets the shadow deleted value.
+    /// True when no resolver-owned shadow remains, including when no copy was created.
     /// </summary>
     public bool ShadowDeleted => !Directory.Exists(ShadowDirectory);
 
-    /// <summary>Does not force GC. Retained references or an interrupted unload can prevent shadow deletion even after the context wrapper is collected.</summary>
+    /// <summary>Explicitly attempt physical deletion after all file consumers have stopped. Does not force GC.</summary>
+    /// <remarks>The caller must first stop Workers and every other consumer of this copy. Collection alone
+    /// cannot establish that precondition. Returns true without deleting anything for stable directories.</remarks>
     public bool TryDeleteShadow()
     {
+        if (ShadowDirectory is null)
+            return true;
         if (!UnloadRequested || !IsCollected)
             return false;
         try
@@ -107,7 +139,8 @@ public sealed class ClrUnloadObservation
 /// disposing this resolver. It neither discovers packages nor restores NuGet at runtime.
 /// </summary>
 /// <remarks>
-/// Entries from one normalized bundle directory share a shadow copy and collectible load context.
+/// Entries from one normalized bundle directory share physical loading mode, assembly identity and a collectible load context.
+/// StableDirectory loads retained files in place; ShadowCopy creates one development copy per bundle.
 /// Each loaded main assembly contributes a dependency resolver and private managed directory. Resolution
 /// checks all registered roots; the same path or byte-identical copies reuse identity. Before adding a root,
 /// read-only inspection rejects declared, resolver-located managed and P/Invoke binary conflicts, including
@@ -144,6 +177,12 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
     private readonly AsyncLocal<ReplacementScope?> replacementScope = new();
     private readonly string shadowRoot;
     private bool disposed;
+
+    /// <summary>Load stable artifacts without creating runtime copies. Explicit ShadowCopy uses the temporary directory.</summary>
+    public ClrModuleResolver(IEnumerable<Assembly>? sharedContracts = null)
+        : this(Path.Combine(Path.GetTempPath(), "cordis-shadow"), sharedContracts)
+    {
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClrModuleResolver"/> type.
@@ -490,8 +529,11 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
     private Lease Prepare(ClrModuleDefinition definition, Bundle? bundle = null, bool reuseCurrent = true)
     {
         var source = BundleSource(definition);
+        if (!Enum.IsDefined(definition.LoadMode))
+            throw new ArgumentOutOfRangeException(nameof(definition), "Unknown CLR module load mode.");
         var shadowRelative = Path.GetRelativePath(source, shadowRoot);
-        if (!Path.IsPathRooted(shadowRelative) && shadowRelative != ".." && !shadowRelative.StartsWith(
+        if (definition.LoadMode == ClrModuleLoadMode.ShadowCopy &&
+            !Path.IsPathRooted(shadowRelative) && shadowRelative != ".." && !shadowRelative.StartsWith(
                 ".." + Path.DirectorySeparatorChar,
                 StringComparison.Ordinal))
             throw new ArgumentException("The shadow directory must be outside the source bundle.", nameof(definition));
@@ -513,20 +555,27 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
             !bundle.Plugins.ContainsKey(ExportKey(relative, definition.EntryType)))
             throw new InvalidOperationException(
                 "Cannot import an uncached export while its CLR bundle is being replaced.");
+        if (bundle is not null && (bundle.ShadowDirectory is not null) !=
+            (definition.LoadMode == ClrModuleLoadMode.ShadowCopy))
+            throw new InvalidOperationException("Entries of one CLR bundle must use the same load mode.");
         var fresh = bundle is null;
-        var destination = bundle?.Directory ?? Path.Combine(shadowRoot, Guid.NewGuid().ToString("N"));
+        var shadowDirectory = bundle?.ShadowDirectory;
+        if (fresh && definition.LoadMode == ClrModuleLoadMode.ShadowCopy)
+            shadowDirectory = Path.Combine(shadowRoot, Guid.NewGuid().ToString("N"));
+        var destination = bundle?.Directory ?? shadowDirectory ?? source;
         BundleContext? context = bundle?.Context;
         try
         {
             if (fresh)
             {
-                Directory.CreateDirectory(destination);
-                CopyDirectory(source, destination);
+                if (shadowDirectory is not null)
+                    Directory.CreateDirectory(shadowDirectory);
+                PrepareDirectory(source, shadowDirectory);
             }
 
             var shadowMain = Path.Combine(destination, relative);
             context ??= new BundleContext(shared);
-            bundle ??= new Bundle(source, context, destination);
+            bundle ??= new Bundle(source, context, destination, shadowDirectory);
             var key = ExportKey(relative, definition.EntryType);
             if (!bundle.Plugins.TryGetValue(key, out var plugin))
             {
@@ -548,29 +597,33 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
             if (!fresh)
                 throw;
             if (context is null)
-                Directory.Delete(destination, recursive: true);
+            {
+                if (shadowDirectory is not null)
+                    Directory.Delete(shadowDirectory, recursive: true);
+            }
             else
             {
-                RequestUnload(context, destination);
+                RequestUnload(context, destination, shadowDirectory);
             }
 
             throw;
         }
     }
 
-    private static void CopyDirectory(string source, string destination)
+    private static void PrepareDirectory(string source, string? destination)
     {
         foreach (var entry in new DirectoryInfo(source).EnumerateFileSystemInfos())
         {
             if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
                 throw new IOException($"Plugin bundles must contain regular files and directories: {entry.FullName}");
-            var target = Path.Combine(destination, entry.Name);
+            var target = destination is null ? null : Path.Combine(destination, entry.Name);
             if (entry is DirectoryInfo directory)
             {
-                Directory.CreateDirectory(target);
-                CopyDirectory(directory.FullName, target);
+                if (target is not null)
+                    Directory.CreateDirectory(target);
+                PrepareDirectory(directory.FullName, target);
             }
-            else
+            else if (target is not null)
                 File.Copy(entry.FullName, target);
         }
     }
@@ -617,12 +670,12 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         bundle.Artifacts.Clear();
         var context = bundle.Context!;
         bundle.Context = null;
-        return RequestUnload(context, bundle.Directory);
+        return RequestUnload(context, bundle.Directory, bundle.ShadowDirectory);
     }
 
-    private ClrUnloadObservation RequestUnload(BundleContext context, string directory)
+    private ClrUnloadObservation RequestUnload(BundleContext context, string directory, string? shadowDirectory)
     {
-        var observation = new ClrUnloadObservation(new WeakReference(context), directory)
+        var observation = new ClrUnloadObservation(new WeakReference(context), directory, shadowDirectory)
         {
             UnloadRequested = true
         };
@@ -683,7 +736,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         }
     }
 
-    private sealed class Bundle(string source, BundleContext context, string directory)
+    private sealed class Bundle(string source, BundleContext context, string directory, string? shadowDirectory)
     {
         public string Source = source;
         public BundleContext? Context = context;
@@ -693,6 +746,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         public readonly Dictionary<(string Assembly, string Entry), TypertContribution?> Artifacts = [];
         public int References;
         public bool Replacing;
+        public string? ShadowDirectory = shadowDirectory;
     }
 
     private sealed class Lease(Bundle bundle, IPlugin plugin)

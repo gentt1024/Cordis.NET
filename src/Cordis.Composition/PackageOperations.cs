@@ -64,7 +64,7 @@ public sealed record PackageChange(
     }
 }
 
-/// <summary>A platform tool failure with its observed process result and retained preparation directory.</summary>
+/// <summary>A platform tool failure with its observed process result and retained output path.</summary>
 /// <remarks>Contains text and paths, not plugin objects. Cancellation does not imply that all downloaded files were removed.</remarks>
 public sealed class PackageToolException(
     string message,
@@ -74,7 +74,7 @@ public sealed class PackageToolException(
     bool timedOut = false,
     bool published = false) : Exception(message)
 {
-    /// <summary>The tool-owned directory requiring inspection or cleanup after failure.</summary>
+    /// <summary>The tool-owned output path requiring inspection or cleanup; it may be a directory or a receipt file.</summary>
     public string Directory
     {
         get;
@@ -141,6 +141,12 @@ public interface IProfilePackageToolchain
     /// <summary>Expose prepared metadata and explicit module mappings. Return only after all files are ready.</summary>
     Task PublishAsync(PreparedPackage package, CancellationToken cancellationToken = default);
 
-    /// <summary>Release mappings and delete profile-owned deployment files after the caller has stopped their fibers.</summary>
+    /// <summary>Release runtime mappings after the caller has stopped their fibers. File removal is platform-specific.</summary>
+    /// <remarks>A toolchain may retain artifacts for other processes or Workers. Configuration removal reports
+    /// retained directories separately; it must not infer physical deletion from fiber or ALC retirement.</remarks>
     Task RemoveAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>Observe retained deployment directories for an identity, including earlier and pending versions.</summary>
+    /// <remarks>This is neither a lease nor permission to delete. Adapters without retained files may return an empty list.</remarks>
+    IReadOnlyList<string> GetRetainedDirectories(string name) => [];
 }

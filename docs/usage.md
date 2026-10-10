@@ -47,7 +47,8 @@ queue and reconciliation callback. See the [authoring guide](authoring.md) for t
 Code HMR is separate from file/config changes. With the ordinary CLR, register a
 `ClrModuleDefinition(bundleDirectory, relativeAssemblyPath, entryType)` on a
 `ClrModuleResolver`. The entry implements `IClrPluginModule`; shared contracts must be the
-host's exact assemblies. Keep the shadow directory outside the bundle. Replace with:
+host's exact assemblies. The default loads a complete stable directory directly. Publish new
+code to another complete directory and retain old files while they have consumers. Replace with:
 
 ```csharp
 await resolver.ReplaceAsync("my-plugin", nextDefinition,
@@ -55,7 +56,10 @@ await resolver.ReplaceAsync("my-plugin", nextDefinition,
 ```
 
 Stop the owning contexts before disposing the resolver. Inspect `ClrUnloadObservation` for
-unload request, collection and shadow deletion independently. Production never forces GC.
+unload request, collection and the load directory independently. Production never forces GC.
+For library-owned installation, verification, restart updates and explicit offline file removal,
+use the [standard CLR artifact workflow](clr-artifacts.md). Explicit `ShadowCopy` remains available
+for quiescent external development outputs that must later be rebuilt in place.
 Use HMR's serialized mutation queue to coordinate code and configuration changes.
 `hmr.TrackLoader(loader, resolver.LocateAsync)` connects entry-resolution diagnostics without
 loading extra assemblies; register replacement callbacks and dependency edges explicitly.
