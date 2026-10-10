@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Cordis.Typert.Generator.Model;
 
 namespace Cordis.Typert.Generator;
 
@@ -17,15 +18,66 @@ public sealed class RemoteGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         true);
 
+    private static readonly DiagnosticDescriptor Drift = new(
+        "CORDISREMOTE002",
+        "Remote source model does not match this build",
+        "{0}",
+        "Cordis",
+        DiagnosticSeverity.Error,
+        true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var services = context.SyntaxProvider.ForAttributeWithMetadataName(
             "Cordis.Composition.RemoteServiceAttribute",
             static (node, _) => node is ClassDeclarationSyntax,
             static (syntax, _) => (Type: (INamedTypeSymbol)syntax.TargetSymbol, Attribute: syntax.Attributes[0]));
+        var models = context
+            .AdditionalTextsProvider
+            .Where(static file => file.Path.EndsWith(".cordis.typert.json", StringComparison.OrdinalIgnoreCase))
+            .Select(static (file, cancellation) => file.GetText(cancellation)?.ToString() ?? "")
+            .Collect();
+        var projectDirectory = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
+            options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var directory)
+                ? directory
+                : "");
         context.RegisterSourceOutput(
-            services,
-            static (output, service) => Emit(output, service.Type, service.Attribute));
+            services.Combine(context.CompilationProvider).Combine(models).Combine(projectDirectory),
+            static (output, input) =>
+            {
+                var (((service, compilation), artifacts), directory) = input;
+                var key = service.Attribute.ConstructorArguments[0].Value as string;
+                foreach (var json in artifacts)
+                {
+                    try
+                    {
+                        var artifact = NativeModelJson.Deserialize(json);
+                        if (!artifact.Services.Any(value => value.Key == key))
+                            continue;
+                        var authored = SourceContractReader.Read((CSharpCompilation)compilation, directory, key);
+                        var differences = NativeModelConformance.Compare(artifact, authored, key!);
+                        if (differences.Length == 0)
+                            continue;
+                        output.ReportDiagnostic(
+                            Diagnostic.Create(
+                                Drift,
+                                service.Type.Locations[0],
+                                "Published source model drift: " + string.Join("; ", differences)));
+                        return;
+                    }
+                    catch (Exception error)
+                    {
+                        output.ReportDiagnostic(
+                            Diagnostic.Create(
+                                Drift,
+                                service.Type.Locations[0],
+                                "Cannot verify source model: " + error.Message));
+                        return;
+                    }
+                }
+
+                Emit(output, service.Type, service.Attribute);
+            });
     }
 
     private static void Emit(SourceProductionContext output, INamedTypeSymbol type, AttributeData attribute)
@@ -198,8 +250,10 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                        {
                            global::Cordis.Composition.TypertRemoteBinding global::Cordis.Composition.ITypertRemoteService.TypertRemote => {{type.Name}}Typert.Binding;
                        }
+                       /// <summary>Generated Remote contribution for the declared service.</summary>
                        public static class {{type.Name}}Typert
                        {
+                           /// <summary>Creates the package-owned Remote contribution.</summary>
                            public static global::Cordis.Composition.TypertContribution Contribution(string package) => global::Cordis.Composition.TypertArtifacts.Contribution(package, {{Literal(type.ToDisplayString())}}, [{{definitions}}]);
                            internal static readonly global::Cordis.Composition.TypertRemoteBinding Binding = new({{Literal(service)}}, {{Literal(space)}},
                                new global::System.Collections.Generic.Dictionary<string, global::Cordis.Composition.TypertUnaryInvoker> { {{unary}} },

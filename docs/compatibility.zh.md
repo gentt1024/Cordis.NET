@@ -117,3 +117,20 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
 
 产品替换接受、业务退休/排空、权限、Project authority、basis 与 receipt/outbox 规则仍由产品拥有。不引入应用 `ApiCatalog` 标准或竞争总规划。剩余通用缺口继续记在原应用基础设施范围中。
+
+
+## 独立原生模型与 Settings 边界，2026-10-10
+
+源编译工具现于运行时 descriptor 发射前生成 version-1 原生声明制品，保留方法/参数名称和 wire 选择、类型引用、成员/构造器关系、C# required 与 JSON-required 事实、嵌套可空标注、支持的常量、可选参数默认值、文档、JSON 策略及 STJ 使用的四个空状态注解，并记录有效编译设置。制品身份标识这些事实，不是 activation 或普适替换准入。Roslyn Symbol 是提取输入；序列化模型没有 Symbol、CLR Type、delegate 或 JsonTypeInfo。引用 CLR 声明标记为 external；元数据不能提供所有仅存在于源码的事实。
+
+现有由 descriptor 形成的 `TypertTypeModel` 仍是有界的旧摘要，新制品不从它反推。普通构建先将源事实与制品比较，再保留现有 descriptor generator。该 conformance 桥在独立提取与 .NET 投影继续建设时保留已成立的 runtime/TS 路径，不宣称所有 emitter 或运行时类型 registry 已消费完整新模型。
+
+.NET emitter 当前投影直接普通 unary 方法及支持的数据 record/class。实际覆盖包含 bool、string、integer、array、只读 list 接口、JsonElement、可空成员、必需构造器/init 成员、命名/ignore 策略和选定空状态注解。只读数据成员、record struct、数据继承、多态/自定义 converter 和更丰富 Remote 形状保留事实或诊断后被该投影拒绝；不宣称完整 C# 或 TS 类型系统等价。JSON 策略不能省略必填 carrier 参数字段，包括显式 null 和默认值。
+
+生成客户端复用原生 HTTP 结果信封和 RemoteError。DTO/抛错 API 是 .NET 适配；TS 保持独立输出，沿用既有结果 API 与 carrier。compiler 只使用所选 SDK Roslyn、STJ 和既有框架传输，本次没有选入新的 NuGet 依赖。
+
+Settings describe 经既有 profile 队列、Include 和 schema/脱敏 helper 暴露选择的 live 配置。本适配仍未实现 base/user 层及数字单调 revision；provider 诊断保留在原生侧，不加入固定 wire 响应。已准入的异步 snapshot 可以在可选普通 `settings` provider 退休后完成：固定上游 describe 是同步调用，没有嵌套 provider lease。这是显式异步适配，与 controller service 或 Remote definition 撤销保留的原生 Gateway generation fence 有区别；后续调用重新查找 provider。不推导任何产品准入、权限或排空规则。
+
+[仅依赖包的 Settings 门禁](../scripts/verify-typert-dotnet.py) 验证源制品、模型独立合同包、pre-CoreCompile/STJ 时序、类型化调用及不同生命周期场景，不调用 Node。静态 Native AOT 适用于调用者，不适用于 collectible CLR Host。IDE/design-time 首次构建、任意引用模型组合、完整 Settings 操作及富图/协议范围继续开放。进行中运行不计作平台验收，正式冻结证据见[验证记录](validation.zh.md)。
+
+Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对应固定上游对 `cordis:include` 的处理。这些插件由 Loader 自身导入，其请求不属于 CLR 制品 resolver。显式将内建入口配置为制品贡献者仍会失败；错误的已声明 CLR 制品与未知 resolver 请求继续报错。真实 Profile Settings 消费者验证了这一边界。

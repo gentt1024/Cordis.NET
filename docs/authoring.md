@@ -251,3 +251,44 @@ Here `ctx` is the client Cordis owner. Await `mountRemote`: it registers owner c
 The [multi-entry gate](../scripts/verify-clr-multi-entry.py) independently packs an author package, consumes it through `PackageReference`, installs its root/subpath entries and exercises shared identity, separate configurations, failed and successful replacement, withdrawal, generated TypeScript calls over real HTTP and invalid arguments. The separate [Remote gate](../scripts/verify-typert.py) covers the native Remote author chain. Use a fresh local package batch and the required Node/TypeScript dependencies. Platform acceptance remains governed by the completed results in [validation](validation.md); these examples alone do not establish Windows/Linux or Native AOT closure. Dynamic CLR loading requires the ordinary runtime.
 
 The remaining source type graph, rich Context/owned-value graph, Peer/uplink/event remotes and binary attachment protocol remain open scope. Migration of existing PluginManager, Settings/configuration and client management consumers to generated Typert contracts remains open. Existing handwritten `MapCordisService` endpoints are still usable, but do not close those gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
+
+
+## Native authored models and .NET consumers, 2026-10-10
+
+Ordinary Plugin, Service and Config use remains in process. Remote is an optional boundary for consumers in another environment. A C# author keeps the existing Remote attributes and explicit STJ context; setting `CordisTypertService` opts that project into source-model extraction. Composition supplies the SDK compiler tool and build target. Node and TypeScript are not prerequisites for this path.
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>settingsController</CordisTypertService>
+</PropertyGroup>
+```
+
+The build publishes `cordis/typert/settingsController.cordis.typert.json` in the author package. This versioned, compiler-independent artifact retains declaration and serializer facts instead of reconstructing them from RPC descriptors. The normal Remote generator compares it with the current compilation and refuses stale source facts with `CORDISREMOTE002`. Referenced declarations use CLR metadata and adjacent XML documentation; source-only initializer/getter bodies unavailable from metadata are not reconstructed. Full referenced-model composition remains open.
+
+A separate contract package can consume a copy of that artifact without referencing the provider implementation:
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>settingsController</CordisTypertService>
+  <CordisTypertClientModel>settingsController.cordis.typert.json</CordisTypertClientModel>
+  <CordisTypertClientNamespace>IndependentSettings.Client</CordisTypertClientNamespace>
+  <CordisTypertClientName>SettingsClient</CordisTypertClientName>
+  <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+</PropertyGroup>
+```
+
+The target writes ordinary DTO/client source before `CoreCompile`, so STJ sees it in the same compilation. Same-round source-generator output cannot serve as STJ input. Generated source is owned by `Clean`; identical incremental emission preserves its bytes and timestamp. This opt-in command-line build is the verified boundary; first-build IDE/design-time integration still needs separate evidence. The selected SDK must provide the matching Roslyn assemblies; the package does not redistribute them.
+
+```csharp
+using var http = new HttpClient();
+using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
+var view = await remote.DescribeAsync();
+```
+
+The caller owns the supplied HttpClient. Direct unary calls return typed values or throw the existing `RemoteError`, preserving owner codes and detached JSON details. This is a native adaptation of the existing result envelope. Client disposal stops admission, cancels its transport requests and rejects late successful completions; it does not dispose the borrowed HttpClient or promise forced Host termination.
+
+The production `SettingsController` resolves the optional ordinary `ISettingsDescribeProvider` service named `settings` on each call. `ProfileSettingsDescribeProvider` reads all host-selected namespaces through one existing profile transaction. It publishes redacted live values and Schemastery declarations without defaults, keeps genuine JSON null distinct from absent secrets, and retains native projection diagnostics outside the fixed response. The host supplies namespace/page policy, writability and document-presence facts. Base/user reconstruction and the pinned monotonic revision are not supplied: this adapter omits those optional layers and retains the existing native revision string.
+
+The [independent .NET Settings gate](../scripts/verify-typert-dotnet.py) packs an author and contract package, then builds a package-only caller outside this repository. The caller does not reference the provider implementation and uses static metadata with reflection fallback disabled. It covers typed describe, redaction, missing/failed provider, retry, held-view invalidation, definition withdrawal/re-registration, scoped suspension and borrowed-client ownership. Primitive roots, null/default arguments, nullable-state annotations and unsupported projections have separate cases. Run with `--aot` for the static caller; the dynamic CLR Host remains an ordinary-runtime boundary. Formal platform results belong to the exact completed checkpoint in [validation](validation.md).
+
+This path covers direct ordinary unary callers and the exercised Settings data shapes. Complete Settings writes/editors, PluginManager/client-management migration, rich graphs, full source-type analysis and TS generation from this new model remain open. Existing TS/Web output stays available and retains its separate gate.

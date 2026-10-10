@@ -1,8 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>true</IsAotCompatible><PackageId>Cordis.NET.Composition</PackageId><Description>File-backed Cordis plugin composition, profiles and lazy configuration.</Description></PropertyGroup>
+  <PropertyGroup>
+    <CordisTypertService>settingsController</CordisTypertService>
+    <CordisTypertCompiler>$(MSBuildProjectDirectory)/../../tools/Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.dll</CordisTypertCompiler>
+  </PropertyGroup>
   <ItemGroup><ProjectReference Include="../Cordis.Core/Cordis.Core.csproj" /><PackageReference Include="YamlDotNet" /></ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../tools/Cordis.Typert.Compiler/Cordis.Typert.Compiler.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="../../tools/Cordis.Typert.Generator/Cordis.Typert.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" PrivateAssets="all" />
     <None Include="../../tools/Cordis.Typert.Generator/bin/$(Configuration)/net10.0/Cordis.Typert.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs/" Visible="false" />
+    <None Include="../../tools/Cordis.Typert.Generator/bin/$(Configuration)/net10.0/Cordis.Typert.Generator.pdb" Pack="true" PackagePath="analyzers/dotnet/cs/" Visible="false" />
+    <None Include="buildTransitive/Cordis.NET.Composition.targets" Pack="true" PackagePath="buildTransitive/" />
+    <None Include="../../tools/Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.dll;../../tools/Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.deps.json;../../tools/Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.runtimeconfig.json" Pack="true" PackagePath="tools/net10.0/typert/" Visible="false" />
+    <None Include="../../tools/Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.pdb" Pack="true" PackagePath="tools/net10.0/typert/" Visible="false" />
   </ItemGroup>
+  <Import Project="buildTransitive/Cordis.NET.Composition.targets" />
 </Project>

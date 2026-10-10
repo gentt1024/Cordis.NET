@@ -205,3 +205,12 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 该顺序承接既有任务表，不另建总规划。完整模型/元数据发布、丰富 Context/owned-value 图、Peer/uplink/events、binary attachment 及 PluginManager/Settings/客户端管理生成合同消费仍是原使命缺口。产品替换接受与 FSM 权限/basis/receipt 继续属于产品。WPF、Avalonia、Godot .NET 与 Blazor 是目标消费者，但目标框架、analyzer host、浏览器及 export 兼容性仍需具名证据。
 
 本审查仅修改文档，未合并、修改运行/API、安装依赖或产生新的平台验收。原范围只追加记录，既有验收保持不变。文档检查不能证明建议中的无 Node .NET 消费链或合并后的 CLR/Typert 行为。
+
+
+## 实施续建，2026-10-10
+
+固定 main 整合与局部生命周期修正保留为独立检查点。多入口消费者现在验证路由撤销后的稳定制品保留，不再要求与 main 冲突的删除；无关 B 的断言也能在 V2 调用成功后拒绝实际旧的全 owner 重建。历史验收记录不改写。
+
+后续实现新增 SDK 提取的独立原生模型、随包 compiler/build target、源事实 conformance 桥和仅消费模型的类型化 .NET 调用者。生产 Settings describe 在一个既有 profile 检查点读取全部选择的 namespace；普通 provider 仍可直接使用，无须 RPC。调用者生成源码在 CoreCompile 前进入编译，STJ 能看到完整 DTO/context；独立消费者关闭 reflection fallback。[新门禁](../scripts/verify-typert-dotnet.py) 并入 `verify.py --package`，TS/Web 仍分开验证。
+
+确切冻结包与平台证据通过后，只闭环具名的原生源模型/Settings 范围，不闭环完整类型图、引用模型组合、全部 generator 后端或全部 Settings 操作。PluginManager/客户端管理迁移和作用域/lookup、流、取消、二进制及更丰富协议范围仍各自需要证据。WPF、Avalonia、Godot .NET 和 Blazor 保留为预期消费者，框架/host 限制需另行验证。本次不引入竞争总规划，不代表发布或新增依赖选型获验收。
