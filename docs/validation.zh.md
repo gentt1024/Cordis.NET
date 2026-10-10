@@ -274,3 +274,16 @@ Windows x64 的 810 项原生测试通过，无失败/跳过；WSL2 Ubuntu 24.04
 运行时检查点的全部 510 个 tracked 文件匹配冻结 Git blob；完整 Linux 门禁保留一致的初始/最终 503 项源码哈希。源码 ZIP SHA-256 为 `805a6d01c8df896e9d565a525b4e4f73086295595caab28c10187808e86f5ead`。四阶段 formatter 对 204 个 C# 文件结论一致。新 Linux 与 Windows 无 Git 包批次分开保留。Windows 实际消费者文件、恢复包和 NuGet 元数据已独立重读。Linux 收集器在任务结束时读取实际配置及恢复包字节，保存哈希匹配保留 feed；其临时消费者/缓存目前已不可访问，未声称事后独立重读源码/缓存。原始报告留在仓库外，回执记录其哈希和上述限制。
 
 本轮关闭已复现的 F1 Service 视图缺陷，Windows 全量门禁仍开放。[原范围剩余项](development.zh.md#2026-10-10-有界执行完成记录)、固定 DSH pin、包版本和公共 API snapshot 不变。动态 CLR 仍仅适用于 JIT。未执行 hosted CI、远端 SourceLink 获取、具名 UI Host、浏览器渲染或 Maker；没有新增依赖、推送、远端合并、发布或部署。后续文档/回执提交与已验证的运行时检查点分别记录。
+
+
+### 配置监听修正与平台门禁闭环，2026-10-10
+
+运行时/包检查点 `48ab1a45a165b11de2405c1153013cb05b169fe3` 保留 caller-view 修正，并修复配置监听深度及原生溢出恢复。固定 DSH 的 `packages/boot/hmr/src/watch-config.ts` 计算最近已存在根目录及有限深度；目标父目录已存在时深度为零。原生 watcher 现在排除该父目录内的 SDK 子目录。缺失祖先仍需递归观察，因为 FileSystemWatcher 不提供有限正深度选项。原生溢出保留原诊断，并通过既有协调器合并排队补读；已关闭监听拒绝迟到错误。这是明确的平台恢复适配：固定 DSH 对 watcher 错误仅警告。公共 API、依赖、版本及 baseline 均未改变。
+
+私有诊断副本在修前执行八轮、修后执行两轮未改变的三个 HMR 用例和真实包更新用例，均通过；修前记录 150 次原生溢出，修后为零。两个聚焦行为检查在旧实现失败、修正后通过：不得探测范围外 SDK 文件事件，以及仅收到溢出通知时必须实际补读配置。这些证据确认被修复的缺陷，不能证明此前无观测超时的唯一根因。第一次历史 HMR 超时位于第三次 Change，即错误的 `disabled` 表达式；此前 caller-view 记录中的“第二个结果”在此更正。历史回执及失败批次保持原样。
+
+精确冻结检查点通过本地 Windows x64 与 WSL2 Ubuntu 24.04 x64 的完整 `verify.py --aot --package`、同 job 作者验证、各 38 项脚本自检和文档检查。Windows TRX 为 812 通过、零失败/跳过；Linux 为 809 通过、零失败，相同三个精确命名的 Windows 专用进程用例未执行。两个原 Windows 失败用例在此次全量中保持原十秒等待并通过。CLR 多 Entry、Remote JIT/静态 AOT/TS/HTTP、无需 Node 的 Settings、符号和离线调试消费者分别通过。精确源码 ZIP 另通过无 Git 独立 build/pack/符号及 Settings JIT/静态 AOT。完成消费者的实际源码及恢复 Cordis 包字节已私下保留，绑定自身 feed，没有重建缺失输入。
+
+私有输入收集器起初在 Windows 存储上合并了两个仅大小写不同的 Linux 投影文件。恢复时，两份原文件可读取，且匹配首次捕获哈希。仅复制恢复将全部 70 份输入存入保留大小写的归档，并保留首次失败日志和捕获记录。稍后独立复核逐份确认保留输入匹配首次捕获，但原 Linux 临时目录已不可访问，未声称此时重读原目录。Windows 和无 Git 的原源码、缓存及元数据已独立重读。这次收集修复没有重跑或改变任一平台门禁。
+
+详见[源码绑定回执](../verification/config-watch-2026-10-10/evidence.json)。本条关闭该检查点的本地 Windows 全量门禁项。完整 Typert 类型图/后端/协议、剩余 Settings 及生产消费者仍未完成。hosted CI、远端 SourceLink 获取、具名 UI Host、Maker 执行、新依赖选型和发布仍未验证或未授权。

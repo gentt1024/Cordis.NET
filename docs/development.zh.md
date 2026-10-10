@@ -237,3 +237,10 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 `e277a7eafcdad5e7047cf73729afd7f51558819d` 的 F1 修正既有 Gateway 对普通 `Service<TState>` 视图的 provider 检查。注册身份、原始 provider 值和 caller view 分别承担职责。作者可以返回新视图，无需自行缓存；Gateway 仍使用原 caller 调用该视图。原始快照同时保留 R1 在重登记或 Set 重入后的失效语义。本轮修正有界 Remote 基础，不新增模型、模块导出机制或完整 Typert 验收。
 
 原范围追加续账。[验证记录](validation.zh.md#caller-view-修复验证2026-10-10) 与[回执](../verification/typert-caller-view-2026-10-10/evidence.json) 保留旧包实际失败、新 Linux 全量及 Windows 无 Git 包消费证据，以及两次 Windows 全量失败。未改动的定向用例通过不能关闭这些失败。Windows 全量验收仍开放，需要解释刷新等待并通过必需门禁；该平台事项不改变既有通用能力缺口的范围或归属。本轮未扩大类型系统调研、选入新依赖、放宽超时或重写无关运行时。
+
+
+### 配置监听修正与平台门禁闭环，2026-10-10
+
+`48ab1a45a165b11de2405c1153013cb05b169fe3` 保留 caller-view 修正，并将父目录已存在时的配置观察对应到固定 DSH 的 depth-zero 监听。原生缓冲溢出现在保留原错误，通过既有队列合并补读；缺失祖先仍保留明确记录的递归适配。已关闭 watcher 拒绝迟到错误。API、baseline、依赖、版本和作者流程均未改变。
+
+[完成的验证](validation.zh.md#配置监听修正与平台门禁闭环2026-10-10)和[回执](../verification/config-watch-2026-10-10/evidence.json)关闭此精确源码的本地 Windows 全量门禁项，同时记录 Linux 和无 Git 独立包消费。记录区分已确认的丢通知恢复缺陷与仍未证明的历史超时唯一根因，并更正第一次历史等待为第三次 Change。原范围追加续账，保留旧回执。完整 Typert 及既有通用能力缺口仍未完成，hosted CI 与发布仍是独立门槛。
