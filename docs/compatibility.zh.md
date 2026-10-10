@@ -114,7 +114,7 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 
 提供者代际检查独立于 definition 撤销验证：等待中的 unary Service、lookup、Context 和 downlink 操作保留活跃 descriptor，同时替换其提供者。撤销本身不会中止这些操作；旧成功结果由原生代际检查拒绝。JSON codec 输入校验、结果序列化与流清理限制分别在公开 API 和[作者指南](authoring.zh.md)中说明。修复后的精确源码与包检查点以最新验证记录为准；早期平台结果只适用于其记录的检查点。
 
-Service 有效性同时使用既有 Core 注册身份和返回的服务值。重新提供同一个对象，包括在同一个 Fiber 内重提供，都会形成不同注册，使此前的调用准入失效。同值 `Set`、普通 `Notify` 和无关隔离 realm 的变化保持该准入。值查询先于最后的身份检查，因为 contextual service tracing 可以同步重入并替换注册。不透明身份仅在 Core 与 Composition 内部使用，不新增公开 API、服务 registry 或持久代数。未完成调用可以保留其注册及 provider，直至结束，仍遵循既有 CLR 协作寿命边界。
+Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provider 值。caller-bound view 是实际调用 receiver；`Service<TState>.CreateView` 每次新建视图不会使活跃 provider 失效。准入在 contextual tracing 前捕获注册及原始值。后续每次检查先执行正常 contextual 查询，再读取最终注册及原始值，因此同步重入不能掩盖 provider 变化。重新提供同一个对象，包括在同一个 Fiber 内重提供，都会形成不同注册，使此前准入失效。设置不同原始值也会使其失效，即使注册身份未变；同值 `Set`、普通 `Notify` 和无关隔离 realm 的变化保持准入。这些观察仅在 Core 与 Composition 内部使用，不新增公开 API、服务 registry 或持久代数。未完成调用可以保留其注册及 provider，直至结束，仍遵循既有 CLR 协作寿命边界。
 
 完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流与 event remotes 及完整二进制 attachment 协议仍未实现。PluginManager、Settings/配置与客户端管理生产消费者向生成合同的迁移仍未完成。既有配置 Schema 导出、手写 `MapCordisService` 与 HTTP/SSE 管理保留当前合同，不能据此计为已完成 Typert 消费者。
 

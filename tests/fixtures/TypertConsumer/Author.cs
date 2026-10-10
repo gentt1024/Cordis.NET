@@ -156,6 +156,89 @@ public partial class EchoService
     }
 }
 
+public sealed class CallerViewState(Context caller)
+{
+    public Context ExpectedCaller
+    {
+        get;
+    } = caller;
+
+    public int Calls
+    {
+        get;
+        set;
+    }
+
+    public int StreamCalls
+    {
+        get;
+        set;
+    }
+
+    public TaskCompletionSource Entered
+    {
+        get;
+    } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource Release
+    {
+        get;
+    } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+}
+
+[RemoteService("caller-view:remote", typeof(RemoteJson), Namespace = "callerView")]
+public sealed partial class CallerViewService : Service<CallerViewState>
+{
+    private readonly Context _caller;
+
+    public CallerViewService(Context context, CallerViewState state) : base(context, "caller-view:remote", state) =>
+        _caller = context;
+
+    private CallerViewService(CallerViewService provider, Context caller) : base(provider, caller) => _caller = caller;
+
+    protected override Service CreateView(Context caller) => new CallerViewService(this, caller);
+
+    private void VerifyCaller()
+    {
+        if (!ReferenceEquals(_caller, State.ExpectedCaller) ||
+            !ReferenceEquals(_caller, TypertInvocation.Current?.Context))
+            throw new InvalidOperationException("The Remote method did not use its actual caller's service view.");
+    }
+
+    [RemoteMethod]
+    public Task<string> Ping()
+    {
+        VerifyCaller();
+        State.Calls++;
+        return Task.FromResult("caller-view");
+    }
+
+    [RemoteMethod]
+    public async Task<string> Hold(string text, CancellationToken signal)
+    {
+        VerifyCaller();
+        State.Calls++;
+        State.Entered.TrySetResult();
+        await State.Release.Task.WaitAsync(signal);
+        VerifyCaller();
+        return text;
+    }
+
+    [RemoteMethod(Stream = true)]
+    public async IAsyncEnumerable<int> Count(int count, [EnumeratorCancellation] CancellationToken signal)
+    {
+        VerifyCaller();
+        State.StreamCalls++;
+        for (var index = 0;index < count;index++)
+        {
+            await Task.Yield();
+            signal.ThrowIfCancellationRequested();
+            VerifyCaller();
+            yield return index;
+        }
+    }
+}
+
 public static class AuthorModule
 {
     public static IPlugin Create(EchoService service) => new Plugin<object?>

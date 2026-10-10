@@ -80,8 +80,8 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
     /// running. Cancellation is cooperative: an aborted signal alone does not change a successful business
     /// result, while a business failure under that signal becomes gateway/cancelled. Preparation failures
     /// retain their own error mapping. These generation fences are a native validity adaptation.
-    /// Service validity compares the registration as well as its value, so reusing a value or provider
-    /// Fiber does not revive calls admitted by a withdrawn registration.
+    /// Service validity compares the registration and original provider value independently of caller
+    /// views. Reusing a value or provider Fiber does not revive calls admitted by a withdrawn registration.
     /// </remarks>
     public async Task<TypertRemoteResult> InvokeAsync(
         string endpoint,
@@ -383,7 +383,7 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
             decoded.Add(value);
         }
 
-        var serviceToken = receiver.Reflect.GetRegistrationToken(descriptor.Service);
+        var registration = receiver.Reflect.GetRegistration(descriptor.Service);
         var service = receiver.Get<object>(descriptor.Service, strict: false) ?? throw Fault(
             "gateway/service-unavailable",
             endpoint,
@@ -393,8 +393,11 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
             throw Fault("gateway/binding-invalid", endpoint, "The service has no matching explicit Remote binding.");
         checks.Add(() =>
         {
-            if (!ReferenceEquals(service, receiver.Get<object>(descriptor.Service, strict: false)) ||
-                !ReferenceEquals(serviceToken, receiver.Reflect.GetRegistrationToken(descriptor.Service)))
+            var currentService = receiver.Get<object>(descriptor.Service, strict: false);
+            var currentRegistration = receiver.Reflect.GetRegistration(descriptor.Service);
+            if (currentService is null ||
+                !ReferenceEquals(registration.Identity, currentRegistration.Identity) ||
+                !ReferenceEquals(registration.Value, currentRegistration.Value))
                 throw Fault("gateway/service-unavailable", endpoint, "The service was withdrawn during this call.");
         });
         var prepared = new Prepared(descriptor, receiver, service, remote.TypertRemote, decoded, checks);

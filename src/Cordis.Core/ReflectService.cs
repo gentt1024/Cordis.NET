@@ -48,10 +48,11 @@ public sealed class ReflectService(Context context)
     /// </summary>
     public T? Get<T>(string name, bool strict = true) => (T?)Get(name, strict);
 
-    internal object? GetRegistrationToken(string name)
+    internal (object? Identity, object? Value) GetRegistration(string name)
     {
         context.VerifyAccess();
-        return context._runtime.Resolve(context, name, false);
+        var registration = context._runtime.Resolve(context, name, false);
+        return (registration, registration?.Value);
     }
 
     /// <summary>

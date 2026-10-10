@@ -9,6 +9,7 @@ internal static class LifetimeCases
 
     public static async Task VerifyAsync()
     {
+        await VerifyCallerViewsAsync();
         await using var root = new Context();
         var registry = new TypertRegistry(root);
         var gateway = new TypertGateway(root, registry);
@@ -54,7 +55,10 @@ internal static class LifetimeCases
         }
 
         var oldService = service;
-        foreach (var mutation in new[] { "different-object", "same-object", "same-fiber", "notify", "contextual-read" })
+        foreach (var mutation in new[]
+                 {
+                     "different-object", "same-object", "same-fiber", "notify", "contextual-read", "contextual-set"
+                 })
         {
             await ReplaceServiceAsync();
             oldService = service;
@@ -91,15 +95,28 @@ internal static class LifetimeCases
                         });
                         break;
                     case "contextual-read":
+                    case "contextual-set":
                         await root.RunAsync(_ =>
                         {
-                            service.ReadAction = () =>
+                            var tracedService = service;
+                            tracedService.ReadAction = () =>
                             {
-                                service.ReadAction = null;
-                                var cleanup = serviceRegistration.DisposeAsync();
-                                Require(cleanup.IsCompletedSuccessfully, "Reentrant provider cleanup did not settle.");
-                                cleanup.GetAwaiter().GetResult();
-                                serviceRegistration = provider.Context.Provide("sample:remote", service);
+                                tracedService.ReadAction = null;
+                                if (mutation == "contextual-set")
+                                {
+                                    service = new ContextualEchoService();
+                                    provider.Context.Reflect.Set("sample:remote", service);
+                                }
+                                else
+                                {
+                                    var cleanup = serviceRegistration.DisposeAsync();
+                                    Require(
+                                        cleanup.IsCompletedSuccessfully,
+                                        "Reentrant provider cleanup did not settle.");
+                                    cleanup.GetAwaiter().GetResult();
+                                    serviceRegistration = provider.Context.Provide("sample:remote", service);
+                                }
+
                                 reentered = true;
                             };
                             return Task.CompletedTask;
@@ -107,7 +124,7 @@ internal static class LifetimeCases
                         break;
                 }
 
-                if (mutation is "same-fiber" or "notify" or "contextual-read")
+                if (mutation is "same-fiber" or "notify" or "contextual-read" or "contextual-set")
                     Require(
                         ReferenceEquals(oldProvider, provider),
                         "An entry-only change replaced the provider Fiber.");
@@ -130,12 +147,49 @@ internal static class LifetimeCases
                     "Notification retired a live registration.");
             else
                 Error(completed, "gateway/service-unavailable");
-            if (mutation == "contextual-read")
+            if (mutation is "contextual-read" or "contextual-set")
                 Require(reentered, "The result check did not exercise contextual service reentry.");
             var current = await gateway.InvokeAsync("sample/NullableEcho", Json("{\"text\":\"fresh\"}"));
             Require(current.Ok && current.Value!.Value.GetString() == "fresh", "The current service is unavailable.");
             Console.WriteLine("PASS unary registration: " + mutation);
         }
+
+        await ReplaceServiceAsync();
+        oldService = service;
+        var admissionReentered = false;
+        await root.RunAsync(_ =>
+        {
+            oldService.ReadAction = () =>
+            {
+                oldService.ReadAction = null;
+                service = new ContextualEchoService();
+                provider.Context.Reflect.Set("sample:remote", service);
+                admissionReentered = true;
+            };
+            return Task.CompletedTask;
+        });
+        var admitting = gateway.InvokeAsync("sample/Hold", Json("{\"text\":\"not admitted\"}"));
+        try
+        {
+            var settled = await Task.WhenAny(admitting, oldService.Entered.Task).WaitAsync(Limit);
+            Require(
+                ReferenceEquals(settled, admitting) && !oldService.Entered.Task.IsCompleted,
+                "A provider Set during the first contextual Get entered the old business method.");
+            Require(admissionReentered, "Admission did not exercise the first contextual Get's provider Set.");
+            Error(await admitting.WaitAsync(Limit), "gateway/service-unavailable");
+        }
+        finally
+        {
+            oldService.Release.TrySetResult();
+            await admitting.WaitAsync(Limit);
+        }
+
+        await root.RunAsync(_ =>
+        {
+            DefinitionsStayActive();
+            return Task.CompletedTask;
+        });
+        Console.WriteLine("PASS unary admission: contextual Set rejects the old view before business entry.");
 
         var fresh = await gateway.InvokeAsync("sample/NullableEcho", Json("{\"text\":\"fresh\"}"));
         Require(fresh.Ok && fresh.Value!.Value.GetString() == "fresh", "The replacement service is unavailable.");
@@ -273,6 +327,132 @@ internal static class LifetimeCases
         });
         Console.WriteLine(
             "PASS stable definitions: withdrawn unary Service, pending lookup, pending Context and pending downlink read reject old success; replacements remain callable.");
+    }
+
+    private static async Task VerifyCallerViewsAsync()
+    {
+        await using var root = new Context();
+        var caller = root.Extend();
+        var registry = new TypertRegistry(root);
+        var gateway = new TypertGateway(caller, registry);
+        var state = new CallerViewState(caller);
+        CallerViewService provider = null!;
+        var definitions = new Dictionary<string, TypertInvocationDescriptor>();
+        await root.RunAsync(ctx =>
+        {
+            registry.Register(ctx, CallerViewServiceTypert.Contribution("IndependentCallerView"));
+            provider = new CallerViewService(ctx, state);
+            Require(
+                !ReferenceEquals(provider.Provider, caller),
+                "The fixture did not separate the service owner from its caller.");
+            foreach (var method in new[] { "Ping", "Hold", "Count" })
+                definitions.Add(method, registry.GetLocal("callerView/" + method)!);
+            for (var index = 0;index < 3;index++)
+            {
+                var first = caller.Get<CallerViewService>("caller-view:remote", strict: false);
+                var second = caller.Get<CallerViewService>("caller-view:remote", strict: false);
+                Require(
+                    first is not null && second is not null &&
+                    !ReferenceEquals(first, second) && !ReferenceEquals(first, provider),
+                    "The standard Service fixture did not create distinct caller views on repeated Get.");
+            }
+
+            return Task.CompletedTask;
+        });
+
+        void DefinitionsStayActive()
+        {
+            foreach (var (method, descriptor) in definitions)
+                Require(
+                    ReferenceEquals(descriptor, registry.GetLocal("callerView/" + method)),
+                    "The caller-view definition changed during a provider value mutation: " + method);
+        }
+
+        for (var index = 0;index < 2;index++)
+        {
+            var result = await gateway.InvokeAsync("callerView/Ping", Json("{}"));
+            Require(
+                result.Ok && result.Value!.Value.GetString() == "caller-view" && state.Calls == index + 1,
+                $"An unchanged provider with a fresh caller view was rejected before its business method: ok={result.Ok}; error={result.Error?.Code}; calls={state.Calls}.");
+        }
+
+        var items = new List<int>();
+        await foreach (var item in gateway.StreamAsync("callerView/Count", Json("{\"count\":3}")))
+        {
+            Require(item.Ok, "An unchanged provider with fresh caller views rejected a downlink read.");
+            items.Add(item.Value!.Value.GetInt32());
+        }
+
+        Require(
+            items.SequenceEqual([0, 1, 2]) && state.StreamCalls == 1 && state.Calls == 2,
+            "The caller-view stream lost its shared State or business values.");
+        Console.WriteLine(
+            "PASS caller views: distinct repeated Get views share State and use the actual unary/downlink caller.");
+
+        foreach (var mutation in new[] { "same-value-set-notify", "different-provider-set" })
+        {
+            await root.RunAsync(ctx =>
+            {
+                state = new CallerViewState(caller);
+                provider = new CallerViewService(ctx.Isolate("caller-view:remote"), state);
+                ctx.Reflect.Set("caller-view:remote", provider);
+                DefinitionsStayActive();
+                return Task.CompletedTask;
+            });
+            var admittedProvider = provider;
+            var admittedState = state;
+            var pending = gateway.InvokeAsync("callerView/Hold", Json("{\"text\":\"held\"}"));
+            await admittedState.Entered.Task.WaitAsync(Limit);
+            try
+            {
+                await root.RunAsync(ctx =>
+                {
+                    if (mutation == "different-provider-set")
+                    {
+                        state = new CallerViewState(caller);
+                        provider = new CallerViewService(ctx.Isolate("caller-view:remote"), state);
+                        Require(
+                            !ReferenceEquals(admittedProvider, provider) &&
+                            ReferenceEquals(admittedProvider.Provider.Fiber, provider.Provider.Fiber),
+                            "Raw provider replacement did not change the value within the same owner Fiber.");
+                    }
+
+                    ctx.Reflect.Set("caller-view:remote", provider);
+                    ctx.Reflect.Notify("caller-view:remote");
+                    DefinitionsStayActive();
+                    Require(
+                        !pending.IsCompleted,
+                        "Provider Set/Notify actively completed a running caller-view method.");
+                    return Task.CompletedTask;
+                });
+            }
+            finally
+            {
+                admittedState.Release.TrySetResult();
+            }
+
+            var completed = await pending.WaitAsync(Limit);
+            if (mutation == "same-value-set-notify")
+                Require(
+                    completed.Ok && completed.Value!.Value.GetString() == "held",
+                    "Same-value Set/Notify retired an unchanged caller-view provider.");
+            else
+                Error(completed, "gateway/service-unavailable");
+            Require(
+                admittedState.Calls == 1,
+                "The pending caller view did not use its provider's shared State exactly once.");
+            var fresh = await gateway.InvokeAsync("callerView/Ping", Json("{}"));
+            Require(
+                fresh.Ok && fresh.Value!.Value.GetString() == "caller-view" &&
+                state.Calls == (mutation == "same-value-set-notify" ? 2 : 1),
+                "The current raw provider was not callable through a fresh caller view.");
+            await root.RunAsync(_ =>
+            {
+                DefinitionsStayActive();
+                return Task.CompletedTask;
+            });
+            Console.WriteLine("PASS caller-view provider mutation: " + mutation);
+        }
     }
 
     private static JsonElement Json(string value)
