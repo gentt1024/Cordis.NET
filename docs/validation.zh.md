@@ -254,3 +254,23 @@ Windows x64 的 810 项原生测试通过，无失败/跳过；WSL2 Ubuntu 24.04
 私有最终收集器在四项门禁命令均退出零后，将 CLR 报告的列表误作对象而失败。证据收集通过校验、复制原制品恢复，没有重跑门禁。回执将这次收集故障及保留日志 hash 与运行结果分别记录。
 
 本次关闭三个确定缺陷及正式验证暴露的 watcher 故障，不关闭[原范围剩余项](development.zh.md#2026-10-10-有界执行完成记录)：完整类型图/后端、更丰富协议及生产消费者工作保持原状态。动态 CLR 仅 JIT。hosted CI、远端 SourceLink、具名 UI 宿主、浏览器呈现和 Maker 未执行。没有新增依赖选型、版本修改、push、远端 merge、发布或部署。后续仅追加文档和脱敏回执，包身份仍为上述源码检查点。
+
+
+## Caller view 修复验证，2026-10-10
+
+运行时/包检查点 `e277a7eafcdad5e7047cf73729afd7f51558819d` 修复 F1。普通 `Service<TState>.CreateView` 可以在每次 Get 时创建不同的 caller-bound view，而注册的原始 provider 保持不变。按引用比较这些视图会在业务进入前拒绝有效 Remote 调用。Gateway 现在在首次 contextual Get 前复制既有注册身份和原始 provider；后续先执行正常 Get，再观察最终注册/值，覆盖 Get 同步重入造成的替换。调用仍使用原 caller view。没有新增 Core 公共 API、持久身份表、强制 abort、模型/生成器改动或普通 Service 的 RPC 要求。
+
+审查提供的未改反例在旧 `a9b53d2` 包上实际失败，错误为 `gateway/service-unavailable`，业务调用为零。最终冻结 fixture 也在同一旧 feed 复现该失败。新包消费者验证重复新视图、共享 State、真实 unary/downlink caller、同值 Set/Notify、同一注册内不同 provider Set、首次及完成 Get 重入、撤销和替换。既有业务错误/取消优先级、lookup/Context 和 Settings snapshot 检查保留。[绑定回执](../verification/typert-caller-view-2026-10-10/evidence.json) 分列源码、旧包复现及新包批次。
+
+| 证据批次 | 实际结果与限制 |
+|---|---|
+| WSL2 中 Ubuntu 24.04 x64 | 完整 `verify.py --aot --package`、同任务 authoring、38 项验证器自检和配对文档检查通过。实际 TRX 为 807 通过、零失败、三个精确识别的 Windows 专用 Platform 用例未执行。Remote JIT/静态 AOT、TS/HTTP、无 Node Settings、CLR 多 Entry、符号及离线调试消费者检查通过 |
+| Windows x64 全量尝试 1 | restore/build 通过；原生测试为 809 通过、一个受控 HMR reconciliation 超时。门禁在打包前停止。未改动的三个对应定向用例复验通过 |
+| Windows x64 全量尝试 2 | restore/build 通过；原生测试为 809 通过、一个包更新 manifest 观察超时。门禁在打包前停止。未改动的对应单个定向用例复验通过 |
+| Windows x64 独立无 Git 源码包 | 精确源码 ZIP 构建并产出 18 个包/符号文件。严格符号/离线调试检查、无 Node Settings JIT/静态 AOT，以及单独 Remote JIT/静态 AOT/TS/HTTP 通过。该批次不代表 Windows 全量原生测试门禁通过 |
+
+两个 Windows 失败用例均不调用 Gateway，其生产路径未受 F1 改动。有界源码复核没有找到明确的丢事件或队列缺陷。刷新调度或队列等待超过未改的十秒期限仍只是候选解释。定向通过不能解释或抹去全量失败。Windows 全量验收仍未完成；本轮未修改超时、断言或无关 HMR 行为，也未进行第三次盲目全量重试。
+
+运行时检查点的全部 510 个 tracked 文件匹配冻结 Git blob；完整 Linux 门禁保留一致的初始/最终 503 项源码哈希。源码 ZIP SHA-256 为 `805a6d01c8df896e9d565a525b4e4f73086295595caab28c10187808e86f5ead`。四阶段 formatter 对 204 个 C# 文件结论一致。新 Linux 与 Windows 无 Git 包批次分开保留。Windows 实际消费者文件、恢复包和 NuGet 元数据已独立重读。Linux 收集器在任务结束时读取实际配置及恢复包字节，保存哈希匹配保留 feed；其临时消费者/缓存目前已不可访问，未声称事后独立重读源码/缓存。原始报告留在仓库外，回执记录其哈希和上述限制。
+
+本轮关闭已复现的 F1 Service 视图缺陷，Windows 全量门禁仍开放。[原范围剩余项](development.zh.md#2026-10-10-有界执行完成记录)、固定 DSH pin、包版本和公共 API snapshot 不变。动态 CLR 仍仅适用于 JIT。未执行 hosted CI、远端 SourceLink 获取、具名 UI Host、浏览器渲染或 Maker；没有新增依赖、推送、远端合并、发布或部署。后续文档/回执提交与已验证的运行时检查点分别记录。

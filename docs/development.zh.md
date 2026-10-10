@@ -230,3 +230,10 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 原范围仅追加 `a9b53d2fce5e1e611599098d87b46fa6300c9618` 的 R1/R2/R3 修复状态。Gateway 内部身份复用已有注册 entry，Core 不新增公共 API、registry 或 RPC 依赖。可空数值事实继续来自作者模型，仅修正字面量发射。DTO/辅助类型共用名称预检，不另建命名系统。Windows 全门禁还暴露配置事件属性读取失败；事件匹配按固定 HMR 的词法路径投递，原生别名失败沿用现有诊断并可恢复。
 
 见[已完成的修复验证](validation.zh.md#typert-修复验证2026-10-10)。真实 Settings 消费、独立 TS/Web、CLR 身份及原错误/寿命边界继续分别验证。早先有界验收和失败不改写。类型图、后端、协议、Settings、lookup 时序及生产消费者开放项仍开放；本次不构成完整 Typert 或新增依赖验收。
+
+
+### Caller view 修复与保留的平台缺口，2026-10-10
+
+`e277a7eafcdad5e7047cf73729afd7f51558819d` 的 F1 修正既有 Gateway 对普通 `Service<TState>` 视图的 provider 检查。注册身份、原始 provider 值和 caller view 分别承担职责。作者可以返回新视图，无需自行缓存；Gateway 仍使用原 caller 调用该视图。原始快照同时保留 R1 在重登记或 Set 重入后的失效语义。本轮修正有界 Remote 基础，不新增模型、模块导出机制或完整 Typert 验收。
+
+原范围追加续账。[验证记录](validation.zh.md#caller-view-修复验证2026-10-10) 与[回执](../verification/typert-caller-view-2026-10-10/evidence.json) 保留旧包实际失败、新 Linux 全量及 Windows 无 Git 包消费证据，以及两次 Windows 全量失败。未改动的定向用例通过不能关闭这些失败。Windows 全量验收仍开放，需要解释刷新等待并通过必需门禁；该平台事项不改变既有通用能力缺口的范围或归属。本轮未扩大类型系统调研、选入新依赖、放宽超时或重写无关运行时。
