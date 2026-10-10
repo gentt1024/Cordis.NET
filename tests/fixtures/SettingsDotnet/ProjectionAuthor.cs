@@ -96,9 +96,11 @@ public readonly record struct ValueRecord(int Count);
 [JsonSerializable(typeof(ValueRecord))]
 public partial class StructJson : JsonSerializerContext;
 
+#if CORDIS_MODEL_OPTIONAL
 [RemoteService("optional", typeof(PrimitiveJson), Namespace = "optional")]
 public sealed partial class OptionalService
 {
     [RemoteMethod("count")]
     public Task<int> Count(int limit = 7) => Task.FromResult(limit);
 }
+#endif
