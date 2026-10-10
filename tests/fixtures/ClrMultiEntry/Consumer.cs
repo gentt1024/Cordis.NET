@@ -404,12 +404,16 @@ await installedRoot.RunAsync(async context =>
     await VerifyUnaffectedAsync();
     var unloads = installedResolver.Unloads.Count;
     await toolchain.RemoveAsync("IndependentMultiEntry");
-    await RejectAsync(
-        () => installedResolver.ResolveAsync("nuget:independentmultientry/second", new Uri("file:///")).AsTask(),
-        "No CLR module mapping");
-    if (installedResolver.Unloads.Count != unloads + 1 || Directory.Exists(prepared.PublicationDirectory))
+    foreach (var request in affectedRequests)
+        await RejectAsync(
+            () => installedResolver.ResolveAsync(request, new Uri("file:///")).AsTask(),
+            "No CLR module mapping");
+    if (installedResolver.Unloads.Count != unloads + 1 || !installedResolver.Unloads[^1].UnloadRequested ||
+        !Directory.Exists(prepared.PublicationDirectory) ||
+        !File.Exists(Path.Combine(prepared.PublicationDirectory!, "IndependentMultiEntry.dll")))
         throw new InvalidOperationException(
-            "Standard package removal did not withdraw every export and retire its bundle once.");
+            "Standard package removal did not withdraw every export, request one unload, and retain its artifact.");
+    await VerifyUnaffectedAsync();
 });
 Console.WriteLine(
     "Independent multi-entry package consumer passed (shared bundle, subpaths, configurations, HMR pending/recovery, withdrawal, NuGet toolchain).");
