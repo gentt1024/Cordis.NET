@@ -445,12 +445,22 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             FileShare.None,
             1,
             FileOptions.DeleteOnClose);
-        var dependencies = PackageManifest
-            .Read(manifestPath)
-            .Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>;
-        if (dependencies?.Any(item => string.Equals(item.Key, name, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(item.Value as string, version, StringComparison.OrdinalIgnoreCase)) == true)
-            throw new InvalidOperationException("The profile still references this package version.");
+        var manifest = PackageManifest.Read(manifestPath).Raw;
+        if (manifest.TryGetValue("dependencies", out var declaration))
+        {
+            if (declaration is not IDictionary<string, object?> dependencies)
+                throw new FormatException("Profile dependencies must be an object when declared.");
+            foreach (var (dependencyName, dependencyValue) in dependencies)
+            {
+                if (!string.Equals(dependencyName, name, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (dependencyValue is not string dependencyVersion)
+                    throw new FormatException("The package dependency must declare a version string.");
+                if (string.Equals(dependencyVersion, version, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("The profile still references this package version.");
+            }
+        }
+
         try
         {
             if (File.Exists(directory))

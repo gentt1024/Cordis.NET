@@ -65,7 +65,11 @@ public sealed partial class PackageManagementTests
     [InlineData("missing")]
     [InlineData("unreadable")]
     [InlineData("invalid")]
-    public async Task Offline_deletion_keeps_artifacts_without_a_readable_unreferenced_manifest(string state)
+    [InlineData("dependencies-array")]
+    [InlineData("dependencies-null")]
+    [InlineData("dependency-object")]
+    [InlineData("dependencies-absent")]
+    public async Task Offline_deletion_requires_readable_unreferenced_dependency_declarations(string state)
     {
         string profile;
         string retained;
@@ -83,7 +87,9 @@ public sealed partial class PackageManagementTests
         }
 
         var receipt = Path.Combine(Path.GetDirectoryName(retained)!, ".1.0.0.files.json");
-        var assembly = await File.ReadAllBytesAsync(Path.Combine(retained, "IndependentPlugin.dll"));
+        var payload = Directory
+            .GetFiles(retained, "*", SearchOption.AllDirectories)
+            .ToDictionary(file => Path.GetRelativePath(retained, file), File.ReadAllBytes);
         var receiptBytes = await File.ReadAllBytesAsync(receipt);
         var manifestPath = Path.Combine(profile, "package.json");
         if (state is "missing" or "unreadable")
@@ -92,6 +98,17 @@ public sealed partial class PackageManagementTests
             Directory.CreateDirectory(manifestPath);
         if (state == "invalid")
             await File.WriteAllTextAsync(manifestPath, "{");
+        if (state == "dependencies-array")
+            await File.WriteAllTextAsync(manifestPath, """{"dependencies":[{"IndependentPlugin":"1.0.0"}]}""");
+        if (state == "dependencies-null")
+            await File.WriteAllTextAsync(manifestPath, """{"dependencies":null}""");
+        if (state == "dependency-object")
+            await File.WriteAllTextAsync(
+                manifestPath,
+                """{"dependencies":{"IndependentPlugin":{"version":"1.0.0"}}}""");
+        if (state == "dependencies-absent")
+            await File.WriteAllTextAsync(manifestPath, "{}");
+        var manifestBytes = File.Exists(manifestPath) ? await File.ReadAllBytesAsync(manifestPath) : null;
 
         var failure = await Record.ExceptionAsync(() => DotnetPluginToolchain.DeleteRetainedArtifactAsync(
             profile,
@@ -112,10 +129,44 @@ public sealed partial class PackageManagementTests
             case "invalid":
                 Assert.IsAssignableFrom<System.Text.Json.JsonException>(failure);
                 break;
+            case "dependencies-array":
+            case "dependencies-null":
+            case "dependency-object":
+                Assert.True(
+                    failure is FormatException,
+                    $"Expected an invalid declaration refusal for {state}; error={failure}; " +
+                    $"payload exists={Directory.Exists(retained)}; receipt exists={File.Exists(receipt)}.");
+                break;
+            case "dependencies-absent":
+                Assert.Null(failure);
+                break;
         }
 
-        Assert.Equal(assembly, await File.ReadAllBytesAsync(Path.Combine(retained, "IndependentPlugin.dll")));
-        Assert.Equal(receiptBytes, await File.ReadAllBytesAsync(receipt));
+        if (state == "dependencies-absent")
+        {
+            Assert.False(Directory.Exists(retained));
+            Assert.False(File.Exists(receipt));
+        }
+        else
+        {
+            Assert.Equal(
+                payload.Keys.Order(StringComparer.Ordinal),
+                Directory
+                    .GetFiles(retained, "*", SearchOption.AllDirectories)
+                    .Select(file => Path.GetRelativePath(retained, file))
+                    .Order(StringComparer.Ordinal));
+            foreach (var (file, bytes) in payload)
+                Assert.Equal(bytes, await File.ReadAllBytesAsync(Path.Combine(retained, file)));
+            Assert.Equal(receiptBytes, await File.ReadAllBytesAsync(receipt));
+        }
+
+        if (manifestBytes is not null)
+            Assert.Equal(manifestBytes, await File.ReadAllBytesAsync(manifestPath));
+        else
+        {
+            Assert.False(File.Exists(manifestPath));
+            Assert.Equal(state == "unreadable", Directory.Exists(manifestPath));
+        }
     }
 
     [Fact]

@@ -340,8 +340,21 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     [Fact]
     public async Task Independent_nuget_plugin_installs_updates_configuration_and_removes_through_session()
     {
-        await using var host = await StartAsync();
+        var hostBundle = Directory.CreateDirectory(Path.Combine(directory, "host-owned-bundle")).FullName;
+        await File.WriteAllTextAsync(
+            Path.Combine(hostBundle, "package.json"),
+            """{"name":"@scope/host","dsh":{"bundle":{"patch":"patch.yml"}}}""");
+        await File.WriteAllTextAsync(Path.Combine(hostBundle, "patch.yml"), "[]\n");
+        await using var host = await StartAsync(
+            installationBundles: new Dictionary<string, string>
+            {
+                ["@scope/host"] = hostBundle
+            });
         var unload = await RunLifecycleAsync(host);
+        var enabled = await host.Session.ConfigurationOperations.SetBundleEnabledAsync("@scope/host", true);
+        Assert.Null(enabled.Error);
+        Assert.Equal("applied", enabled.Application);
+        Assert.Contains("@scope/host", PackageManifest.Read(Path.Combine(host.Profile, "package.json")).Bundles);
         for (var attempt = 0;attempt < 12 && !unload.IsCollected;attempt++)
         {
             GC.Collect();
