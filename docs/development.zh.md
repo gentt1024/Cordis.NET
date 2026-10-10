@@ -140,3 +140,68 @@ Roslyn 还通过 `TypertCodec.CreateNullable` 提供根引用可空注解，因�
 后续有界质量审查发现，共享 CLR bundle 只使用第一主程序集的依赖根，客户端 Schema 投影则丢弃了 tuple 的 `prefixItems`。两者是既有公开能力中的实现缺陷。修复增加按入口登记的依赖根与确定性的私有 binary 冲突拒绝，并保留位置 tuple 类型，对不支持的长度明确拒绝。独立包 fixture 保留修复前对照，检查两个 CLR 入口顺序、实际 native 依赖及类型化 tuple 消费。
 
 审查还发现公开 XML 缺少生命周期限制，提供者代际检查的证据也不完整。Codec 文档现区分延迟输入 Schema 校验与结果序列化；Gateway 文档说明撤销、协作取消、串行流清理与 root 关闭边界。独立的仅包引用用例保留活跃 definition，分别替换 unary Service、等待中的 lookup、Context 和 downlink 提供者。最新[验证记录](validation.zh.md)将已完成检查绑定到精确源码及包批次。这些修正承接原范围；上述通用未完成职责仍未实现，不改写历史验收。
+
+## 2026-10-10 .NET First Typert 架构审查
+
+本审查承接原范围续账。目标是忠实对应固定 DSH 的设计与可观察语义，优先服务 .NET 作者和消费者。完整 Typert 仍属于通用基础设施范围；短期交付限制不使其缺失职责成为产品专用或永久排除项。以下建议不是新的实现验收。
+
+### 源码检查点与集成边界
+
+本次审查的 Typert 候选仍为 `2d048e3c101c12abf4a757b9eeacebbf9dcd3538`。已获取的远端 main 为 `a018f34681d834f485217343db6a39dc609ee8ec`，包含安全退休/恢复及已合入的稳定 CLR 制品工作流。较早 CLR 候选 `3036bcb1500148296fa5218c9f057903eea94d60` 已不再是集成依据。DSH 仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。
+
+不修改 index 的合并模拟报告 `ClrModuleResolver.cs`、`Loader.cs` 与 `docs/public-api.txt` 存在冲突，未合并分支。Resolver/toolchain 集成现可基于已接受的 main SHA 推进，须保留默认稳定目录、显式开发影子副本、部署文件保留、receipt 及安装包升级要求重启的行为。开发实现 HMR 仍是独立路径。旧候选的 Windows/Linux、包、AOT 和 TypeScript 结果不能证明集成源码。
+
+### 架构判断与作者体验
+
+固定[官方作者 Skill](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/preset/agent-preset/skills/cordis-plugin-development/SKILL.md)及其 [host-plugin 指南](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/preset/agent-preset/skills/cordis-plugin-development/references/host-plugin.md)暴露普通 Plugin、Service 与 Config 职责。Cordis.NET 应保留这些普通 C# 路径。同进程消费者直接解析当前 Service。作者在跨环境时选择 Remote；类型提取、制品发布和注册逐步由既有工具链承担。
+
+建议方向：作者 C# 声明经过 Roslyn 提取，形成可序列化、编译器无关的模型；模型分别投影为原生 binding、类型化 .NET 合同/客户端、JSON 合同及按需 TypeScript 制品。运行贡献仍由既有 Loader/Registry 机制持有。这是在现有 Typert 中补齐职责，不替换 Core、Composition、HMR 或管理 API。
+
+固定[生成器模型](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/model.ts)区分 `FaceModel`/`TypeGraph`、调用元数据及作者类型与 codec 类型，包含非 Remote Service、Event 与引用对象；其[发射器](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts)消费该模型。原生提取须保留对应职责，明确 C#/CLR 适配，不能承诺任意 C# 或整个 TypeScript 编译器等价。
+
+| 信息来源 | 合适的事实责任 | 限制 |
+|---|---|---|
+| Roslyn Symbol 与语义分析 | 作者声明、选定公共成员、类型关系、可空性、Remote 标记、身份及源码诊断 | 编译器对象仅作提取输入，不进入运行模型状态 |
+| 编译器无关模型 | 稳定声明关系及分开的序列化/调用投影 | 不存 Service 实例、CLR `Type`、delegate、`JsonTypeInfo`、Expression Tree 或通用活对象图 |
+| STJ 元数据、Schema 与显式 codec 策略 | 实际 JSON 名称、converter、必填性及支持的 wire 形状 | 不能恢复全部作者类型、方法 scope 或借用/拥有 Context 的语义 |
+| 运行 descriptor 与 binding | 活跃贡献的调用准入及原生分派 | 不能成为完整源码模型或持久合同缓存 |
+| 显式 Reflection adapter | 为选定程序集提供可选 JIT 提取/校验 | 不作作者必经路径、全局程序集扫描或 Native AOT 回退 |
+
+Schema/OpenAPI 优先的组织方式会简化部分 DTO/HTTP 生成，但会丢失声明关系与生命周期含义，最终仍须另建模型补回。Reflection 优先则缺少源码事实，并增加运行加载/AOT 约束。两者均不适合作为完整 Typert 的唯一事实源。本决策无需引入 Quantum 或新的对象图框架。
+
+### 现有候选：保留与调整
+
+| 现有代码 | 判断 | 剩余工作 |
+|---|---|---|
+| 直接 Service 解析；Fiber 拥有的原子贡献；分开的 lookup/Context 声明与 provider；definition history | 保留为运行基础，使用已有有界证据 | 将每个新消费者的可观察顺序与失败/恢复同固定生产调用者对照 |
+| Roslyn 类型化调用 delegate、STJ 元数据与输入校验、carrier 无关 Gateway、HTTP/NDJSON、现有 TS 输出 | 保留 | 增加类型化 .NET 消费，不能强制 TS 或引入另一套 RPC 协议 |
+| `RemoteGenerator` 直接发射 descriptor；`TypertArtifacts.Contribution` 回填方法签名而类型/event/object 集合为空 | 保留为有界兼容投影，不能扩为全类型事实源 | 插入独立提取模型，再逐步让现有发射器消费该模型 |
+| Schema 到 TS 边界投影与根可空性修复 | 保留已经证明的 wire 行为 | 在投影之前保留作者名称/关系；嵌套泛型可空性及完整源类型图仍未完成 |
+| `TypertLoader` 将 contribution task 缓存至整个 activation 结束 | 保留已记录的当前行为，重新核对 CLR 代际集成 | 退休共享 owner 同时撤销无关包；仅重启整个 owner 不能证明 A/B 隔离替换。须明确新代路由且不保留旧 codec/factory |
+
+编译模型缓存可只包含不可变数据，以精确构建输入与生成器版本为键。运行 codec、delegate 和元数据则具有 owner/bundle 代际寿命。Registry 的持久 history 不能保留退休 binding。调用方生成 DTO 或显式共享且有版本的合同程序集，优于类型化客户端引用 collectible provider 实现。Managed 卸载仍是协作行为；保留的调用、DTO 或元数据可以继续持有 ALC。
+
+一项分派差异须单独判定：固定 Host 在并发解析参数 lookup 之前检查当前 Service/binding；候选先串行解析 lookup，再检查当前 Service。Provider 副作用与撤销可能使该顺序可观察。零参数 Settings 切片不能验证这项差异。宣称 lookup 对等之前，须建立对照场景并修复顺序，或记录有依据的平台适配。
+
+当前显式 `JsonSerializerContext` 继续是受支持的作者路径。普通源生成器不能消费彼此的普通输出。Roslyn 新文档的 pre-compilation API 不能读取 Compilation/Syntax 输入，不能据此声称固定 SDK 可从发现的 C# 方法自动生成 STJ 元数据。应比较显式 context、构建前步骤与分阶段合同编译，再决定自动化。Attribute 形态、公开模型/客户端 API、合同共享、目标框架与构建组织需要在实现前另行进行 API 讨论。
+
+### 成熟库复用
+
+继续使用 Roslyn 提取/生成，STJ 提供静态 JSON 元数据与支持的 Schema 投影，ASP.NET Core/HttpClient 提供传输机制。DSH 特有的身份、所有权、Context/lookup、撤销、错误与流生命周期仍由 Cordis 负责。[库调研附录](typert-dotnet-library-research.zh.md)记录官方依据、AOT 限制、依赖、许可及待核查项。
+
+NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 serializer 验证。NSwag 适用于明确选择的 OpenAPI 投影，不能成为新的 Remote 权威。gRPC 与 StreamJsonRpc 可作为未来 carrier，但需要大量语义转换；目前引入不能补上模型或 .NET 客户端职责，反而增加工作。本审查未选定或安装任何新库。
+
+### 有界生产消费者与实施优先级
+
+选择固定 DSH [Settings controller](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/settings-controller/src/index.ts)的 `settings/describe` 及真实 [Settings mirror](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-settings/src/client/settings-mirror.ts)。该零参数 direct unary 没有 lookup、Context receiver 或取消参数；它读取当前 optional provider，并显式投影/脱敏返回值。Mirror 在读取失败时保留旧视图，保留期间发生的 invalidation，并允许重试。这些观察构成消费者对照依据，无需新造 Echo 示例。
+
+原生 `ReadSettingsAsync` 与 `ReadSettingsSchemasAsync` 可复用真实 ProfileSession/配置所有权，但其形状和 revision 不同，且分别运行在不同事务。拼接两个读取不能证明处于同一 DSH `DescribeValue` 检查点。公开 Settings 投影与 revision 适配需先确定，再暴露生成 controller。固定 Host 撤销不强制中断已开始的 unary，也不对成功结果执行代际检查；固定 Client 挂载在撤销后拒绝晚到结果。现有原生成功值代际检查是明确适配。客户端 HttpClient 取消不能改变该 Host 合同。
+
+1. 基于已接受 main 集成，同时保留稳定 CLR 工作流及已证明的多 Entry 身份/依赖隔离。验证两个入口顺序、配置、移除、失败替换/恢复及无关 owner 不受影响。不增加 `IModulePlugin.Exports`，不将导出混为 `Provide`。
+2. 扩大 descriptor 之前，先提取有界独立模型。包含选定非 Remote 声明、递归/外部类型引用、作者类型与 wire 类型及可空性。分析可以成功而 codec 投影拒绝，须分别记录。完整类型图未支持职责继续保持未完成。
+3. 证明一条仅包引用 .NET 链：C# 作者声明 → 模型 → 发布合同/客户端制品 → 注册 → 实际 carrier 上类型化调用 → provider/definition 撤销与重试。消费者使用生成方法，不能手写 endpoint 字符串/JSON，不能引用 provider 实现。JIT 与静态 AOT 门禁不依赖 Node/TypeScript；覆盖脱敏、额外字段/参数、provider 缺失/故障、并发 invalidation 及保留回调的晚到结果。
+4. 从同一模型独立验证按需 TS/Web 输出。Scope/lookup、流、binary 和取消各用固定生产场景闭环；`describe` 成功不能关闭这些行。在精确集成源码上执行适用的 Windows/Linux/包/平台门禁。
+
+该顺序承接既有任务表，不另建总规划。完整模型/元数据发布、丰富 Context/owned-value 图、Peer/uplink/events、binary attachment 及 PluginManager/Settings/客户端管理生成合同消费仍是原使命缺口。产品替换接受与 FSM 权限/basis/receipt 继续属于产品。WPF、Avalonia、Godot .NET 与 Blazor 是目标消费者，但目标框架、analyzer host、浏览器及 export 兼容性仍需具名证据。
+
+本审查仅修改文档，未合并、修改运行/API、安装依赖或产生新的平台验收。原范围只追加记录，既有验收保持不变。文档检查不能证明建议中的无 Node .NET 消费链或合并后的 CLR/Typert 行为。
