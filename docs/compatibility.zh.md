@@ -134,3 +134,6 @@ Settings describe 经既有 profile 队列、Include 和 schema/脱敏 helper �
 [仅依赖包的 Settings 门禁](../scripts/verify-typert-dotnet.py) 验证源制品、模型独立合同包、pre-CoreCompile/STJ 时序、类型化调用及不同生命周期场景，不调用 Node。静态 Native AOT 适用于调用者，不适用于 collectible CLR Host。IDE/design-time 首次构建、任意引用模型组合、完整 Settings 操作及富图/协议范围继续开放。进行中运行不计作平台验收，正式冻结证据见[验证记录](validation.zh.md)。
 
 Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对应固定上游对 `cordis:include` 的处理。这些插件由 Loader 自身导入，其请求不属于 CLR 制品 resolver。显式将内建入口配置为制品贡献者仍会失败；错误的已声明 CLR 制品与未知 resolver 请求继续报错。真实 Profile Settings 消费者验证了这一边界。
+
+
+原生 Gateway 仍先串行解析参数，再验证当前 Service/binding，与固定 Host 先验证再并发 lookup 的顺序不同。这仍是架构审查中未闭合的兼容项。无参数的 Settings 消费者没有提供该时序证据，不能将其关项。

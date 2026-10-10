@@ -214,3 +214,12 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 后续实现新增 SDK 提取的独立原生模型、随包 compiler/build target、源事实 conformance 桥和仅消费模型的类型化 .NET 调用者。生产 Settings describe 在一个既有 profile 检查点读取全部选择的 namespace；普通 provider 仍可直接使用，无须 RPC。调用者生成源码在 CoreCompile 前进入编译，STJ 能看到完整 DTO/context；独立消费者关闭 reflection fallback。[新门禁](../scripts/verify-typert-dotnet.py) 并入 `verify.py --package`，TS/Web 仍分开验证。
 
 确切冻结包与平台证据通过后，只闭环具名的原生源模型/Settings 范围，不闭环完整类型图、引用模型组合、全部 generator 后端或全部 Settings 操作。PluginManager/客户端管理迁移和作用域/lookup、流、取消、二进制及更丰富协议范围仍各自需要证据。WPF、Avalonia、Godot .NET 和 Blazor 保留为预期消费者，框架/host 限制需另行验证。本次不引入竞争总规划，不代表发布或新增依赖选型获验收。
+
+
+### 2026-10-10 有界执行完成记录
+
+运行时/包检查点 `89a63edb0ba51ea63d5fb6ffa96e14134178286a` 已完成 Windows/Linux 全部门禁及独立构建的无 Git 源码压缩包验收。见[验证记录](validation.zh.md#2026-10-10-clr-整合与原生-settings-消费链验证)及[绑定证据回执](../verification/typert-dotnet-2026-10-10/evidence.json)。固定 main 整合、精确生命周期修正和原生模型/客户端实现仍为独立检查点。原私有范围追加状态续账，保留历史验收及失败运行。
+
+实际流水线为：C# 源声明与有效编译输入 → 独立可序列化模型 → 仅模型合同包 → CoreCompile 前 DTO/client/context → STJ 元数据 → 真实 Settings HTTP 调用。普通 `ISettingsDescribeProvider` 仍直接作为 Service 消费。既有运行时绑定和 TS emitter 经源/制品 conformance 桥保留，尚未全部迁移到独立模型。JSON Schema 和 RPC descriptor 是投影，不是 authored model 的事实来源。
+
+已证明的模型切片保留作者成员/构造器关系、C#/JSON required、空状态注解、支持的常量与可选默认值、XML 作者说明及编译选项。分析事实与调用方投影支持分开；不支持的可选调用、readonly 数据、record struct 和规范化方法名称冲突明确拒绝，避免静默丢失语义。完整图组合、全部后端及原范围剩余基础设施项仍开放；不新建总规划或选定第三方依赖。

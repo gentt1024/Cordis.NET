@@ -213,3 +213,24 @@ python scripts/check-docs.py
 锁变更后的最终候选需要重新冻结并运行门禁，不能沿用上述检查点。必须一起读取实际报告中的提交、运行前后源码哈希、精确包哈希与状态。源码 ZIP 从固定 Git blob 导出，另列生成的 no-Git 构建元数据。报告总数、源码执行、差分与包消费者仍属不同证据。独立 CLR 门禁现包括嵌套主程序集、两个入口顺序、私有 native 调用、binary 副本身份/冲突和延迟拒绝对照。Remote 门禁包括真实的显式 Schema 闭合 tuple 调用与四种 definition 稳定的提供者撤销场景；其他 tuple 变体只证明 codec/投影支持。
 
 这些检查不关闭原范围剩余通用行。不表示已执行 hosted CI、远端 SourceLink 获取、Maker、Release、发布或部署。原始报告与私有审查记录不进入跟踪源码；审查交付可包含绑定冻结源码的脱敏证据清单。
+
+
+## 2026-10-10 CLR 整合与原生 Settings 消费链验证
+
+未发布的运行时/包检查点 `89a63edb0ba51ea63d5fb6ffa96e14134178286a` 已在 Windows x64 与 WSL2 下 Ubuntu 24.04 x64 通过 `verify.py --aot --package`、`verify-authoring.py --verification ... --aot --packages ...`、38 项验证器自检及配对文档检查，使用 SDK 10.0.111。两平台两类完整门禁均记录 `sourceUnchanged=true`、干净 checkout，以及完全相同的 502 项初始/最终源码哈希。固定源码 ZIP 包含 507 个已跟踪 Git blob；门禁排除 `verification/` 下五个历史文件。无 Git 构建的生成元数据单列。[绑定证据回执](../verification/typert-dotnet-2026-10-10/evidence.json)记录源码/压缩包、报告及各独立包批次哈希。后续文档验收不改变已验证源码检查点。
+
+| 证据 | 已完成结果与边界 |
+|---|---|
+| Release 构建与实际 TRX | 零警告/错误。Windows：809 通过、零失败/跳过。Linux：806 通过、零失败，三个确属 Windows 的 Platform 用例未执行。Core 148、Composition 442、Extensions 110；Platform 在 Windows 为 109，在 Linux 为 106 |
+| 固定 main 整合 | `7bde0ede48c0199715c7d1b045a99d6ea8436bb6` 整合已接受 CLR main `a018f34681d834f485217343db6a39dc609ee8ec`，保留稳定目录、显式 shadow、完整性凭据、共享 bundle/ALC 租约及安全退休/恢复 |
+| 跨代生命周期 | `fc4d9f097c7b45aa1ad4d04d106de8cacd177b0a` 按精确 Loader 请求暂停/恢复，只失效其贡献缓存并拒绝旧导入迟到。真实包替换保留无关 B 的注册/owner/service 身份及调用。逻辑移除撤销路由并请求卸载，同时保留稳定制品文件 |
+| 独立原生作者/模型/客户端 | 冷缓存 NuGet 作者生成 authored model；独立的仅模型合同包在 CoreCompile 前生成 DTO、客户端与 STJ context。调用方不引用提供者实现。禁用 Reflection fallback 的真实 HTTP Settings describe 在两平台通过 JIT 和静态 Native AOT 调用方消费，没有 Node 命令 |
+| Settings 行为 | 实际 ProfileSession 选择的多个 namespace 在同一配置事务读取。验证 live 值/schema 选择、嵌套 secret 脱敏、显式 null/default、缺失/故障 provider、错误 details、重试、mirror invalidation、provider/definition 撤销、迟到结果及客户端 Dispose。分别验证普通 provider、Remote definition 与调用方寿命；当前 Service 的代际检查另有既有 Remote 门禁证据 |
+| 模型/构建边界 | 源声明/制品事实漂移拒绝；冷构建、增量和 Clean/重建通过。primitive/string/array 请求结果、空状态注解及支持的构造器使用真实 STJ 元数据。readonly 成员、可选参数、record struct 和生成名称冲突保留分析事实并明确拒绝不支持的投影；可选默认值影响模型身份 |
+| 原 TS/Web 与 CLR 能力 | 两平台单独通过既有独立 Remote NuGet 作者、严格 TypeScript、固定 Cordis 挂载及实际 HTTP/NDJSON 门禁。CLR 多 Entry 包消费、固定源码对照、管理/客户端路径、静态 AOT probes 及包消费也通过。TS 输出仍走既有 descriptor/Schema 投影 |
+| 包/源码证明 | 八个 Cordis.NET 包、Greeting 示例及配对符号包通过严格 DLL/PDB/源码关联和离线消费者 frame 检查。精确源码 ZIP 的 SHA-256 为 `aff79029c38515c24de911f09727e8f5ffa99a729debe2eca9e40c48da49057d`，其无 Git 副本另行通过 Release build/pack、同一符号/debug-consumer 检查及 Settings JIT/AOT 消费 |
+| 格式与脚本闭包 | 未改变的 203 个 C# 文件在四个格式阶段一致。两平台正式 runner 均通过全部 38 项脚本自检和配对文档检查。作者门禁复制到仓库外的变异构建已包含 Compiler/Generator 源码与锁文件 |
+
+失败和中断记录保持原状态。首个生命周期包批次要求物理删除，与已接受稳定保留语义冲突；修正后的消费者曾用同一生产包批次独立复验。较早模型检查点暴露源码/XML conformance、全局 AOT 标志传播到仅构建期的 Compiler/Analyzer，以及仅分析的可选方法夹具误入运行时 analyzer。Settings 夹具曾因未排空 Host 输出而阻塞；排空同一未结束进程即恢复调用，随后修正 reader。`e97d8bf70ce119d33526ac3ca3edfeb685910c22` 两平台运行时/包门禁通过，但作者变异构建复制清单漏了 Compiler/Generator，因此作者门禁失败；最终检查点补齐清单，未改变变异断言。主动停止的旧 Windows 运行和独立自检的错误 SDK 运行不计验收。原始证据私下保留，未覆盖或连同机器路径提交。
+
+仅验收上述本地切片，不代表完整 Typert。独立 authored model 不从有损 descriptor 反推；现有 analyzer 仍通过源事实 conformance 桥生成运行时绑定。丰富类型/引用图组合、全部模型驱动后端、丰富 Context/owned-value、Peer/uplink/events、完整 binary attachment 及剩余生产消费者迁移保持未完成。未提供 Settings base/user、写操作或数值 revision 等价；适配使用原生 string revision。lookup 时序、IDE/design-time 首构建以及 WPF/Avalonia/Godot .NET/Blazor 具名宿主需独立证据。不声明 Native AOT 内动态 CLR 支持。未执行 hosted CI、远端 SourceLink 获取、浏览器呈现或 Maker。DSH pin 和包版本不变；没有新增依赖选型、推送、远端合并、发布、Release 或部署。
