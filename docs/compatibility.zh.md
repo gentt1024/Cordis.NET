@@ -144,4 +144,6 @@ Settings describe 经既有 profile 队列、Include 和 schema/脱敏 helper �
 Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对应固定上游对 `cordis:include` 的处理。这些插件由 Loader 自身导入，其请求不属于 CLR 制品 resolver。显式将内建入口配置为制品贡献者仍会失败；错误的已声明 CLR 制品与未知 resolver 请求继续报错。真实 Profile Settings 消费者验证了这一边界。
 
 
-原生 Gateway 仍先串行解析参数，再验证当前 Service/binding，与固定 Host 先验证再并发 lookup 的顺序不同。这仍是架构审查中未闭合的兼容项。无参数的 Settings 消费者没有提供该时序证据，不能将其关项。
+原生 Gateway 现在对应固定 prepareInvocation 顺序：参数名和 receiver Context 之后检查实际 Service／binding，再启动全部参数解析。解析保持参数顺序，按首先观察到的失败返回，捕获已启动工作的晚到错误而不取消它们。definition／provider／原始 Service 注册检查仍在分发前拒绝失效的成功准备结果。原生代际检查仍是明确 CLR 适配；未结束 resolver 可以保留提供者直到结束。调用取消不覆盖准备错误，也不强制终止 resolver。本修复有聚焦反例和生成包消费者，正式完成证据另行记录。零参数 Settings 切片不作为 lookup 顺序证明。
+
+本轮标准 Settings 的数值 revision／可省略 expectedRevision、独立模型事实支持矩阵，以及语义对应／固定协议互通的区别，见[已确认续行合同](development.zh.md#已确认的续行合同与-r022026-10-11)。当前 hash describe 投影仍待显式迁移；已有 base64 二进制结果不等价于 connection attachment。

@@ -244,3 +244,58 @@ The original scope receives an append-only disposition. The [verification record
 `48ab1a45a165b11de2405c1153013cb05b169fe3` retains the caller-view repair and aligns existing-parent config observation with fixed DSH's depth-zero watch. Native buffer overflow now reports the original error and requests a coalesced reread through the existing queue; missing ancestors retain the explicitly documented recursive adaptation. Closed watchers reject late errors. No API, baseline, dependency, version or authoring workflow changes.
 
 The [completed verification](validation.md#configuration-watch-repair-and-platform-closure-2026-10-10) and [receipt](../verification/config-watch-2026-10-10/evidence.json) close the local Windows full-gate item for this exact source, alongside Linux and independent no-Git package proof. They distinguish confirmed lost-notification recovery from the unproven unique causes of historical timeouts, and correct the first historical wait to the third Change. The original scope receives an append-only disposition; previous receipts are retained. Full Typert and the existing generic capability gaps remain open; hosted CI and publication are separate gates.
+
+
+## Accepted continuation contracts and R02, 2026-10-11
+
+Continuation starts from merged main `424cfb98823e9867de5198118b26f3973b9b397d`. This section updates the original application-infrastructure task; earlier acceptance records retain their source and limits. The maintainer has decided D-REV, D-MODEL and D-WIRE below. These decisions authorize implementation, not complete Typert, a new dependency or publication.
+
+### Settings revision and compatibility (D-REV)
+
+Standard Settings describe and generated editing clients must use numeric revision and optional expectedRevision, following pinned [SettingsForms](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/settings/settings/src/index.ts). Its map belongs to one SettingsForms service instance, keyed by entry identity. The first observed active entry starts at zero; subsequent describe observations increment when the serialized tuple of Fiber uid, schema and raw entry config changes. Observed disappearance increments once and keeps the entry's history in that instance. Presentation-only autoGenerate changes notify without incrementing revision. Service reconstruction or process restart creates a fresh map; these numbers do not establish durable identity, global ordering or a cross-restart lease.
+
+A supplied expectedRevision is checked against that view inside the existing edit transaction before changing data. Omission removes only the comparison with a previous read: authorization, complete candidate validation, serialized editing and commit consistency still apply. The standard editor sends the revision it read. Existing file/content hashes continue to fence file and commit changes; they are not truncated into numbers or turned into a second configuration authority.
+
+The current native SettingsDocument and SettingsNamespaceView expose string hashes. The released alpha.4 tag contains SettingsDocument, while SettingsNamespaceView and the generated settings/describe route were introduced after that tag. Preserve the released hash entry points and their meaning. The standard numeric projection needs a distinct DTO/model contract; regeneration and migration of the existing bounded describe caller must be explicit. A source or wire signature cannot silently switch from string to number under its old contract identity. This migration remains pending; the decision does not make the current hash-based Remote projection compliant.
+
+### Analysis, projection and consumption (D-MODEL)
+
+The selected public boundary and its reachable references are analysis roots; Remote is one root category. Ordinary Plugin/Service/Config use remains in-process. Analysis must retain author identity, members and signatures, generic definitions and actual arguments, inheritance/interfaces, nullability, requiredness, defaults, documentation, source and relevant compilation facts. External declarations remain explainable references rather than unlimited third-party implementation traversal. Backend refusals are separate from missing analysis facts.
+
+| Existing duty / selected fact | Analysis status and current-round obligation | Projection / consumer boundary |
+|---|---|---|
+| T01: ordinary public declarations, Service, Config, events and explicit reference objects | Must implement selected roots; SourceContractReader currently discovers RemoteService classes only | No RPC requirement for ordinary Service; event and object consumers need their own routes |
+| T01/T02: selected member signatures, generic definitions/arguments and interfaces | Must implement missing full method/interface/type-parameter relationships; the current model retains a bounded data/member/constructor slice and base/type references | C# and TS support are verified independently; unsupported projection does not close analysis work |
+| T02: nullability, required, supported constants/defaults, documentation/source/compiler facts | Existing Remote/data slice has bounded evidence; extend and verify for the additional roots and reachable references | Current .NET DTO/client projection rejects unsupported shape rather than dropping facts |
+| T02: cross-package identities and external references | Current model records limited external/type references; composition and explanatory referenced declarations must be implemented and consumed | Caller must not reference collectible Provider implementation; model-only contracts remain the author route |
+| T03: one model consumed by runtime, Schema, .NET and TS backends | Must migrate incrementally; the source/artifact conformance bridge is temporary, not reverse-model authority | Existing runtime and TS emitters remain supported during real caller migration |
+| T04: richer .NET method/data projection | Optional calls, readonly data, record structs and naming collisions currently refuse; required supported cases remain pending rather than excluded | Each backend needs its own bounded support and actual-use evidence; not every analysis type must serialize |
+| T05: model-only, pre-CoreCompile then STJ, no Node, no Provider reference | Existing package-only Settings slice has evidence; new facts and clients require renewed evidence | IDE/design-time builds and named UI environments remain pending; console or Node execution does not prove them |
+
+These are current delivery obligations, not a new overall plan. A temporary refusal is an accurate development result, not completion. Changing required support or deferring a confirmed duty needs a maintainer disposition with its consumer impact.
+
+### Remote semantics and interoperability (D-WIRE)
+
+Native .NET and the repository's standard TS client must consume the same Registry, Gateway and operation authority. Context, object references/ownership, Peer, uplink, downlink, events, attachments, cancellation and recovery remain generic current-round duties. New carriers must close a concrete missing capability through those owners, not add another runtime or business dispatcher. Settings continues through configuration editing; PluginManager continues through operations, task ownership and queues. Disconnect does not implicitly cancel an installation, and an uncertain response does not automatically replay a write.
+
+| Boundary | Existing evidence / required continuation | Meaning of interoperability |
+|---|---|---|
+| Native HTTP result envelope and NDJSON; repository standard TS runtime | Existing unary/downlink, errors, cancellation and base64 byte-array slice; rerun independently for this change | Native .NET ↔ repository TS behavior on this carrier; does not prove the pinned Node client protocol |
+| Pinned Gateway client ConnectionHandle RPC and connection attachments | Direct upstream-client compatibility is unverified; keep an explicit adapter/frame/type/error/attachment checklist before claiming that boundary | Actual pinned client ↔ native Host calls, including failure and ownership; equivalent JSON field order is not a requirement |
+| Pinned stream-client / stream-protocol / stream-server | Uplink, multiplexed downlink and stream lifetime interoperability are pending | Exact required frames, item codecs, cancel/close and failure behavior, plus real cross-end execution |
+| Pinned remote-events and protocol event/object/Context/Peer declarations | Generic native semantics and the applicable cross-end routes remain pending | Shared lifecycle and identities; Agent/Session/account product selection tables stay outside Cordis.NET |
+| Recovery and replacement across these boundaries | Existing generation fences are bounded foundations; consumer-specific recovery remains pending | Old callbacks cannot resume dispatch; an unknown write outcome cannot authorize automatic replay |
+
+Here semantic correspondence means the fixed observable behavior implemented through native owners. Protocol interoperability means a named fixed upstream client/transport actually exchanges its required frames, types and errors with native code. Complete generic responsibilities include both the remaining native semantics and any explicitly selected interoperability boundaries; neither a successful unary demo nor changed wording closes them. No historical full-wire claim is retroactively reinterpreted as acceptance.
+
+### R02 implementation and evidence boundary
+
+Pinned Gateway prepareInvocation validates argument names and receiver Context, then Service/binding, then starts every parameter resolver with Promise.all. R02 moves native Service admission before parameter decoding/lookup, starts every independent resolver in the existing Cordis execution domain, returns the first observed failure and observes late resolver failures without cancelling started work. Successful resolution preserves declaration order and the existing definition, lookup, Context and raw Service-registration fences. Invocation cancellation still does not override preparation errors or forcibly terminate a resolver.
+
+The focused counterexamples failed on the original merged runtime and pass after repair: missing/invalid Service, simultaneous lookup barriers, ordered successful arguments, first failure with unfinished late work, immediate decode failure with a later started resolver, and withdrawal before dispatch. Package-only generated-author proof and the mandatory repository/platform gates remain the acceptance boundary for this repair; focused results alone do not close R02. Model, Settings and protocol duties above continue after this independent correction.
+
+### R02 local closure and continuation ownership
+
+The [2026-10-11 validation](validation.md#remote-preparation-repair-verification-2026-10-11) records completed local Windows/Linux package gates for source checkpoint `679f57fb1be671c9f47ebc5a61f041b9d7215a3b`. Review/main integration remains pending. Subsequent receipt/documentation changes do not replace that runtime/package identity.
+
+The maintainer narrowed this session to the already-started R02 correction and its verification/handoff. Further repository infrastructure, including the accepted D-REV/D-MODEL/D-WIRE duties above, belongs to a new session starting from latest main; unmerged R02 changes enter through the existing review process first. This transfer does not close or reduce those duties. No new model, complete Settings, PluginManager or rich protocol implementation is started here.

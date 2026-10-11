@@ -244,3 +244,58 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 `48ab1a45a165b11de2405c1153013cb05b169fe3` 保留 caller-view 修正，并将父目录已存在时的配置观察对应到固定 DSH 的 depth-zero 监听。原生缓冲溢出现在保留原错误，通过既有队列合并补读；缺失祖先仍保留明确记录的递归适配。已关闭 watcher 拒绝迟到错误。API、baseline、依赖、版本和作者流程均未改变。
 
 [完成的验证](validation.zh.md#配置监听修正与平台门禁闭环2026-10-10)和[回执](../verification/config-watch-2026-10-10/evidence.json)关闭此精确源码的本地 Windows 全量门禁项，同时记录 Linux 和无 Git 独立包消费。记录区分已确认的丢通知恢复缺陷与仍未证明的历史超时唯一根因，并更正第一次历史等待为第三次 Change。原范围追加续账，保留旧回执。完整 Typert 及既有通用能力缺口仍未完成，hosted CI 与发布仍是独立门槛。
+
+
+## 已确认的续行合同与 R02，2026-10-11
+
+续行起点为已合入 main 的 `424cfb98823e9867de5198118b26f3973b9b397d`。本节增量更新原应用基础设施任务；历史验收保留各自源码和边界。维护者已确认以下 D-REV、D-MODEL、D-WIRE；这授权继续实施，不代表完整 Typert、新增依赖或发布已获验收。
+
+### Settings revision 与兼容迁移（D-REV）
+
+标准 Settings describe 与生成的编辑客户端必须使用数值 revision 和可省略 expectedRevision，对应固定 [SettingsForms](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/settings/settings/src/index.ts)。其 map 属于一个 SettingsForms 服务实例，以 Entry 身份为键。首次观察到活跃 Entry 时为零；后续 describe 观察到 Fiber uid、Schema、原始 Entry config 的序列化元组改变时递增。观察到消失时递增一次，并在该实例中保留历史。仅 autoGenerate 展示变化会通知但不递增 revision。服务重建或进程重启产生新 map；这些数值不提供持久身份、全局顺序或跨重启租约。
+
+提供 expectedRevision 时，在现有编辑事务内、改变数据前，对该视图检查冲突。省略仅免除与先前读取的 revision 比较，授权、完整候选校验、串行编辑和提交一致性检查仍执行。标准编辑器提交读到的 revision。现有文件／内容 hash 继续检测文件及提交冲突，不截断为数值，也不成为第二份配置权威。
+
+当前原生 SettingsDocument 和 SettingsNamespaceView 暴露字符串 hash。已发布 alpha.4 tag 包含 SettingsDocument，而 SettingsNamespaceView 及生成的 settings/describe 路由在该 tag 之后引入。保留已发布 hash 入口及原含义。标准数值投影需要独立 DTO／模型合同，并明确重新生成与迁移现有有界 describe 调用者；不能在旧合同身份下静默将源码或 wire 签名从字符串切为数值。此迁移仍待实施，本次方向确认不意味着当前 hash Remote 投影已符合标准。
+
+### 分析、投影与消费（D-MODEL）
+
+选定公开边界及其可达引用是分析入口，Remote 只是其中一类。普通 Plugin／Service／Config 保留同进程使用。分析必须保留作者身份、成员签名、泛型定义及实际实参、继承／接口、空性、required、默认值、文档、来源及必要编译事实。外部声明保留可解释引用，不无限遍历第三方实现。后端拒绝与分析事实缺失分别记账。
+
+| 既有职责／选定事实 | 分析状态与本轮义务 | 投影／消费者边界 |
+|---|---|---|
+| T01：普通公开声明、Service、Config、事件、显式引用对象 | 必须补齐选定入口；SourceContractReader 当前只发现 RemoteService class | 普通 Service 不强制 RPC；事件与对象消费者需要各自路线 |
+| T01/T02：选定成员签名、泛型定义／实参、接口 | 必须补齐完整方法／接口／类型参数关系；现有模型只保留有界数据成员／构造关系及 base／类型引用 | C# 与 TS 分别验收；投影暂不支持不能关闭分析职责 |
+| T02：空性、required、支持的常量／默认值、文档／来源／编译事实 | 已有 Remote／数据切片有有界证据；新增入口及可达引用继续补齐、复验 | 当前 .NET DTO／客户端投影拒绝不支持形状，不丢弃事实 |
+| T02：跨包身份与外部引用 | 当前仅保留有限外部／类型引用；组合及可解释的被引用声明必须实施并消费 | Caller 不引用可卸载 Provider 实现；保留 model-only 作者路线 |
+| T03：运行时、Schema、.NET、TS 消费同一模型 | 必须逐步迁移；源码／制品一致性桥是过渡，不是反推模型权威 | 真实调用者迁移期间保留已有运行时和 TS emitter |
+| T04：更丰富的 .NET 方法／数据投影 | optional 调用、readonly 数据、record struct、名称冲突目前明确拒绝；要求支持的用例仍待实施，未排除 | 各后端需要有界支持及实际使用证据；不要求每种分析类型都可序列化 |
+| T05：model-only、pre-CoreCompile 后 STJ、无需 Node、不引用 Provider | 既有包消费 Settings 切片有证据；新增事实和客户端需重新验证 | IDE／design-time 和具名 UI 环境仍待验证；控制台或 Node 不替代 |
+
+这些是本轮交付义务，不另造总规划。暂时拒绝是准确开发状态，不是完成。改变要求支持的范围或延期已确认职责，需要列出消费者影响并由维护者裁决。
+
+### Remote 语义与互通（D-WIRE）
+
+原生 .NET 与仓库标准 TS 客户端必须消费同一 Registry、Gateway 和操作权威。Context、对象引用／所有权、Peer、uplink、下行流、事件、attachment、取消、恢复仍属本轮通用职责。新增 carrier 必须通过既有所有者解决具体缺口，不另建运行时或业务分发。Settings 复用配置编辑；PluginManager 复用 operations、任务所有权和队列。断开连接不自动取消安装，响应不确定不自动重放写入。
+
+| 边界 | 已有证据／必要续建 | 互通含义 |
+|---|---|---|
+| 原生 HTTP result envelope、NDJSON；仓库标准 TS runtime | 已有 unary／下行流、错误、取消及 base64 byte-array 切片；本次分别复验 | 此 carrier 上原生 .NET ↔ 仓库 TS 的行为；不证明固定 Node 客户端协议 |
+| 固定 Gateway 客户端 ConnectionHandle RPC 与 connection attachment | 直接上游客户端兼容尚未验证；声明该边界前保留明确 adapter／帧／类型／错误／attachment 清单 | 实际固定客户端 ↔ 原生 Host 调用，含失败及所有权；不要求无关 JSON 字段顺序 |
+| 固定 stream-client／stream-protocol／stream-server | uplink、多路下行流、流生命周期互通仍待完成 | 所需帧、item codec、cancel／close、失败语义及真实跨端运行 |
+| 固定 remote-events 与 protocol 的事件／对象／Context／Peer 声明 | 通用原生语义及适用跨端路线仍待完成 | 共享生命周期和身份；Agent／Session／账户产品选择表留在 Cordis.NET 外 |
+| 上述边界的恢复与替换 | 现有代际检查只是有界基础；消费者恢复仍待完成 | 旧回调不恢复分发；不确定写入结果不授权自动重放 |
+
+这里“语义对应”指通过原生所有者实现固定可观察行为；“协议互通”指具名固定上游客户端／传输真实交换所要求的帧、类型和错误。完整通用职责包括剩余原生语义及明确选定的互通边界，单个 unary demo 或措辞变化不能关闭缺口。历史完整 wire 承诺不追溯改写为已经验收。
+
+### R02 实施与证据边界
+
+固定 Gateway prepareInvocation 先检查参数名和 receiver Context，再检查 Service／binding，之后用 Promise.all 启动所有参数 resolver。R02 将原生 Service 准入移到参数解码／lookup 之前，在现有 Cordis 执行域中启动所有独立解析，按首先观察到的失败返回，捕获晚到解析失败，不取消已开始工作。成功时保持声明参数顺序及既有 definition、lookup、Context、原始 Service 注册检查。调用取消仍不覆盖准备阶段错误，也不强制终止 resolver。
+
+聚焦反例在合入后的原运行时失败，修复后通过：缺失／错误 Service、同时启动屏障、成功参数顺序、其他工作未结束时先返回错误、立即解码失败后仍启动后续解析，以及分发前撤销。独立包生成作者证明和仓库／平台正式门禁仍是本修复验收边界；聚焦通过不单独关闭 R02。此独立修正之后继续推进上述模型、Settings 和协议职责。
+
+### R02 本地收口及续行归属
+
+[2026-10-11 验证记录](validation.zh.md#remote-准备阶段修复验证2026-10-11) 记录源码检查点 `679f57fb1be671c9f47ebc5a61f041b9d7215a3b` 已完成的本地 Windows／Linux 包门禁。审查／合入 main 仍待完成。后续回执／文档改动不替代该运行时／包身份。
+
+维护者将本会话缩限为已开工 R02 的修正、验证和交接。其余仓库基础设施，包括上述已认可的 D-REV／D-MODEL／D-WIRE 职责，由从最新 main 起步的新会话继续；未合入的 R02 先走既有审查流程。这项交接不关闭或缩减这些职责。本会话不启动新的模型、完整 Settings、PluginManager 或丰富协议实现。
