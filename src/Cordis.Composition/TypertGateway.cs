@@ -71,6 +71,11 @@ public sealed record TypertRemoteResult(bool Ok, JsonElement? Value, TypertRemot
 }
 
 /// <summary>Carrier-independent Remote dispatch over live Cordis services and generated Typert contracts.</summary>
+/// <remarks>
+/// Preparation admits the Service and binding before starting all parameter resolvers. It returns the first
+/// observed resolution failure without cancelling other started resolvers; their late failures remain observed.
+/// Pending resolvers can retain their provider until they settle, including after a failed request has returned.
+/// </remarks>
 public sealed class TypertGateway(Context caller, TypertRegistry registry)
 {
     /// <summary>Invoke one unary method with exact arguments and current service and provider registrations.</summary>
@@ -329,60 +334,6 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
                     "The receiver Context belongs to another Cordis execution domain.");
         }
 
-        var decoded = new List<object?>();
-        foreach (var parameter in descriptor.Parameters)
-        {
-            if (!arguments.TryGetProperty(parameter.Wire, out var raw))
-            {
-                decoded.Add(Undefined.Value);
-                continue;
-            }
-
-            var value = Decode(parameter.Codec, raw, endpoint, parameter.Wire);
-            if (parameter.Lookup is { } key)
-            {
-                var provider = registry.GetLookup(key) ?? throw Fault(
-                    "gateway/lookup-unavailable",
-                    endpoint,
-                    "The lookup provider is unavailable.",
-                    field: parameter.Wire);
-                var providerToken = registry.LookupToken(key);
-                checks.Add(() =>
-                {
-                    if (!ReferenceEquals(providerToken, registry.LookupToken(key)))
-                        throw Fault(
-                            "gateway/lookup-unavailable",
-                            endpoint,
-                            "The lookup provider was withdrawn during this call.",
-                            field: parameter.Wire);
-                });
-                Match(provider.Wire, provider.WireTypeSymbol, parameter.Wire, parameter.Codec, endpoint);
-                try
-                {
-                    value = await provider.Resolve(value) ?? throw Fault(
-                        "gateway/lookup-not-found",
-                        endpoint,
-                        "The identity resolved to no object.",
-                        field: parameter.Wire);
-                }
-                catch (RemoteError)
-                {
-                    throw;
-                }
-                catch (Exception error)
-                {
-                    throw Fault(
-                        "gateway/lookup-failed",
-                        endpoint,
-                        "The lookup resolver failed.",
-                        error,
-                        parameter.Wire);
-                }
-            }
-
-            decoded.Add(value);
-        }
-
         var registration = receiver.Reflect.GetRegistration(descriptor.Service);
         var service = receiver.Get<object>(descriptor.Service, strict: false) ?? throw Fault(
             "gateway/service-unavailable",
@@ -391,6 +342,7 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
         if (service is not ITypertRemoteService remote || remote.TypertRemote.Service != descriptor.Service ||
             remote.TypertRemote.Namespace != descriptor.Namespace)
             throw Fault("gateway/binding-invalid", endpoint, "The service has no matching explicit Remote binding.");
+        var decoded = await ResolveParametersAsync(descriptor, arguments, checks);
         checks.Add(() =>
         {
             var currentService = receiver.Get<object>(descriptor.Service, strict: false);
@@ -403,6 +355,83 @@ public sealed class TypertGateway(Context caller, TypertRegistry registry)
         var prepared = new Prepared(descriptor, receiver, service, remote.TypertRemote, decoded, checks);
         prepared.Check();
         return prepared;
+    }
+
+    private Task<object?[]> ResolveParametersAsync(
+        TypertInvocationDescriptor descriptor,
+        JsonElement arguments,
+        List<Action> checks)
+    {
+        var endpoint = descriptor.Endpoint;
+        var decoded = new object?[descriptor.Parameters.Count];
+        if (decoded.Length == 0)
+            return Task.FromResult(decoded);
+        var completion = new TaskCompletionSource<object?[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var remaining = decoded.Length;
+        // Like upstream Promise.all: start every resolver, fail on the first observed rejection,
+        // and observe already-started work without cancelling it or waiting for it to fail.
+        for (var index = 0;index < decoded.Length;index++)
+            _ = ResolveAsync(index);
+        return completion.Task;
+
+        async Task ResolveAsync(int index)
+        {
+            try
+            {
+                decoded[index] = await ResolveParameterAsync(descriptor.Parameters[index], arguments, endpoint, checks);
+                if (--remaining == 0)
+                    completion.TrySetResult(decoded);
+            }
+            catch (Exception error)
+            {
+                completion.TrySetException(error);
+            }
+        }
+    }
+
+    private async Task<object?> ResolveParameterAsync(
+        TypertInvocationParameter parameter,
+        JsonElement arguments,
+        string endpoint,
+        List<Action> checks)
+    {
+        if (!arguments.TryGetProperty(parameter.Wire, out var raw))
+            return Undefined.Value;
+        var value = Decode(parameter.Codec, raw, endpoint, parameter.Wire);
+        if (parameter.Lookup is not { } key)
+            return value;
+        var provider = registry.GetLookup(key) ?? throw Fault(
+            "gateway/lookup-unavailable",
+            endpoint,
+            "The lookup provider is unavailable.",
+            field: parameter.Wire);
+        var providerToken = registry.LookupToken(key);
+        checks.Add(() =>
+        {
+            if (!ReferenceEquals(providerToken, registry.LookupToken(key)))
+                throw Fault(
+                    "gateway/lookup-unavailable",
+                    endpoint,
+                    "The lookup provider was withdrawn during this call.",
+                    field: parameter.Wire);
+        });
+        Match(provider.Wire, provider.WireTypeSymbol, parameter.Wire, parameter.Codec, endpoint);
+        try
+        {
+            return await provider.Resolve(value) ?? throw Fault(
+                "gateway/lookup-not-found",
+                endpoint,
+                "The identity resolved to no object.",
+                field: parameter.Wire);
+        }
+        catch (RemoteError)
+        {
+            throw;
+        }
+        catch (Exception error)
+        {
+            throw Fault("gateway/lookup-failed", endpoint, "The lookup resolver failed.", error, parameter.Wire);
+        }
     }
 
     private static void Match(string wire, string symbol, string expectedWire, TypertCodec codec, string endpoint)

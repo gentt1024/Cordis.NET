@@ -139,6 +139,17 @@ public partial class EchoService
     [RemoteMethod]
     public Task<byte[]> Binary(string text) => Task.FromResult(System.Text.Encoding.UTF8.GetBytes(text));
 
+    [RemoteMethod]
+    public Task<string> LookupPair(
+        [RemoteLookup("sample:pair-left", "leftId", typeof(string))]
+        Document left,
+        [RemoteLookup("sample:pair-right", "rightId", typeof(string))]
+        Document right)
+    {
+        LookupCalls++;
+        return Task.FromResult(left.Title + ":" + right.Title);
+    }
+
     [RemoteMethod(Stream = true)]
     public async IAsyncEnumerable<string> BlockedStream([EnumeratorCancellation] CancellationToken signal)
     {

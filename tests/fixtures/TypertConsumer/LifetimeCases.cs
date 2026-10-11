@@ -9,6 +9,7 @@ internal static class LifetimeCases
 
     public static async Task VerifyAsync()
     {
+        await VerifyPreparationAsync();
         await VerifyCallerViewsAsync();
         await using var root = new Context();
         var registry = new TypertRegistry(root);
@@ -327,6 +328,95 @@ internal static class LifetimeCases
         });
         Console.WriteLine(
             "PASS stable definitions: withdrawn unary Service, pending lookup, pending Context and pending downlink read reject old success; replacements remain callable.");
+    }
+
+    private static async Task VerifyPreparationAsync()
+    {
+        await using var root = new Context();
+        var registry = new TypertRegistry(root);
+        var gateway = new TypertGateway(root, registry);
+        var service = new EchoService();
+        var leftStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var rightStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var leftFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var leftResult = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var rightResult = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await root.RunAsync(ctx =>
+        {
+            registry.Register(ctx, AuthorModule.Contribution());
+            registry.RegisterLookup(
+                ctx,
+                "sample:pair-left",
+                new(
+                    "left",
+                    "leftId",
+                    "IndependentRemote.Document",
+                    "System.String",
+                    async _ =>
+                    {
+                        leftStarted.SetResult();
+                        try
+                        {
+                            return await leftResult.Task;
+                        }
+                        finally
+                        {
+                            leftFinished.SetResult();
+                        }
+                    }));
+            registry.RegisterLookup(
+                ctx,
+                "sample:pair-right",
+                new(
+                    "right",
+                    "rightId",
+                    "IndependentRemote.Document",
+                    "System.String",
+                    async _ =>
+                    {
+                        rightStarted.SetResult();
+                        return await rightResult.Task;
+                    }));
+            return Task.CompletedTask;
+        });
+        var arguments = Json("{\"leftId\":\"one\",\"rightId\":\"two\"}");
+        Error(await gateway.InvokeAsync("sample/LookupPair", arguments).WaitAsync(Limit), "gateway/service-unavailable");
+        Require(
+            !leftStarted.Task.IsCompleted && !rightStarted.Task.IsCompleted,
+            "An unavailable service started lookup work.");
+        await root.RunAsync(ctx =>
+        {
+            ctx.Provide("sample:remote", service);
+            return Task.CompletedTask;
+        });
+        var call = gateway.InvokeAsync("sample/LookupPair", arguments);
+        try
+        {
+            await leftStarted.Task.WaitAsync(Limit);
+            await rightStarted.Task.WaitAsync(Limit);
+            rightResult.SetException(new InvalidOperationException("first right failure"));
+            var result = await call.WaitAsync(Limit);
+            Error(result, "gateway/lookup-failed");
+            Require(
+                result.Error!.Details!.Value.GetProperty("field").GetString() == "rightId",
+                "Parallel resolution lost the first failing wire field.");
+            Require(
+                !leftFinished.Task.IsCompleted && service.LookupCalls == 0,
+                "Failure waited for the other lookup or invoked business code.");
+            leftResult.SetException(new InvalidOperationException("late left failure"));
+            await leftFinished.Task.WaitAsync(Limit);
+            await root.RunAsync(_ => Task.CompletedTask);
+            Require(service.LookupCalls == 0, "Late lookup work invoked a failed request.");
+        }
+        finally
+        {
+            leftResult.TrySetResult(new Document("left"));
+            rightResult.TrySetResult(new Document("right"));
+            await call.WaitAsync(Limit);
+        }
+
+        Console.WriteLine(
+            "PASS generated package preparation: service admission, parallel lookup, first failure and late work.");
     }
 
     private static async Task VerifyCallerViewsAsync()
