@@ -347,3 +347,15 @@ R02 从已合入 main `424cfb98823e9867de5198118b26f3973b9b397d` 续行。运行
 首个冻结 `57a3df8` 完整运行在 847 项中失败一项：预读不可读兼容数据绕过了原安全授权拒绝。其 846 项通过不算验收。修复将未知字节与不存在区分，继续由原权威裁决；既有主要回归保留断言，并新增失败 application／未变化状态检查。原失败报告保留。独立规范格式检查发现 21 个排版差异，经 token 不变的修正后四阶段通过。早先试验消费者暴露必需 nullable 字段被省略、CLI 未挂载 PluginManager，两项均在此门禁前修复。另一次脚本自检启动使用了错误 SDK 搜索路径，固定 SDK 下未改动的测试通过。以上尝试均不改记为最终批次通过。
 
 [管理迁移](management-remote-migration.zh.md)记录唯一生成式公共用法，以及退出的手写 PluginManager HTTP／SSE 路由、浏览器方法和 decoder。原始配置／状态／制品职责保留既有所有者与授权。选定通知不将 Peer／uplink／waterfalls、owned-value／引用图或完整附件／wire 互通关项。保存的 v2 重建 Remote、泛型 DTO 发射、引用模型组合、原生文档／UI 集成及其余[原范围](development.zh.md)继续开放。本检查点未执行原始 DSH 源测试／跨运行时 differential、Linux、Native AOT、托管 CI、远程 SourceLink 取回、浏览器渲染、无 Git 源码归档构建或 Maker；早先上游执行保留自己的证据身份。没有新增依赖、合并、tag、发布或部署；本地 alpha.4 版本包是隔离验证输入。后续文档／回执提交与这些二进制分别绑定身份。
+
+## 显式引用模型消费2026-10-11
+
+源码检查点 `2cf481c0e14315aec79ee92f8b0c00421331f1f3` 为既有普通 DTO/STJ 投影接通显式引用声明模型。根仍由主模型选择；完整程序集限定身份选择可达的 source 定义。缺失、冲突或不支持的定义在保留输出前失败。非公开 `JsonInclude` 数据现产生类型级 `TYPM202`，修复已观察到的静默遗漏；受影响旧模型需要重提取。模型格式、固定上游 pin、依赖、包版本及持久数据格式均未变化。
+
+真实仅包调用者承担组合数据图的名称、required／null 边界、常量默认值及递归合同。作者默认值从 11 改为 12 后，执行了重提取、重生成、重新打包和消费，主模型身份保持不变。编译器／构建层覆盖六类独立拒绝、删除旧输出、未变化的增量输出、Clean 和字节相同的冷重建。引用根不能提升无关的主模型根。21 步聚焦探针及独立源码审查先于冻结门禁，不替代它。
+
+Release 重建零警告、零错误。`python scripts/verify.py --package --package-output artifacts/reference-model-final-packages` 在 Windows x64 JIT、SDK 10.0.111 下通过：847 项测试零失败／跳过，47 个外层步骤、109 个生成消费者步骤，544 个源码 hash 上 `sourceUnchanged=true`。43 项 ConfigurationEditTests 及原有授权、并发、脱敏、寿命和失败回归继续保留。18 个新包／符号归档通过严格源码绑定及既有离线调试消费者。四个格式阶段在 234 个 C# 文件上零修改一致；38 项验证脚本自检和成对文档检查也通过。
+
+[绑定回执](../verification/reference-model-composition-2026-10-11/evidence.json)记录实际报告、TRX、源码／包 hash 和六类拒绝结果。257 个私有捕获的消费者输入来自实际完成的目录，包括生成输入及与本批 feed 核对的五个已还原 Cordis 归档；它们不是对每次临时源码变更中间态的重建。三个非 C# 文件与 Git blob 仅有 CRLF／LF 表示差异，每个编译 C# 文件字节都与 Git 一致。私有 `JsonInclude` red／green 探针及初次 formatter 分歧继续记录为失败证据；没有通过放宽断言获得验收。
+
+另一次静态管理客户端 Native AOT 检查在先前的 `6ad9d7f` 包上通过，宿主为 JIT。[独立回执](../verification/management-model-continuation-2026-10-11/static-management-aot.json)记录七个 .NET 步骤和一个 TypeScript 步骤，不证明 `2cf481c` 的 AOT。本次新源码检查点未执行原始 DSH 测试／跨运行时 differential、Linux、Native AOT、托管 CI、浏览器渲染、Maker、无 Git 归档构建或远程 SourceLink 取回。更广的保存 Remote、泛型 DTO、Schema／TS 引用模型及原基础设施职责继续开放。没有据此新增依赖、合并、发布或部署；文档／回执提交与二进制身份分别记录。
