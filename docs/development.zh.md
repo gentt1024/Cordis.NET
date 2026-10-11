@@ -15,7 +15,7 @@
 | 生成消费者 | 同一保存事实及选定目录／数据／客户端政策 → 对应后端已支持范围内的目录、DTO／STJ 或 .NET／TS 输出 | 各用途 emitter | caller 无法重建必需数据／serializer 行为时拒绝该投影，不复制作者业务代码 | 保留 pre-`CoreCompile` 生成及无 Provider 实现引用的 caller；普通根不要求 Remote 注册 |
 | 构建与交付 | 当前源码、模型及生成结果 → 包与消费者证据 | MSBuild targets、包检查及既有消费者门禁 | 生成失败删除拥有的旧输出；Clean 与增量构建仍是可观察合同 | 只打包 `cordis/typert/$(AssemblyName).cordis.model.json`；退出 `CordisTypertDeclarationModelPath` 及旧模型路径 |
 
-此表定义重建目标，不声称验证已经完成。当前必须接通的消费者包括 Settings、PluginManager、通知、普通目录、DTO／STJ 及受支持的 .NET／TS 路线。完整源码／编译器覆盖、更广引用模型及 Schema／TS 后端、丰富 Remote／owned-value 协议、原生文档与原任务 UI／平台工作继续开放。后端拒绝记录当前能力，不关闭这些义务。新结果必须绑定真实源码和包批次；下方历史检查点不证明本次重建。
+此表中选定路线已在 `7937ee8` 完成 Windows x64 JIT／包门禁；[验证记录](validation.zh.md#模型管线重建2026-10-11)列明精确源码、包批次及失败边界。当前必须接通的消费者包括 Settings、PluginManager、通知、普通目录、DTO／STJ 及受支持的 .NET／TS 路线。完整源码／编译器覆盖、更广引用模型及 Schema／TS 后端、丰富 Remote／owned-value 协议、原生文档与原任务 UI／平台工作继续开放。后端拒绝记录当前能力，不关闭这些义务。新结果必须绑定真实源码和包批次；下方历史检查点不证明本次重建。
 
 MSBuild 按解析得到的完整程序集身份，将引用的 XML 文档作为生成器输入。这样，即使提取器读取实现程序集，而 C# 编译器绑定引用程序集，两边仍保留相同的文档事实。XML 文本参与增量分析，只在引用声明需要时解析。生成器仍使用编译器符号定位实现成员、发射可编译的 C#；调用语义来自共同声明合同。
 
@@ -340,8 +340,8 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 | 选择的普通 Plugin/Service/Config/object 声明 | 公开源根、可达定义、字段/属性/indexer、重载/泛型方法、事件及 delegate | 已实现且有有界包／目录证据。成员存在不推导执行或 RPC。 |
 | 泛型、继承和引用事实 | 程序集加 metadata 身份，type parameter owner/ordinal/constraints、应用实参、containing type、直接 base/interfaces、tuple 名称及 enum 底层类型 | 有界分析已实现；包 fixture 检查字面事实。不展开外部实现。 |
 | required、nullable、默认值及来源 | 分开的 required/accessor/nullability 标志，类型化常量或未执行 initializer 表达式，XML/源码位置及 provenance | 有界分析已实现，不执行源码体。metadata-reference 的源码体仍不可得。 |
-| 普通独立目录 | 打包当前声明制品，不引用 provider 实现地消费、验证身份及投影声明成员 | 有界目录行为在 `verify-typert-dotnet.py` 有历史包证据；重建链须在同一门禁重新提取并取得新包证据。 |
-| Remote/.NET DTO/STJ/TS 投影 | 同一声明解释器、明确后端政策与 pre-`CoreCompile` caller 生成 | Settings、管理／通知与普通 DTO/STJ 引用模型消费者保留各自历史检查点。重建的共同管线须取得真实包／HTTP 及最终冻结证据。泛型 DTO 发射及更广的 Remote／引用模型后端继续开放。 |
+| 普通独立目录 | 打包当前声明制品，不引用 provider 实现地消费、验证身份及投影声明成员 | 重建目录在 `7937ee8` 通过 `verify-typert-dotnet.py` 的重新提取及包消费；本次验证回执记录对应输入。 |
+| Remote/.NET DTO/STJ/TS 投影 | 同一声明解释器、明确后端政策与 pre-`CoreCompile` caller 生成 | Settings、管理／通知、保存模型 Remote 与普通 DTO/STJ 引用模型消费者在 `7937ee8` 通过实际包／HTTP 门禁。早期证据仍保留原检查点。泛型 DTO 发射及更广的 Remote／引用模型后端继续开放。 |
 | 完整 events/reference-object 运行及跨包源组合 | 声明引用保留身份，当前运行时沿用既有显式注册 | 普通 DTO/STJ 源模型组合已通过显式输入实现。更广的 Remote/Schema/TS 组合、owned graph 调用及富协议各行仍开放。 |
 | IDE、UI 及整体交付 | 既有 TFM/analyzer/build/carrier 路线 | design-time IDE、WPF/Avalonia/Godot/Blazor、浏览器管理、跨平台/AOT 和最终冻结范围验收需要具名证据。控制台/目录通过不将这些关项。 |
 

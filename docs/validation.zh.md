@@ -359,3 +359,19 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 [绑定回执](../verification/reference-model-composition-2026-10-11/evidence.json)记录实际报告、TRX、源码／包 hash 和六类拒绝结果。257 个私有捕获的消费者输入来自实际完成的目录，包括生成输入及与本批 feed 核对的五个已还原 Cordis 归档；它们不是对每次临时源码变更中间态的重建。三个非 C# 文件与 Git blob 仅有 CRLF／LF 表示差异，每个编译 C# 文件字节都与 Git 一致。私有 `JsonInclude` red／green 探针及初次 formatter 分歧继续记录为失败证据；没有通过放宽断言获得验收。
 
 另一次静态管理客户端 Native AOT 检查在先前的 `6ad9d7f` 包上通过，宿主为 JIT。[独立回执](../verification/management-model-continuation-2026-10-11/static-management-aot.json)记录七个 .NET 步骤和一个 TypeScript 步骤，不证明 `2cf481c` 的 AOT。本次新源码检查点未执行原始 DSH 测试／跨运行时 differential、Linux、Native AOT、托管 CI、浏览器渲染、Maker、无 Git 归档构建或远程 SourceLink 取回。更广的保存 Remote、泛型 DTO、Schema／TS 引用模型及原基础设施职责继续开放。没有据此新增依赖、合并、发布或部署；文档／回执提交与二进制身份分别记录。
+
+## 模型管线重建，2026-10-11
+
+源码 `7937ee8d838bb973fd5aa58f416bdb7d5513c53c` 在 SDK 10.0.111 上完成本地 Windows x64 JIT 与包门禁。[证据](../verification/model-pipeline-rebuild-2026-10-11/evidence.json)记录精确源码／包哈希、保留的失败及消费者输入。执行 `python scripts/verify.py --package --package-output artifacts/model-rebuild-final-packages` 期间源码未变化。
+
+- Release 重建零警告、零错误；848 项测试全部通过，无失败或跳过，包含 44 项配置编辑测试。
+- 完整门禁 47 步；生成 .NET／TypeScript 包消费者 133 步；检查 18 个包及符号包归档。
+- 唯一声明制品驱动普通目录／数据和保存模型 Remote caller 生成。真实 HTTP 宿主与不引用 provider 实现的 caller 使用同一作者 DTO；标准 Settings、PluginManager 与通知继续使用原所有者。
+- 实际消费者覆盖外部 metadata context 拒绝、保留 key 的服务类改名、无关根变化、非有限默认值拒绝、冷／增量构建、Clean 及旧输出清除。只读作者 Host 执行实际 getter，独立 caller 投影则明确拒绝。
+- Settings 自动通知与显式读取共享 live namespace 选择及 revision 计算，在配置事务繁忙时仍可完成。新增回归在修复前生产代码上失败，修复后通过。
+
+上一冻结点 `ba55cc2` 的完整测试结束于两项配置测试清理阶段的文件共享冲突，847 项中通过 845 项，报告独立保留。源码复核发现自动失效通知启动了未归属所有者寿命的文件读取事务；修复移除这项工作，没有为删除目录加入重试。原始文件占用者未被识别，因此不将这些失败归因于已经唯一证明的原因。
+
+随后冻结点 `e2ba70e` 的 848 项测试通过 847 项。一项管理传输测试在活动 Gateway 迭代器结束前关闭 root，违反 `424cfb98` 已记录的生命周期合同。未修改源码的定向重跑通过，因此该失败依赖调度时序。测试现在先撤销通知源，读取相同终止错误帧和 EOF，再关闭 root 并检查 Gone。16 项管理传输定向测试全部通过，生产清理仍传播失败。
+
+四阶段 formatter 对 240 个 C# 文件达成一致。38 项验证脚本自检在观察修复前执行，相关脚本字节未变化。本批未执行 Linux、Native AOT、原始 DSH 源码／跨运行时差分、浏览器渲染、Maker、托管 CI、源码归档构建或远端 SourceLink 获取。此前 Linux／AOT 证据仍绑定原检查点。未改变包版本、上游 pin 或依赖；本次验收不包含合并、推送、发布或部署。
