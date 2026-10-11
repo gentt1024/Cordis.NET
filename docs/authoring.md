@@ -122,7 +122,7 @@ The final command runs in another terminal and mutates only the generated exampl
 
 ## Deployment and verification boundaries
 
-The candidate admission and coordinated metadata-save APIs below require `0.2.0-alpha.4` or later. Alpha.4 is currently a release candidate; the published alpha.3 packages do not provide this contract.
+The candidate admission and coordinated metadata-save APIs below were introduced for `0.2.0-alpha.4`; alpha.3 does not provide them. The current source also contains later contract corrections, including [standard Settings migration](settings-contract-migration.md), that require a future package version. Use current project references or an isolated local validation feed for those changes; do not replace the published alpha.4 packages.
 
 For package and bundle-selection policy, set `session.ConfigurationOperations.AdmitProfileAsync`. The callback receives `ProfileCandidate.ManifestJson` (the exact proposed saved text), `ConfigurationJson` (the effective raw root rows, without evaluating expressions), and a detached `Composition` view with source layers and skipped selections. During installation, `Package` also exposes the prepared directory and planned publication destination so policy can inspect artifacts before Publish. It is null for other operations. Throw to refuse. Validate this library candidate instead of re-reading the profile and predicting another candidate in `IProfilePackageToolchain.PublishAsync`. Do not re-enter configuration operations from admission. Keep product-owned policy inputs stable until the operation settles; this callback does not freeze external SDK or application state. `ProfileSession` supplies candidate-aware application automatically.
 

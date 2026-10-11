@@ -122,7 +122,7 @@ node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/ap
 
 ## 部署与验证边界
 
-下述候选准入与协调 metadata 保存 API 需要 `0.2.0-alpha.4` 或更高版本。alpha.4 当前为发布候选；已发布的 alpha.3 包不提供此合同。
+下述候选准入与协调 metadata 保存 API 为 `0.2.0-alpha.4` 引入，alpha.3 不提供。当前源码还包含[标准 Settings 迁移](settings-contract-migration.zh.md)等后续合同修正，需要未来使用新的包版本。这些变更应通过当前 project reference 或隔离本地验证 feed 消费，不替换已发布的 alpha.4 包。
 
 包与 bundle 选择的产品政策通过 `session.ConfigurationOperations.AdmitProfileAsync` 设置。回调接收 `ProfileCandidate.ManifestJson`（拟保存的确切文本）、`ConfigurationJson`（不执行表达式的有效原始根条目），以及包含来源层和跳过选择的独立 `Composition` 视图。安装时，`Package` 还提供准备目录及计划发布目录，政策可在 Publish 前读取产物；其他操作中它为 null。抛出异常即拒绝。应校验库提供的候选，不再在 `IProfilePackageToolchain.PublishAsync` 中重新读 Profile 并预测另一份候选。准入期间不要重入配置操作。产品自身政策输入须保持稳定直到操作结束；此回调不冻结外部 SDK 或应用状态。`ProfileSession` 自动提供候选应用路径。
 

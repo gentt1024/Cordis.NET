@@ -2,7 +2,11 @@
 
 ## [Unreleased]
 
-## [0.2.0-alpha.4] - Unreleased
+- Corrected the standard Settings contract to numeric owner revisions and optional numeric expected revisions. Generated .NET/TS clients, the CLI and maintained consumers use one contract; string/null revisions and old Settings hash endpoints are rejected or removed. Full-configuration/file hash checks retain their independent duties. See [Settings migration](docs/settings-contract-migration.md).
+- Added selected ordinary C# declaration models and an independent artifact-only catalog, retaining bounded member/generic/reference/source facts without requiring Remote declarations. Optional parameter facts now drive supported runtime bindings and generated clients.
+- Recorded the fixed-upstream port requirement and source-bound local verification. These source changes require a future package version; the published alpha.4 batch remains unchanged.
+
+## [0.2.0-alpha.4]
 
 - Added coordinated Profile/Session writes and immutable profile candidates. Installation refuses stale inputs rather than overwriting concurrent edits; publication permits only the planned package and mapping changes. Admission, persistence and application use the same candidate.
 - Applied captured base configuration when Include patches compare equal, preserved legacy reconciliation customization without admission, and required explicit candidate-aware reconciliation when admission is enabled.

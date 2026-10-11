@@ -6,7 +6,7 @@ Cordis.NET targets the pinned DeepSeek Harness vendored Cordis behavior describe
 
 ## Upstream fidelity requirement
 
-Cordis.NET is a faithful, idiomatic .NET port of the fixed DSH baseline and the repository's agreed generic application infrastructure. It does not establish a separate framework specification from its own experimental designs. The normative sources are the fixed upstream behavior, the agreed repository scope, and .NET adaptations supported by a concrete platform need.
+Cordis.NET is a faithful, idiomatic .NET port of the fixed DSH baseline and the repository's agreed generic application infrastructure. Its own experimental designs do not establish a separate framework specification or a permanent compatibility obligation. The normative sources are the fixed upstream behavior, the agreed repository scope, and .NET adaptations supported by a concrete platform need.
 
 Current code, API snapshots, generated clients and tests must be corrected against those sources. A signature's presence on main, an earlier public release or a passing old test does not by itself justify preserving an incorrect port. Correct errors and migrate their consumers directly. Retain a compatibility route only when an independent consumer or compatibility commitment requires it. Protect persisted data and Git history separately from obsolete runtime interfaces. This policy does not require line-by-line TypeScript translation or authorize rewriting mechanisms that already satisfy their contract.
 

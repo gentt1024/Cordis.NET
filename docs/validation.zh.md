@@ -307,3 +307,22 @@ R02 从已合入 main `424cfb98823e9867de5198118b26f3973b9b397d` 续行。运行
 维护者随后仅授权 R02 分支推送、PR／CI，以及审查和必需检查通过后的合入。其余基础设施职责仍由新会话承担。托管检查和 main 合入以 PR 及 workflow run 的实际 checkout 提交记录，不替代原 `679f57f` 本地证据身份。仓库要求线性历史及双平台 verify 检查，因此依既有 squash 惯例合入，不绕过门禁。
 
 第一次托管尝试 [run 38107202823](https://github.com/gentt1024/Cordis.NET/actions/runs/38107202823) 对 PR head `8f1042a6c726717a5eecf5ea9eee89697b3e348a` 的合并 checkout `6ad0b11f2cbd44078fca6a46fa660baf2aa16c68` 执行检查。两个 runtime job 均因最终 fixture 的 WaitAsync 调用不符合 JB 格式而停止，尚未执行运行时验证或打包。此前本地 formatter 通过早于该 fixture 改动，未证明 `679f57f` 的格式通过。这次失败保留为证据，不计作验收。修正仅将该调用换行，没有改变 token 或 Gateway 行为；fixture 字节已变，必须建立新候选并执行新的完整托管门禁，不将旧双平台结果归算给新源码。
+
+## 标准 Settings 与普通模型验证，2026-10-11
+
+运行时／包检查点 `8d4838af3a500b84c6c5d7b5eca93d92d813c45c` 包含续建实现 `3753a5a059b4b3db06befb612a293b50439510d5` 和修正后的包夹具。主线基点为 `3342a967f4e57206bec272684a40a437fc051b77`，已包含通过 PR #15 合入的 R02。固定 DSH 基线仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。历史修复证据继续归属原源码身份。
+
+[移植原则](compatibility.zh.md#上游忠实性要求)已明确写入兼容性政策，并从 README 链接。当前合同依据固定上游行为和有理由的 .NET 适配；旧试验接口是需要校正的对象。[Settings 迁移说明](settings-contract-migration.zh.md)记录唯一数值合同、普通服务／宿主／客户端调用及退出路径。完整配置／文件 hash API 仍通过同一配置 owner 承担独立源编辑职责，不转换或保留旧字符串 Settings 合同。持久 YAML／JSON 格式及 Git 历史不变。
+
+| 已执行路线 | 可观察证据 |
+|---|---|
+| 原生配置与 Settings | 全量运行中的 43 项 ConfigurationEditTests 均通过，覆盖分层 base/user 投影、安全 Schema 默认值、secret/hidden 边界、动态 live 路径、有序编辑、完整校验、源冲突、并发和恢复。六个未放宽的修前包反例分别对 live 路径、base 投影、未知 live 成员清除、公开默认值、整体 live 根元数据和 secret 根脱敏实际失败。 |
+| 生成 Settings 消费者 | 实际 .NET 包／HTTP 调用覆盖数值 describe/update/replace/mutate、持久化前过期拒绝、省略 expected revision、string/null revision 及遗漏 set value 的拒绝、显式 null 编辑、秘密存在标记、只读 owner、独立 Entry、消失／重入和 owner 重启。保留 provider/definition/client 退役与提交后 describe 失败检查。严格 TS 与真实 HTTP 消费另行通过。 |
+| 普通声明与目录 | 26 阶段包路线检查选择的公开根、泛型／成员／引用事实、源码漂移、无效根／声明／身份、增量／Clean／冷重建及独立仅制品目录。它不引用 provider 实现，也不执行作者方法体。证据覆盖已记录的有界模型路线，不代表完整图组合或所有后端。 |
+| 原生 Remote 与包 | 独立可选参数生成／调用、API 快照、CLI 调用、客户端类型／寿命／共享模块／watch、CLR 部署和多入口替换、隔离 runtime/tool/HTTP/Remote 消费者、包边界、配对符号及离线调试消费均通过。 |
+
+本地 Windows x64 JIT、SDK 10.0.111 的 `python scripts/verify.py --package` 通过：827 项测试通过，零失败／跳过，`sourceUnchanged=true`。四个格式阶段对 216 个 C# 文件一致，零改动。38 项既有验证器自检及配对文档检查通过。[绑定回执](../verification/settings-model-continuation-2026-10-11/evidence.json)记录门禁步骤、实际 TRX 哈希、全部 18 个本地包／符号归档哈希及源码哈希。包含精确 529 个文件的源码 ZIP 通过解压／哈希核验，SHA-256 为 `eb7c9eaf8b5b63c48b63ebf21915035513f02831b35a1d633ae0f214b7f8ddf0`；本次未执行新的无 Git 归档构建。
+
+保留两次早先失败作为私有本地证据。未提交实现通过原生测试，但其包 SourceLink 仍绑定旧 main 而失败；提交实现后纠正了源码身份。冻结的 `3753a5a` 门禁随后因 Settings 包夹具把用户 patch 同时作为基础文件、写入后重复应用 override 并使 Entry 不可寻址而失败。夹具现在遵循既有宿主方式，挂载独立空 `cordis.yml`。原客户端断言在定向包复验和最终完整门禁中均通过；两次早先失败均不重分类为验收。
+
+本候选关闭上述标准 Settings 读写、可选 Remote 参数及有界普通声明／目录检查。标准文档打开、生成 PluginManager／通知整合、完整模型／后端及丰富协议职责继续保留在[原范围](development.zh.md)，未从本轮工作移除。本检查点未执行 Linux、Native AOT、hosted CI、远端 SourceLink 获取、浏览器渲染、具名 UI Host 或 Maker。依赖、pin 和源码版本未改；未推送、远端合并、打 tag、发布或部署。本地使用 alpha.4 版本号的包只是隔离验证输入，不替换已发布 alpha.4。后续文档／回执提交另有身份，不替代本运行时检查点。
