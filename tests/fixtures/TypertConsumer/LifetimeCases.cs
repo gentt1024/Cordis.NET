@@ -351,7 +351,7 @@ internal static class LifetimeCases
                     "left",
                     "leftId",
                     "IndependentRemote.Document",
-                    "System.String",
+                    "string",
                     async _ =>
                     {
                         leftStarted.SetResult();
@@ -371,7 +371,7 @@ internal static class LifetimeCases
                     "right",
                     "rightId",
                     "IndependentRemote.Document",
-                    "System.String",
+                    "string",
                     async _ =>
                     {
                         rightStarted.SetResult();
