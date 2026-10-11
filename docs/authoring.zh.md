@@ -214,7 +214,7 @@ public partial class EchoService
 
 `TypertCodec` 在首次使用 `Schema` 或 `Decode` 时延迟准备并检查 Schema，可空输入也会执行检查。Decode 校验已支持的原生子集，再反序列化；Encode 使用所提供元数据序列化，不准备或校验结果 Schema。不受支持的 Schema 特性明确失败。客户端投影将 `prefixItems` 保留为 readonly tuple，支持有界可选前缀、嵌套局部引用及无界的类型化或 unknown 尾部。超出前缀的最小长度、有限的尾部长度上限会被拒绝。[tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) 向生成 binding 提供显式 Schema，区分真实闭合 tuple HTTP 调用与仅 codec/投影的变体证据；它不证明 Roslyn 推断 CLR tuple 类型或完整源类型图。
 
-Remote 方法当前支持必需普通参数与 `Task<T>`，或显式 `RemoteMethod(Stream = true)` 的 `IAsyncEnumerable<T>`。可以增加最后一个 `CancellationToken` 参数传递协作取消，但不能声明默认值。显式 Context 和对象 lookup 声明具有宿主拥有的登记 API；同一 fixture 包含完整作用域与 lookup 示例。
+Remote 方法支持必需普通参数，以及带受支持常量默认值的可选参数；返回 `Task<T>`，或通过显式 `RemoteMethod(Stream = true)` 返回 `IAsyncEnumerable<T>`。省略可选参数时使用作者默认值；显式 null 仍是独立的 wire 输入，受参数的 null 合同约束。末尾 `CancellationToken` 参数提供协作取消，可以声明 `= default`，不属于 wire 参数。[可选参数消费者](../tests/fixtures/TypertOptional/OptionalConsumer.cs)覆盖省略、null 与必填输入。显式 Context 和对象 lookup 声明具有宿主拥有的登记 API；Typert fixture 保留完整作用域与 lookup 示例。
 
 ### 登记、调用与撤销合同
 

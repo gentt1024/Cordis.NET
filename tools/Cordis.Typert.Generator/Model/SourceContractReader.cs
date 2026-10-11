@@ -151,7 +151,7 @@ internal sealed partial class SourceContractReader
             return new(
                 "array",
                 value.Type?.ToDisplayString() ?? "",
-                JsonSerializer.Serialize(value.Values.Select(Constant).ToArray()));
+                value.IsNull ? "null" : JsonSerializer.Serialize(value.Values.Select(Constant).ToArray()));
         if (value.Kind == TypedConstantKind.Type)
             return new(
                 "type",

@@ -5,6 +5,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace IndependentDeclarations;
 
+[ArrayLabels("null", null, Types = null)]
+[ArrayLabels("empty", new string[] { }, Types = new Type[] { })]
+[ArrayLabels("values", new[] { "label" }, Types = new[] { typeof(string) })]
 public sealed class Config
 {
     public string Label

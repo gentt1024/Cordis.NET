@@ -44,6 +44,9 @@ public sealed class SharedEnvelope
 }
 
 [RemoteService("sharedData", typeof(SharedRemoteJson))]
+[ArrayLabels("null", null, Types = null)]
+[ArrayLabels("empty", new string[] { }, Types = new Type[] { })]
+[ArrayLabels("values", new[] { "label" }, Types = new[] { typeof(string) })]
 public partial class SharedRemote
 {
     [RemoteMethod("echo")]

@@ -25,12 +25,32 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
         '<LangVersion>14.0</LangVersion>', composition +
         '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>', root_items)
     shutil.copyfile(fixtures / "Author.cs", author / "Author.cs")
+    shutil.copyfile(fixtures / "ArrayLabels.cs", author / "ArrayLabels.cs")
     run("declaration-author-pack", [dotnet, "pack", author_project, "-c", "Release", "-o", feed])
     response = author / "obj/Release/net10.0/cordis-typert"
     model = response / "IndependentDeclarations.Provider.cordis.model.json"
     owned = [model] + [response / name for name in ("model-roots.rsp", "model-sources.rsp", "model-references.rsp")]
     authored = json.loads(model.read_text(encoding="utf-8"))
     assert authored["declarations"], "Author produced no declaration facts"
+    config_facts = next(value for value in authored["declarations"] if value["metadataName"] == "IndependentDeclarations.Config")
+    arrays = {json.loads(value["arguments"][0]["json"]): value
+        for value in config_facts["attributes"] if value["name"] == "IndependentDeclarations.ArrayLabelsAttribute"}
+    assert set(arrays) == {"null", "empty", "values"}
+    for label, attribute in arrays.items():
+        positional = attribute["arguments"][1]
+        named = next(value["value"] for value in attribute["namedArguments"] if value["name"] == "Types")
+        assert positional["kind"] == named["kind"] == "array"
+        assert positional["type"] == "string[]" and named["type"] == "System.Type[]"
+        for value in (positional, named):
+            if label in ("null", "empty"):
+                assert value["json"] == ("null" if label == "null" else "[]")
+                assert value["elements"] == []
+            else:
+                assert len(json.loads(value["json"])) == len(value["elements"]) == 1
+        if label == "values":
+            assert positional["elements"][0]["json"] == '"label"'
+            type_reference = named["elements"][0]["reference"]
+            assert type_reference["kind"] == "primitive" and type_reference["name"] == "System_String"
     shutil.copyfile(model, output / "ordinary-declaration-model.json")
     with zipfile.ZipFile(feed / "IndependentDeclarations.Provider.1.0.0-alpha.nupkg") as archive:
         assert archive.read("cordis/typert/IndependentDeclarations.Provider.cordis.model.json") == model.read_bytes()
@@ -88,7 +108,11 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
     for label, original, changed in (
             ("return-annotation", "[return: MaybeNull]", "[return: NotNull]"),
             ("extension-receiver", "this Page<Config> page", "Page<Config> page"),
-            ("method-default", "int limit = 7", "int limit = 8")):
+            ("method-default", "int limit = 7", "int limit = 8"),
+            ("null-array", '[ArrayLabels("null", null, Types = null)]',
+                '[ArrayLabels("null", new string[] { }, Types = null)]'),
+            ("null-array-named", '[ArrayLabels("null", null, Types = null)]',
+                '[ArrayLabels("null", null, Types = new Type[] { })]')):
         changed_model = author / (label + ".cordis.model.json")
         changed_source = original_source.replace(original.encode(), changed.encode(), 1)
         assert changed_source != original_source, "Source mutation did not apply: " + label
@@ -108,11 +132,17 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
             assert not count["parameters"][0]["this"] and count["parameters"][0]["scoped"] == "None"
             assert "extension" not in count["modifiers"]
             assert not count["parameters"][1]["this"] and count["parameters"][1]["scoped"] == "ScopedValue"
-        else:
+        elif label == "method-default":
             page = next(value for value in changed_facts["declarations"] if value["metadataName"] == "IndependentDeclarations.Page`1")
             find = next(value for value in page["members"] if value["name"] == "Find" and len(value["parameters"]) == 2)
             assert find["parameters"][1]["optional"] and find["parameters"][1]["default"]["json"] == "8"
             assert member(changed_facts, "IndependentDeclarations.Page`1", "Limit")["initializer"]["json"] == "7"
+        else:
+            config = next(value for value in changed_facts["declarations"] if value["metadataName"] == "IndependentDeclarations.Config")
+            changed_array = next(value for value in config["attributes"]
+                if value["name"] == "IndependentDeclarations.ArrayLabelsAttribute" and value["arguments"][0]["json"] == '"null"')
+            assert changed_array["arguments"][1]["json"] == ("[]" if label == "null-array" else "null")
+            assert changed_array["namedArguments"][0]["value"]["json"] == ("null" if label == "null-array" else "[]")
         shutil.copyfile(changed_model, output / ("ordinary-" + label + "-drift.json"))
         changes.append({"changedFact": label, "contractIdentityChanged": True})
 
@@ -228,6 +258,8 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
         "modelAndCatalogIncrementalStampsPreserved": True,
         "modelAndCatalogCleanOutputsRemoved": True,
         "coldRebuildPreservedIdentityAndCatalog": True,
+        "attributeArrays": {"cases": ["null", "empty", "values"], "constructorAndNamedArguments": True,
+            "nullAndEmptyIdentitiesDiffer": True, "savedModelReadByCatalogCompiler": True},
         "tamperedIdentityRefusedAndStaleOutputRemoved": True,
         "sourceFactChanges": changes,
         "duplicateSignatureRefusedAndStaleOutputRemoved": True,
@@ -542,6 +574,7 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
         shutil.copyfile(fixtures / "Author.cs", author / "Author.cs")
         shutil.copyfile(fixtures / "DataAuthor.cs", author / "DataAuthor.cs")
     shutil.copyfile(fixtures / "SharedAuthor.cs", author / "SharedAuthor.cs")
+    shutil.copyfile(fixtures / "ArrayLabels.cs", author / "ArrayLabels.cs")
     run("ordinary-data-author-pack", [dotnet, "pack", author_project, "-c", "Release", "-o", feed])
     model = author / "obj/Release/net10.0/cordis-typert/IndependentData.Provider.cordis.model.json"
     with zipfile.ZipFile(feed / "IndependentData.Provider.1.0.0-alpha.nupkg") as archive:

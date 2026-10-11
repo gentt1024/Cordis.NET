@@ -19,9 +19,12 @@ Actual visible services determine routing; a descriptor alone cannot invoke a pr
 The native implementation preserves atomic registration, identity conflicts, exact-owner
 withdrawal, descriptor history and stale-call fences for the implemented subset. Invocation
 Context uses explicit providers and an asynchronous ambient call instead of JavaScript's rebound
-`this.ctx`. Collectible typed metadata belongs to its bundle generation: replacing that generation
-requires retiring and rebuilding its TypertLoader owner, or using host-shared DTO contracts.
-Neither path supplies product admission, draining or business recovery policy.
+`this.ctx`. Collectible typed metadata belongs to its bundle generation. Bundle replacement keeps
+the TypertLoader owner and suspends only the affected exact Loader requests before switching
+provider Fibers. Resume those requests after commit, or after confirmed successful recovery;
+unrelated contributions retain their identity. The [authoring workflow](authoring.md#register-call-and-withdraw-contracts)
+defines the ordering and failure boundary. This supplies no product admission, draining or
+business recovery policy.
 
 This is an incremental implementation of the original application infrastructure scope. The
 native carrier is not the complete fixed Typert wire protocol. The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
@@ -112,7 +115,9 @@ at runtime. StaticModuleResolver is explicit; packages ship normal assemblies an
 
 Core/Composition/Extensions are the static path. CLR, JavaScript and Hosting are separate
 optional dependencies. CLR bundles use a collectible AssemblyLoadContext with explicit
-shared-contract identity and complete shadow directories. Stop, replacement, unload request,
+shared-contract identity. Normal deployment loads verified stable artifact directories in place;
+`ShadowCopy` is an explicit development option. The [CLR artifact workflow](clr-artifacts.md)
+defines those modes and their ownership. Stop, replacement, unload request,
 collection and file deletion are separate observations. Tests force collection only to
 observe leaks; production does not make forced GC a lifecycle success condition.
 
