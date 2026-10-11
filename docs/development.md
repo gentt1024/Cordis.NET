@@ -19,6 +19,8 @@ The selected flows in this table completed the Windows x64 JIT/package gate at `
 
 MSBuild supplies reference XML documentation to the generator under each resolved assembly identity. This preserves the same documentation facts when extraction reads an implementation assembly and the C# compiler binds its reference assembly. XML text is an incremental analyzer input and is parsed only when a referenced declaration needs it. The generator still uses compiler symbols to locate implementation members and emit compilable C#; invocation semantics come from the common declaration contract.
 
+The follow-up at `54ae030` preserves null attribute arrays through extraction, saved-model reading and Host binding, and corrects current owner/replacement and optional-parameter guidance. The [focused repair record](validation.md#null-attribute-arrays-and-current-guidance-2026-10-11) has a separate frozen Windows package identity. It preserves the stage responsibilities above and leaves the original remaining model, protocol and platform work open.
+
 ## Fast loop
 
 The package version for source builds is defined once in [Directory.Build.props](../Directory.Build.props). Projects inherit it; package verification scripts read it for their isolated consumers. When an exact local package version is needed, query that same value:

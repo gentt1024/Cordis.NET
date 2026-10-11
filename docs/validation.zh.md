@@ -375,3 +375,13 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 随后冻结点 `e2ba70e` 的 848 项测试通过 847 项。一项管理传输测试在活动 Gateway 迭代器结束前关闭 root，违反 `424cfb98` 已记录的生命周期合同。未修改源码的定向重跑通过，因此该失败依赖调度时序。测试现在先撤销通知源，读取相同终止错误帧和 EOF，再关闭 root 并检查 Gone。16 项管理传输定向测试全部通过，生产清理仍传播失败。
 
 四阶段 formatter 对 240 个 C# 文件达成一致。38 项验证脚本自检在观察修复前执行，相关脚本字节未变化。本批未执行 Linux、Native AOT、原始 DSH 源码／跨运行时差分、浏览器渲染、Maker、托管 CI、源码归档构建或远端 SourceLink 获取。此前 Linux／AOT 证据仍绑定原检查点。未改变包版本、上游 pin 或依赖；本次验收不包含合并、推送、发布或部署。
+
+## null 数组属性与当前用法修正，2026-10-11
+
+源码 `54ae0308c74135686d1e8eeaec0ec46367c6fbf0` 使用新的包 feed，在 SDK 10.0.111 上完成本地 Windows x64 JIT 门禁。[回执](../verification/null-array-review-fix-2026-10-11/evidence.json)绑定源码哈希、包身份、测试报告与保留的失败。Release Rebuild 零警告、零错误；848 项测试全部通过，无失败或跳过。完整门禁 47 步，生成消费者 135 步，其中 46 项为预期拒绝；检查 18 个包及符号包。四阶段 formatter 对 241 个 C# 文件达成一致，fixture 修改后 38 项验证脚本自检通过。
+
+共同常量读取器在枚举数组 `Values` 前检查 `TypedConstant.IsNull`。null 数组保留 array kind、类型、`json=null` 和空的结构化 elements；空数组仍为 `json=[]`。既有普通目录消费者承担构造参数与命名参数的 null、空、非空数组矩阵。分别将两种 null 参数改为空数组都会改变声明身份。保存制品由目录编译器重读，共用 Remote 作者则覆盖独立的 generator／Host 接线风险及不引用 Provider 实现的真实 HTTP 调用。原有 readonly Host 成功、caller 拒绝、增量／Clean 和管理消费者继续纳入完整门禁。
+
+修复前，普通和 Remote 作者均在冻结的 `7937ee8` 包上因空引用提取失败。另一次构建使用相同隔离旧包缓存，移除显式提取根后，在 Host generator 触发 `CORDISREMOTE001`。这些是实际执行的失败。更早的直接 generator 尝试使用全局缓存，因缺少属性失败，不作为 null 数组红例。首轮脚本自检选择了错误的系统 SDK；一项新增断言把既有 primitive 字符串引用误写为 named 声明；相应日志分别保留，均未要求改变生产合同。
+
+现行 architecture 保留 TypertLoader owner，使用精确请求暂停与恢复，并说明稳定 CLR 原地加载和显式开发 ShadowCopy。配对作者指南说明可选常量默认值、省略与 null 的区别，以及末尾 CancellationToken 的默认值。历史验证回执不变。本检查点未执行 Linux、Native AOT、原始 DSH 源码／跨运行时差分、浏览器或具名 UI、托管 CI、Maker、源码归档构建或远端 SourceLink 获取。更广模型和协议工作继续开放；未改变依赖、pin 或包版本，未合并、发布或部署。
