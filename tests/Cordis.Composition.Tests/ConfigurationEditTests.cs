@@ -1201,6 +1201,56 @@ public sealed class ConfigurationEditTests
     }
 
     [Fact]
+    public async Task Settings_presentation_notification_does_not_reenter_the_configuration_transaction()
+    {
+        await using var fixture = await Fixture.StartAsync();
+        var before = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        var notification = new TaskCompletionSource<object?[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Operations.RunExclusiveAsync = async action =>
+        {
+            entered.TrySetResult();
+            try
+            {
+                await release.Task;
+                await action();
+            }
+            finally
+            {
+                exited.TrySetResult();
+            }
+        };
+        try
+        {
+            await fixture.Include.Context.RunAsync(context =>
+            {
+                context.Events.On(
+                    "settings/document-updated",
+                    (_, args) =>
+                    {
+                        notification.TrySetResult(args);
+                        return null;
+                    });
+                fixture.Forms.Configure(false, fixture.Loader.Resolve("root:worker").Fiber);
+                return Task.CompletedTask;
+            });
+            var completed = await Task.WhenAny(notification.Task, entered.Task).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Same(notification.Task, completed);
+            var arguments = await notification.Task;
+            Assert.Equal("worker", arguments[0]);
+            Assert.Equal(before.Revision, Assert.IsType<double>(arguments[1]));
+        }
+        finally
+        {
+            release.TrySetResult();
+            if (entered.Task.IsCompleted)
+                await exited.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Fact]
     public async Task Caller_owned_read_only_map_is_detached_before_queue_wait()
     {
         await using var fixture = await Fixture.StartAsync(whole: true);

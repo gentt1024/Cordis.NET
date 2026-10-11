@@ -170,6 +170,8 @@ public sealed class SettingsForms : Service, ISettingsProvider
 
     internal bool AutoGenerate(Entry entry) => state.Presentations.GetValueOrDefault(entry.Fiber!, true);
 
+    internal bool IsClosed => state.Closed;
+
     internal double Observe(Entry entry, string fingerprint)
     {
         var auto = AutoGenerate(entry);
@@ -185,6 +187,8 @@ public sealed class SettingsForms : Service, ISettingsProvider
     {
         foreach (var (id, prior) in state.Revisions.ToArray())
         {
+            if (state.Closed)
+                return;
             if (active.Contains(id) || prior.Fingerprint is null)
                 continue;
             var next = prior with
@@ -211,12 +215,15 @@ public sealed class SettingsForms : Service, ISettingsProvider
 
         void Schedule() => _ = Task.Run(async () =>
         {
-            Interlocked.Exchange(ref state.Scheduled, 0);
-            if (state.Closed)
-                return;
             try
             {
-                await DescribeAsync();
+                await Provider.RunAsync(_ =>
+                {
+                    Interlocked.Exchange(ref state.Scheduled, 0);
+                    if (!state.Closed)
+                        state.Operations.ObserveSettingsChanges(this);
+                    return Task.CompletedTask;
+                });
             }
             catch (Exception error)
             {

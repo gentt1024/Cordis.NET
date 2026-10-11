@@ -39,45 +39,23 @@ public sealed partial class PluginConfigurationOperations
         var namespaces = new List<SettingsNamespaceView>();
         var diagnostics = new List<string>();
         var active = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var entry in include.Loader.Entries())
+        foreach (var (entry, policy, capture) in SettingsNamespaces(owner, diagnostics))
         {
-            if (entry.Fiber?.State != FiberState.Active || entry.Fiber.ConfigDescription?.Kind != "object")
-                continue;
-            try
-            {
-                _ = EditableEntry(entry.Id);
-            }
-            catch (Refusal)
-            {
-                diagnostics.Add(entry.Options.Id + ": namespace is not uniquely addressable");
-                continue;
-            }
-
-            var policy = owner.Policy(entry);
-            var capture = CaptureSettings(entry, policy);
-            if (capture.Descriptor.Properties.Count == 0)
-                continue;
-            if (ReferenceEquals(capture.Value, Undefined.Value))
-            {
-                diagnostics.Add(entry.Options.Id + ": a secret root has no JSON form value; namespace omitted");
-                continue;
-            }
-
             var schema = ConfigurationSchemaExporter.ToSettingsSchemastery(
                 capture.Descriptor,
                 (node, value) => RedactSettings(node, value, [], []));
             diagnostics.AddRange(
                 capture.Diagnostics.Concat(schema.Diagnostics).Select(message => entry.Options.Id + ": " + message));
-            var completeSchema = ConfigurationSchemaExporter.ToSchemastery(entry.Fiber.ConfigDescription);
-            var fingerprint = entry.Fiber.Uid?.ToString(CultureInfo.InvariantCulture) + "\n" + completeSchema.Document +
-                "\n" + RawFingerprint(entry.Options.Config ?? new EntryOptions());
-            var revision = owner.Observe(entry, fingerprint);
+            var revision = ObserveSettingsRevision(owner, entry);
             active.Add(entry.Id);
             var inherited = SettingsInheritance(entry, layers, baseRows);
             JsonElement resolvedBase;
             try
             {
-                var interpolated = Data.Interpolate(inherited, entry.Fiber.Context, include.Loader.ExpressionEvaluator);
+                var interpolated = Data.Interpolate(
+                    inherited,
+                    entry.Fiber!.Context,
+                    include.Loader.ExpressionEvaluator);
                 var effective = entry.Fiber.ValidateConfiguration(interpolated);
                 var bindings = entry.Fiber.ProjectConfigurationValues(effective);
                 resolvedBase = SettingsJsonValue(CaptureSettings(entry, policy, bindings).Value);
@@ -106,6 +84,61 @@ public sealed partial class PluginConfigurationOperations
 
         owner.ObserveUnavailable(active);
         return new(new(owner.Writable, owner.HasDocument, namespaces.AsReadOnly()), diagnostics.AsReadOnly());
+    }
+
+    internal void ObserveSettingsChanges(SettingsForms owner)
+    {
+        include.Context.VerifyAccess();
+        var active = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (entry, _, _) in SettingsNamespaces(owner))
+        {
+            if (owner.IsClosed)
+                return;
+            ObserveSettingsRevision(owner, entry);
+            active.Add(entry.Id);
+        }
+
+        owner.ObserveUnavailable(active);
+    }
+
+    private IEnumerable<(Entry Entry, SettingsPolicy Policy, SettingsCapture Capture)> SettingsNamespaces(
+        SettingsForms owner,
+        List<string>? diagnostics = null)
+    {
+        foreach (var entry in include.Loader.Entries())
+        {
+            if (entry.Fiber?.State != FiberState.Active || entry.Fiber.ConfigDescription?.Kind != "object")
+                continue;
+            try
+            {
+                _ = EditableEntry(entry.Id);
+            }
+            catch (Refusal)
+            {
+                diagnostics?.Add(entry.Options.Id + ": namespace is not uniquely addressable");
+                continue;
+            }
+
+            var policy = owner.Policy(entry);
+            var capture = CaptureSettings(entry, policy);
+            if (capture.Descriptor.Properties.Count == 0)
+                continue;
+            if (ReferenceEquals(capture.Value, Undefined.Value))
+            {
+                diagnostics?.Add(entry.Options.Id + ": a secret root has no JSON form value; namespace omitted");
+                continue;
+            }
+
+            yield return (entry, policy, capture);
+        }
+    }
+
+    private static double ObserveSettingsRevision(SettingsForms owner, Entry entry)
+    {
+        var completeSchema = ConfigurationSchemaExporter.ToSchemastery(entry.Fiber!.ConfigDescription!);
+        var fingerprint = entry.Fiber.Uid?.ToString(CultureInfo.InvariantCulture) + "\n" + completeSchema.Document +
+            "\n" + RawFingerprint(entry.Options.Config ?? new EntryOptions());
+        return owner.Observe(entry, fingerprint);
     }
 
     private object? SettingsInheritance(

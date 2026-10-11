@@ -143,6 +143,8 @@ Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provi
 
 Settings describe 经既有 profile 队列、Include 和 schema/脱敏 helper 暴露选择的 live 配置。下文的合同修正通过同一配置权威提供脱敏 base/user 层与 owner 范围内的数值观察 revision。provider 诊断保留在原生侧，不加入固定 wire 响应。已准入的异步 snapshot 可以在可选普通 `settings` provider 退休后完成：固定上游 describe 是同步调用，没有嵌套 provider lease。这是显式异步适配，与 controller service 或 Remote definition 撤销保留的原生 Gateway generation fence 有区别；后续调用重新查找 provider。不推导任何产品准入、权限或排空规则。
 
+Settings 自动失效通知在一个同步 Cordis 回合中观察与 `DescribeAsync` 相同的选定 live namespace 和 revision 指纹，不为发布通知读取 profile 文件或进入配置／HMR 事务。所有者关闭后，排队观察不再产生作用。显式 `DescribeAsync` 保留一致的 profile 分层读取及上述已准入 snapshot 边界。观察与协调分开，避免通知工作在所有者清理后仍占用 profile 文件。
+
 [仅依赖包门禁](../scripts/verify-typert-dotnet.py)的 Settings 部分 验证源制品、模型独立合同包、pre-CoreCompile/STJ 时序、类型化调用及不同生命周期场景，不调用 Node。静态 Native AOT 适用于调用者，不适用于 collectible CLR Host。IDE/design-time 首次构建、任意引用模型组合、完整 Settings 操作及富图/协议范围继续开放。进行中运行不计作平台验收，正式冻结证据见[验证记录](validation.zh.md)。
 
 Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对应固定上游对 `cordis:include` 的处理。这些插件由 Loader 自身导入，其请求不属于 CLR 制品 resolver。显式将内建入口配置为制品贡献者仍会失败；错误的已声明 CLR 制品与未知 resolver 请求继续报错。真实 Profile Settings 消费者验证了这一边界。
