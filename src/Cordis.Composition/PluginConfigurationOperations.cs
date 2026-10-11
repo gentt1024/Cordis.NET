@@ -57,7 +57,7 @@ public sealed record BundleConfigurationInfo(
 /// <summary>
 /// The persistence and application outcomes of one management operation.
 /// </summary>
-/// <param name="Changed">Whether profile manifest or patch bytes changed; this is separate from runtime application.</param>
+/// <param name="Changed">Whether profile manifest, patch or compatibility bytes changed; this is separate from runtime application.</param>
 /// <param name="Application">Application outcome: applied, restart-required, overridden or failed.</param>
 /// <param name="Target">The affected entry, bundle or exact compatibility package/version identity.</param>
 /// <param name="Enabled">The requested enablement state.</param>
@@ -530,7 +530,8 @@ public sealed partial class PluginConfigurationOperations(
             }
         }
 
-        return await Read(ManifestPath) + "\0" + await Read(PatchPath);
+        return await Read(ManifestPath) + "\0" + await Read(PatchPath) + "\0" +
+            await Read(Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename));
     }
 
     private async Task<ProfileCandidate> WriteManifestAsync(
@@ -581,7 +582,7 @@ public sealed partial class PluginConfigurationOperations(
         }
     }
 
-    private sealed class Refusal(string code) : Exception(code)
+    private sealed class Refusal(string code, string? message = null) : Exception(message ?? code)
     {
         public string Code
         {

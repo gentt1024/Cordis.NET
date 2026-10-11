@@ -252,7 +252,7 @@ Here `ctx` is the client Cordis owner. Await `mountRemote`: it registers owner c
 
 The [multi-entry gate](../scripts/verify-clr-multi-entry.py) independently packs an author package, consumes it through `PackageReference`, installs its root/subpath entries and exercises shared identity, separate configurations, failed and successful replacement, withdrawal, generated TypeScript calls over real HTTP and invalid arguments. The separate [Remote gate](../scripts/verify-typert.py) covers the native Remote author chain. Use a fresh local package batch and the required Node/TypeScript dependencies. Platform acceptance remains governed by the completed results in [validation](validation.md); these examples alone do not establish Windows/Linux or Native AOT closure. Dynamic CLR loading requires the ordinary runtime.
 
-The remaining source type graph, rich Context/owned-value graph, Peer/uplink/event remotes and binary attachment protocol remain open scope. Migration of existing PluginManager, Settings/configuration and client management consumers to generated Typert contracts remains open. Existing handwritten `MapCordisService` endpoints are still usable, but do not close those gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
+The richer source type graph, Context/owned-value graph, Peer/uplink remotes and binary attachment protocol remain open scope. Settings, PluginManager and selected host emit notifications now use generated contracts over the existing profile owners; see [management migration](management-remote-migration.md). Native raw configuration, host state and artifact delivery retain their independent duties. Existing application-specific `MapCordisService` endpoints do not close the remaining wire gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
 
 
 ## Native authored models and .NET consumers, 2026-10-10
@@ -289,13 +289,13 @@ using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remot
 var view = await remote.DescribeAsync();
 ```
 
-The caller owns the supplied HttpClient. Direct unary calls return typed values or throw the existing `RemoteError`, preserving owner codes and detached JSON details. This is a native adaptation of the existing result envelope. Client disposal stops admission, cancels its transport requests and rejects late successful completions; it does not dispose the borrowed HttpClient or promise forced Host termination.
+The caller owns the supplied HttpClient. Direct unary calls return typed values or throw the existing `RemoteError`, preserving owner codes and detached JSON details. Generated downlink methods return `IAsyncEnumerable<T>` over NDJSON with `ResponseHeadersRead`; each enumerator owns its response and reader, while client disposal cancels active reads. Error items retain the same failure shape, and truncated items fail. This is a native adaptation of the existing result envelope. Client disposal stops admission, cancels its transport requests and rejects late successful completions; it does not dispose the borrowed HttpClient or promise forced Host termination.
 
 The production `SettingsController` resolves the optional ordinary `ISettingsProvider` named `settings` on every call. Mount `SettingsForms` over the session's existing `ConfigurationOperations`; it derives uniquely addressable active forms from the authors' live Config declarations. Its numeric revisions observe Fiber identity, complete schema and raw configuration. The same profile queue owns layered redacted reads, complete candidate validation and writes. Describe/update/replace/mutate use the one generated contract. See [Settings contract migration](settings-contract-migration.md) for public calls and removed hash-only Settings paths.
 
 The [independent .NET Settings gate](../scripts/verify-typert-dotnet.py) packs an author and contract package, then builds a package-only caller outside this repository. The caller does not reference the provider implementation and uses static metadata with reflection fallback disabled. It covers typed describe, redaction, missing/failed provider, retry, held-view invalidation, definition withdrawal/re-registration, scoped suspension and borrowed-client ownership. Primitive roots, null/default arguments, nullable-state annotations and unsupported projections have separate cases. Run with `--aot` for the static caller; the dynamic CLR Host remains an ordinary-runtime boundary. Formal platform results belong to the exact completed checkpoint in [validation](validation.md).
 
-This path covers direct ordinary unary callers and the exercised Settings describe/update/replace/mutate shapes. Native document integration, PluginManager/client-management migration, rich graphs, complete source-type analysis and TS generation from the ordinary declaration model remain open. Existing TS/Web output stays available and retains its separate gate.
+This path covers unary callers, supported downlink streams and the standard Settings, PluginManager and notification consumers. Native document integration, rich graphs, complete source-type analysis and TS generation from the ordinary declaration model remain open. Existing TS/Web output stays available and retains its separate gate.
 
 
 ## Ordinary declaration models
@@ -321,4 +321,19 @@ dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-mod
 
 The catalog retains analysis diagnostics and generates no binding, Remote registration, DTO serializer or executable Service. Syntax errors and duplicate declaration identities refuse extraction and remove owned stale output. Other pre-generator compilation errors are recorded explicitly because a valid build can depend on neighboring generator output. Source graph limits are 256 named definitions and 64 nested references; unresolved/function-pointer signatures are diagnosed as analysis gaps. This is not complete C# compiler or reflection coverage. The existing .NET Typert gate verifies package-only consumption, incremental timestamps, Clean including a failed first extraction, cold rebuild, reference identities and refused inputs.
 
-V1 `.cordis.typert.json` and `CordisTypertService` retain their format. Typed Remote generation now consumes their existing optional/default facts, including non-null optional wire fields. Extensions distinguish the contracts; `emit-dotnet` rejects ordinary v2 artifacts. V2 DTO/STJ/TS projection, referenced-model composition, design-time IDE and named UI validation remain open work.
+V1 `.cordis.typert.json` remains the bounded Remote wire projection. Its extraction and the v2 declaration model share authored member, reference, initializer and attribute facts; historical v1 bytes are not a separate compatibility authority. `CordisTypertService=*` selects all supported authored services into one assembly-named artifact. A selected service's complete reachable graph is retained. Conflicting JSON naming policies for a shared DTO, including nested and recursive references, fail with `TYPM113`.
+
+Selected ordinary records/classes can generate DTOs and a static STJ context from the saved v2 artifact without a Remote declaration or provider assembly:
+
+```xml
+<PropertyGroup>
+  <CordisTypertDataModel>Example.cordis.model.json</CordisTypertDataModel>
+  <CordisTypertDataNamespace>Example.Consumer.Data</CordisTypertDataNamespace>
+  <CordisTypertDataJsonContext>ExampleDataJson</CordisTypertDataJsonContext>
+</PropertyGroup>
+<ItemGroup>
+  <CordisTypertDataRoot Include="Example.Options" />
+</ItemGroup>
+```
+
+The target invokes `emit-dotnet-data` before `CoreCompile`, using the same supported JSON projection as the Remote caller. Missing members retain supported constant defaults; explicit null remains distinct. Unsupported declarations are refused instead of omitted. The independent consumer uses the same authored DTO as an ordinary root and a Remote argument/result. `emit-dotnet` still accepts only the Remote artifact. Saved-v2 Remote reconstruction, generic DTO projection, referenced-model composition, design-time IDE and named UI validation remain open.

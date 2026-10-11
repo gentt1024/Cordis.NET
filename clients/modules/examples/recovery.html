@@ -3,6 +3,7 @@
 <button id="run">Run recovery checks</button><pre id="result">Ready</pre>
 <script type="module">
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
+import { createRemote } from '/client-runtime/notifications.mjs'
 const result = document.querySelector('#result')
 const button = document.querySelector('#run')
 const check = (condition, message) => { if (!condition) throw new Error(message) }
@@ -15,7 +16,7 @@ async function until(predicate, message) {
 }
 button.onclick = async () => {
   button.disabled = true
-  let modules, management
+  let modules, management, notifications
   try {
     await fetch('/test/reset', { method: 'POST' })
     const shell = { root: {}, tools: { part: {} }, starts: 0, stops: 0 }
@@ -26,10 +27,11 @@ button.onclick = async () => {
     })
     const instance = modules.context.get('shared-result')
     instance.draft = 'unsaved text'
-    management = createManagementClient({ modules, recovery: { backoffBaseMs: 20, backoffMaxMs: 50 } })
+    notifications = createRemote(location.origin + '/remote')
+    management = createManagementClient({ modules, notifications, recovery: { backoffBaseMs: 20, backoffMaxMs: 50 } })
     const phases = []
     management.connection.subscribe(() => phases.push(management.connection.getSnapshot().phase))
-    await until(() => management.connection.getSnapshot().phase === 'connected', 'Initial SSE handshake')
+    await until(() => management.connection.getSnapshot().phase === 'connected', 'Notification ready and state query')
     phases.length = 0
     await fetch('/test/loss', { method: 'POST' })
     await until(() => phases.includes('disconnected') && management.connection.getSnapshot().phase === 'connected', 'Transport recovery')
@@ -44,10 +46,11 @@ button.onclick = async () => {
     await until(() => shell.stops === 1, 'Real graph withdrawal')
     await management.close()
     await modules.dispose()
-    result.textContent = 'PASS real script + HTTP/SSE: disconnect retains instance/draft; failed handshake recovers; actual withdrawal disposes'
+    result.textContent = 'PASS real scripts + generated notifications: disconnect retains instance/draft; failed query recovers; actual withdrawal disposes'
   } catch (error) { result.textContent = 'FAIL ' + error.stack }
   finally {
     await management?.close()
+    notifications?.dispose()
     await modules?.dispose()
     button.disabled = false
   }

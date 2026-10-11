@@ -76,7 +76,7 @@ public sealed record TypertRemoteResult(bool Ok, JsonElement? Value, TypertRemot
 /// observed resolution failure without cancelling other started resolvers; their late failures remain observed.
 /// Pending resolvers can retain their provider until they settle, including after a failed request has returned.
 /// </remarks>
-public sealed class TypertGateway(Context caller, TypertRegistry registry)
+public sealed partial class TypertGateway(Context caller, TypertRegistry registry)
 {
     /// <summary>Invoke one unary method with exact arguments and current service and provider registrations.</summary>
     /// <remarks>

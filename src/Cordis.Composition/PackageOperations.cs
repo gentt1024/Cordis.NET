@@ -1,6 +1,9 @@
 namespace Cordis.Composition;
 
 /// <summary>An exact package identity and an explicitly selected source. Sources are interpreted by the platform toolchain.</summary>
+/// <param name="Name">The platform package identity.</param>
+/// <param name="Version">The exact package version.</param>
+/// <param name="Source">A source selected by the host's toolchain.</param>
 public sealed record PackageRequest(string Name, string Version, string Source)
 {
     /// <summary>Optional inspected archive hash to fence a host's approval against changed source contents.</summary>
@@ -13,6 +16,10 @@ public sealed record PackageRequest(string Name, string Version, string Source)
 
 /// <summary>Metadata inspected without importing plugin code or executing its build targets.</summary>
 /// <remarks>ContentHash identifies the requested package archive. It does not describe or lock its transitive dependency closure.</remarks>
+/// <param name="Request">The exact archive request whose metadata was inspected.</param>
+/// <param name="ContentHash">The inspected archive's content identity.</param>
+/// <param name="Description">The inspected package description.</param>
+/// <param name="RequiresBuildApproval">Whether preparation requires permission to execute package build code.</param>
 public sealed record PackageInspection(
     PackageRequest Request,
     string ContentHash,
@@ -42,9 +49,21 @@ public sealed record PreparedPackage(string Name, string Version, string Directo
 }
 
 /// <summary>A bounded tool output chunk or a management phase. Observers must not control operation success.</summary>
+/// <param name="RequestId">The active installation identifier.</param>
+/// <param name="Phase">The operation's current phase.</param>
+/// <param name="Output">A tool output chunk, or null for a phase change.</param>
 public sealed record PackageProgress(string RequestId, string Phase, string? Output = null);
 
 /// <summary>Separate durable package, selection and runtime outcomes; disk remnants are not an atomic rollback promise.</summary>
+/// <param name="RequestId">The installation identifier, or an empty string for removal.</param>
+/// <param name="Target">The platform package identity.</param>
+/// <param name="Stage">The last phase reached by the operation.</param>
+/// <param name="Installed">Whether the operation observed a durable installation.</param>
+/// <param name="Selected">Whether the profile selects this package.</param>
+/// <param name="Application">The application outcome, including applied, restart-required, failed or cancelled.</param>
+/// <param name="Error">A stable refusal or failure code, or null.</param>
+/// <param name="Diagnostic">Failure or retention details, or null.</param>
+/// <param name="Residuals">Retained paths reported by this operation, when available.</param>
 public sealed record PackageChange(
     string RequestId,
     string Target,
@@ -139,6 +158,8 @@ public interface IProfilePackageToolchain
         CancellationToken cancellationToken = default);
 
     /// <summary>Expose prepared metadata and explicit module mappings. Return only after all files are ready.</summary>
+    /// <remarks>Updating an installed identity preserves its running module mapping until restart.
+    /// Publishing a new identity may add its mapping before profile reconciliation.</remarks>
     Task PublishAsync(PreparedPackage package, CancellationToken cancellationToken = default);
 
     /// <summary>Release runtime mappings after the caller has stopped their fibers. File removal is platform-specific.</summary>

@@ -53,7 +53,7 @@ const modules = await bootClientModules({
 既有验证流程运行 `verify-client-shared-modules.mjs`，由独立插件消费构建后的公开包，使用注入的 Node transport。既有浏览器验证载体的 `/shared` 页面另行验证真实默认/自定义 script transport 和缺失供应者。这些结果不替代原生目录测试、上游断言或托管验证。
 
 
-浏览器首次启动调用固定 web 激活审计；导入失败、激活失败和等待缺失服务的 Pending 条目会拒绝启动并清理。暂时断线保留插件和草稿。公开客户端接受 `transport.fetch`、`transport.openEvents`、`recovery` 及手动 `reconnect()`。固定连接控制器在原生 HTTP/SSE carrier 上负责握手截止、重试/退避和离线/上线处理。关闭所有者会拒绝新写入、取消读取并等待撤销。恢复不重放结果未知的写操作。
+浏览器首次启动调用固定 web 激活审计；导入失败、激活失败和等待缺失服务的 Pending 条目会拒绝启动并清理。暂时断线保留插件和草稿。公开客户端在 `options.notifications` 接受生成通知客户端，并接受 `transport.fetch`、`recovery` 及手动 `reconnect()`。固定连接控制器在生成 NDJSON 订阅上负责握手截止、重试/退避和离线/上线处理；收到订阅就绪后读取完整 state 和 graph。关闭所有者会拒绝新写入、取消读取并等待撤销。恢复不重放结果未知的写操作。
 
 ## 应用调用
 
@@ -89,7 +89,7 @@ B 保留源所有权、raw 不透明性与既有 Session 队列。独立审查�
 
 上述无 Git 导出限制随后已通过绑定真实源码提交修复。针对该构建修正的独立无 Git `verify.py --aot --package` 已通过，包含严格符号与独立消费。这项结果不验证后续应用基础设施改动，也不代表远端 SourceLink 已可取得。
 
-当前源码在初始片之上扩展了有序配置编辑/reset、嵌套 Settings 与独立声明导出、NuGet/SDK 包操作、HTTP/SSE 管理、CLI 操作和浏览器模块交付。上文初始限制描述先前验收批次。新增路径分别进行独立审查与组合验证，不能把存在实现当作沿用旧批次证据的理由。
+当前源码在初始片之上扩展了有序配置编辑/reset、嵌套 Settings 与独立声明导出、NuGet/SDK 包操作、HTTP JSON/NDJSON 生成式管理、CLI 操作和浏览器模块交付。上文初始限制描述先前验收批次，包括当时的 Settings hash 视图。当前标准 Settings 使用数值 revision；[Settings 迁移](settings-contract-migration.zh.md)和[管理迁移](management-remote-migration.zh.md)记录唯一现行合同。新增路径分别进行独立审查与组合验证，不能把存在实现当作沿用旧批次证据的理由。
 
 ## 2026-10-09 应用基础设施范围续账
 
@@ -113,7 +113,7 @@ B 保留源所有权、raw 不透明性与既有 Session 队列。独立审查�
 | 原生类型化 Client 生成与 Fiber 挂载：generator Remote 输出、Gateway `$mount()`、`packages/api/remotes/src/client/index.ts` | `TypertArtifacts.GenerateClient`、生成的 `createRemote` 和 `mountRemote`、真实固定 Cordis Client Context | 两个独立多 Entry 客户端通过 HTTP 及 TypeScript 正反编译。`16440e3e0adaac65abf510038495dc7115f1cc6e` 的 Windows/Linux 包消费者通过实际 HTTP、生成 TypeScript、固定 Cordis 挂载、撤销、替换、共享 namespace 及忽略 abort 的 carrier，包含 namespace 队列修复 | Client effect 持有已挂载 namespace 方法、撤销和保留的回调。完整上游 Client Context/stream/event 合同仍未完成 | 已实现且有证据 |
 | 完整 transport、图 codec 与事件闭包：[Client 流开启](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts#L220)消费[Connection Peer/carrier 合同](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/connection/src/rpc.ts#L263)，[Gateway 流 framing](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/stream-protocol.ts)、[owned-value 协议](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/protocol/src/owned-value.ts)及[API Remotes Host 事件注册](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/remotes/src/index.ts#L42)供给 Gateway | 这些路径没有完成的原生对应 | Unary 与下行证据不覆盖这些路径 | Client-to-Host 流 uplink、双向 Peer/request 服务、事件转发、丰富 Context/owned-value 图 codec、binary attachment 与完整 Typert wire 兼容仍需实现和消费者 | 未实现 |
 | 既有原生管理消费者：PluginManager、ConfigEditor、Settings controller、客户端管理及包构建 | `PluginConfigurationOperations`、`ProfileSession`、Settings 导出、原生 HTTP/SSE endpoint、`DotnetPluginToolchain` | 原路径保留[验证记录](validation.zh.md)的历史证据。新增多 Entry 作者交付也使用实际工具链 | 原生 HTTP 管理仍是明确适配，保留既有状态和生命周期所有者 | 明确平台适配 |
-| 管理消费者迁入生成合同：Settings controller/`ui-settings`、PluginManager/`ui-plugin-manager` 及 API Remotes Client assembly | 标准生成 Settings controller 复用 SettingsForms；PluginManager 保留既有操作 owner | CLI、维护中的示例、生成 TS／HTTP 和独立 model-only .NET 包调用消费 Settings，见[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11) | 标准原生 Settings describe/update/replace/mutate 合同已迁入。生成 PluginManager 动作及转发通知仍需实现和消费者 | Settings 生成合同有本地包证据；PluginManager 仍开放 |
+| 管理消费者迁入生成合同：Settings controller/`ui-settings`、PluginManager/`ui-plugin-manager` 及 API Remotes Client assembly | 生成 Settings 与 PluginManager 复用既有 Profile 操作；Gateway 持有唯一选定通知源 | CLI、维护中的示例、生成 TS／HTTP 和独立 model-only .NET 包调用消费 Settings，见[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11) | 标准 Settings、PluginManager 及宿主选择的 emit 通知已实现。CLI、维护示例及生成 .NET/TS 调用者使用唯一合同，见[管理迁移](management-remote-migration.zh.md)；完整固定 wire 与产品 UI 仍需独立闭环 | 有界生成消费者已实现；最终批次证据绑定其冻结检查点 |
 | 共享 bundle HMR 与原生合同检查：[HMR watcher](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/boot/hmr/src/index.ts#L267)调用 `partialReload`，[替换/恢复](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/boot/hmr/src/index.ts#L406)导入并归一化 Loader 导出，用捕获的配置重注册受影响 Fiber，并等待 Loader 稳定 | 成组 `ClrModuleResolver.ReplaceAsync`、`Loader.ReplacePluginsAsync`、既有 `HmrManager`、live binding/provider 校验 | 独立多 Entry 包消费者覆盖不完整替换拒绝、坏候选、Pending 等待、双 Entry 回滚、保留兄弟入口、最后一次退役及 Remote 恢复。Provider 不匹配与 definition 撤销另有原生证据 | 共享 bundle 替换是既有 HMR 之上的 CLR 适配。这些检查不证明通用同契约替换准入算法 | 已实现且有证据 |
 | 应用能力选择与替换准入：API Remotes 及领域持有的 provider | 宿主组合与应用政策 | 按固定生产所有权定责，没有读取 Maker | Agent/LLM、RSI、FSM Project 接受、权限、basis、receipt、CAS、outbox、Viewer 保护与业务退役仍属产品 | 真正产品专用 |
 
@@ -309,7 +309,7 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 | 方向 | 合同落点与推荐 | 兼容和剩余决策 |
 |---|---|---|
 | D-REV | 标准 Settings 统一采用数值合同。`double` 对应 JavaScript number；观察版本从 0 开始，由 Settings owner 持有。省略 expected revision 只跳过先前视图比较。 | 已批准直接纠正：消费者重新生成与构建；拒绝 string/null expected revision；不新增版本化 Remote 或转换路径。仅保留具有独立职责的完整配置／文件 hash 机制。 |
-| D-MODEL | `CordisTypertModelRoot` item 选择精确公开 CLR metadata name。`extract-model` 写出普通 v2 事实；`inspect-model` 将其作为目录消费。选择不要求额外 attribute、`partial`、serializer context 或 provider 注册。 | v1 Remote 模型格式、身份计算和 `.cordis.typert.json` 扩展名保留；optional/default 事实现在驱动受支持的绑定和客户端。普通 `.cordis.model.json` 不会被误当作 v1 generator 输入。v2 分析不使普通方法成为可远程调用方法。 |
+| D-MODEL | `CordisTypertModelRoot` item 选择精确公开 CLR metadata name。`extract-model` 写出普通 v2 事实；`inspect-model` 将其作为目录消费。选择不要求额外 attribute、`partial`、serializer context 或 provider 注册。 | v1 继续承担受支持的 Remote wire 投影，扩展名为 `.cordis.typert.json`；它消费共享声明事实，不以历史字节兼容为职责。optional/default 事实驱动受支持的绑定和客户端。普通 `.cordis.model.json` 不会被误当作 v1 generator 输入。v2 分析不使普通方法成为可远程调用方法。 |
 | D-WIRE | Registry/Gateway 继续拥有分发和生命周期。既有原生 HTTP/NDJSON 是 unary、显式 Context/lookup、downlink/base64 的当前 .NET/TS 互通边界。Context/owned references、Peer/uplink/events/attachments 的合同落实后在同一所有者扩展。 | 不承诺整个 DSH 产品 wire，也未选入新 carrier。直接固定客户端互通必须逐边界说明帧、codec、所有权、错误和取消，并通过真实跨端调用。产品 Remote 选择表留在库外。 |
 
 迁移见[Settings 合同迁移](settings-contract-migration.zh.md)。持久 YAML/JSON 格式及 Git 历史不变。标准 Settings 消费者需要重建；未来发布必须使用新的包版本身份。本地源码版本不变。
@@ -322,12 +322,12 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 | 泛型、继承和引用事实 | 程序集加 metadata 身份，type parameter owner/ordinal/constraints、应用实参、containing type、直接 base/interfaces、tuple 名称及 enum 底层类型 | 有界分析已实现；包 fixture 检查字面事实。不展开外部实现。 |
 | required、nullable、默认值及来源 | 分开的 required/accessor/nullability 标志，类型化常量或未执行 initializer 表达式，XML/源码位置及 provenance | 有界分析已实现，不执行源码体。metadata-reference 的源码体仍不可得。 |
 | 普通独立目录 | 打包 v2 制品，不引用 provider 实现地消费、验证身份及投影声明成员 | 已实现，独立包／目录证据进入 `verify-typert-dotnet.py`，没有另建平行门禁。 |
-| Remote/.NET DTO/STJ/TS 投影 | 既有 v1 支持路线及 pre-`CoreCompile` 时序 | 可选原生绑定及生成 Settings .NET／TS 消费在新检查点通过。v2 普通 DTO 发射及后端收敛继续实施。 |
+| Remote/.NET DTO/STJ/TS 投影 | 既有 v1 支持路线及 pre-`CoreCompile` 时序 | 可选原生绑定及生成 Settings .NET／TS 消费在新检查点通过。选定 v2 普通 .NET DTO/STJ 发射及共享作者事实解释已实现；保存的 v2 重建 Remote、泛型 DTO 发射及引用模型组合继续开放。 |
 | 完整 events/reference-object 运行及跨包源组合 | 声明引用保留身份，当前运行时沿用既有显式注册 | 分析未将其完成。引用模型组合、owned graph 调用及富协议各行仍开放。 |
 | IDE、UI 及整体交付 | 既有 TFM/analyzer/build/carrier 路线 | design-time IDE、WPF/Avalonia/Godot/Blazor、浏览器管理、跨平台/AOT 和最终冻结范围验收需要具名证据。控制台/目录通过不将这些关项。 |
 
 首片复用 source reader 的事实 helper、打包 compiler 和 MSBuild 工具定位。
 没有新增配置、安装或 Remote 权威。有限的 v1 源事实一致性桥在生产 emitter 消费对应模型事实时检测过期源事实，
-其保留依据是这项验证职责。原生文档集成、生成式 PluginManager／客户端管理、富协议及其他原基础设施义务仍在原范围内开放。
+其保留依据是这项验证职责。原生文档集成、完整生成产品 UI/Client assembly、富协议及其他原基础设施义务仍在原范围内开放；标准 PluginManager 与选定通知合同已实现，不新增操作所有者。
 
 上述有界检查在 `8d4838af3a500b84c6c5d7b5eca93d92d813c45c` 通过；[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11)和[绑定回执](../verification/settings-model-continuation-2026-10-11/evidence.json)保留包身份及早先失败。标准 Settings 文档打开及通知交付仍需各自整合证据。其余原职责不变。

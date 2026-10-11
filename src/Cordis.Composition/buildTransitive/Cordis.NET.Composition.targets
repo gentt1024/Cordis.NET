@@ -6,9 +6,14 @@
     <_CordisTypertBaseIntermediate Condition="'$(BaseIntermediateOutputPath)' != ''">$(BaseIntermediateOutputPath)</_CordisTypertBaseIntermediate>
     <_CordisTypertBaseIntermediate Condition="'$(_CordisTypertBaseIntermediate)' == ''">obj/</_CordisTypertBaseIntermediate>
     <CordisTypertOutputDirectory Condition="'$(CordisTypertOutputDirectory)' == ''">$(_CordisTypertBaseIntermediate)$(Configuration)/$(TargetFramework)/cordis-typert/</CordisTypertOutputDirectory>
+    <CordisTypertModelPath Condition="'$(CordisTypertModelPath)' == '' and '$(CordisTypertService)' == '*'">$(CordisTypertOutputDirectory)$(AssemblyName).cordis.typert.json</CordisTypertModelPath>
     <CordisTypertModelPath Condition="'$(CordisTypertModelPath)' == ''">$(CordisTypertOutputDirectory)$(CordisTypertService).cordis.typert.json</CordisTypertModelPath>
     <CordisTypertDeclarationModelPath Condition="'$(CordisTypertDeclarationModelPath)' == ''">$(CordisTypertOutputDirectory)$(AssemblyName).cordis.model.json</CordisTypertDeclarationModelPath>
     <_CordisTypertDeclarationFiles>$(CordisTypertDeclarationModelPath);$(CordisTypertOutputDirectory)model-roots.rsp;$(CordisTypertOutputDirectory)model-sources.rsp;$(CordisTypertOutputDirectory)model-references.rsp</_CordisTypertDeclarationFiles>
+    <CordisTypertDataNamespace Condition="'$(CordisTypertDataNamespace)' == ''">$(RootNamespace).Data</CordisTypertDataNamespace>
+    <CordisTypertDataJsonContext Condition="'$(CordisTypertDataJsonContext)' == ''">DataJson</CordisTypertDataJsonContext>
+    <CordisTypertDataSource>$(CordisTypertOutputDirectory)$(CordisTypertDataJsonContext).Data.g.cs</CordisTypertDataSource>
+    <_CordisTypertDataFiles>$(CordisTypertDataSource);$(CordisTypertOutputDirectory)data-roots.rsp</_CordisTypertDataFiles>
     <CordisTypertClientNamespace Condition="'$(CordisTypertClientNamespace)' == ''">$(RootNamespace).Remote</CordisTypertClientNamespace>
     <CordisTypertClientName Condition="'$(CordisTypertClientName)' == ''">RemoteClient</CordisTypertClientName>
     <CordisTypertClientSource>$(CordisTypertOutputDirectory)$(CordisTypertClientName).Generated.g.cs</CordisTypertClientSource>
@@ -39,6 +44,24 @@
   </Target>
   <Target Name="CordisTypertCleanDeclarations" BeforeTargets="CoreClean">
     <Delete Files="$(_CordisTypertDeclarationFiles)" />
+  </Target>
+  <Target Name="CordisTypertEmitDotnetData" BeforeTargets="CoreCompile"
+          DependsOnTargets="ResolveReferences"
+          Condition="'$(CordisTypertDataModel)' != '' and '$(DesignTimeBuild)' != 'true'">
+    <MakeDir Directories="$(CordisTypertOutputDirectory)" />
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)data-roots.rsp" Lines="@(CordisTypertDataRoot)" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(_CordisTypertDataFiles)" />
+    </ItemGroup>
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet-data --model &quot;$(CordisTypertDataModel)&quot; --roots &quot;$(CordisTypertOutputDirectory)data-roots.rsp&quot; --namespace &quot;$(CordisTypertDataNamespace)&quot; --context &quot;$(CordisTypertDataJsonContext)&quot; --output &quot;$(CordisTypertDataSource)&quot;" />
+    <ItemGroup>
+      <Compile Remove="$(CordisTypertDataSource)" />
+      <Compile Include="$(CordisTypertDataSource)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="CordisTypertCleanDotnetData" BeforeTargets="CoreClean">
+    <Delete Files="$(_CordisTypertDataFiles)" />
   </Target>
   <!-- The source generator cannot supply STJ input in its own generation round. -->
   <Target Name="CordisTypertExtractModel" BeforeTargets="CoreCompile"

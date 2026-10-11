@@ -77,10 +77,24 @@ public sealed partial class PluginConfigurationOperations
         string requestId,
         bool buildApproved,
         bool enabled = true,
+        CancellationToken cancellationToken = default) =>
+        InstallPackageAsync(toolchain, request, requestId, (_, _) => Task.FromResult(buildApproved), enabled,
+            cancellationToken);
+
+    /// <summary>Register an installation before inspection, then authorize the inspected archive within its task lifetime.</summary>
+    /// <remarks>The callback is a build decision, independent of exact-version exemptions. Inspection, approval and
+    /// preparation share the active request ID and cancellation token; transport withdrawal does not own that token.</remarks>
+    public Task<PackageChange> InstallPackageAsync(
+        IProfilePackageToolchain toolchain,
+        PackageRequest request,
+        string requestId,
+        Func<PackageInspection, CancellationToken, Task<bool>> authorizeBuildAsync,
+        bool enabled = true,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(toolchain);
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(authorizeBuildAsync);
         ArgumentException.ThrowIfNullOrWhiteSpace(requestId);
         var active = new ActiveInstall(cancellationToken);
         lock (installsGate)
@@ -106,7 +120,7 @@ public sealed partial class PluginConfigurationOperations
             try
             {
                 active.Completion.TrySetResult(
-                    await InstallCoreAsync(toolchain, request, requestId, active, buildApproved, enabled));
+                    await InstallCoreAsync(toolchain, request, requestId, active, authorizeBuildAsync, enabled));
             }
             catch (Exception error)
             {
@@ -171,7 +185,7 @@ public sealed partial class PluginConfigurationOperations
         PackageRequest request,
         string requestId,
         ActiveInstall active,
-        bool buildApproved,
+        Func<PackageInspection, CancellationToken, Task<bool>> authorizeBuildAsync,
         bool enabled)
     {
         var token = active.Cancellation.Token;
@@ -216,6 +230,12 @@ public sealed partial class PluginConfigurationOperations
                     launch.CompatibilityWarning,
                     launch.CompatibilityPackageName)(new(inspectedManifest));
             }
+
+            token.ThrowIfCancellationRequested();
+            var buildApproved = await authorizeBuildAsync(inspection, token);
+            token.ThrowIfCancellationRequested();
+            if (!buildApproved && inspection.RequiresBuildApproval)
+                throw new Refusal("build-not-approved", "The host refused build-execution approval for this inspected package.");
 
             stage = "prepare";
             ReportPackageProgress(requestId, stage);

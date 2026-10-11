@@ -16,6 +16,7 @@ PAIRS = [
     ("docs/validation.md", "docs/validation.zh.md"),
     ("docs/configuration-description.md", "docs/configuration-description.zh.md"),
     ("docs/settings-contract-migration.md", "docs/settings-contract-migration.zh.md"),
+    ("docs/management-remote-migration.md", "docs/management-remote-migration.zh.md"),
     ("docs/upgrade-0.2.0-rc.2.md", "docs/upgrade-0.2.0-rc.2.zh.md"),
     ("docs/publication-readiness.md", "docs/publication-readiness.zh.md"),
 ]

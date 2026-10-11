@@ -252,7 +252,7 @@ await mounted.dispose();
 
 [多入口门禁](../scripts/verify-clr-multi-entry.py) 独立打包作者 NuGet，通过 `PackageReference` 消费，安装包根/子路径入口，并验证共享身份、独立配置、成功与失败替换、撤销、真实 HTTP 上的生成 TypeScript 调用及错误参数。独立的 [Remote 门禁](../scripts/verify-typert.py) 覆盖原生 Remote 作者链。使用最新本地包批次及所需 Node/TypeScript 依赖。平台验收以[验证记录](validation.zh.md)中已完成结果为准；这些示例本身不能证明 Windows/Linux 或 Native AOT 闭环。动态 CLR 加载要求普通运行时。
 
-剩余源类型图、丰富 Context/owned-value 图、Peer/uplink/event remotes 及二进制 attachment 协议仍未完成。既有 PluginManager、Settings/配置与客户端管理消费者向生成 Typert 合同的迁移仍未完成。既有手写 `MapCordisService` endpoint 仍可使用，但不能据此关闭这些缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
+更丰富的源类型图、Context/owned-value 图、Peer/uplink remotes 及二进制 attachment 协议仍未完成。Settings、PluginManager 与选定宿主 emit 通知已通过既有 profile owner 接入生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
 
 
 ## 原生作者模型与 .NET 消费者，2026-10-10
@@ -289,13 +289,13 @@ using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remot
 var view = await remote.DescribeAsync();
 ```
 
-HttpClient 由调用者拥有。直接 unary 调用返回类型化值或抛出既有 `RemoteError`，保留 owner 错误码及独立 JSON details；这是对现有结果信封的原生适配。客户端 Dispose 停止新调用、取消自己的传输请求并拒绝迟到成功结果，不 Dispose 借用的 HttpClient，也不承诺强制终止 Host。
+HttpClient 由调用者拥有。直接 unary 调用返回类型化值或抛出既有 `RemoteError`，保留 owner 错误码及独立 JSON details。生成 downlink 方法通过带 `ResponseHeadersRead` 的 NDJSON 返回 `IAsyncEnumerable<T>`；每个枚举器拥有自己的 response 与 reader，客户端 Dispose 取消活动读取。错误项保留相同失败形状，截断项明确失败。这是对现有结果信封的原生适配。客户端 Dispose 停止新调用、取消自己的传输请求并拒绝迟到成功结果，不 Dispose 借用的 HttpClient，也不承诺强制终止 Host。
 
 生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsProvider`。将 `SettingsForms` 挂在会话已有 `ConfigurationOperations` 之上；它根据作者的 live Config 声明推导 active、唯一可寻址的表单。数值 revision 观察 Fiber 身份、完整 schema 和原始配置。层级脱敏读取、完整候选校验和写入都归同一个 profile 队列。describe/update/replace/mutate 使用唯一生成合同。公开调用与退出的 Settings hash 路径见[Settings 合同迁移](settings-contract-migration.zh.md)。
 
 [独立 .NET Settings 门禁](../scripts/verify-typert-dotnet.py) 打包作者与合同包，再于仓库外构建仅依赖包的调用者。调用者不引用提供者实现，关闭 reflection fallback 并使用静态 metadata。门禁覆盖类型化 describe、脱敏、provider 缺失/失败、重试、已持视图失效重读、definition 撤销/重注册、局部 suspend 和借用客户端所有权；基础类型根、null/default 参数、空状态注解及拒绝不支持投影另有用例。`--aot` 验证静态调用者；动态 CLR Host 仍属于普通运行时边界。正式平台结果以[验证记录](validation.zh.md)中的确切完成检查点为准。
 
-该路径覆盖直接普通 unary 客户端和实际验证的 Settings 数据形状。原生文档集成、PluginManager/客户端管理迁移、富图、完整源类型分析及从普通模型生成 TS 仍开放。已有 TS/Web 输出继续可用并单独验收。
+该路径覆盖 unary 客户端、受支持的 downlink 流，以及标准 Settings、PluginManager 和通知消费。原生文档集成、富图、完整源类型分析及从普通模型生成 TS 仍开放。已有 TS/Web 输出继续可用并单独验收。
 
 
 ## 普通声明模型
@@ -321,4 +321,19 @@ dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-mod
 
 目录保留分析诊断，不生成 binding、Remote 注册、DTO serializer 或可执行 Service。语法错误和重复声明身份会拒绝提取，并清除拥有的旧输出；其他 pre-generator 编译错误明确记录，因为合法构建可能依赖邻近 generator 输出。源图限 256 个具名定义、64 层嵌套引用；未解析类型/function-pointer 签名作为分析缺口诊断。这不是完整 C# 编译器或反射覆盖。既有 .NET Typert 门禁验证仅包引用消费、增量时间戳、包括首次提取失败在内的 Clean、冷重建、引用身份和拒绝输入。
 
-v1 `.cordis.typert.json` 和 `CordisTypertService` 保留既有格式。类型化 Remote 生成现在消费其既有 optional/default 事实，包括非 null 的可省略 wire 字段。扩展名区分合同；`emit-dotnet` 拒绝普通 v2 制品。v2 DTO/STJ/TS 投影、引用模型组合、design-time IDE 和具名 UI 验证仍属后续实施。
+v1 `.cordis.typert.json` 保留受限的 Remote wire 投影职责。该提取入口与 v2 声明模型共享作者的成员、引用、initializer 和 attribute 事实；历史 v1 字节不是另一套兼容权威。`CordisTypertService=*` 将全部受支持的作者 service 选入按程序集命名的同一制品。选择单个 service 时保留其完整可达图。共享 DTO 的 JSON 命名策略冲突（包括嵌套及递归引用）以 `TYPM113` 拒绝。
+
+选定普通 record/class 可从已保存的 v2 制品生成 DTO 及静态 STJ context，不要求 Remote 声明或引用 provider 程序集：
+
+```xml
+<PropertyGroup>
+  <CordisTypertDataModel>Example.cordis.model.json</CordisTypertDataModel>
+  <CordisTypertDataNamespace>Example.Consumer.Data</CordisTypertDataNamespace>
+  <CordisTypertDataJsonContext>ExampleDataJson</CordisTypertDataJsonContext>
+</PropertyGroup>
+<ItemGroup>
+  <CordisTypertDataRoot Include="Example.Options" />
+</ItemGroup>
+```
+
+target 在 `CoreCompile` 前调用 `emit-dotnet-data`，复用 Remote caller 支持的 JSON 投影。成员省略保留受支持的常量默认值；显式 null 仍有独立含义。不支持的声明明确拒绝，不静默丢失。独立消费者将同一个作者 DTO 同时用作普通 root 和 Remote 参数/结果。`emit-dotnet` 仍只接收 Remote 制品。保存的 v2 制品重建 Remote、泛型 DTO 投影、引用模型组合、design-time IDE 和具名 UI 验证继续开放。

@@ -10,6 +10,8 @@ using Cordis.Composition;
 using Cordis.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 const string implementation = "one";
@@ -85,11 +87,14 @@ try
     var builder = WebApplication.CreateSlimBuilder();
     builder.WebHost.UseUrls("http://127.0.0.1:0");
     builder.Logging.ClearProviders();
+    builder.Services.AddHttpContextAccessor();
     await using var server = builder.Build();
-    new CordisManagement(
+    var management = new CordisManagement(
         session,
-        (http, _) => Task.FromResult(http.Request.Headers.Authorization == "consumer-policy")).Map(server);
+        (http, _) => Task.FromResult(http.Request.Headers.Authorization == "consumer-policy"));
+    management.Map(server);
     var registry = new TypertRegistry(session.Context);
+    await management.MountPluginManagerAsync(session.Context, registry, server.Services.GetRequiredService<IHttpContextAccessor>());
     await session.Context.RunAsync(context =>
     {
         new SettingsForms(
@@ -208,19 +213,22 @@ try
             raw.RootElement.GetProperty("raw").GetProperty("label").GetString() == "original",
             "ordinary inheritance restoration missing");
     using (var refused = await client.PostAsync(
-               "/cordis/install",
-               new StringContent(
-                   """{"name":"new-code","version":"1.0.0","source":"explicit","requestId":"static-install","inspectedHash":"unused"}""",
-                   Encoding.UTF8,
-                   "application/json")))
+               "/remote/pluginManager/installBundle",
+               JsonBody("""{"args":{"request":{"name":"new-code","version":"1.0.0","source":"explicit"},"options":{"requestId":"static-install","inspectedHash":"unused","enabled":true}}}""")))
     {
-        Require(refused.StatusCode == HttpStatusCode.BadRequest, "static host accepted dynamic installation");
+        Require(refused.StatusCode == HttpStatusCode.OK, "standard static host carrier refused the request");
+        using var result = JsonDocument.Parse(await refused.Content.ReadAsStringAsync());
+        Require(!result.RootElement.GetProperty("ok").GetBoolean() &&
+            result.RootElement.GetProperty("error").GetProperty("code").GetString() == "plugin-manager/toolchain-absent",
+            "static host accepted dynamic installation");
         Require(
-            (await refused.Content.ReadAsStringAsync()).Contains(
+            result.RootElement.GetProperty("error").GetProperty("message").GetString()!.Contains(
                 "static code changes require republishing",
                 StringComparison.Ordinal),
             "static code boundary missing");
     }
+    using (var retired = await client.PostAsync("/cordis/install", JsonBody("{}")))
+        Require(retired.StatusCode == HttpStatusCode.NotFound, "retired handwritten installation route remained active");
 
     await session.Context.RunAsync(async _ => await provider.DisposeAsync());
     using (var unavailable = await client.PostAsync(

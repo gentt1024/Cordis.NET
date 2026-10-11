@@ -1084,6 +1084,7 @@ Cordis.Composition: Cordis.Composition.PluginConfigurationOperations : System.Ob
   Method System.Threading.Tasks.Task`1[Cordis.Composition.ConfigurationSchemaView] ReadConfigurationSchemasAsync(System.String, System.Threading.CancellationToken) attrs= params=entryId:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.ConfigurationSnapshot] ReadConfigurationAsync(System.String, System.Threading.CancellationToken) attrs= params=entryId:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageChange] InstallPackageAsync(Cordis.Composition.IProfilePackageToolchain, Cordis.Composition.PackageRequest, System.String, Boolean, Boolean, System.Threading.CancellationToken) attrs= params=toolchain:NotNull/NotNull ;request:NotNull/NotNull ;requestId:NotNull/NotNull ;buildApproved:NotNull/NotNull ;enabled:NotNull/NotNull optional=true [System.Runtime.InteropServices.OptionalAttribute()];cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageChange] InstallPackageAsync(Cordis.Composition.IProfilePackageToolchain, Cordis.Composition.PackageRequest, System.String, System.Func`3[Cordis.Composition.PackageInspection,System.Threading.CancellationToken,System.Threading.Tasks.Task`1[System.Boolean]], Boolean, System.Threading.CancellationToken) attrs= params=toolchain:NotNull/NotNull ;request:NotNull/NotNull ;requestId:NotNull/NotNull ;authorizeBuildAsync:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull,NotNull/NotNull<NotNull/NotNull>> ;enabled:NotNull/NotNull optional=true [System.Runtime.InteropServices.OptionalAttribute()];cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageChange] RemovePackageAsync(Cordis.Composition.IProfilePackageToolchain, System.String, System.Threading.CancellationToken) attrs= params=toolchain:NotNull/NotNull ;name:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageChange] WaitForInstallAsync(System.String) attrs= params=requestId:NotNull/NotNull  return=NotNull/NotNull<Nullable/Nullable>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.ProfileDocument] ReadProfileAsync(System.Threading.CancellationToken) attrs= params=cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
@@ -1093,6 +1094,136 @@ Cordis.Composition: Cordis.Composition.PluginConfigurationOperations : System.Ob
   Method System.Threading.Tasks.Task`1[System.String] CancelInstallAsync(System.String) attrs= params=requestId:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[System.String] PreviewAsync(Boolean) attrs= params=json:NotNull/NotNull optional=false [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Constructor Void .ctor(Cordis.Composition.ProfileLaunch, Cordis.Composition.Include, System.String) attrs= params=launch:NotNull/NotNull ;include:NotNull/NotNull ;ownerEntryId:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()]
+Cordis.Composition: Cordis.Composition.PluginInstallCancellation : System.Object [System.IEquatable`1[Cordis.Composition.PluginInstallCancellation]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.PluginInstallCancellation) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.PluginInstallCancellation <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.String Status attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String) attrs= params=Status:NotNull/NotNull
+  Method Void Deconstruct(System.String ByRef) attrs= params=Status:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.PluginInstallOptions : System.Object [System.IEquatable`1[Cordis.Composition.PluginInstallOptions]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property Boolean Enabled attrs= NotNull/NotNull get=True set=True init=True
+  Method Boolean Equals(Cordis.Composition.PluginInstallOptions) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.PluginInstallOptions <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.String InspectedHash attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String RequestId attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.String) attrs= params=RequestId:NotNull/NotNull ;InspectedHash:NotNull/NotNull
+  Method Void Deconstruct(System.String ByRef, System.String ByRef) attrs= params=RequestId:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];InspectedHash:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.PluginManagementPermission : System.Object [System.IEquatable`1[Cordis.Composition.PluginManagementPermission]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.PluginManagementPermission) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Property Boolean Mutation attrs= NotNull/NotNull get=True set=True init=True
+  Property Cordis.Composition.PackageInspection Package attrs= Nullable/Nullable get=True set=True init=True
+  Method Cordis.Composition.PluginManagementPermission <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.String Operation attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String Target attrs= Nullable/Nullable get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.String, Cordis.Composition.PackageInspection, Boolean) attrs= params=Operation:NotNull/NotNull ;Target:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()];Package:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()];Mutation:NotNull/NotNull optional=false [System.Runtime.InteropServices.OptionalAttribute()]
+  Method Void Deconstruct(System.String ByRef, System.String ByRef, Cordis.Composition.PackageInspection ByRef, Boolean ByRef) attrs= params=Operation:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Target:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];Package:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];Mutation:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.PluginManager : Cordis.Service [Cordis.Composition.ITypertRemoteService,Cordis.IContextualService] flags=Public, BeforeFieldInit attrs=[Cordis.Composition.RemoteServiceAttribute("pluginManager", typeof(Cordis.Composition.PluginManagerJson))]
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.DshCompatibilityRead] ListVersionExemptionsAsync() attrs=[Cordis.Composition.RemoteMethodAttribute("listVersionExemptions")] params= return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageChange] InstallBundleAsync(Cordis.Composition.PackageRequest, Cordis.Composition.PluginInstallOptions) attrs=[Cordis.Composition.RemoteMethodAttribute("installBundle")] params=request:NotNull/NotNull ;options:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageChange] RemoveBundleAsync(System.String) attrs=[Cordis.Composition.RemoteMethodAttribute("removeBundle")] params=name:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageChange] WaitForInstallAsync(System.String) attrs=[Cordis.Composition.RemoteMethodAttribute("waitForInstall")] params=requestId:NotNull/NotNull  return=NotNull/NotNull<Nullable/Nullable>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageInspection] InspectAsync(Cordis.Composition.PackageRequest, System.Threading.CancellationToken) attrs=[Cordis.Composition.RemoteMethodAttribute("inspect")] params=request:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PluginInstallCancellation] CancelInstallAsync(System.String) attrs=[Cordis.Composition.RemoteMethodAttribute("cancelInstall")] params=requestId:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PluginManagerChange] SetBundleEnabledAsync(System.String, Boolean) attrs=[Cordis.Composition.RemoteMethodAttribute("setBundleEnabled")] params=name:NotNull/NotNull ;enabled:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PluginManagerChange] SetPluginEnabledAsync(System.String, Boolean) attrs=[Cordis.Composition.RemoteMethodAttribute("setPluginEnabled")] params=id:NotNull/NotNull ;enabled:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[Cordis.Composition.PluginManagerChange] SetVersionExemptionAsync(System.String, System.String, Boolean, Boolean) attrs=[Cordis.Composition.RemoteMethodAttribute("setVersionExemption")] params=packageVersion:NotNull/NotNull ;runtimeVersion:NotNull/NotNull ;enabled:NotNull/NotNull ;acceptRisk:NotNull/NotNull optional=false [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Threading.Tasks.Task`1[System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.BundleConfigurationInfo]] ListBundlesAsync() attrs=[Cordis.Composition.RemoteMethodAttribute("listBundles")] params= return=NotNull/NotNull<NotNull/NotNull<NotNull/NotNull>>
+  Method System.Threading.Tasks.Task`1[System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.PluginManagerPlugin]] ListPluginsAsync() attrs=[Cordis.Composition.RemoteMethodAttribute("listPlugins")] params= return=NotNull/NotNull<NotNull/NotNull<NotNull/NotNull>>
+  Method System.Threading.Tasks.Task`1[System.Collections.Generic.IReadOnlyList`1[System.String]] SourcesAsync() attrs=[Cordis.Composition.RemoteMethodAttribute("sources")] params= return=NotNull/NotNull<NotNull/NotNull<NotNull/NotNull>>
+  Method System.Threading.Tasks.Task`1[System.Collections.Generic.IReadOnlyList`1[System.String]] VersionsAsync(System.String, System.String, System.Threading.CancellationToken) attrs=[Cordis.Composition.RemoteMethodAttribute("versions")] params=name:NotNull/NotNull ;source:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull<NotNull/NotNull>>
+  Constructor Void .ctor(Cordis.Context, Cordis.Composition.PluginConfigurationOperations, System.Func`3[Cordis.Context,Cordis.Composition.PluginManagementPermission,System.Threading.Tasks.Task`1[System.Boolean]], Cordis.Composition.IProfilePackageToolchain) attrs= params=context:NotNull/NotNull ;operations:NotNull/NotNull ;authorize:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull,NotNull/NotNull<NotNull/NotNull>> ;packages:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()]
+Cordis.Composition: Cordis.Composition.PluginManagerChange : System.Object [System.IEquatable`1[Cordis.Composition.PluginManagerChange]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property Boolean Changed attrs= NotNull/NotNull get=True set=True init=True
+  Property Boolean Enabled attrs= NotNull/NotNull get=True set=True init=True
+  Method Boolean Equals(Cordis.Composition.PluginManagerChange) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.PluginManagerChange <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.PluginManagerDiagnostic] Warnings attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True
+  Property System.String Application attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String Diagnostic attrs= Nullable/Nullable get=True set=True init=True
+  Property System.String Error attrs= Nullable/Nullable get=True set=True init=True
+  Property System.String Target attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(Boolean, System.String, System.String, Boolean, System.String, System.String, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.PluginManagerDiagnostic]) attrs= params=Changed:NotNull/NotNull ;Application:NotNull/NotNull ;Target:NotNull/NotNull ;Enabled:NotNull/NotNull ;Error:Nullable/Nullable ;Diagnostic:Nullable/Nullable ;Warnings:NotNull/NotNull<NotNull/NotNull>
+  Method Void Deconstruct(Boolean ByRef, System.String ByRef, System.String ByRef, Boolean ByRef, System.String ByRef, System.String ByRef, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.PluginManagerDiagnostic] ByRef) attrs= params=Changed:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Application:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Target:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Enabled:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Error:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];Diagnostic:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];Warnings:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.PluginManagerChanged : System.Object [System.IEquatable`1[Cordis.Composition.PluginManagerChanged]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.PluginManagerChanged) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.PluginManagerChanged <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.String Reason attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String) attrs= params=Reason:NotNull/NotNull
+  Method Void Deconstruct(System.String ByRef) attrs= params=Reason:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.PluginManagerDiagnostic : System.Object [System.IEquatable`1[Cordis.Composition.PluginManagerDiagnostic]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.PluginManagerDiagnostic) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Property Boolean Required attrs= NotNull/NotNull get=True set=True init=True
+  Method Cordis.Composition.PluginManagerDiagnostic <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyList`1[System.String] Missing attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True
+  Property System.String Error attrs= Nullable/Nullable get=True set=True init=True
+  Property System.String Id attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String Module attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String Phase attrs= Nullable/Nullable get=True set=True init=True
+  Property System.String State attrs= Nullable/Nullable get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.String, System.String, System.String, System.Collections.Generic.IReadOnlyList`1[System.String], Boolean, System.String) attrs= params=Id:NotNull/NotNull ;Module:NotNull/NotNull ;State:Nullable/Nullable ;Error:Nullable/Nullable ;Missing:NotNull/NotNull<NotNull/NotNull> ;Required:NotNull/NotNull ;Phase:Nullable/Nullable
+  Method Void Deconstruct(System.String ByRef, System.String ByRef, System.String ByRef, System.String ByRef, System.Collections.Generic.IReadOnlyList`1[System.String] ByRef, Boolean ByRef, System.String ByRef) attrs= params=Id:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Module:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];State:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];Error:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];Missing:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()];Required:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Phase:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.PluginManagerJson : System.Text.Json.Serialization.JsonSerializerContext [System.Text.Json.Serialization.Metadata.IBuiltInJsonTypeInfoResolver,System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver] flags=Public, BeforeFieldInit attrs=[System.CodeDom.Compiler.GeneratedCodeAttribute("System.Text.Json.SourceGeneration", "10.0.14.37416")],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.DshCompatibilityRead))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.PackageChange))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.PackageInspection))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.PackageProgress))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.PackageRequest))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.PluginInstallCancellation))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.PluginInstallOptions))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.PluginManagerChange))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.PluginManagerChanged))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(System.Boolean))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(System.Collections.Generic.IReadOnlyList`1[[Cordis.Composition.BundleConfigurationInfo, Cordis.Composition, Version=0.2.0.0, Culture=neutral, PublicKeyToken=null]]))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(System.Collections.Generic.IReadOnlyList`1[[Cordis.Composition.PluginManagerPlugin, Cordis.Composition, Version=0.2.0.0, Culture=neutral, PublicKeyToken=null]]))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(System.Collections.Generic.IReadOnlyList`1[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]))],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(System.String))],[System.Text.Json.Serialization.JsonSourceGenerationOptionsAttribute(DefaultIgnoreCondition = 0, PropertyNamingPolicy = 1, RespectNullableAnnotations = True, RespectRequiredConstructorParameters = True)]
+  Property Cordis.Composition.PluginManagerJson Default attrs= NotNull/Unknown get=True set=False init=False
+  Method System.Text.Json.Serialization.Metadata.JsonTypeInfo GetTypeInfo(System.Type) attrs= params=type:NotNull/NotNull  return=Nullable/Nullable
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.BundleConfigurationInfo] BundleConfigurationInfo attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.BundleConfigurationRow] BundleConfigurationRow attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.DshCompatibilityRead] DshCompatibilityRead attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PackageChange] PackageChange attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PackageInspection] PackageInspection attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PackageProgress] PackageProgress attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PackageRequest] PackageRequest attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PluginInstallCancellation] PluginInstallCancellation attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PluginInstallOptions] PluginInstallOptions attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PluginManagerChange] PluginManagerChange attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PluginManagerChanged] PluginManagerChanged attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PluginManagerDiagnostic] PluginManagerDiagnostic attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.PluginManagerPlugin] PluginManagerPlugin attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Boolean] Boolean attrs= Unknown/Unknown<NotNull/NotNull> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Collections.Generic.IReadOnlyDictionary`2[System.String,System.Collections.Generic.IReadOnlyList`1[System.String]]] IReadOnlyDictionaryStringIReadOnlyListString attrs= Unknown/Unknown<Unknown/Unknown<Unknown/Unknown,Unknown/Unknown<Unknown/Unknown>>> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.BundleConfigurationInfo]] IReadOnlyListBundleConfigurationInfo attrs= Unknown/Unknown<Unknown/Unknown<Unknown/Unknown>> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.BundleConfigurationRow]] IReadOnlyListBundleConfigurationRow attrs= Unknown/Unknown<Unknown/Unknown<Unknown/Unknown>> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.PluginManagerDiagnostic]] IReadOnlyListPluginManagerDiagnostic attrs= Unknown/Unknown<Unknown/Unknown<Unknown/Unknown>> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.PluginManagerPlugin]] IReadOnlyListPluginManagerPlugin attrs= Unknown/Unknown<Unknown/Unknown<Unknown/Unknown>> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Collections.Generic.IReadOnlyList`1[System.String]] IReadOnlyListString attrs= Unknown/Unknown<Unknown/Unknown<Unknown/Unknown>> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Int32] Int32 attrs= Unknown/Unknown<NotNull/NotNull> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Nullable`1[System.Int32]] NullableInt32 attrs= Unknown/Unknown<Nullable/Nullable> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.String] String attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Constructor Void .ctor() attrs= params=
+  Constructor Void .ctor(System.Text.Json.JsonSerializerOptions) attrs= params=options:NotNull/NotNull
+Cordis.Composition: Cordis.Composition.PluginManagerPlugin : System.Object [System.IEquatable`1[Cordis.Composition.PluginManagerPlugin]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property Boolean Enabled attrs= NotNull/NotNull get=True set=True init=True
+  Method Boolean Equals(Cordis.Composition.PluginManagerPlugin) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.PluginManagerPlugin <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.String EntryId attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String ModuleName attrs= NotNull/NotNull get=True set=True init=True
+  Property System.String PatchId attrs= Nullable/Nullable get=True set=True init=True
+  Property System.String ReadOnlyReason attrs= Nullable/Nullable get=True set=True init=True
+  Property System.String State attrs= Nullable/Nullable get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.String, Boolean, System.String, System.String, System.String) attrs= params=EntryId:NotNull/NotNull ;ModuleName:NotNull/NotNull ;Enabled:NotNull/NotNull ;PatchId:Nullable/Nullable ;ReadOnlyReason:Nullable/Nullable ;State:Nullable/Nullable
+  Method Void Deconstruct(System.String ByRef, System.String ByRef, Boolean ByRef, System.String ByRef, System.String ByRef, System.String ByRef) attrs= params=EntryId:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];ModuleName:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Enabled:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];PatchId:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];ReadOnlyReason:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];State:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.PluginManagerTypert : System.Object [] flags=Public, Abstract, Sealed, BeforeFieldInit attrs=
+  Method Cordis.Composition.TypertContribution Contribution(System.String) attrs= params=package:NotNull/NotNull  return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.PluginRecoveryState : System.Enum [System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable] flags=Public, Sealed attrs=
   Field Cordis.Composition.PluginRecoveryState Failed attrs= NotNull/NotNull readonly=False constant=2
   Field Cordis.Composition.PluginRecoveryState NotAttempted attrs= NotNull/NotNull readonly=False constant=0
@@ -1249,6 +1380,20 @@ Cordis.Composition: Cordis.Composition.RemoteMethodAttribute : System.Attribute 
   Property System.String Name attrs= Nullable/Nullable get=True set=True init=False
   Property System.String Wire attrs= NotNull/NotNull get=True set=True init=False
   Constructor Void .ctor(System.String) attrs= params=name:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()]
+Cordis.Composition: Cordis.Composition.RemoteNotifications : System.Object [Cordis.Composition.ITypertRemoteService] flags=Public, BeforeFieldInit attrs=[Cordis.Composition.RemoteServiceAttribute("remoteNotifications", typeof(Cordis.Composition.RemoteNotificationsJson), Namespace = "remoteNotifications")]
+  Method System.Collections.Generic.IAsyncEnumerable`1[Cordis.Composition.TypertRemoteNotification] WatchAsync(System.Threading.CancellationToken) attrs=[Cordis.Composition.RemoteMethodAttribute("watch", Stream = True)] params=cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
+  Constructor Void .ctor(Cordis.Context, Cordis.Composition.TypertGateway) attrs= params=context:NotNull/NotNull ;gateway:NotNull/NotNull
+Cordis.Composition: Cordis.Composition.RemoteNotificationsJson : System.Text.Json.Serialization.JsonSerializerContext [System.Text.Json.Serialization.Metadata.IBuiltInJsonTypeInfoResolver,System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver] flags=Public, BeforeFieldInit attrs=[System.CodeDom.Compiler.GeneratedCodeAttribute("System.Text.Json.SourceGeneration", "10.0.14.37416")],[System.Text.Json.Serialization.JsonSerializableAttribute(typeof(Cordis.Composition.TypertRemoteNotification))],[System.Text.Json.Serialization.JsonSourceGenerationOptionsAttribute(DefaultIgnoreCondition = 3, PropertyNamingPolicy = 1, RespectNullableAnnotations = True, RespectRequiredConstructorParameters = True)]
+  Property Cordis.Composition.RemoteNotificationsJson Default attrs= NotNull/Unknown get=True set=False init=False
+  Method System.Text.Json.Serialization.Metadata.JsonTypeInfo GetTypeInfo(System.Type) attrs= params=type:NotNull/NotNull  return=Nullable/Nullable
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[Cordis.Composition.TypertRemoteNotification] TypertRemoteNotification attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement]] IReadOnlyListJsonElement attrs= Unknown/Unknown<Unknown/Unknown<NotNull/NotNull>> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.String] String attrs= Unknown/Unknown<Unknown/Unknown> get=True set=False init=False
+  Property System.Text.Json.Serialization.Metadata.JsonTypeInfo`1[System.Text.Json.JsonElement] JsonElement attrs= Unknown/Unknown<NotNull/NotNull> get=True set=False init=False
+  Constructor Void .ctor() attrs= params=
+  Constructor Void .ctor(System.Text.Json.JsonSerializerOptions) attrs= params=options:NotNull/NotNull
+Cordis.Composition: Cordis.Composition.RemoteNotificationsTypert : System.Object [] flags=Public, Abstract, Sealed, BeforeFieldInit attrs=
+  Method Cordis.Composition.TypertContribution Contribution(System.String) attrs= params=package:NotNull/NotNull  return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.RemoteServiceAttribute : System.Attribute [] flags=Public, Sealed, BeforeFieldInit attrs=[System.AttributeUsageAttribute((System.AttributeTargets)4, Inherited = False)]
   Property System.String Namespace attrs= Nullable/Nullable get=True set=True init=False
   Property System.String Service attrs= NotNull/Unknown get=True set=False init=False
@@ -1457,6 +1602,7 @@ Cordis.Composition: Cordis.Composition.TypertEventModel : System.Object [System.
   Constructor Void .ctor(System.String, System.String, System.String) attrs= params=Name:NotNull/NotNull ;Signature:NotNull/NotNull ;Mode:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()]
   Method Void Deconstruct(System.String ByRef, System.String ByRef, System.String ByRef) attrs= params=Name:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Signature:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Mode:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertGateway : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Cordis.EffectHandle RegisterRemoteEvents(Cordis.Context, Cordis.Composition.TypertRemoteEventSource) attrs= params=owner:NotNull/NotNull ;source:NotNull/NotNull  return=NotNull/NotNull
   Method System.Collections.Generic.IAsyncEnumerable`1[Cordis.Composition.TypertRemoteResult] StreamAsync(System.String, System.Text.Json.JsonElement, System.Threading.CancellationToken) attrs= params=endpoint:NotNull/NotNull ;arguments:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.TypertRemoteResult] InvokeAsync(System.String, System.Text.Json.JsonElement, System.Threading.CancellationToken) attrs= params=endpoint:NotNull/NotNull ;arguments:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Constructor Void .ctor(Cordis.Context, Cordis.Composition.TypertRegistry) attrs= params=caller:NotNull/NotNull ;registry:NotNull/NotNull
@@ -1649,6 +1795,33 @@ Cordis.Composition: Cordis.Composition.TypertRemoteContribution : System.Object 
   Method System.String ToString() attrs= params= return=NotNull/NotNull
   Constructor Void .ctor(System.String, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertInvocationDescriptor]) attrs= params=Package:NotNull/NotNull ;Descriptors:NotNull/NotNull<NotNull/NotNull>
   Method Void Deconstruct(System.String ByRef, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertInvocationDescriptor] ByRef) attrs= params=Package:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Descriptors:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertRemoteEventDefinition : System.Object [System.IEquatable`1[Cordis.Composition.TypertRemoteEventDefinition]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.TypertRemoteEventDefinition) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.TypertRemoteEventDefinition <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertCodec] Args attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True
+  Property System.String Event attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertCodec]) attrs= params=Event:NotNull/NotNull ;Args:NotNull/NotNull<NotNull/NotNull>
+  Method Void Deconstruct(System.String ByRef, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertCodec] ByRef) attrs= params=Event:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Args:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertRemoteEventFrame : System.Object [System.IEquatable`1[Cordis.Composition.TypertRemoteEventFrame]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.TypertRemoteEventFrame) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.TypertRemoteEventFrame <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement] Args attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True
+  Property System.String Event attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement]) attrs= params=Event:NotNull/NotNull ;Args:NotNull/NotNull<NotNull/NotNull>
+  Method Void Deconstruct(System.String ByRef, System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement] ByRef) attrs= params=Event:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Args:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertRemoteEventSource : System.MulticastDelegate [System.ICloneable,System.Runtime.Serialization.ISerializable] flags=Public, Sealed attrs=
+  Method System.Collections.Generic.IAsyncEnumerable`1[Cordis.Composition.TypertRemoteEventFrame] EndInvoke(System.IAsyncResult) attrs= params=result:Unknown/Unknown  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Collections.Generic.IAsyncEnumerable`1[Cordis.Composition.TypertRemoteEventFrame] Invoke(System.Threading.CancellationToken) attrs= params=cancellationToken:NotNull/NotNull  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.IAsyncResult BeginInvoke(System.Threading.CancellationToken, System.AsyncCallback, System.Object) attrs= params=cancellationToken:NotNull/NotNull ;callback:Unknown/Unknown ;object:Unknown/Unknown  return=Unknown/Unknown
+  Constructor Void .ctor(System.Object, IntPtr) attrs= params=object:Unknown/Unknown ;method:NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertRemoteEvents : System.Object [] flags=Public, Abstract, Sealed, BeforeFieldInit attrs=
+  Method Cordis.Composition.TypertRemoteEventSource FromCordis(Cordis.Context, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertRemoteEventDefinition]) attrs= params=owner:NotNull/NotNull ;events:NotNull/NotNull<NotNull/NotNull>  return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertRemoteFailure : System.Object [System.IEquatable`1[Cordis.Composition.TypertRemoteFailure]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.TypertRemoteFailure) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
@@ -1660,6 +1833,17 @@ Cordis.Composition: Cordis.Composition.TypertRemoteFailure : System.Object [Syst
   Method System.String ToString() attrs= params= return=NotNull/NotNull
   Constructor Void .ctor(System.String, System.String, System.Nullable`1[System.Text.Json.JsonElement]) attrs= params=Code:NotNull/NotNull ;Message:NotNull/NotNull ;Details:Nullable/Nullable
   Method Void Deconstruct(System.String ByRef, System.String ByRef, System.Nullable`1[System.Text.Json.JsonElement] ByRef) attrs= params=Code:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Message:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Details:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertRemoteNotification : System.Object [System.IEquatable`1[Cordis.Composition.TypertRemoteNotification]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.TypertRemoteNotification) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.TypertRemoteNotification <Clone>$() attrs= params= return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement] Args attrs= Nullable/Nullable<NotNull/NotNull> get=True set=True init=True
+  Property System.String Event attrs= Nullable/Nullable get=True set=True init=True
+  Property System.String Kind attrs= NotNull/NotNull get=True set=True init=True
+  Method System.String ToString() attrs= params= return=NotNull/NotNull
+  Constructor Void .ctor(System.String, System.String, System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement]) attrs= params=Kind:NotNull/NotNull ;Event:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()];Args:Nullable/Nullable<NotNull/NotNull> optional=null [System.Runtime.InteropServices.OptionalAttribute()]
+  Method Void Deconstruct(System.String ByRef, System.String ByRef, System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement] ByRef) attrs= params=Kind:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Event:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()];Args:Nullable/Nullable<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertRemoteResult : System.Object [System.IEquatable`1[Cordis.Composition.TypertRemoteResult]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.TypertRemoteResult) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
@@ -1902,9 +2086,10 @@ Cordis.Hosting: Cordis.Hosting.CordisHostOptions : System.Object [] flags=Public
   Method Cordis.Hosting.CordisHostOptions Configure(System.Func`4[Cordis.Context,System.IServiceProvider,System.Threading.CancellationToken,System.Threading.Tasks.Task]) attrs= params=startup:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull,NotNull/NotNull,NotNull/NotNull>  return=NotNull/NotNull
   Constructor Void .ctor() attrs= params=
 Cordis.AspNetCore: Cordis.AspNetCore.CordisManagement : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method System.Threading.Tasks.Task MountPluginManagerAsync(Cordis.Context, Cordis.Composition.TypertRegistry, Microsoft.AspNetCore.Http.IHttpContextAccessor, System.String) attrs= params=owner:NotNull/NotNull ;registry:NotNull/NotNull ;requests:NotNull/NotNull ;package:NotNull/NotNull optional="Cordis.NET.PluginManager" [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
+  Method System.Threading.Tasks.Task NotifyClientModulesChangedAsync() attrs= params= return=NotNull/NotNull
   Constructor Void .ctor(Cordis.Extensions.ProfileSession, System.Func`3[Microsoft.AspNetCore.Http.HttpContext,Cordis.AspNetCore.ManagementPermission,System.Threading.Tasks.Task`1[System.Boolean]], Cordis.Composition.IProfilePackageToolchain, System.Func`2[System.Threading.CancellationToken,System.Threading.Tasks.Task`1[Cordis.Composition.ClientModuleCatalog]]) attrs= params=session:NotNull/NotNull ;authorize:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull,NotNull/NotNull<NotNull/NotNull>> ;packages:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()];clientModules:Nullable/Nullable<NotNull/NotNull,NotNull/NotNull<NotNull/NotNull>> optional=null [System.Runtime.InteropServices.OptionalAttribute()]
   Method Void Map(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder, System.String) attrs= params=endpoints:NotNull/NotNull ;prefix:NotNull/NotNull optional="/cordis" [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
-  Method Void NotifyClientModulesChanged() attrs= params= return=NotNull/NotNull
 Cordis.AspNetCore: Cordis.AspNetCore.CordisRemoteEndpoints : System.Object [] flags=Public, Abstract, Sealed, BeforeFieldInit attrs=
   Method Microsoft.AspNetCore.Builder.IEndpointConventionBuilder MapCordisRemote(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder, System.String, Cordis.Composition.TypertGateway, System.Func`3[Microsoft.AspNetCore.Http.HttpContext,System.String,System.Threading.Tasks.Task`1[System.Boolean]]) attrs= params=endpoints:NotNull/NotNull ;prefix:NotNull/NotNull ;gateway:NotNull/NotNull ;authorize:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull,NotNull/NotNull<NotNull/NotNull>>  return=NotNull/NotNull
 Cordis.AspNetCore: Cordis.AspNetCore.CordisServiceEndpoints : System.Object [] flags=Public, Abstract, Sealed, BeforeFieldInit attrs=

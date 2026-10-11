@@ -26,24 +26,24 @@ await copyFile(resolve(root, 'clients/modules/examples/index.html'), resolve(out
 let roster = ['provider', 'panel']
 let managementWithdrawn = false
 let stateFailures = 0
-let sequence = 0
 const streams = new Set()
 function sharedGraph() {
   const { bytes, ...entry } = modules.get('shared')
   return managementWithdrawn ? { rev: 'empty', entries: [], batches: [] }
     : { rev: entry.rev, entries: [entry], batches: [{ phase: 'application', url: entry.url, rev: entry.rev, entries: [entry.id] }] }
 }
-function send(response, kind) {
-  response.write('data: ' + JSON.stringify({ generation: 'browser-host', sequence: ++sequence, kind, value: null }) + '\n\n')
+function send(response, event) {
+  response.write(JSON.stringify({ ok: true, value: { kind: 'event', event, args: [] } }) + '\n')
 }
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, 'http://localhost')
-    if (url.pathname === '/cordis/events') {
-      response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store' })
+    if (url.pathname === '/remote/remoteNotifications/watch/stream' && request.method === 'POST') {
+      for await (const _ of request) { /* consume the generated request envelope */ }
+      response.writeHead(200, { 'content-type': 'application/x-ndjson', 'cache-control': 'no-store' })
       streams.add(response)
-      send(response, 'connected')
-      request.on('close', () => streams.delete(response))
+      response.write(JSON.stringify({ ok: true, value: { kind: 'ready' } }) + '\n')
+      response.on('close', () => streams.delete(response))
       return
     }
     if (url.pathname === '/cordis/state') {
@@ -61,7 +61,7 @@ const server = createServer(async (request, response) => {
     if (url.pathname.startsWith('/test/') && request.method === 'POST') {
       if (url.pathname === '/test/loss') for (const stream of streams) stream.end()
       else if (url.pathname === '/test/fail-state') stateFailures = 1
-      else if (url.pathname === '/test/withdraw') { managementWithdrawn = true; for (const stream of streams) send(stream, 'client-modules') }
+      else if (url.pathname === '/test/withdraw') { managementWithdrawn = true; for (const stream of streams) send(stream, 'client-modules/changed') }
       else if (url.pathname === '/test/reset') { managementWithdrawn = false; stateFailures = 0 }
       else { response.writeHead(404); response.end(); return }
       response.end('ok')
@@ -96,7 +96,8 @@ const server = createServer(async (request, response) => {
       : url.pathname === '/recovery' ? resolve(root, 'clients/modules/examples/recovery.html')
       : url.pathname === '/shared' ? resolve(root, 'clients/modules/examples/shared/index.html')
       : url.pathname === '/shared-check.mjs' ? resolve(root, 'clients/modules/examples/shared/check.mjs')
-      : url.pathname === '/client-runtime/client.mjs' ? resolve(runtime, 'client.mjs') : undefined
+      : url.pathname === '/client-runtime/client.mjs' ? resolve(runtime, 'client.mjs')
+      : url.pathname === '/client-runtime/notifications.mjs' ? resolve(runtime, 'notifications.mjs') : undefined
     if (file === undefined) { response.writeHead(404); response.end(); return }
     response.writeHead(200, { 'content-type': ['/', '/shared', '/recovery'].includes(url.pathname) ? 'text/html' : 'text/javascript' })
     response.end(await readFile(file))

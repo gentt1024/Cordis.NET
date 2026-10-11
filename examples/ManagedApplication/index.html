@@ -6,6 +6,8 @@
 <form id="install"><label>Package <input name="name" required></label>
 <label>Version <input name="version" value="1.0.0-alpha.1" required></label>
 <label><input name="approved" type="checkbox" required>Allow this inspected package build</label><button>Inspect and install</button></form>
+<form id="wait-install"><label>Installation request ID <input name="requestId" required></label><button>Wait for active install</button></form>
+<form id="cancel-install"><label>Installation request ID <input name="requestId" required></label><button>Explicitly cancel install</button></form>
 <form id="remove"><label>Package to remove <input name="name" required></label><button>Remove</button></form>
 <button id="inventory">Refresh inventory</button><pre id="plugins"></pre><ul id="plugin-actions"></ul>
 <form id="enable"><label>Bundle <input name="target" value="example-provider" required></label><label><input name="enabled" type="checkbox" checked>Enabled</label><button>Apply selection</button></form>
@@ -20,8 +22,10 @@
 <pre id="result" role="status"></pre><pre id="client-diagnostics"></pre><pre id="slot-status"></pre><div id="contributions"></div>
 <script type="module">
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
-import { createRemote } from '/client-runtime/settings.mjs'
-let settingsRemote
+import { createRemote as createSettingsRemote } from '/client-runtime/settings.mjs'
+import { createRemote as createPluginManagerRemote } from '/client-runtime/management.mjs'
+import { createRemote as createNotificationRemote } from '/client-runtime/notifications.mjs'
+let settingsRemote, pluginManager, notifications
 function accepted(result) { if (!result.ok) throw result.error; return result.value }
 const modules = await bootClientModules({graph:{rev:'initial',entries:[],batches:[]}})
 function showModules() {
@@ -40,17 +44,32 @@ async function closeOwner() {
   client = undefined
   settingsRemote?.dispose()
   settingsRemote = undefined
+  pluginManager?.dispose()
+  pluginManager = undefined
+  const previousNotifications = notifications
+  notifications = undefined
   await previous?.close()
+  previousNotifications?.dispose()
 }
 function connect() {
   ownerQueue = ownerQueue.then(async () => {
     await closeOwner()
     if (disposed) return
-    const owner = createManagementClient({baseUrl:'/cordis',modules})
+    notifications = createNotificationRemote(location.origin + '/remote')
+    const owner = createManagementClient({baseUrl:'/cordis',modules,notifications})
     client = owner
-    settingsRemote = createRemote(location.origin + '/remote')
+    settingsRemote = createSettingsRemote(location.origin + '/remote')
+    pluginManager = createPluginManagerRemote(location.origin + '/remote', (url, init) => {
+      const connection = owner.connection.getSnapshot()
+      if (connection.phase !== 'connected') return Promise.reject(new Error('Wait for current host state before managing plugins'))
+      const headers = new Headers(init?.headers)
+      headers.set('If-Cordis-Generation', connection.state.generation)
+      return fetch(url, {...init,headers,credentials:'same-origin'})
+    })
     const update = () => { document.querySelector('#connection').textContent = owner.connection.getSnapshot().phase }
-    subscriptions.push(owner.connection.subscribe(update), owner.subscribe(event => { if(event.kind==='package') show(event.value) }))
+    subscriptions.push(owner.connection.subscribe(update), owner.subscribe(event => {
+      if (event.event === 'plugin-manager/install-state' || event.event === 'plugin-manager/install-log') show(event.args)
+    }))
     update()
   }).catch(error => show({error:error.message}))
   return ownerQueue
@@ -68,13 +87,22 @@ function form(id, action) { document.querySelector(id).addEventListener('submit'
   event.preventDefault(); try { await action(event.target) } catch(error) { show({error:error.message}) }
 }) }
 form('#install', async form => {
-  const [source] = await client.readSources()
+  const [source] = accepted(await pluginManager['pluginManager/sources']({}))
   const request={name:form.elements.name.value,version:form.elements.version.value,source}
-  const inspected=await client.inspect(request)
-  show(await client.install(request,{inspectedHash:inspected.hash,requestId:crypto.randomUUID()}))
+  const inspected=accepted(await pluginManager['pluginManager/inspect']({request}))
+  const requestId=crypto.randomUUID()
+  document.querySelector('#wait-install').elements.requestId.value=requestId
+  document.querySelector('#cancel-install').elements.requestId.value=requestId
+  show({requestId,status:'Installing. If the response is lost, query this request ID before taking another action.'})
+  show(accepted(await pluginManager['pluginManager/installBundle']({request,options:{inspectedHash:inspected.contentHash,requestId,enabled:true}})))
 })
-form('#remove', async form => show(await client.remove(form.elements.name.value)))
-form('#enable', async form => show(await client.enable('bundle',form.elements.target.value,form.elements.enabled.checked)))
+form('#wait-install', async form => {
+  const result=accepted(await pluginManager['pluginManager/waitForInstall']({requestId:form.elements.requestId.value}))
+  show(result ?? {status:'Unknown. No active install has this ID; this does not establish success or cancellation.'})
+})
+form('#cancel-install', async form => show(accepted(await pluginManager['pluginManager/cancelInstall']({requestId:form.elements.requestId.value}))))
+form('#remove', async form => show(accepted(await pluginManager['pluginManager/removeBundle']({name:form.elements.name.value}))))
+form('#enable', async form => show(accepted(await pluginManager['pluginManager/setBundleEnabled']({name:form.elements.target.value,enabled:form.elements.enabled.checked}))))
 form('#settings', settings)
 form('#edit', async form => {
   if (!view) throw new Error('Read settings first')
@@ -82,20 +110,20 @@ form('#edit', async form => {
   show(mode === 'settings' ? accepted(await settingsRemote['settings/mutate']({ns:entry,ops:operations,expectedRevision:view.revision})) : await client.mutateConfiguration(entry,operations,view.revision))
   await settings()
 })
-async function inventory(owner = client) {
+async function inventory(owner = pluginManager) {
   try {
-    const rows = await owner.readPlugins()
-    if (owner !== client || disposed) return
+    const rows = accepted(await owner['pluginManager/listPlugins']({}))
+    if (owner !== pluginManager || disposed) return
     document.querySelector('#plugins').textContent=JSON.stringify(rows,null,2)
     const actions = document.querySelector('#plugin-actions')
     actions.replaceChildren()
     for (const row of rows) {
       const item = document.createElement('li'), button = document.createElement('button')
-      button.textContent = `${row.enabled ? 'Disable' : 'Enable'} ${row.module}`
-      button.disabled = row.readOnlyReason !== null
+      button.textContent = `${row.enabled ? 'Disable' : 'Enable'} ${row.moduleName}`
+      button.disabled = row.readOnlyReason != null
       item.append(`${row.entryId}: ${row.state ?? 'inactive'} `,button,row.readOnlyReason ?? '')
       button.onclick = async () => {
-        try { show(await owner.enable('plugin',row.entryId,!row.enabled)); await inventory(owner) }
+        try { show(accepted(await owner['pluginManager/setPluginEnabled']({id:row.entryId,enabled:!row.enabled}))); await inventory(owner) }
         catch(error){show({error:error.message})}
       }
       actions.append(item)
@@ -119,10 +147,11 @@ form('#stop-build', async form => {
   show({compiler:'stopped'})
 })
 document.querySelector('#compatibility').onclick = async () => {
-  try { show(await client.readCompatibility()) } catch(error){show({error:error.message})}
+  try { show(accepted(await pluginManager['pluginManager/listVersionExemptions']({}))) } catch(error){show({error:error.message})}
 }
-form('#compatibility-grant', async form => show(await client.compatibility(form.elements.packageVersion.value,
-  form.elements.runtimeVersion.value,form.elements.enabled.checked,form.elements.acceptRisk.checked)))
+form('#compatibility-grant', async form => show(accepted(await pluginManager['pluginManager/setVersionExemption']({
+  packageVersion:form.elements.packageVersion.value,runtimeVersion:form.elements.runtimeVersion.value,
+  enabled:form.elements.enabled.checked,acceptRisk:form.elements.acceptRisk.checked}))))
 window.addEventListener('pagehide',()=>{
   disposed = true
   unsubscribeModules()

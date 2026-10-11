@@ -81,7 +81,12 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
                 assert "buildTransitive/Cordis.NET.Composition.targets" in entries, identity
                 for asset in ("Cordis.Typert.Compiler.dll", "Cordis.Typert.Compiler.deps.json", "Cordis.Typert.Compiler.runtimeconfig.json"):
                     assert "tools/net10.0/typert/" + asset in entries, (identity, asset)
-                assert "cordis/typert/settingsController.cordis.typert.json" in entries, identity
+                model_path = "cordis/typert/Cordis.Composition.cordis.typert.json"
+                assert model_path in entries, identity
+                model = json.loads(archive.read(model_path))
+                assert {service["key"] for service in model["services"]} == {
+                    "settingsController", "pluginManager", "remoteNotifications"
+                }, identity
                 assert not any(PurePosixPath(name).name.startswith("Microsoft.CodeAnalysis") for name in entries), identity
 
             assert any(name.startswith("LICENSES/") for name in entries), package

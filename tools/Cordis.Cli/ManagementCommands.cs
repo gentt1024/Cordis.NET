@@ -4,6 +4,9 @@ using System.Text.Json;
 using SettingsClient = Cordis.Cli.Settings.SettingsClient;
 using SettingsClientJson = Cordis.Cli.Settings.SettingsClientJson;
 using Cordis.Composition;
+using PluginManagerClient = Cordis.Cli.Management.PluginManagerClient;
+using PluginManagerClientJson = Cordis.Cli.Management.PluginManagerClientJson;
+using ManagerRequest = Cordis.Cli.Management.PackageRequest;
 
 internal static class ManagementCommands
 {
@@ -94,59 +97,41 @@ internal static class ManagementCommands
             var state = (EntryOptions)(await GetAsync("state"))!;
             var generation = (string)state["generation"]!;
             client.DefaultRequestHeaders.Add("If-Cordis-Generation", generation);
+            using var manager = new PluginManagerClient(client, new Uri(client.BaseAddress!, "../remote"));
             object? result = arguments[0] switch
             {
                 "state" => state,
-                "plugins" => await GetAsync("plugins"),
-                "bundles" => await GetAsync("bundles"),
-                "sources" => await GetAsync("sources"),
-                "versions" => await GetAsync(
-                    "versions?name=" + Uri.EscapeDataString(Value(0)) + "&source=" +
-                    Uri.EscapeDataString(source ?? throw new ArgumentException("--source is required."))),
+                "plugins" => await manager.ListPluginsAsync(),
+                "bundles" => await manager.ListBundlesAsync(),
+                "sources" => await manager.SourcesAsync(),
+                "versions" => await manager.VersionsAsync(Value(0), source ?? throw new ArgumentException("--source is required.")),
                 "configuration" => await GetAsync("configuration?entryId=" + Uri.EscapeDataString(Value(0))),
                 "schema" => Value(0) == "configuration"
                     ? await GetAsync("configuration/schema?entryId=" + Uri.EscapeDataString(Value(1)))
                     : throw new ArgumentException("Choose settings or configuration."),
                 "edit" => await EditAsync(),
-                "compatibility" => await GetAsync("compatibility"),
-                "grant" => await PostAsync(
-                    "compatibility",
-                    new()
-                    {
-                        ["packageVersion"] = Value(0),
-                        ["runtimeVersion"] = Value(1),
-                        ["enabled"] = bool.Parse(Value(2)),
-                        ["acceptRisk"] = bool.Parse(Value(3)),
-                    }),
-                "wait" => await GetAsync("install/wait?requestId=" + Uri.EscapeDataString(Value(0))),
-                "cancel" => await PostAsync(
-                    "install/cancel",
-                    new()
-                    {
-                        ["requestId"] = Value(0)
-                    }),
-                "remove" => await PostAsync(
-                    "remove",
-                    new()
-                    {
-                        ["name"] = Value(0)
-                    }),
-                "enable" => await PostAsync(
-                    "enable",
-                    new()
-                    {
-                        ["kind"] = Value(0),
-                        ["target"] = Value(1),
-                        ["enabled"] = bool.Parse(Value(2))
-                    }),
-                "inspect" => await PostAsync("inspect", Package()),
+                "compatibility" => await manager.ListVersionExemptionsAsync(),
+                "grant" => await manager.SetVersionExemptionAsync(Value(0), Value(1), bool.Parse(Value(2)), bool.Parse(Value(3))),
+                "wait" => await manager.WaitForInstallAsync(Value(0)),
+                "cancel" => await manager.CancelInstallAsync(Value(0)),
+                "remove" => await manager.RemoveBundleAsync(Value(0)),
+                "enable" => Value(0) switch
+                {
+                    "plugin" => await manager.SetPluginEnabledAsync(Value(1), bool.Parse(Value(2))),
+                    "bundle" => await manager.SetBundleEnabledAsync(Value(1), bool.Parse(Value(2))),
+                    _ => throw new ArgumentException("Choose plugin or bundle.")
+                },
+                "inspect" => await manager.InspectAsync(Package()),
                 "install" => await InstallAsync(),
                 _ => throw new ArgumentException("Unknown management command."),
             };
-            Console.WriteLine(ConfigurationFile.Write(result, true));
+            var printed = result is null or EntryOptions
+                ? result
+                : ConfigurationFile.Parse(JsonSerializer.Serialize(result, result.GetType(), PluginManagerClientJson.Default), true);
+            Console.WriteLine(ConfigurationFile.Write(printed, true));
             if (result is null && arguments[0] == "wait")
                 return 3;
-            return result is EntryOptions row && (row.GetValueOrDefault("error") is not null ||
+            return printed is EntryOptions row && (row.GetValueOrDefault("error") is not null ||
                 row.GetValueOrDefault("application") as string is "failed" or "cancelled")
                 ? 1
                 : 0;
@@ -154,13 +139,7 @@ internal static class ManagementCommands
             string Value(int index) =>
                 values.Count > index ? values[index] : throw new ArgumentException("A command argument is missing.");
 
-            EntryOptions Package() =>
-                new()
-                {
-                    ["name"] = Value(0),
-                    ["version"] = Value(1),
-                    ["source"] = source ?? throw new ArgumentException("--source is required.")
-                };
+            ManagerRequest Package() => new(Value(0), Value(1), source ?? throw new ArgumentException("--source is required."));
 
             async Task<object?> EditAsync()
             {
@@ -198,32 +177,31 @@ internal static class ManagementCommands
                     throw new ArgumentException(
                         "--approve-build acknowledges package code execution; the host must also authorize this package.");
                 var package = Package();
-                var inspection = (EntryOptions)(await PostAsync("inspect", package))!;
-                package["inspectedHash"] = inspection["hash"];
-                package["requestId"] = requestId ?? Guid.NewGuid().ToString("N");
-                Console.Error.WriteLine("Installation request: " + package["requestId"]);
+                var inspection = await manager.InspectAsync(package);
+                var id = requestId ?? Guid.NewGuid().ToString("N");
+                Console.Error.WriteLine("Installation request: " + id);
                 try
                 {
-                    return await PostAsync("install", package);
+                    return await manager.InstallBundleAsync(package, new(id, inspection.ContentHash));
                 }
-                catch (HttpRequestException error) when (error.StatusCode is null)
+                catch (RemoteError error) when (error.Code == "gateway/internal" &&
+                    error.InnerException is HttpRequestException { StatusCode: null })
                 {
                     // Only transport loss leaves the submission outcome unknown. An explicit
                     // rejection must not borrow the result of a different request with the same ID.
                     var unknown = new EntryOptions
                     {
                         ["error"] = "unknown-result",
-                        ["requestId"] = package["requestId"]
+                        ["requestId"] = id
                     };
                     try
                     {
                         if (!await IsOriginalHostAsync())
                             return unknown;
-                        var active = await GetAsync(
-                            "install/wait?requestId=" + Uri.EscapeDataString((string)package["requestId"]!));
-                        return await IsOriginalHostAsync() ? active ?? unknown : unknown;
+                        var active = await manager.WaitForInstallAsync(id);
+                        return await IsOriginalHostAsync() ? (object?)active ?? unknown : unknown;
                     }
-                    catch (HttpRequestException)
+                    catch (Exception recoveryError) when (recoveryError is HttpRequestException or RemoteError)
                     {
                         return unknown;
                     }

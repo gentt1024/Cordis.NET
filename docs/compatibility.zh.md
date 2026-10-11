@@ -25,7 +25,7 @@ Cordis.NET 是固定 DSH 基线及仓库已确认通用应用基础设施的忠�
 
 可选浏览器模块 bootstrap 将外壳持有的 `staticModules` 和可选 `loadBundle` 传给固定 DSH 模块系统。原生目录捕获接受相同的额外精确请求名，SDK 默认模块继续可用。包根不会自动供应任意子路径。外壳持有对象与类型，Cordis 持有插件副作用；默认与自定义 transport 都保留既有同源 revision 边界。这是恢复上游 bootstrap 接线，不新增模块注册机制或 npm 解析器，见[开发说明](development.zh.md#外壳持有的客户端模块)。
 
-浏览器启动复用固定 web 激活审计；后续 sync 保留诊断/重试语义。HTTP/SSE 恢复复用固定连接控制器，以数值时序适配替代 Schemastery 运行时。暂时断线保留插件，显式 close 撤销插件。CLI 参数、就绪和有界退出复用 Composition、ProfileSession 与 Generic Host。这些修正恢复上游装配职责，不改变 Core Pending 语义。
+浏览器启动复用固定 web 激活审计；后续 sync 保留诊断/重试语义。生成通知恢复复用固定连接控制器，以数值时序适配替代 Schemastery 运行时。暂时断线保留插件，显式 close 撤销插件。CLI 参数、就绪和有界退出复用 Composition、ProfileSession 与 Generic Host。这些修正恢复上游装配职责，不改变 Core Pending 语义。
 
 | 路径 | 支持的行为 | 边界 |
 |---|---|---|
@@ -39,7 +39,7 @@ Cordis.NET 不执行任意服务端 TypeScript 插件。JavaScript 原型、抛�
 
 字段编辑复用固定 ConfigEditor 的职责：所属层定位、正常 hook/校验、完整 raw 用户覆盖、overlay 拒绝、持久写入和协作恢复。为保留无关注释，原生编辑可保留 YAML flow 根。revision 使用原生内容/激活哈希；不能无损往返的 `Undefined` SET 会被拒绝，不改变运行时 sentinel 语义。部署需重启时在保存前拒绝。Settings 选择已声明的 live 数据，包含嵌套对象和集合，并在提交时同样强制宿主选择／脱敏政策。用户来源 presence 纳入唯一的同源 inserted row，是明确的原生适配，不按 effective 值比较推断。有序 SET/reset 请求在写入前校验一个完整候选。显式元数据支持独立的 Schemastery 与 JSON Schema 投影；不能推断任意 validator 的变换，投影诊断仍是合同的一部分。Core 保存注解而不解释表单政策。独立审查与组合验证结果见[验证记录](validation.zh.md)。
 
-客户端制品通过部署包路由复用 `dsh.client.platform=web` 与 `exports['./client']`，真实路径检查覆盖目录链接。原 Probes 消费者保留自包含 ESM 与轮询；当前源码另提供 `ClientModuleCatalog` 及可选 TypeScript 包，复用固定 Cordis/Loader、module entries 和 SlotCore 机制。显式声明外部包的模块编译成 lazy factory 注册，不承诺任意 npm 解析。HTTP/SSE 管理是原生协议，使用宿主授权、代际约束与活动安装查询，不承诺与任意 Typert 服务线协议兼容。源码测试、浏览器交互、CLR 执行与包消费仍是分开的证据。这些新增能力不改变正式行为锁或已发布批次。
+客户端制品通过部署包路由复用 `dsh.client.platform=web` 与 `exports['./client']`，真实路径检查覆盖目录链接。原 Probes 消费者保留自包含 ESM 与轮询；当前源码另提供 `ClientModuleCatalog` 及可选 TypeScript 包，复用固定 Cordis/Loader、module entries 和 SlotCore 机制。显式声明外部包的模块编译成 lazy factory 注册，不承诺任意 npm 解析。生成式管理使用原生 HTTP JSON/NDJSON carrier，具有宿主授权、代际约束及活动安装查询。该 carrier 不证明完整固定 Typert 线协议兼容。源码测试、浏览器交互、CLR 执行与包消费仍是分开的证据。这些新增能力不改变正式行为锁或已发布批次。
 
 部署解析代在既有包映射和本地映射之外接受显式外部链接根。每一代捕获链接的真实目标；撤下根只停止其调用者的路由，不卸载保留的模块。同名链接改指另一目标需要重启，即使中间曾撤下该根。链接的 peer 声明从当前祖先 manifest 读取；私有依赖查找仍由宿主提供，CLR 导出仍使用显式映射。这不安装 Node loader，也不模拟 Node exports、包自引用、CommonJS/ESM 差异或 worker 传播。
 
@@ -68,7 +68,7 @@ patch 来源读取、字段编辑和 Settings 来源判定均将 falsey `insert`
 
 DSH-enabled NuGet 宿主应显式将 `ProfileLaunch.CompatibilityPackageName` 设置为 `DotnetPluginToolchain.NormalizeCompatibilityPackageName`，将 `ManifestLocator` 设置为该工具链的 `LocateManifest`。适配只改变 grant key 中的名称；包/runtime 精确版本、manifest 拼写和已保存选择不变。Scoped npm 名称及默认 DSH policy 保留原规则。管理入口在授权前只解析一次豁免身份，向持久化传递相同的规范值；直接调用者先使用 `ResolveVersionExemptionIdentity`，再调用 `SetVersionExemptionAsync`。授权变化参与既有 DSH session 刷新。授权数据不可读时不授权、不可覆写，也不阻止启动。
 
-HTTP 管理授权与执行使用同一个端点资源。插件/bundle 启停使用 `target`，移除及包检查使用 `name`，活动安装等待/取消使用 `requestId`，豁免使用规范的 `packageVersion`。配置使用 `entryId`，客户端制品使用路由中的包名。标准 Settings 使用独立的生成 Remote 路线及宿主提供的授权。额外字段不能替代授权目标。清单与事件流要求对应操作权限，不指向单个资源。
+管理授权使用生成方法实际解析的资源：插件启停使用 `id`，bundle 启停/移除使用 `name`，包检查/安装使用 `request.name`，等待/取消使用 `requestId`，豁免使用规范的 `packageVersion`。原生配置使用 `entryId`，客户端制品使用路由包名。标准 Settings 与通知使用生成 Remote 路线及宿主 endpoint 授权。无关 query 字段不能替代目标。清单与通知流不指向单个资源。[管理迁移说明](management-remote-migration.zh.md)记录已退出的手写 HTTP 与 SSE 路线。
 
 原生管理 `Changed` 事件逐个隔离同步观察者异常，记录日志，既不替换已完成操作的结果，也不阻止后续观察者。它不改变 Core 事件语义。启停与 bundle 选择先持久化、再协调；应用失败仍可能保留已保存文件。字段编辑恢复继续遵循其独立合同。
 
@@ -122,7 +122,7 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 
 Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provider 值。caller-bound view 是实际调用 receiver；`Service<TState>.CreateView` 每次新建视图不会使活跃 provider 失效。准入在 contextual tracing 前捕获注册及原始值。后续每次检查先执行正常 contextual 查询，再读取最终注册及原始值，因此同步重入不能掩盖 provider 变化。重新提供同一个对象，包括在同一个 Fiber 内重提供，都会形成不同注册，使此前准入失效。设置不同原始值也会使其失效，即使注册身份未变；同值 `Set`、普通 `Notify` 和无关隔离 realm 的变化保持准入。这些观察仅在 Core 与 Composition 内部使用，不新增公开 API、服务 registry 或持久代数。未完成调用可以保留其注册及 provider，直至结束，仍遵循既有 CLR 协作寿命边界。
 
-完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流与 event remotes 及完整二进制 attachment 协议仍未实现。PluginManager 与客户端管理迁移仍未完成；Settings 现在使用下文的标准生成合同。既有配置 Schema 导出、手写 `MapCordisService` 与 HTTP/SSE 管理保留当前合同，不能据此计为已完成 Typert 消费者。
+完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流、waterfall 事件及完整二进制 attachment 协议仍未实现。标准 Settings、PluginManager 和宿主选择的 emit 通知现已使用生成合同。原生 state、完整配置、制品路由及独立 `MapCordisService` 适配继续承担各自职责。这些受支持的原生路线不证明完整固定线协议互通。
 
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
 
@@ -135,7 +135,7 @@ Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provi
 
 现有由 descriptor 形成的 `TypertTypeModel` 仍是有界的旧摘要，新制品不从它反推。普通构建先将源事实与制品比较，再保留现有 descriptor generator。该 conformance 桥在独立提取与 .NET 投影继续建设时保留已成立的 runtime/TS 路径，不宣称所有 emitter 或运行时类型 registry 已消费完整新模型。
 
-.NET emitter 当前投影直接普通 unary 方法及支持的数据 record/class。实际覆盖包含 bool、string、integer、array、只读 list 接口、JsonElement、可空成员、必需构造器/init 成员、命名/ignore 策略和选定空状态注解。只读数据成员、record struct、数据继承、多态/自定义 converter 和更丰富 Remote 形状保留事实或诊断后被该投影拒绝；不宣称完整 C# 或 TS 类型系统等价。JSON 策略不能省略必填 carrier 参数字段，包括显式 null 和默认值。
+.NET emitter 当前投影直接 unary 方法、downlink 流及选定普通数据 record/class。实际覆盖包含 bool、string、integer、array、只读 list 接口、JsonElement、可空成员、必需构造器/init 成员、命名/ignore 策略和选定空状态注解。只读数据成员、record struct、数据继承、多态/自定义 converter 和更丰富 Remote 形状保留事实或诊断后被该投影拒绝；不宣称完整 C# 或 TS 类型系统等价。JSON 策略不能省略必填 carrier 参数字段，包括显式 null 和默认值。
 
 常量投影保留可空基本数值初始化值，包括 float/decimal 字面量后缀和显式 null，不改变模型格式。写入调用者源码前，emitter 检查目标 namespace 中全部投影 DTO、生成 client、JSON context、failure 和逐方法 envelope 的类型名。冲突明确标出双方来源后拒绝；拒绝时删除拥有的旧输出，不把冲突推迟到 C# 编译。
 
@@ -143,7 +143,7 @@ Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provi
 
 Settings describe 经既有 profile 队列、Include 和 schema/脱敏 helper 暴露选择的 live 配置。下文的合同修正通过同一配置权威提供脱敏 base/user 层与 owner 范围内的数值观察 revision。provider 诊断保留在原生侧，不加入固定 wire 响应。已准入的异步 snapshot 可以在可选普通 `settings` provider 退休后完成：固定上游 describe 是同步调用，没有嵌套 provider lease。这是显式异步适配，与 controller service 或 Remote definition 撤销保留的原生 Gateway generation fence 有区别；后续调用重新查找 provider。不推导任何产品准入、权限或排空规则。
 
-[仅依赖包的 Settings 门禁](../scripts/verify-typert-dotnet.py) 验证源制品、模型独立合同包、pre-CoreCompile/STJ 时序、类型化调用及不同生命周期场景，不调用 Node。静态 Native AOT 适用于调用者，不适用于 collectible CLR Host。IDE/design-time 首次构建、任意引用模型组合、完整 Settings 操作及富图/协议范围继续开放。进行中运行不计作平台验收，正式冻结证据见[验证记录](validation.zh.md)。
+[仅依赖包门禁](../scripts/verify-typert-dotnet.py)的 Settings 部分 验证源制品、模型独立合同包、pre-CoreCompile/STJ 时序、类型化调用及不同生命周期场景，不调用 Node。静态 Native AOT 适用于调用者，不适用于 collectible CLR Host。IDE/design-time 首次构建、任意引用模型组合、完整 Settings 操作及富图/协议范围继续开放。进行中运行不计作平台验收，正式冻结证据见[验证记录](validation.zh.md)。
 
 Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对应固定上游对 `cordis:include` 的处理。这些插件由 Loader 自身导入，其请求不属于 CLR 制品 resolver。显式将内建入口配置为制品贡献者仍会失败；错误的已声明 CLR 制品与未知 resolver 请求继续报错。真实 Profile Settings 消费者验证了这一边界。
 
@@ -155,7 +155,7 @@ Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对�
 
 选择的普通公开声明已有独立 v2 `.cordis.model.json` 路线。它保留作者方法的返回 wrapper 和取消参数，不应用 Remote 规范化。声明定义使用程序集身份及 CLR metadata name；构造引用保留实参、包含泛型类型和空性。泛型参数标明类型/方法 owner 和 ordinal。直接 base/interface 边、public/protected 成员、事件/delegate、accessor、required/default 事实、常量、未执行 initializer 和源码文档均为模型数据。它们不注册运行能力，也不承诺可执行投影。
 
-v1 原生制品格式与身份计算继续使用。原生可省略参数依据已有模型事实消费；纠正后的 Settings 模型要求重新生成消费者。普通扩展名明确不进入旧 Remote AdditionalFiles。外部类型是具有显式来源的不透明 metadata 引用，不是重建的源图。完整引用模型组合、function-pointer 签名、任意编译器覆盖及各普通 DTO/运行后端继续开放。独立消费者是既有包门禁中的仅制品声明目录，本次证据绑定其记录的候选。
+两个提取入口现在消费同一套声明成员、引用、initializer、attribute 及来源事实。v2 制品保留丰富分析，v1 是受限 Remote wire 投影；serializer 命名属于该投影。共享可达 DTO 图的命名策略冲突以 TYPM113 拒绝，包括嵌套与递归引用。历史 v1 字节及身份不是独立兼容要求。普通扩展名不进入 Remote AdditionalFiles。外部声明保留 metadata 来源，不重建实现体。选定普通 .NET DTO/STJ 发射消费 v2 制品，不加载 provider；同一个 DTO 同时作为普通 root 及 Remote 参数/结果验证。保存的 v2 制品重建 Remote、引用模型组合、泛型 DTO 发射及其他后端继续开放。
 
 上游将标记为 secret 的整个 live 根脱敏为 JavaScript undefined。原生 JSON namespace 要求有值，因此省略该根并返回原生诊断，其他 namespace 仍可读取。hidden 根按宿主政策省略。这项有界 JSON 适配不公开 secret，也不伪造替代值。
 

@@ -65,6 +65,7 @@ var builder = WebApplication.CreateSlimBuilder(
         ContentRootPath = AppContext.BaseDirectory
     });
 builder.WebHost.UseUrls("http://127.0.0.1:5187");
+builder.Services.AddHttpContextAccessor();
 await using var app = builder.Build();
 var clientArtifacts = new Dictionary<string, string>(clientPackages, StringComparer.Ordinal);
 
@@ -110,7 +111,10 @@ var management = new CordisManagement(
     _ => Task.FromResult(catalog!));
 management.Map(app);
 var settingsContracts = SettingsControllerTypert.Contribution("Cordis.ManagedApplication.Settings");
-var settingsRegistry = new TypertRegistry(session.Context);
+var managerContracts = PluginManagerTypert.Contribution("Cordis.ManagedApplication.Management");
+var notificationContracts = RemoteNotificationsTypert.Contribution("Cordis.ManagedApplication.Notifications");
+var registry = new TypertRegistry(session.Context);
+var gateway = new TypertGateway(session.Context, registry);
 await session.Context.RunAsync(context =>
 {
     new SettingsForms(
@@ -118,16 +122,32 @@ await session.Context.RunAsync(context =>
         session.ConfigurationOperations,
         _ => new SettingsPolicy(["limit", "label", "credential"]));
     new SettingsController(context);
-    settingsRegistry.Register(context, settingsContracts);
+    registry.Register(context, settingsContracts);
+    new RemoteNotifications(context, gateway);
+    registry.Register(context, notificationContracts);
+    gateway.RegisterRemoteEvents(context, TypertRemoteEvents.FromCordis(context,
+    [
+        new("plugin-manager/changed", [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
+        new("plugin-manager/install-state", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
+        new("plugin-manager/install-log", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
+        new("settings/document-updated", [TypertCodec.Create(SettingsJson.Default.String), TypertCodec.Create(SettingsJson.Default.Double)]),
+        new("app-boot/config-reload", []),
+        new("client-modules/changed", []),
+    ]));
     return Task.CompletedTask;
 });
+await management.MountPluginManagerAsync(
+    session.Context, registry, app.Services.GetRequiredService<IHttpContextAccessor>(), managerContracts.Package);
 app.MapCordisRemote(
     "/remote",
-    new TypertGateway(session.Context, settingsRegistry),
+    gateway,
     (http, _) => Task.FromResult(Authorized(http)));
-var settingsClient = TypertArtifacts.GenerateClient(settingsContracts);
-app.MapGet("/client-runtime/settings.mjs", () => Results.Text(settingsClient.Module, "text/javascript"));
-app.MapGet("/client-runtime/settings.d.ts", () => Results.Text(settingsClient.Declaration, "text/plain"));
+foreach (var (name, contracts) in new[] { ("settings", settingsContracts), ("management", managerContracts), ("notifications", notificationContracts) })
+{
+    var client = TypertArtifacts.GenerateClient(contracts);
+    app.MapGet("/client-runtime/" + name + ".mjs", () => Results.Text(client.Module, "text/javascript"));
+    app.MapGet("/client-runtime/" + name + ".d.ts", () => Results.Text(client.Declaration, "text/plain"));
+}
 
 app.MapGet("/", () => Results.File(Path.Combine(app.Environment.ContentRootPath, "index.html"), "text/html"));
 app.MapGet("/client-runtime/client.mjs", () => Results.File(Path.Combine(runtime, "client.mjs"), "text/javascript"));
@@ -176,7 +196,7 @@ void QueueCapture()
         try
         {
             await CaptureAsync();
-            management.NotifyClientModulesChanged();
+            await management.NotifyClientModulesChangedAsync();
         }
         catch (Exception error)
         {
@@ -186,7 +206,7 @@ void QueueCapture()
                 [],
                 new Uri(configuration),
                 "/cordis/client/artifacts");
-            management.NotifyClientModulesChanged();
+            await management.NotifyClientModulesChangedAsync();
             Console.Error.WriteLine("Client catalog withdrawn: " + error.Message);
         }
     }));
@@ -292,7 +312,7 @@ foreach (var author in watchSources)
                             }
 
                             builds[name] = new(name, "running", revision, null);
-                            management.NotifyClientModulesChanged();
+                            await management.NotifyClientModulesChangedAsync();
                         });
                         // Stop escapes a queued publication while root disposal owns that queue.
                         // Its tracked settlement rejects publication when cancellation reaches the queue.

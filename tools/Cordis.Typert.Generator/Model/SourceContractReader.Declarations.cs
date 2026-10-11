@@ -9,6 +9,10 @@ namespace Cordis.Typert.Generator.Model;
 internal sealed partial class SourceContractReader
 {
     private readonly Dictionary<string, DeclarationType> declarations = new(StringComparer.Ordinal);
+    private readonly HashSet<string> declarationVisiting = new(StringComparer.Ordinal);
+    private readonly Dictionary<DeclarationReference, ITypeSymbol> referenceSymbols = new();
+    private readonly Dictionary<ISymbol, DeclarationMember> memberFacts = new(SymbolEqualityComparer.Default);
+    private readonly List<NativeDiagnostic> declarationDiagnostics = [];
 
     internal static DeclarationModelDocument ReadDeclarations(
         CSharpCompilation compilation,
@@ -28,7 +32,8 @@ internal sealed partial class SourceContractReader
         var reader = new SourceContractReader(compilation, projectDirectory);
         foreach (var diagnostic in declarationErrors)
             reader.diagnostics.Add(
-                new("PreGeneratorDeclaration", diagnostic.Id, diagnostic.GetMessage(CultureInfo.InvariantCulture)));
+                new("PreGeneratorDeclaration", diagnostic.Id, diagnostic.GetMessage(CultureInfo.InvariantCulture),
+                    reader.DiagnosticOwner(diagnostic)));
         var roots = metadataNames
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
@@ -68,7 +73,7 @@ internal sealed partial class SourceContractReader
             roots,
             reader.declarations.Values.OrderBy(type => type.Id, StringComparer.Ordinal).ToArray(),
             reader
-                .diagnostics.OrderBy(value => value.Symbol, StringComparer.Ordinal)
+                .diagnostics.Concat(reader.declarationDiagnostics).OrderBy(value => value.Symbol, StringComparer.Ordinal)
                 .ThenBy(value => value.Code, StringComparer.Ordinal)
                 .ToArray());
         try
@@ -82,6 +87,13 @@ internal sealed partial class SourceContractReader
     }
 
     private DeclarationReference DeclarationReference(ITypeSymbol type, int depth = 0)
+    {
+        var reference = ReadDeclarationReference(type, depth);
+        referenceSymbols[reference] = type;
+        return reference;
+    }
+
+    private DeclarationReference ReadDeclarationReference(ITypeSymbol type, int depth)
     {
         var nullable = type.NullableAnnotation.ToString();
         if (depth > 64)
@@ -104,22 +116,22 @@ internal sealed partial class SourceContractReader
             return new("primitive", type.SpecialType.ToString(), nullable, []);
         if (type is not INamedTypeSymbol named || type.TypeKind == TypeKind.Error)
         {
-            Diagnose(
+            declarationDiagnostics.Add(new(
                 "AnalysisUnsupported",
                 "TYPM201",
                 "Unresolved types and function-pointer signatures require a further declaration projection.",
-                type.ToDisplayString());
+                type.ToDisplayString()));
             return new("unsupported", type.ToDisplayString(), nullable, []);
         }
 
         var definition = named.OriginalDefinition;
         var id = DeclarationId(definition);
-        if (!declarations.ContainsKey(id) && visiting.Add(id))
+        if (!declarations.ContainsKey(id) && declarationVisiting.Add(id))
         {
-            if (declarations.Count + visiting.Count > 256)
+            if (declarations.Count + declarationVisiting.Count > 256)
                 throw new InvalidDataException("Reachable declaration definitions exceed the native graph size 256.");
             ReadDeclaration(definition, id, depth);
-            visiting.Remove(id);
+            declarationVisiting.Remove(id);
         }
 
         return new(
@@ -172,6 +184,15 @@ internal sealed partial class SourceContractReader
     }
 
     private DeclarationMember ReadDeclarationMember(ISymbol symbol, int depth)
+    {
+        if (memberFacts.TryGetValue(symbol, out var facts))
+            return facts;
+        facts = ExtractDeclarationMember(symbol, depth);
+        memberFacts[symbol] = facts;
+        return facts;
+    }
+
+    private DeclarationMember ExtractDeclarationMember(ISymbol symbol, int depth)
     {
         var method = symbol as IMethodSymbol;
         var property = symbol as IPropertySymbol;
@@ -281,6 +302,17 @@ internal sealed partial class SourceContractReader
         string.Join(
             "; ",
             diagnostics.Select(value => value.Id + ": " + value.GetMessage(CultureInfo.InvariantCulture)));
+
+    private string? DiagnosticOwner(Diagnostic diagnostic)
+    {
+        if (diagnostic.Location.SourceTree is not { } tree)
+            return null;
+        var declaration = tree.GetRoot().FindNode(diagnostic.Location.SourceSpan).AncestorsAndSelf()
+            .OfType<BaseTypeDeclarationSyntax>().FirstOrDefault();
+        return declaration is not null && compilation.GetSemanticModel(tree).GetDeclaredSymbol(declaration) is { } type
+            ? DeclarationId(type)
+            : null;
+    }
 
     private static NativeAttribute[] DeclarationAttributes(ISymbol? symbol) =>
         DeclarationAttributes(symbol?.GetAttributes() ?? []);

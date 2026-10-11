@@ -30,6 +30,8 @@ internal sealed partial class SourceContractReader
         string projectDirectory,
         string? service = null)
     {
+        if (service == "*")
+            service = null;
         var reader = new SourceContractReader(compilation, projectDirectory);
         var roots = compilation
             .SyntaxTrees
@@ -137,6 +139,7 @@ internal sealed partial class SourceContractReader
 
     private NativeMethod Method(IMethodSymbol method)
     {
+        var facts = ReadDeclarationMember(method, 0);
         var marker = Attribute(method, "Cordis.Composition.RemoteMethodAttribute")!;
         var name = Named(marker, "Name")?.Value as string ??
             marker.ConstructorArguments.FirstOrDefault().Value as string ?? method.Name;
@@ -144,10 +147,10 @@ internal sealed partial class SourceContractReader
         var context = Named(marker, "Context")?.Value as string;
         var cancellation = method.Parameters.LastOrDefault()?.Type.ToDisplayString() ==
             "System.Threading.CancellationToken";
-        var parameters = cancellation ? method.Parameters[..^1] : method.Parameters;
+        var parameters = cancellation ? facts.Parameters[..^1] : facts.Parameters;
         var namedReturn = method.ReturnType as INamedTypeSymbol;
         var wrapper = namedReturn?.OriginalDefinition.ToDisplayString() ?? method.ReturnType.ToDisplayString();
-        var result = namedReturn is { TypeArguments.Length: 1 } ? namedReturn.TypeArguments[0] : method.ReturnType;
+        var result = facts.Type!.Arguments.Length == 1 ? facts.Type.Arguments[0] : facts.Type;
         if (wrapper != (stream
                 ? "System.Collections.Generic.IAsyncEnumerable<T>"
                 : "System.Threading.Tasks.Task<TResult>"))
@@ -166,7 +169,7 @@ internal sealed partial class SourceContractReader
             name,
             method.Name,
             wrapper,
-            Type(result),
+            ProjectReference(result),
             stream,
             cancellation,
             context,
@@ -174,32 +177,36 @@ internal sealed partial class SourceContractReader
             parameters
                 .Select(parameter =>
                 {
-                    var lookup = Attribute(parameter, "Cordis.Composition.RemoteLookupAttribute");
+                    var lookup = Attribute(method.Parameters.First(value => value.Name == parameter.Name), "Cordis.Composition.RemoteLookupAttribute");
                     return new NativeParameter(
                         parameter.Name,
                         lookup?.ConstructorArguments.ElementAtOrDefault(1).Value as string ?? parameter.Name,
-                        Type(parameter.Type),
+                        ProjectReference(parameter.Type),
                         lookup?.ConstructorArguments.FirstOrDefault().Value as string,
                         lookup?.ConstructorArguments.ElementAtOrDefault(2).Value is ITypeSymbol wireType
                             ? Type(wireType)
                             : null,
-                        parameter.RefKind.ToString(),
-                        parameter.HasExplicitDefaultValue,
-                        parameter.HasExplicitDefaultValue
-                            ? Constant(parameter.Type, parameter.ExplicitDefaultValue)
-                            : null,
-                        parameter.IsParams,
-                        Attributes(parameter),
-                        Docs(parameter));
+                        parameter.RefKind,
+                        parameter.Default is not null,
+                        parameter.Default,
+                        parameter.Params,
+                        ProjectionAttributes(parameter.Attributes),
+                        Docs(method.Parameters.First(value => value.Name == parameter.Name)));
                 })
                 .ToArray(),
-            Docs(method),
-            Location(method));
+            facts.Documentation,
+            facts.Location);
     }
 
-    private NativeTypeReference Type(ITypeSymbol symbol, int depth = 0)
+    private NativeTypeReference Type(ITypeSymbol symbol, int depth = 0) =>
+        ProjectReference(DeclarationReference(symbol, depth), depth);
+
+    // Remote wire references are a projection of the ordinary declaration facts.
+    // Symbols identify the declaration to project; nullability, arguments and array shape come from those facts.
+    private NativeTypeReference ProjectReference(DeclarationReference reference, int depth = 0)
     {
-        var nullable = symbol.NullableAnnotation.ToString();
+        var symbol = referenceSymbols[reference];
+        var nullable = reference.Nullability;
         if (depth > 64)
         {
             Diagnose(
@@ -210,14 +217,13 @@ internal sealed partial class SourceContractReader
             return new("unsupported", symbol.ToDisplayString(), nullable, []);
         }
 
-        if (symbol is IArrayTypeSymbol array)
-            return new("array", "", nullable, [Type(array.ElementType, depth + 1)], array.Rank);
-        if (symbol.SpecialType is not SpecialType.None && symbol.SpecialType != SpecialType.System_Object)
-            return new("primitive", symbol.SpecialType.ToString(), nullable, []);
+        if (reference.Kind == "array")
+            return new("array", "", nullable, [ProjectReference(reference.Arguments[0], depth + 1)], reference.Rank);
+        if (reference.Kind == "primitive" && reference.Name != "System_Object")
+            return new("primitive", reference.Name, nullable, []);
         if (symbol.ToDisplayString() == "System.Text.Json.JsonElement")
             return new("json", "System.Text.Json.JsonElement", nullable, []);
-        if (symbol is not INamedTypeSymbol named ||
-            symbol.TypeKind is TypeKind.Error or TypeKind.Dynamic or TypeKind.Pointer or TypeKind.TypeParameter)
+        if (symbol is not INamedTypeSymbol named || reference.Kind is not ("named" or "primitive"))
         {
             Diagnose(
                 "AnalysisUnsupported",
@@ -228,7 +234,7 @@ internal sealed partial class SourceContractReader
         }
 
         if (named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
-            return new("nullable", "System.Nullable<T>", nullable, [Type(named.TypeArguments[0], depth + 1)]);
+            return new("nullable", "System.Nullable<T>", nullable, [ProjectReference(reference.Arguments[0], depth + 1)]);
         var definition = named.OriginalDefinition.ToDisplayString();
         if (definition is "System.Collections.Generic.List<T>" or "System.Collections.Generic.IReadOnlyList<T>" or
             "System.Collections.Generic.IList<T>" or "System.Collections.Generic.IEnumerable<T>" or
@@ -240,8 +246,9 @@ internal sealed partial class SourceContractReader
                 "collection",
                 definition,
                 nullable,
-                named.TypeArguments.Select(value => Type(value, depth + 1)).ToArray());
+                reference.Arguments.Select(value => ProjectReference(value, depth + 1)).ToArray());
         var id = Id(named);
+        ValidateCachedWireNames(new("named", id, nullable, []), new(StringComparer.Ordinal));
         if (named.SpecialType == SpecialType.System_Object)
         {
             Diagnose(
@@ -265,11 +272,36 @@ internal sealed partial class SourceContractReader
             visiting.Remove(id);
         }
 
-        return new("named", id, nullable, named.TypeArguments.Select(value => Type(value, depth + 1)).ToArray());
+        return new("named", id, nullable, reference.Arguments.Select(value => ProjectReference(value, depth + 1)).ToArray());
+    }
+
+    private void ValidateCachedWireNames(NativeTypeReference reference, HashSet<string> checkedTypes)
+    {
+        foreach (var argument in reference.Arguments)
+            ValidateCachedWireNames(argument, checkedTypes);
+        if (reference.Kind != "named" || !checkedTypes.Add(reference.Name) ||
+            !types.TryGetValue(reference.Name, out var declaration))
+            return;
+        if (declaration.Members.Any(member => member.WireName !=
+                DeclarationWireProjection.MemberName(member.Name, member.Attributes, namingPolicy)))
+            Diagnose(
+                "ProjectionUnsupported",
+                "TYPM113",
+                "Shared Remote data has conflicting serializer member names; select each service separately for wire projection.",
+                declaration.Id);
+        foreach (var member in declaration.Members)
+            ValidateCachedWireNames(member.Type, checkedTypes);
+        foreach (var argument in declaration.TypeArguments)
+            ValidateCachedWireNames(argument, checkedTypes);
+        foreach (var parameter in declaration.Constructors.SelectMany(constructor => constructor.Parameters))
+            ValidateCachedWireNames(parameter.Type, checkedTypes);
+        if (declaration.BaseType is not null)
+            ValidateCachedWireNames(declaration.BaseType, checkedTypes);
     }
 
     private void Declaration(INamedTypeSymbol type, string id, int depth)
     {
+        var facts = declarations[DeclarationId(type)];
         if (type.TypeKind != TypeKind.Class || type.IsRefLikeType || type.IsUnboundGenericType ||
             type.TypeParameters.Length > 0)
             Diagnose(
@@ -309,26 +341,24 @@ internal sealed partial class SourceContractReader
             .Where(value =>
                 !(type.IsRecord && value.Parameters.Length == 1 &&
                     SymbolEqualityComparer.Default.Equals(value.Parameters[0].Type, type)))
+            .Select(value => ReadDeclarationMember(value, depth + 1))
             .Select(value => new NativeConstructor(
-                value.DeclaredAccessibility.ToString(),
-                Attribute(value, JsonPrefix + "JsonConstructorAttribute") is not null,
-                Attribute(value, "System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute") is not null,
-                value
-                    .Parameters.Select(parameter => new NativeConstructorParameter(
+                value.Accessibility,
+                value.Attributes.Any(attribute => attribute.Name == JsonPrefix + "JsonConstructorAttribute"),
+                value.Attributes.Any(attribute => attribute.Name == "System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute"),
+                value.Parameters.Select(parameter => new NativeConstructorParameter(
                         parameter.Name,
-                        Type(parameter.Type, depth + 1),
+                        ProjectReference(parameter.Type, depth + 1),
                         members.FirstOrDefault(member => member.Name.Equals(
                                 parameter.Name,
                                 StringComparison.OrdinalIgnoreCase))
                             ?.Name,
-                        parameter.HasExplicitDefaultValue,
-                        parameter.HasExplicitDefaultValue
-                            ? Constant(parameter.Type, parameter.ExplicitDefaultValue)
-                            : null,
-                        Attributes(parameter)))
+                        parameter.Default is not null,
+                        parameter.Default,
+                        ProjectionAttributes(parameter.Attributes)))
                     .ToArray()))
             .ToArray();
-        var attributes = Attributes(type);
+        var attributes = ProjectionAttributes(facts.Attributes);
         if (attributes.Any(value => value.Name is JsonPrefix + "JsonConverterAttribute"
                 or JsonPrefix + "JsonPolymorphicAttribute" or JsonPrefix + "JsonDerivedTypeAttribute"))
             Diagnose(
@@ -338,35 +368,30 @@ internal sealed partial class SourceContractReader
                 id);
         types[id] = new(
             id,
-            type.Name,
+            facts.Name,
             type.ContainingNamespace.ToDisplayString(),
-            type.IsRecord
-                ? type.TypeKind == TypeKind.Class ? "record" : "recordStruct"
-                : type.TypeKind.ToString().ToLowerInvariant(),
-            type.DeclaringSyntaxReferences.Length == 0,
+            facts.Kind,
+            facts.Provenance == "metadata-reference",
             baseType,
             type.TypeArguments.Select(value => Type(value, depth + 1)).ToArray(),
             members,
             constructors,
             attributes,
-            Docs(type),
-            Location(type));
+            facts.Documentation,
+            facts.Location);
     }
 
     private NativeMember Member(ISymbol member)
     {
-        var property = member as IPropertySymbol;
-        var field = member as IFieldSymbol;
-        var attributes = Attributes(member);
-        var wire = Attribute(member, JsonPrefix + "JsonPropertyNameAttribute")
-            ?.ConstructorArguments.FirstOrDefault()
-            .Value as string ?? WireName(member.Name);
-        var write = property?.SetMethod is { DeclaredAccessibility: Accessibility.Public } setter
-            ? setter.IsInitOnly ? "init" : "set"
-            : field is { IsReadOnly: false }
+        var facts = ReadDeclarationMember(member, 0);
+        var attributes = ProjectionAttributes(facts.Attributes);
+        var wire = DeclarationWireProjection.MemberName(facts.Name, attributes, namingPolicy);
+        var write = facts.Setter == "Public"
+            ? facts.InitOnly ? "init" : "set"
+            : facts.Kind == "field" && !facts.Modifiers.Contains("readonly", StringComparer.Ordinal)
                 ? "field"
                 : "none";
-        var initializer = Initializer(member);
+        var initializer = ProjectInitializer(facts.Initializer, Id(member.ContainingType!) + "." + facts.Name);
         if (write == "none")
             Diagnose(
                 "ProjectionUnsupported",
@@ -382,20 +407,20 @@ internal sealed partial class SourceContractReader
                 "Custom converters, extension data and non-public inclusion require an explicit standalone projection.",
                 Id(member.ContainingType!) + "." + member.Name);
         return new(
-            member.Name,
+            facts.Name,
             wire,
-            property is null ? "field" : "property",
-            Type(property?.Type ?? field!.Type),
-            property?.IsRequired ?? field!.IsRequired,
-            Attribute(member, JsonPrefix + "JsonRequiredAttribute") is not null,
-            property?.GetMethod?.DeclaredAccessibility == Accessibility.Public || field is not null,
+            facts.Kind,
+            ProjectReference(facts.Type!),
+            facts.Required,
+            attributes.Any(value => value.Name == JsonPrefix + "JsonRequiredAttribute"),
+            facts.Getter == "Public" || facts.Kind == "field",
             write,
-            member.DeclaredAccessibility.ToString(),
+            facts.Accessibility,
             attributes,
             initializer,
-            GetterConstant(member),
-            Docs(member),
-            Location(member));
+            facts.GetterConstant,
+            facts.Documentation,
+            facts.Location);
     }
 
     private NativeConstant? GetterConstant(ISymbol member)
@@ -416,43 +441,19 @@ internal sealed partial class SourceContractReader
             : new("computedGetter", semantic.GetTypeInfo(expression).Type?.ToDisplayString() ?? "", "null");
     }
 
-    private NativeConstant? Initializer(ISymbol member)
+    private NativeConstant? ProjectInitializer(NativeConstant? initializer, string origin)
     {
-        var syntax = member.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
-        var expression = syntax switch
-        {
-            PropertyDeclarationSyntax property => property.Initializer?.Value,
-            VariableDeclaratorSyntax variable => variable.Initializer?.Value,
-            _ => null
-        };
-        if (expression is null)
-            return null;
-        var semantic = compilation.GetSemanticModel(expression.SyntaxTree);
-        var value = semantic.GetConstantValue(expression);
-        if (value.HasValue)
-            return Constant(
-                semantic.GetTypeInfo(expression).ConvertedType ?? semantic.GetTypeInfo(expression).Type!,
-                value.Value);
-        if (expression is CollectionExpressionSyntax { Elements.Count: 0 })
+        if (initializer is not { Kind: "expression" })
+            return initializer;
+        if (JsonSerializer.Deserialize<string>(initializer.Json) == "[]")
             return new("emptyCollection", "", "[]");
         Diagnose(
             "ProjectionUnsupported",
             "TYPM111",
             "Non-constant member initializer is retained as an unsupported projection fact.",
-            Id(member.ContainingType!) + "." + member.Name);
-        return new("unsupported", semantic.GetTypeInfo(expression).Type?.ToDisplayString() ?? "", "null");
+            origin);
+        return new("unsupported", initializer.Type, "null");
     }
-
-    private string WireName(string name) => namingPolicy switch
-    {
-        "0" => name,
-        "1" => JsonNamingPolicy.CamelCase.ConvertName(name),
-        "2" => JsonNamingPolicy.SnakeCaseLower.ConvertName(name),
-        "3" => JsonNamingPolicy.SnakeCaseUpper.ConvertName(name),
-        "4" => JsonNamingPolicy.KebabCaseLower.ConvertName(name),
-        "5" => JsonNamingPolicy.KebabCaseUpper.ConvertName(name),
-        _ => throw new InvalidDataException("Unsupported source JSON naming policy value " + namingPolicy)
-    };
 
     private NativeLocation? Location(ISymbol symbol)
     {
@@ -517,21 +518,15 @@ internal sealed partial class SourceContractReader
         .Select(value => (TypedConstant?)value.Value)
         .FirstOrDefault();
 
-    private static NativeAttribute[] Attributes(ISymbol symbol) => symbol
-        .GetAttributes()
-        .Where(value => value.AttributeClass?.ToDisplayString() is { } name &&
+    private static NativeAttribute[] Attributes(ISymbol symbol) => ProjectionAttributes(DeclarationAttributes(symbol));
+
+    private static NativeAttribute[] ProjectionAttributes(NativeAttribute[] attributes) => attributes
+        .Where(value => value.Name is { } name &&
             (name.StartsWith(JsonPrefix, StringComparison.Ordinal) || name is
                 "System.Diagnostics.CodeAnalysis.AllowNullAttribute"
                 or "System.Diagnostics.CodeAnalysis.DisallowNullAttribute" or
                 "System.Diagnostics.CodeAnalysis.MaybeNullAttribute"
                 or "System.Diagnostics.CodeAnalysis.NotNullAttribute"))
-        .Select(value => new NativeAttribute(
-            value.AttributeClass!.ToDisplayString(),
-            value.ConstructorArguments.Select(Constant).ToArray(),
-            value
-                .NamedArguments.OrderBy(pair => pair.Key, StringComparer.Ordinal)
-                .Select(pair => new NativeNamedConstant(pair.Key, Constant(pair.Value)))
-                .ToArray()))
         .ToArray();
 
     private static NativeConstant Constant(TypedConstant value)

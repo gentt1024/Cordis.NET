@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from typert_declaration_consumer import verify_declaration_consumer
+from typert_management_consumer import verify_management_consumer
 
 
 def main():
@@ -23,6 +24,8 @@ def main():
     parser.add_argument("--aot", action="store_true")
     parser.add_argument("--declarations-only", action="store_true",
         help="Run only the ordinary declaration package and catalog checks.")
+    parser.add_argument("--management-only", action="store_true",
+        help="Run only standard generated management and notification package consumers.")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = options.output.resolve()
@@ -46,6 +49,7 @@ def main():
     steps = []
     status = "failed"
     provider_referenced = None
+    management_node_commands = []
 
     def run(name, command, expected_failure=False):
         assert Path(str(command[0])).name.lower() not in {"node", "node.exe", "npm", "npx"}
@@ -71,8 +75,15 @@ def main():
     try:
         composition = f'<PackageReference Include="Cordis.NET.Composition" Version="{version}"/>'
         clr = f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>'
-        verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project)
+        if not options.management_only:
+            verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project)
         if options.declarations_only:
+            provider_referenced = False
+            status = "requested-checks-passed"
+            return
+        management_node_commands = verify_management_consumer(root, source, options.packages.resolve(), output,
+            version, dotnet, composition, run, project, options.aot)
+        if options.management_only:
             provider_referenced = False
             status = "requested-checks-passed"
             return
@@ -333,7 +344,9 @@ def main():
     finally:
         (output / "results.json").write_text(json.dumps({"status": status, "steps": steps, "independentSourceDirectory": str(source),
             "providerImplementationReferencedByCaller": provider_referenced, "packageReferencesOnly": True,
-            "nodeCommands": [], "aotRequested": options.aot, "declarationsOnly": options.declarations_only}, indent=2) + "\n", encoding="utf-8")
+            "nodeCommands": [], "managementTypeScriptCommands": management_node_commands,
+            "aotRequested": options.aot, "declarationsOnly": options.declarations_only,
+            "managementOnly": options.management_only}, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
