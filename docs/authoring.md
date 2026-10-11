@@ -247,13 +247,13 @@ await connection.dispose();
 
 Await `mountRemote`: it registers owner cleanup and contributes methods to the shared root `remote.<namespace>` service. Disjoint contributions can share a namespace; duplicate methods or unrelated services are refused. Withdrawal removes only that contribution, then removes the namespace when its last contribution leaves. Client disposal drains its work without closing the borrowed Connection. The application owns Connection disposal. Optional fetch and WebSocket factories configure the application's carrier identity, without changing generated methods or Host authorization.
 
-The local continuation has exercised unary, downlink mux and unary multipart attachment recovery with generated .NET/TS clients and the fixed Connection under Node. Typed uplink, reverse Context/owned-value and complete event forwarding remain under implementation. The previous base64 wire and per-method NDJSON paths are removed.
+The shared runtime supports unary results, unary multipart attachment recovery, downlink and typed uplink mux, with generated .NET/TS clients. The [validation record](validation.md#shared-remote-connection-package-gate-2026-10-12) separates the frozen package gate, fixed DSH interoperability and Native AOT evidence. Reverse Context/owned-value and complete event forwarding remain under implementation. The previous base64 wire and per-method NDJSON paths are removed.
 
 ### Consumer evidence and remaining scope
 
 The [multi-entry gate](../scripts/verify-clr-multi-entry.py) independently packs an author package, consumes it through `PackageReference`, installs its root/subpath entries and exercises shared identity, separate configurations, failed and successful replacement, withdrawal, generated TypeScript calls over real HTTP and invalid arguments. The separate [Remote gate](../scripts/verify-typert.py) covers the native Remote author chain. Use a fresh local package batch and the required Node/TypeScript dependencies. Platform acceptance remains governed by the completed results in [validation](validation.md); these examples alone do not establish Windows/Linux or Native AOT closure. Dynamic CLR loading requires the ordinary runtime.
 
-The richer source type graph, Context/owned-value graph, Peer/uplink remotes and binary attachment protocol remain open scope. Settings, PluginManager and selected host emit notifications now use generated contracts over the existing profile owners; see [management migration](management-remote-migration.md). Native raw configuration, host state and artifact delivery retain their independent duties. Existing application-specific `MapCordisService` endpoints do not close the remaining wire gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
+The richer source type graph, reverse Context/owned-value handling, complete fixed events and browser scoped assembly remain open scope. Operator Peer ownership, typed uplink and unary multipart now have implementations and bounded evidence; these do not close the remaining responsibilities. Settings, PluginManager and selected host emit notifications now use generated contracts over the existing profile owners; see [management migration](management-remote-migration.md). Native raw configuration, host state and artifact delivery retain their independent duties. Existing application-specific `MapCordisService` endpoints do not close the remaining wire gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
 
 
 ## Native authored models and .NET consumers, 2026-10-10
@@ -335,14 +335,14 @@ Register the input value type in the author's STJ context, here `typeof(string)`
 
 ```csharp
 await using var stream = await client.ExchangeAsync("prefix:", cancellationToken);
-stream.Send(null);       // Local validation and enqueue; no Host acknowledgement.
-stream.Send("first");   // Sending before the first read is supported.
-stream.End();            // Drain queued input and half-close; keep reading output.
+stream.Send(null);
+stream.Send("first");
+stream.End();
 await foreach (var item in stream.WithCancellation(cancellationToken))
     Console.WriteLine(item);
 ```
 
-The generated return type is `Task<RemoteStreamHandle<string, string?>>`. Downlink-only methods retain `RemoteStreamHandle<T>` without send/end capabilities. Both have one output consumer. `End` is idempotent, including after termination. Sending after half-close or retirement fails locally. `DisposeAsync` cancels this logical call and awaits owned local work; it does not acknowledge remote business retirement. Host input codec failure terminates the logical stream even when the author catches the input exception. Sibling streams and the Connection remain active.
+`Send` validates and enqueues locally, including before the first read; it does not acknowledge Host receipt. `End` half-closes the input after queued sends while output remains readable. The generated return type is `Task<RemoteStreamHandle<string, string?>>`. Downlink-only methods retain `RemoteStreamHandle<T>` without send/end capabilities. Both have one output consumer. `End` is idempotent, including after termination. Sending after half-close or retirement fails locally. `DisposeAsync` cancels this logical call and awaits owned local work; it does not acknowledge remote business retirement. Host input codec failure terminates the logical stream even when the author catches the input exception. Sibling streams and the Connection remain active.
 
 Generated TypeScript returns `RemoteDuplexHandle<Output, Input>` with `send`, `end`, and awaited `dispose`; optional items use `undefined`, independently of `null`. Its send boundary checks lossless JSON, and the Host validates the declared codec. .NET also validates its generated input codec before enqueueing. Text mux uses ordinary item values and omits `value` for absence; it adds no binary frame or wrapper. Primitive, nullable value, supported collection/dictionary and existing bounded DTO codecs retain their actual backend limits. Owned objects and reverse Context/event delivery remain separate open work.
 

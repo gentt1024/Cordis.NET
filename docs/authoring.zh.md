@@ -247,13 +247,13 @@ await connection.dispose();
 
 必须等待 `mountRemote`，它在所有者上登记清理，并向共享的根 `remote.<namespace>` Service 贡献方法。不同贡献可以共享命名空间，重复方法或无关 Service 会被拒绝。撤销只移除本贡献，最后一个贡献退出才撤销命名空间。客户端释放等待自身工作，不关闭借用的 Connection；应用负责释放 Connection。可选的 fetch 与 WebSocket 工厂配置应用的传输身份，不改变生成方法或 Host 授权。
 
-本地续建已通过生成式 .NET/TS 客户端与 Node 下的固定 Connection 执行 unary、下行 mux 及 unary multipart 附件恢复。Typed uplink、反向 Context／owned-value 和完整事件转发仍在实施。原 base64 线格式与每方法 NDJSON 路径已退出。
+共享运行时支持 unary 结果、unary multipart 附件恢复、下行及 typed uplink mux，并供生成式 .NET/TS 客户端消费。[验证记录](validation.zh.md#共享-remote-connection-包门禁2026-10-12)区分冻结包门禁、固定 DSH 互通及 Native AOT 证据。反向 Context／owned-value 和完整事件转发仍在实施。原 base64 线格式与每方法 NDJSON 路径已退出。
 
 ### 消费者证据与剩余范围
 
 [多入口门禁](../scripts/verify-clr-multi-entry.py) 独立打包作者 NuGet，通过 `PackageReference` 消费，安装包根/子路径入口，并验证共享身份、独立配置、成功与失败替换、撤销、真实 HTTP 上的生成 TypeScript 调用及错误参数。独立的 [Remote 门禁](../scripts/verify-typert.py) 覆盖原生 Remote 作者链。使用最新本地包批次及所需 Node/TypeScript 依赖。平台验收以[验证记录](validation.zh.md)中已完成结果为准；这些示例本身不能证明 Windows/Linux 或 Native AOT 闭环。动态 CLR 加载要求普通运行时。
 
-更丰富的源类型图、Context/owned-value 图、Peer/uplink remotes 及二进制 attachment 协议仍未完成。Settings、PluginManager 与选定宿主 emit 通知已通过既有 profile owner 接入生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
+更丰富的源类型图、反向 Context/owned-value 处理、完整固定事件及浏览器 scoped 装配仍未完成。operator Peer 所有权、typed uplink 和 unary multipart 现已有实现与有限验证，不据此关闭剩余职责。Settings、PluginManager 与选定宿主 emit 通知已通过既有 profile owner 接入生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
 
 
 ## 原生作者模型与 .NET 消费者，2026-10-10
@@ -335,14 +335,14 @@ public async IAsyncEnumerable<string> Exchange(
 
 ```csharp
 await using var stream = await client.ExchangeAsync("prefix:", cancellationToken);
-stream.Send(null);       // 本地校验与入队，不代表 Host 已确认。
-stream.Send("first");   // 首次读取前即可发送。
-stream.End();            // 发完队列并半关闭上行，下行仍可继续读取。
+stream.Send(null);
+stream.Send("first");
+stream.End();
 await foreach (var item in stream.WithCancellation(cancellationToken))
     Console.WriteLine(item);
 ```
 
-生成返回类型为 `Task<RemoteStreamHandle<string, string?>>`。只有下行的方法保留不具备 send/end 能力的 `RemoteStreamHandle<T>`；两者都只有一个下行消费者。`End` 幂等，终止后也不报错；半关闭或退休后的发送在本地拒绝。`DisposeAsync` 取消本逻辑调用并等待自己拥有的本地工作，不确认远端业务退休。Host 输入 codec 失败会终止逻辑流，即使作者捕获输入异常；同连接的其他流仍可继续。
+`Send` 在本地校验并入队，首次读取前即可调用，不代表 Host 已确认；`End` 在队列发送后半关闭上行，下行仍可继续读取。生成返回类型为 `Task<RemoteStreamHandle<string, string?>>`。只有下行的方法保留不具备 send/end 能力的 `RemoteStreamHandle<T>`；两者都只有一个下行消费者。`End` 幂等，终止后也不报错；半关闭或退休后的发送在本地拒绝。`DisposeAsync` 取消本逻辑调用并等待自己拥有的本地工作，不确认远端业务退休。Host 输入 codec 失败会终止逻辑流，即使作者捕获输入异常；同连接的其他流仍可继续。
 
 生成的 TypeScript 返回带 `send`、`end` 和可等待 `dispose` 的 `RemoteDuplexHandle<Output, Input>`，可缺失项使用 `undefined`，与 `null` 独立。其发送边界校验无损 JSON，Host 校验声明 codec；.NET 在入队前还会校验生成的输入 codec。文本 mux 传原始 item 值，缺失时省略 `value`，不增加 binary 帧或对象包装。原始类型、可空值类型、受支持集合／字典及既有有界 DTO codec 仍受各后端实际限制。owned 对象、反向 Context 和事件投递继续属于独立的未完成工作。
 

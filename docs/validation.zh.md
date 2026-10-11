@@ -407,3 +407,13 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 前一冻结包候选在修复包源引用后，通过完整独立声明／引用、Settings、管理和通知消费者脚本。当前共享调用者有自己的包回执，不借用此前完整门禁源码测试或旧 AOT 的结果。仓库级验收仍未完成：早先包门禁因 SourceLink 要求已提交源码而在未提交工作树上失败，未放宽门禁。生成空性、模型接线、错误详情和隔离缓存设置的失败证据分别保留。本条不宣称 Linux、完整当前浏览器验收、反向 Context/owned values 或完整事件已完成。
 
 本地 `4e76a74` 检查点重新通过全部 848 项源码测试。其包门禁随后定位到仍使用 CRLF 的文件与 SourceLink 源码字节不一致，Git 按仓库属性保存为 LF。仓库格式流程已修正该输入，C# token 值及 using 声明未改变；四个格式阶段现已一致。格式化源码使用独立的包验证身份。两个原始符号失败报告均保留，未调整校验规则。
+
+## 共享 Remote Connection 包门禁，2026-10-12
+
+冻结的本地实现为 `4881e089757f4e73181082eb796f686348c19127`，其前一个功能检查点为 `4e76a74691fbb3649192fe5e56e3ba292e5773e4`。`python scripts/verify.py --package` 在 Windows x64、SDK 10.0.111 上通过。全部 848 项源码测试通过，无失败或跳过。47 个外层门禁步骤包括包符号、真实调试源码定位、CLR 部署／多 Entry 和独立消费者。.NET／TS 生成与 Settings 消费者脚本完成 149 个步骤，其中包含预期拒绝。门禁期间源码保持不变。
+
+[回执](../verification/remote-connection-2026-10-12/evidence.json)绑定源码清单、TRX 报告、18 个包／符号归档、实际还原的 Cordis 包字节，以及执行完成后的消费者输入。全部参与编译的 C# 文件与提交字节一致。既有四个格式阶段对 259 个文件达成一致；格式修正保留了 token 值和 using 声明。此前未提交源码及 CRLF 导致的 SourceLink 失败保留原始报告，仍记为失败执行。
+
+正常 build／pack 和独立调用者覆盖共享 unary 结果合同、两种 scoped、multipart、typed uplink、引用模型、Settings 及生成式管理。Remote 引用复用已有声明组合与源事实。同一候选另通过[真实浏览器恢复](../verification/remote-connection-2026-10-12/browser-recovery.json)：生成的选定通知经过生产 ASP.NET mux；断线保留插件实例／草稿，失败查询能够恢复，实际撤销才释放实例。
+
+上一条本地回执中的固定 DSH Node unary／mux 及 Windows Native AOT caller 检查，属于各自记录的格式化前源码／包候选。它们是有限证据，不作为最终候选重跑结果。本门禁未执行 Linux、原始 DSH 测试套件或全运行时差分、托管 CI、远端 SourceLink 获取、源码归档构建或 Maker。反向 Context／owned-value、完整固定事件、浏览器 scoped 装配和剩余模型／平台职责继续开放。依赖、上游 pin、包版本和已发布包身份均未改变。本次仅本地实现与验证，未推送、合并、发布或部署。

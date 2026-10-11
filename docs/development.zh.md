@@ -398,3 +398,9 @@ G01 在既有共同声明中采用 `[RemoteUplink] IAsyncEnumerable<T>`。生成
 主要维护入口为 `SharedAuthor.cs`、`SharedConsumer.cs`、`SharedClient.ts` 及 `verify-typert-dotnet.py` 中的共享包消费者。TS 夹具检查自身生成／传输和非法帧边界，包括缓冲溢出与协议关闭，不重复普通 DTO 后端套件。固定 DSH mux 代码也已在 Node 下对原生 Host 执行原始输入、缺失/null、半关闭及 codec 拒绝。生成空性、引用模型接线和错误详情的失败记录保留在本地证据中。这些结果不代表 Linux、完整浏览器或仓库级验收。
 
 接下来沿已批准的固定工作流完成反向 Context/owned-value/事件处理，保持同步 resolver/release，在 handler 和回复结算后释放 owned Context，保留 borrowed Context。既有选定通知源不证明这些职责完成。最终源码／包验证须使用自己的候选身份；早先因未提交源码而触发的 SourceLink 拒绝仍是失败门禁，不作豁免。
+
+### 共享载体验证检查点，2026-10-12
+
+本地源码 `4881e08` 已完成 [Windows 包门禁](validation.zh.md#共享-remote-connection-包门禁2026-10-12)，源码／包身份与同源码的浏览器恢复结果分别记录。G01 已接通上述类型化作者／输入／客户端链。此结果更新此前门禁进行中的状态，不重分类早先失败或 AOT／互通候选。正常引用模型消费、共享载体及 typed uplink 是当前路线，没有保留历史 fallback。
+
+接续固定事件工作流：`$events`、`$events/result`、每次读取的 `agent` adapter 和 `agentId` 帧。resolver／release 保持同步；取消后 owned 解析值仍须存活至 handler 与回复结算，borrowed Context 保持借用。现有 `remoteNotifications/watch` 是需要随消费者迁移的选定 emit 切片，不是完整事件目标合同。不得将固定字段替换为通用 Context-key wire，也不得在真实事件消费接通前将私有作者探针固化为公开接口。
