@@ -6,22 +6,23 @@ namespace Cordis.Typert.Generator.Model;
 /// </summary>
 internal sealed class DeclarationDataProjection
 {
-    private readonly Dictionary<string, DeclarationType> declarations;
+    private readonly DeclarationModelComposition declarations;
     private readonly Dictionary<string, NativeTypeDeclaration> projected = new(StringComparer.Ordinal);
     private readonly HashSet<string> visiting = new(StringComparer.Ordinal);
 
-    private DeclarationDataProjection(DeclarationModelDocument model)
+    private DeclarationDataProjection(DeclarationModelDocument model, DeclarationModelDocument[] references)
     {
-        declarations = model.Declarations.ToDictionary(type => type.Id, StringComparer.Ordinal);
+        declarations = new(model, references);
     }
 
     internal static string Emit(
         DeclarationModelDocument model,
         IEnumerable<string> roots,
         string targetNamespace,
-        string context)
+        string context,
+        DeclarationModelDocument[]? referenceModels = null)
     {
-        var projection = new DeclarationDataProjection(model);
+        var projection = new DeclarationDataProjection(model, referenceModels ?? []);
         var selected = roots
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
@@ -39,18 +40,21 @@ internal sealed class DeclarationDataProjection
             .ToArray();
         if (selected.Length == 0)
             throw Refuse("roots", "At least one data root is required.");
-        foreach (var diagnostic in model.Diagnostics)
+        foreach (var diagnostic in projection.declarations.Diagnostics)
             if (diagnostic.Symbol is null || projection.projected.Keys.Any(id =>
                     diagnostic.Symbol == id || diagnostic.Symbol.StartsWith(id + ".", StringComparison.Ordinal)))
                 throw Refuse(
                     diagnostic.Symbol ?? "model",
                     diagnostic.Category + " " + diagnostic.Code + ": " + diagnostic.Message);
-        return DotnetProjectionEmitter.EmitData(
+        var source = DotnetProjectionEmitter.EmitData(
             projection.projected.Values.OrderBy(type => type.Id, StringComparer.Ordinal).ToArray(),
             selected,
             model.ContractIdentity,
             targetNamespace,
             context);
+        return source + string.Concat(
+            projection.declarations.ReferenceIdentities.Select(identity =>
+                "// Referenced declaration model " + identity + "\n"));
     }
 
     private NativeTypeReference Reference(DeclarationReference reference, int depth = 0)
@@ -69,9 +73,9 @@ internal sealed class DeclarationDataProjection
 
         if (reference.Kind == "array" && reference.Rank == 1 && reference.Arguments.Length == 1)
             return new("array", "", reference.Nullability, [Reference(reference.Arguments[0], depth + 1)], 1);
-        if (reference.Kind != "named" || reference.ContainingType is not null ||
-            !declarations.TryGetValue(reference.Name, out var type))
+        if (reference.Kind != "named" || reference.ContainingType is not null)
             throw Refuse(reference.Name, "Unsupported or unresolved data reference.");
+        var type = declarations.Resolve(reference.Name);
         if (type.Provenance == "metadata-reference")
         {
             if (type.MetadataName == "System.Nullable`1" &&

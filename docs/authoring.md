@@ -323,7 +323,7 @@ The catalog retains analysis diagnostics and generates no binding, Remote regist
 
 V1 `.cordis.typert.json` remains the bounded Remote wire projection. Its extraction and the v2 declaration model share authored member, reference, initializer and attribute facts; historical v1 bytes are not a separate compatibility authority. `CordisTypertService=*` selects all supported authored services into one assembly-named artifact. A selected service's complete reachable graph is retained. Conflicting JSON naming policies for a shared DTO, including nested and recursive references, fail with `TYPM113`.
 
-Selected ordinary records/classes can generate DTOs and a static STJ context from the saved v2 artifact without a Remote declaration or provider assembly:
+Selected ordinary classes can generate DTOs and a static STJ context from the saved v2 artifact without a Remote declaration or provider assembly:
 
 ```xml
 <PropertyGroup>
@@ -333,7 +333,16 @@ Selected ordinary records/classes can generate DTOs and a static STJ context fro
 </PropertyGroup>
 <ItemGroup>
   <CordisTypertDataRoot Include="Example.Options" />
+  <CordisTypertDataReferenceModel Include="Shared.cordis.model.json" />
 </ItemGroup>
 ```
 
-The target invokes `emit-dotnet-data` before `CoreCompile`, using the same supported JSON projection as the Remote caller. Missing members retain supported constant defaults; explicit null remains distinct. Unsupported declarations are refused instead of omitted. The independent consumer uses the same authored DTO as an ordinary root and a Remote argument/result. `emit-dotnet` still accepts only the Remote artifact. Saved-v2 Remote reconstruction, generic DTO projection, referenced-model composition, design-time IDE and named UI validation remain open.
+The optional `CordisTypertDataReferenceModel` items supply saved v2 models for external data definitions reached from the selected roots. Each input is checked with its existing model identity. Resolution requires an exact assembly-qualified declaration identity, including the assembly version and public-key token; names alone do not match. A referenced model supplies source facts for its own declarations. A metadata placeholder by itself remains insufficient. References do not add public roots: `CordisTypertDataRoot` still selects only roots published by the primary model.
+
+The equivalent CLI accepts `emit-dotnet-data ... --reference-models reference-models.rsp`. The response file lists one model path per line; relative paths are resolved from the response file's directory. Omit this option when no reference models are needed. Every explicitly supplied reference identity is recorded in the generated source, in deterministic order. Conflicting source definitions for the same identity are refused; identical definitions may occur in several inputs, and different source locations alone do not conflict. Missing definitions, incompatible declaration shapes and generated type-name collisions are also refused. This validates declared identities and artifact contents, not correspondence to an arbitrary implementation DLL; publish each model with the source build that produced it.
+
+The target invokes `emit-dotnet-data` before `CoreCompile`, using the same supported JSON projection as the Remote caller. Each build reads the primary and reference model contents; unchanged generated output retains its bytes and timestamp. Generation failure removes stale source, and `Clean` removes generated source and owned response files. Missing members retain supported constant defaults; explicit null remains distinct. These generated data carriers do not replay authored constructor or accessor behavior. Referenced DTOs use the same bounded public class/property subset as local DTOs; composition does not enable generic DTOs, inheritance, custom converters or other refused shapes. Extraction records `TYPM202` on a source type whose non-public instance data member has explicit `JsonInclude` but falls outside the public analysis surface. Projection rejects that type, including through a reference model, rather than silently dropping the JSON member; unrelated declarations remain usable.
+
+Re-extract such models with the current compiler after upgrading. A saved artifact's hash validates its saved facts; it cannot recover members omitted by an older extractor or prove every authored JSON configuration. The compiler does not infer those missing facts from a DLL or an old artifact. The model JSON shape is unchanged; this correction requires source re-extraction, and package verification must use models produced by the current tool.
+
+The independent consumer uses the same authored DTO as an ordinary root and a Remote argument/result. `emit-dotnet` still accepts only the Remote artifact. Saved-v2 Remote reconstruction, generic DTO projection, broader referenced-model backends, design-time IDE and named UI validation remain open.

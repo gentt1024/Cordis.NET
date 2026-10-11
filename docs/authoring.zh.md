@@ -323,7 +323,7 @@ dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-mod
 
 v1 `.cordis.typert.json` 保留受限的 Remote wire 投影职责。该提取入口与 v2 声明模型共享作者的成员、引用、initializer 和 attribute 事实；历史 v1 字节不是另一套兼容权威。`CordisTypertService=*` 将全部受支持的作者 service 选入按程序集命名的同一制品。选择单个 service 时保留其完整可达图。共享 DTO 的 JSON 命名策略冲突（包括嵌套及递归引用）以 `TYPM113` 拒绝。
 
-选定普通 record/class 可从已保存的 v2 制品生成 DTO 及静态 STJ context，不要求 Remote 声明或引用 provider 程序集：
+选定普通 class 可从已保存的 v2 制品生成 DTO 及静态 STJ context，不要求 Remote 声明或引用 provider 程序集：
 
 ```xml
 <PropertyGroup>
@@ -333,7 +333,16 @@ v1 `.cordis.typert.json` 保留受限的 Remote wire 投影职责。该提取入
 </PropertyGroup>
 <ItemGroup>
   <CordisTypertDataRoot Include="Example.Options" />
+  <CordisTypertDataReferenceModel Include="Shared.cordis.model.json" />
 </ItemGroup>
 ```
 
-target 在 `CoreCompile` 前调用 `emit-dotnet-data`，复用 Remote caller 支持的 JSON 投影。成员省略保留受支持的常量默认值；显式 null 仍有独立含义。不支持的声明明确拒绝，不静默丢失。独立消费者将同一个作者 DTO 同时用作普通 root 和 Remote 参数/结果。`emit-dotnet` 仍只接收 Remote 制品。保存的 v2 制品重建 Remote、泛型 DTO 投影、引用模型组合、design-time IDE 和具名 UI 验证继续开放。
+可选的 `CordisTypertDataReferenceModel` items 为所选根可达的外部数据定义提供已保存的 v2 模型。每个输入都按既有模型身份校验。解析要求完整的 assembly-qualified 声明身份精确匹配，包括程序集版本和公钥 token；只同名不会匹配。引用模型为自己的声明提供源事实，仅有 metadata 占位仍不足以投影。引用项不增加公开根：`CordisTypertDataRoot` 仍只能选择主模型发布的 roots。
+
+对应 CLI 接受 `emit-dotnet-data ... --reference-models reference-models.rsp`。响应文件每行列出一个模型路径，相对路径以响应文件所在目录为基准。不需要引用模型时可省略此选项。所有显式引用输入的身份按确定顺序记录在生成源码中。同身份的源定义冲突会被拒绝；多个输入可含相同定义，仅源码位置不同不构成冲突。缺失定义、不一致的声明形状及生成类型名称冲突也会被拒绝。这验证声明身份与制品内容，不证明模型与任意实现 DLL 的对应关系；应将模型与产生它的源码构建一起发布。
+
+target 在 `CoreCompile` 前调用 `emit-dotnet-data`，复用 Remote caller 支持的 JSON 投影。每次构建读取主模型与引用模型内容；生成结果不变时保持字节和时间戳。生成失败删除旧源码，`Clean` 删除生成源码及所属响应文件。成员省略保留受支持的常量默认值；显式 null 仍有独立含义。生成的数据 carrier 不重放作者构造器或 accessor 行为。引用 DTO 与本地 DTO 使用相同的有界公开 class/property 子集；组合不开放泛型 DTO、继承、自定义 converter 或其他已拒绝形状。若源类型的非公开实例数据成员显式标记 `JsonInclude`，却不在公开分析范围内，提取器会为所属类型记录 `TYPM202`。投影拒绝该类型，包括从引用模型到达它的情况，不再静默丢弃 JSON 成员；无关声明仍可使用。
+
+升级后应使用当前 compiler 重新提取这类模型。已保存制品的 hash 只验证已保存的事实，不能补回旧提取器遗漏的成员，也不证明所有作者 JSON 配置。compiler 不从 DLL 或旧制品猜测这些缺失事实。模型 JSON 形状没有改变；这项修正要求从源码重新提取，包验证须使用当前工具生成的模型。
+
+独立消费者将同一个作者 DTO 同时用作普通 root 和 Remote 参数/结果。`emit-dotnet` 仍只接收 Remote 制品。保存的 v2 制品重建 Remote、泛型 DTO 投影、更广的引用模型后端、design-time IDE 和具名 UI 验证继续开放。

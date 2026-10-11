@@ -155,7 +155,11 @@ Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对�
 
 选择的普通公开声明已有独立 v2 `.cordis.model.json` 路线。它保留作者方法的返回 wrapper 和取消参数，不应用 Remote 规范化。声明定义使用程序集身份及 CLR metadata name；构造引用保留实参、包含泛型类型和空性。泛型参数标明类型/方法 owner 和 ordinal。直接 base/interface 边、public/protected 成员、事件/delegate、accessor、required/default 事实、常量、未执行 initializer 和源码文档均为模型数据。它们不注册运行能力，也不承诺可执行投影。
 
-两个提取入口现在消费同一套声明成员、引用、initializer、attribute 及来源事实。v2 制品保留丰富分析，v1 是受限 Remote wire 投影；serializer 命名属于该投影。共享可达 DTO 图的命名策略冲突以 TYPM113 拒绝，包括嵌套与递归引用。历史 v1 字节及身份不是独立兼容要求。普通扩展名不进入 Remote AdditionalFiles。外部声明保留 metadata 来源，不重建实现体。选定普通 .NET DTO/STJ 发射消费 v2 制品，不加载 provider；同一个 DTO 同时作为普通 root 及 Remote 参数/结果验证。保存的 v2 制品重建 Remote、引用模型组合、泛型 DTO 发射及其他后端继续开放。
+两个提取入口现在消费同一套声明成员、引用、initializer、attribute 及来源事实。v2 制品保留丰富分析，v1 是受限 Remote wire 投影；serializer 命名属于该投影。共享可达 DTO 图的命名策略冲突以 TYPM113 拒绝，包括嵌套与递归引用。历史 v1 字节及身份不是独立兼容要求。普通扩展名不进入 Remote AdditionalFiles。外部声明保留 metadata 来源，不重建实现体。选定普通 .NET DTO/STJ 发射消费 v2 制品，不加载 provider；同一个 DTO 同时作为普通 root 及 Remote 参数/结果验证。保存的 v2 制品重建 Remote、泛型 DTO 发射及其他后端继续开放。
+
+普通数据投影可显式接收引用 v2 模型，解析可达外部 DTO 定义。每个输入均校验模型身份，声明必须按完整的 assembly-qualified 身份精确匹配。只有明确提供的源定义能补足 metadata 引用；未解析引用和冲突定义会被拒绝。根仍从主模型选择，跨模型继续使用既有有界数据 carrier 规则。源码位置不同不构成不同定义。生成源码记录所有显式输入身份。提取器为通过 `JsonInclude` 显式纳入 JSON 的非公开实例数据在所属类型上记录 `TYPM202`，避免公开数据投影静默省略 JSON 成员。这是复用既有 v2 格式与 emitter 的源码制品组合适配，不加载实现程序集，也不新增依赖。它不证明任意 DLL 与这些源码制品对应，不重放作者行为，也不建立通用 Remote/Schema/TS 引用模型支持。
+
+受非公开 `JsonInclude` 数据漏采影响的模型须在升级后重新提取。身份校验检查制品中已有的事实，不能重建旧提取器遗漏的内容，也不证明完整作者 JSON 行为。这是保持模型 JSON 形状不变的源码提取修正，不建立提取器版本转换或 legacy 投影，也不从实现 DLL 或旧文件猜测缺失事实。新包验证须用当前工具提取模型。
 
 上游将标记为 secret 的整个 live 根脱敏为 JavaScript undefined。原生 JSON namespace 要求有值，因此省略该根并返回原生诊断，其他 namespace 仍可读取。hidden 根按宿主政策省略。这项有界 JSON 适配不公开 secret，也不伪造替代值。
 

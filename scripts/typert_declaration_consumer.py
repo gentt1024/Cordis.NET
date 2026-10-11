@@ -8,11 +8,7 @@ import zipfile
 
 def verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project):
     fixtures = root / "tests/fixtures/DeclarationModel"
-    external, external_project = project("DeclarationExternal",
-        '<AssemblyName>IndependentDeclarations.External</AssemblyName>'
-        '<PackageId>IndependentDeclarations.External</PackageId><Version>1.0.0-alpha</Version>', "")
-    shutil.copyfile(fixtures / "External.cs", external / "External.cs")
-    run("declaration-external-pack", [dotnet, "pack", external_project, "-c", "Release", "-o", feed])
+    external_setup = pack_external_data(fixtures, feed, dotnet, composition, run, project)
 
     roots = (
         "IndependentDeclarations.Config",
@@ -241,6 +237,151 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
         "ordinaryModelRefusedByRemoteEmitter": True
     }, indent=2) + "\n", encoding="utf-8")
     verify_data_consumer(fixtures, source, feed, output, dotnet, composition, compiler, roslyn, run, project)
+    verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, external_setup)
+
+
+def pack_external_data(fixtures, feed, dotnet, composition, run, project):
+    roots = ''.join('<CordisTypertModelRoot Include="IndependentDeclarations.External.' + name + '"/>'
+        for name in ("ImportedData", "UnrelatedData", "ImportedHiddenData", "Envelope`1"))
+    external, external_project = project("DeclarationExternal",
+        '<AssemblyName>IndependentDeclarations.External</AssemblyName>'
+        '<PackageId>IndependentDeclarations.External</PackageId><Version>1.0.0-alpha</Version>', composition,
+        '<ItemGroup>' + roots + '</ItemGroup>')
+    shutil.copyfile(fixtures / "External.cs", external / "External.cs")
+    run("declaration-external-pack", [dotnet, "pack", external_project, "-c", "Release", "-o", feed])
+    model = external / "obj/Release/net10.0/cordis-typert/IndependentDeclarations.External.cordis.model.json"
+    return external, external_project, model
+
+
+def verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, external_setup=None):
+    fixtures = root / "tests/fixtures/DeclarationModel"
+    external, external_project, external_model = external_setup or pack_external_data(fixtures, feed, dotnet, composition, run, project)
+    sdk = run("referenced-data-selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
+    compiler = source / "cache/cordis.net.composition" / version / "tools/net10.0/typert/Cordis.Typert.Compiler.dll"
+    roslyn = dotnet.parent / "sdk" / sdk / "Roslyn/bincore"
+    author, author_project = project("ReferencedDataAuthor",
+        '<AssemblyName>IndependentReferenced.Provider</AssemblyName>'
+        '<PackageId>IndependentReferenced.Provider</PackageId><Version>1.0.0-alpha</Version>',
+        composition + '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>',
+        '<ItemGroup><CordisTypertModelRoot Include="IndependentDeclarations.ReferencedData"/>'
+        '<CordisTypertModelRoot Include="IndependentDeclarations.ReferencedHiddenData"/>'
+        '<CordisTypertModelRoot Include="IndependentDeclarations.DataExternal"/></ItemGroup>')
+    shutil.copyfile(fixtures / "DataAuthor.cs", author / "DataAuthor.cs")
+    run("referenced-data-author-pack", [dotnet, "pack", author_project, "-c", "Release", "-o", feed])
+    model = author / "obj/Release/net10.0/cordis-typert/IndependentReferenced.Provider.cordis.model.json"
+    for package_id, artifact in (("IndependentDeclarations.External", external_model), ("IndependentReferenced.Provider", model)):
+        with zipfile.ZipFile(feed / (package_id + ".1.0.0-alpha.nupkg")) as archive:
+            assert archive.read("cordis/typert/" + artifact.name) == artifact.read_bytes()
+
+    contracts, contracts_project = project("ReferencedDataContracts",
+        '<PackageId>IndependentReferenced.Contracts</PackageId><Version>1.0.0-alpha</Version>'
+        '<CordisTypertDataModel>' + model.name + '</CordisTypertDataModel>'
+        '<CordisTypertDataNamespace>IndependentDeclarations.Referenced</CordisTypertDataNamespace>'
+        '<CordisTypertDataJsonContext>ReferencedDataJson</CordisTypertDataJsonContext>', composition,
+        '<ItemGroup><CordisTypertDataRoot Include="IndependentDeclarations.ReferencedData"/>'
+        '<CordisTypertDataReferenceModel Include="' + external_model.name + '"/>'
+        '<None Include="*.cordis.model.json" Pack="true" PackagePath="cordis/typert/"/></ItemGroup>')
+    primary_input = contracts / model.name
+    reference_input = contracts / external_model.name
+    shutil.copyfile(model, primary_input)
+    shutil.copyfile(external_model, reference_input)
+    main_identity = json.loads(primary_input.read_text(encoding="utf-8"))["contractIdentity"]
+    reference_identity = json.loads(reference_input.read_text(encoding="utf-8"))["contractIdentity"]
+    original_reference = reference_input.read_bytes()
+    run("referenced-data-contracts-pack", [dotnet, "pack", contracts_project, "-c", "Release", "-o", feed])
+    generated = contracts / "obj/Release/net10.0/cordis-typert/ReferencedDataJson.Data.g.cs"
+    owned = [generated] + [generated.parent / name for name in ("data-roots.rsp", "data-reference-models.rsp")]
+    first_source = generated.read_bytes()
+    assert main_identity.encode() in first_source and reference_identity.encode() in first_source, "Generated data lost an explicit model input identity"
+    stamp = generated.stat().st_mtime_ns
+    run("referenced-data-contracts-incremental", [dotnet, "build", contracts_project, "-c", "Release"])
+    assert generated.stat().st_mtime_ns == stamp and generated.read_bytes() == first_source
+    caller, caller_project = project("ReferencedDataConsumer", '<OutputType>Exe</OutputType>',
+        '<PackageReference Include="IndependentReferenced.Contracts" Version="1.0.0-alpha"/>')
+    shutil.copyfile(fixtures / "ReferencedConsumer.cs", caller / "Program.cs")
+
+    def call(label, default):
+        run(label + "-build", [dotnet, "build", caller_project, "-c", "Release"])
+        result = run(label, [dotnet, caller / "bin/Release/net10.0/ReferencedDataConsumer.dll", str(default)])
+        assert ("referenced ordinary data carrier consumer passed: " + str(default)).encode() in result
+        assets = json.loads((caller / "obj/project.assets.json").read_text(encoding="utf-8"))
+        assert not any(name.startswith(("IndependentDeclarations.External/", "IndependentReferenced.Provider/"))
+            for name in assets["libraries"]), "Caller acquired a referenced author's implementation package"
+        for assembly in ("IndependentDeclarations.External.dll", "IndependentReferenced.Provider.dll"):
+            assert not list((caller / "bin").rglob(assembly)), "Caller acquired an author's implementation assembly"
+    call("referenced-data-caller", 11)
+
+    external_source = external / "External.cs"
+    original_source = external_source.read_bytes()
+    try:
+        changed_source = original_source.replace(b"= 11;", b"= 12;", 1)
+        assert changed_source != original_source
+        external_source.write_bytes(changed_source)
+        run("referenced-data-source-change-build", [dotnet, "build", external_project, "-c", "Release"])
+        changed_reference = external_model.read_bytes()
+    finally:
+        external_source.write_bytes(original_source)
+    changed_identity = json.loads(changed_reference)["contractIdentity"]
+    assert changed_identity != reference_identity
+    reference_input.write_bytes(changed_reference)
+    assert json.loads(primary_input.read_text(encoding="utf-8"))["contractIdentity"] == main_identity
+    run("referenced-data-reference-change-build", [dotnet, "build", contracts_project, "-c", "Release"])
+    changed_projection = generated.read_bytes()
+    assert changed_projection != first_source and changed_identity.encode() in changed_projection
+    assert reference_identity.encode() not in changed_projection
+    contracts_project.write_bytes(contracts_project.read_bytes().replace(b'<Version>1.0.0-alpha</Version>', b'<Version>1.0.1-alpha</Version>'))
+    run("referenced-data-changed-contracts-pack", [dotnet, "pack", contracts_project, "-c", "Release", "-o", feed])
+    caller_project.write_bytes(caller_project.read_bytes().replace(b'Version="1.0.0-alpha"', b'Version="1.0.1-alpha"'))
+    call("referenced-data-changed-caller", 12)
+
+    original_input = contracts / "original-reference.cordis.model.json"
+    original_input.write_bytes(original_reference)
+    corrupt_input = contracts / "invalid-identity-reference.cordis.model.json"
+    corrupt_input.write_text(json.dumps(dict(json.loads(changed_reference), contractIdentity="sha256:" + "0" * 64)), encoding="utf-8")
+    roots = contracts / "refused-reference-roots.rsp"
+    references = contracts / "refused-reference-models.rsp"
+    refused = contracts / "Refused.Reference.Data.g.cs"
+    refusals = []
+    for label, root_name, selected_references, diagnostic in (
+        ("missing", "IndependentDeclarations.ReferencedData", [], "External data declarations require referenced-model composition"),
+        ("conflicting-source", "IndependentDeclarations.ReferencedData", [reference_input.name, original_input.name], "Conflicting source definitions"),
+        ("reference-identity", "IndependentDeclarations.ReferencedData", [reference_input.name, corrupt_input.name], "identity does not match its authored facts"),
+        ("reference-root", "IndependentDeclarations.External.UnrelatedData", [reference_input.name], "explicitly selected declaration root"),
+        ("reference-generic", "IndependentDeclarations.DataExternal", [reference_input.name], "Generic data declarations require a further projection"),
+        ("private-json-include", "IndependentDeclarations.ReferencedHiddenData", [reference_input.name], "TYPM202"),
+    ):
+        roots.write_text(root_name + "\n", encoding="utf-8")
+        references.write_text(''.join(name + "\n" for name in selected_references), encoding="utf-8")
+        refused.write_text("stale generated data", encoding="utf-8")
+        rejected = run("referenced-data-refuse-" + label, [dotnet, compiler, "--roslyn-directory", roslyn,
+            "emit-dotnet-data", "--model", primary_input, "--roots", roots, "--reference-models", references,
+            "--namespace", "IndependentDeclarations.Referenced", "--context", "ReferencedDataJson", "--output", refused], True)
+        assert diagnostic.encode() in rejected, rejected
+        assert not refused.exists(), "Reference refusal retained stale data source: " + label
+        refusals.append({"case": label, "staleOutputRemoved": True})
+
+    project_bytes = contracts_project.read_bytes()
+    try:
+        contracts_project.write_bytes(project_bytes.replace(
+            ('<CordisTypertDataReferenceModel Include="' + external_model.name + '"/>').encode(), b''))
+        rejected = run("referenced-data-msbuild-missing-model", [dotnet, "build", contracts_project, "-c", "Release"], True)
+        assert b"External data declarations require referenced-model composition" in rejected and not generated.exists()
+    finally:
+        contracts_project.write_bytes(project_bytes)
+    run("referenced-data-failed-build-clean", [dotnet, "clean", contracts_project, "-c", "Release"])
+    assert not any(path.exists() for path in owned), "Clean retained a generated data source or reference response file"
+    run("referenced-data-cold-rebuild", [dotnet, "build", contracts_project, "-c", "Release"])
+    assert generated.read_bytes() == changed_projection, "Cold rebuild changed a reference-composed carrier"
+    shutil.copyfile(primary_input, output / "referenced-data-main-model.json")
+    shutil.copyfile(reference_input, output / "referenced-data-library-model.json")
+    (output / "referenced-data-evidence.json").write_text(json.dumps({
+        "consumer": "reference-composed-ordinary-data-carrier-stj", "mainContractIdentity": main_identity,
+        "referenceContractIdentity": reference_identity, "changedReferenceContractIdentity": changed_identity,
+        "packageReferencesOnly": True, "authorImplementationsReferenced": False,
+        "namesRequiredNullDefaultsAndRecursion": True, "referenceRootsDoNotExpandMainRoots": True,
+        "sourceAuthoredConflict": True, "referenceChangeRegeneratedAndConsumed": True,
+        "cleanAndFailedBuildRemovedOwnedOutputs": True, "refusals": refusals
+    }, indent=2) + "\n", encoding="utf-8")
 
 
 def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, compiler, roslyn, run, project):

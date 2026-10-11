@@ -12,7 +12,7 @@ import threading
 import xml.etree.ElementTree as ET
 import zipfile
 
-from typert_declaration_consumer import verify_declaration_consumer
+from typert_declaration_consumer import verify_declaration_consumer, verify_referenced_data_consumer
 from typert_management_consumer import verify_management_consumer
 
 
@@ -26,6 +26,8 @@ def main():
         help="Run only the ordinary declaration package and catalog checks.")
     parser.add_argument("--management-only", action="store_true",
         help="Run only standard generated management and notification package consumers.")
+    parser.add_argument("--data-references-only", action="store_true",
+        help="Run only ordinary DTO projections composed from explicit referenced models.")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = options.output.resolve()
@@ -75,6 +77,11 @@ def main():
     try:
         composition = f'<PackageReference Include="Cordis.NET.Composition" Version="{version}"/>'
         clr = f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>'
+        if options.data_references_only:
+            verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project)
+            provider_referenced = False
+            status = "requested-checks-passed"
+            return
         if not options.management_only:
             verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project)
         if options.declarations_only:
@@ -346,7 +353,7 @@ def main():
             "providerImplementationReferencedByCaller": provider_referenced, "packageReferencesOnly": True,
             "nodeCommands": [], "managementTypeScriptCommands": management_node_commands,
             "aotRequested": options.aot, "declarationsOnly": options.declarations_only,
-            "managementOnly": options.management_only}, indent=2) + "\n", encoding="utf-8")
+            "managementOnly": options.management_only, "dataReferencesOnly": options.data_references_only}, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

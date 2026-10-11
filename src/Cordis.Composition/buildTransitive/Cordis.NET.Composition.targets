@@ -13,7 +13,7 @@
     <CordisTypertDataNamespace Condition="'$(CordisTypertDataNamespace)' == ''">$(RootNamespace).Data</CordisTypertDataNamespace>
     <CordisTypertDataJsonContext Condition="'$(CordisTypertDataJsonContext)' == ''">DataJson</CordisTypertDataJsonContext>
     <CordisTypertDataSource>$(CordisTypertOutputDirectory)$(CordisTypertDataJsonContext).Data.g.cs</CordisTypertDataSource>
-    <_CordisTypertDataFiles>$(CordisTypertDataSource);$(CordisTypertOutputDirectory)data-roots.rsp</_CordisTypertDataFiles>
+    <_CordisTypertDataFiles>$(CordisTypertDataSource);$(CordisTypertOutputDirectory)data-roots.rsp;$(CordisTypertOutputDirectory)data-reference-models.rsp</_CordisTypertDataFiles>
     <CordisTypertClientNamespace Condition="'$(CordisTypertClientNamespace)' == ''">$(RootNamespace).Remote</CordisTypertClientNamespace>
     <CordisTypertClientName Condition="'$(CordisTypertClientName)' == ''">RemoteClient</CordisTypertClientName>
     <CordisTypertClientSource>$(CordisTypertOutputDirectory)$(CordisTypertClientName).Generated.g.cs</CordisTypertClientSource>
@@ -50,11 +50,12 @@
           Condition="'$(CordisTypertDataModel)' != '' and '$(DesignTimeBuild)' != 'true'">
     <MakeDir Directories="$(CordisTypertOutputDirectory)" />
     <WriteLinesToFile File="$(CordisTypertOutputDirectory)data-roots.rsp" Lines="@(CordisTypertDataRoot)" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)data-reference-models.rsp" Lines="@(CordisTypertDataReferenceModel->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <ItemGroup>
       <FileWrites Include="$(_CordisTypertDataFiles)" />
     </ItemGroup>
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet-data --model &quot;$(CordisTypertDataModel)&quot; --roots &quot;$(CordisTypertOutputDirectory)data-roots.rsp&quot; --namespace &quot;$(CordisTypertDataNamespace)&quot; --context &quot;$(CordisTypertDataJsonContext)&quot; --output &quot;$(CordisTypertDataSource)&quot;" />
+          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet-data --model &quot;$(CordisTypertDataModel)&quot; --roots &quot;$(CordisTypertOutputDirectory)data-roots.rsp&quot; --reference-models &quot;$(CordisTypertOutputDirectory)data-reference-models.rsp&quot; --namespace &quot;$(CordisTypertDataNamespace)&quot; --context &quot;$(CordisTypertDataJsonContext)&quot; --output &quot;$(CordisTypertDataSource)&quot;" />
     <ItemGroup>
       <Compile Remove="$(CordisTypertDataSource)" />
       <Compile Include="$(CordisTypertDataSource)" />

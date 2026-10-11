@@ -322,8 +322,8 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 | 泛型、继承和引用事实 | 程序集加 metadata 身份，type parameter owner/ordinal/constraints、应用实参、containing type、直接 base/interfaces、tuple 名称及 enum 底层类型 | 有界分析已实现；包 fixture 检查字面事实。不展开外部实现。 |
 | required、nullable、默认值及来源 | 分开的 required/accessor/nullability 标志，类型化常量或未执行 initializer 表达式，XML/源码位置及 provenance | 有界分析已实现，不执行源码体。metadata-reference 的源码体仍不可得。 |
 | 普通独立目录 | 打包 v2 制品，不引用 provider 实现地消费、验证身份及投影声明成员 | 已实现，独立包／目录证据进入 `verify-typert-dotnet.py`，没有另建平行门禁。 |
-| Remote/.NET DTO/STJ/TS 投影 | 既有 v1 支持路线及 pre-`CoreCompile` 时序 | 可选原生绑定及生成 Settings .NET／TS 消费在新检查点通过。选定 v2 普通 .NET DTO/STJ 发射及共享作者事实解释已实现；保存的 v2 重建 Remote、泛型 DTO 发射及引用模型组合继续开放。 |
-| 完整 events/reference-object 运行及跨包源组合 | 声明引用保留身份，当前运行时沿用既有显式注册 | 分析未将其完成。引用模型组合、owned graph 调用及富协议各行仍开放。 |
+| Remote/.NET DTO/STJ/TS 投影 | 既有 v1 支持路线及 pre-`CoreCompile` 时序 | 可选原生绑定及生成 Settings .NET／TS 消费在新检查点通过。选定 v2 普通 .NET DTO/STJ 发射及共享作者事实解释已实现；显式引用 v2 源模型现可补全受支持的普通 DTO/STJ 图；保存的 v2 重建 Remote、泛型 DTO 发射及其他引用模型后端继续开放。 |
+| 完整 events/reference-object 运行及跨包源组合 | 声明引用保留身份，当前运行时沿用既有显式注册 | 普通 DTO/STJ 源模型组合已通过显式输入实现。更广的 Remote/Schema/TS 组合、owned graph 调用及富协议各行仍开放。 |
 | IDE、UI 及整体交付 | 既有 TFM/analyzer/build/carrier 路线 | design-time IDE、WPF/Avalonia/Godot/Blazor、浏览器管理、跨平台/AOT 和最终冻结范围验收需要具名证据。控制台/目录通过不将这些关项。 |
 
 首片复用 source reader 的事实 helper、打包 compiler 和 MSBuild 工具定位。
@@ -338,4 +338,12 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 
 选定普通 v2 DTO/STJ 发射、受支持默认值和 .NET downlink 客户端现有真实包消费证据。v1／v2 解释共享源事实，各自制品职责仍明确；嵌套 JSON 策略冲突会被拒绝。既有 Extensions 回归承担不可读兼容数据／数据保护行为，Composition 承担通知清理；包客户端覆盖生成／传输及任务寿命边界。早先失败检查点及原断言继续保留为证据。
 
-从原范围表的开放行继续：引用模型组合、保存的 v2 重建 Remote、其余丰富 Remote／owned-value 协议、原生文档及不依赖产品的 UI／Client assembly。本批不推导它们完成。重大公开合同／平台取舍及新增依赖仍需讨论，Maker 适配仍属其自己的会话。本批 Windows JIT 验收不将早先 Linux／AOT 证据延伸到新源码；合并和发布是另行且未授权的行动。
+从原范围表的开放行继续：其他引用模型后端、保存的 v2 重建 Remote、其余丰富 Remote／owned-value 协议、原生文档及不依赖产品的 UI／Client assembly。本批不推导它们完成。重大公开合同／平台取舍及新增依赖仍需讨论，Maker 适配仍属其自己的会话。本批 Windows JIT 验收不将早先 Linux／AOT 证据延伸到新源码；合并和发布是另行且未授权的行动。
+
+### 显式引用模型检查点，2026-10-11
+
+普通 DTO/STJ 发射现接受 `CordisTypertDataReferenceModel` item，按完整声明身份解析，根仍由主模型选择。它复用 v2 源事实和既有发射器；缺失、冲突或不支持的定义在保留生成输出前拒绝。当前提取器对非公开的显式 JSON 成员报告 `TYPM202`；重新提取这类模型，不猜补遗漏事实。没有改变格式、依赖、持久 profile 或 Remote 协议。
+
+聚焦的仅包消费者通过 21 步，包括不含任一作者 DLL 的实际调用、引用变化后的重生成、六类拒绝及 Clean。这是功能探针；新源码的完整冻结包验证仍待执行。下一项仍是保存的 v2 Remote 事实及原范围的其他后端／协议行。
+
+另一次 Windows 静态管理客户端 Native AOT 检查已在先前冻结的 `6ad9d7f` 包上通过。[回执](../verification/management-model-continuation-2026-10-11/static-management-aot.json) 将该源码身份与本次新模型工作分开。宿主仍为 JIT；不推导 Linux、托管 CI 或动态 CLR AOT 通过。

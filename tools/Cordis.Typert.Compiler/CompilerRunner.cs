@@ -44,7 +44,7 @@ internal static class CompilerRunner
                     "optimize"
                 },
                 "emit-dotnet" => new[] { "model", "namespace", "service", "client", "output" },
-                "emit-dotnet-data" => new[] { "model", "roots", "namespace", "context", "output" },
+                "emit-dotnet-data" => new[] { "model", "roots", "namespace", "context", "reference-models", "output" },
                 "inspect-model" => new[] { "model", "output" },
                 _ => throw new InvalidDataException("Unknown native compiler command " + args[0])
             };
@@ -65,7 +65,12 @@ internal static class CompilerRunner
                         .Where(line => !string.IsNullOrWhiteSpace(line))
                         .Select(line => line.Trim()),
                     Required(options, "namespace"),
-                    Required(options, "context")),
+                    Required(options, "context"),
+                    options.TryGetValue("reference-models", out var referenceModels)
+                        ? ResponseFile(referenceModels, Path.GetDirectoryName(Path.GetFullPath(referenceModels))!)
+                            .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
+                            .ToArray()
+                        : []),
                 "emit-dotnet" => DotnetProjectionEmitter.Emit(
                     NativeModelJson.Deserialize(File.ReadAllText(Required(options, "model"))),
                     Required(options, "namespace"),

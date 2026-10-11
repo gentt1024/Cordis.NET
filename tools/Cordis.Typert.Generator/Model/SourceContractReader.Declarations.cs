@@ -151,6 +151,18 @@ internal sealed partial class SourceContractReader
     private void ReadDeclaration(INamedTypeSymbol type, string id, int depth)
     {
         var source = SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly);
+        if (source && type
+                .GetMembers()
+                .Any(member => !member.IsStatic &&
+                    member is IPropertySymbol { IsIndexer: false } or IFieldSymbol &&
+                    !PublicDeclarationMember(member) &&
+                    Attribute(member, JsonPrefix + "JsonIncludeAttribute") is not null))
+            declarationDiagnostics.Add(
+                new(
+                    "ProjectionUnsupported",
+                    "TYPM202",
+                    "Non-public explicitly included JSON data requires a separately supported declaration projection.",
+                    id));
         var parent = source && type.ContainingType is not null
             ? DeclarationReference(type.ContainingType, depth + 1).Name
             : null;

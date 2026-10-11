@@ -166,3 +166,27 @@ public sealed class DataWireCollision
         set;
     }
 }
+
+public sealed class ReferencedData
+{
+    public required ImportedData External
+    {
+        get;
+        init;
+    }
+
+    public IReadOnlyList<ImportedData>? Items
+    {
+        get;
+        set;
+    }
+}
+
+public sealed class ReferencedHiddenData
+{
+    public ImportedHiddenData? Value
+    {
+        get;
+        set;
+    }
+}
