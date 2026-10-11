@@ -17,7 +17,8 @@ namespace Cordis.Platform.Tests;
 public sealed class ManagementTransportTests
 {
     [Fact]
-    public async Task Real_http_settings_enforce_authorization_generation_and_revision_without_restarting_live_plugin()
+    public async Task
+        Real_remote_settings_enforce_authorization_and_revision_while_configuration_retains_generation_fencing()
     {
         var root = Directory.CreateTempSubdirectory("cordis-http-").FullName;
         try
@@ -57,87 +58,122 @@ public sealed class ManagementTransportTests
                 [],
                 new Dictionary<string, string>());
             await using var session = await ProfileSession.StartAsync(config, launch, resolver);
-            var permissions = new List<ManagementPermission>();
             await using var server = CreateServer();
             new CordisManagement(
                 session,
-                (http, permission) =>
+                (http, _) => Task.FromResult(http.Request.Headers.Authorization == "test-host-policy")).Map(server);
+            var registry = new TypertRegistry(session.Context);
+            await session.Context.RunAsync(context =>
+            {
+                new SettingsForms(context, session.ConfigurationOperations, _ => new SettingsPolicy(["limit"]));
+                new SettingsController(context);
+                registry.Register(context, SettingsControllerTypert.Contribution("Cordis.Tests.Settings"));
+                return Task.CompletedTask;
+            });
+            var permissions = new List<string>();
+            server.MapCordisRemote(
+                "/remote",
+                new TypertGateway(session.Context, registry),
+                (http, endpoint) =>
                 {
-                    permissions.Add(permission);
+                    permissions.Add(endpoint);
                     return Task.FromResult(
-                        http.Request.Headers.Authorization == "test-host-policy" &&
-                        (permission.Operation != "settings-write" || permission.Target == "root:worker") ||
-                        http.Request.Headers.Authorization == "settings-only" &&
-                        permission.Operation == "settings-read");
-                },
-                _ => new SettingsPolicy(["limit"])).Map(server);
+                        http.Request.Headers.Authorization == "test-host-policy" ||
+                        http.Request.Headers.Authorization == "settings-only" && endpoint == "settings/describe");
+                });
             await server.StartAsync();
             using var client = new HttpClient
             {
                 BaseAddress = new Uri(server.Urls.Single())
             };
             Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/cordis/state")).StatusCode);
+            Assert.Equal(
+                HttpStatusCode.Forbidden,
+                (await client.PostAsJsonAsync(
+                    "/remote/settings/describe",
+                    new
+                    {
+                        args = new
+                        {
+                        }
+                    })).StatusCode);
             client.DefaultRequestHeaders.Authorization = new("test-host-policy");
             using var state = JsonDocument.Parse(await client.GetStringAsync("/cordis/state"));
             var generation = state.RootElement.GetProperty("generation").GetString();
             var view = await ReadSettingsAsync(client);
+            Assert.Equal(0, view.Revision);
             var patch = Path.Combine(profile, "cordis.patch.yml");
             var original = await File.ReadAllTextAsync(patch);
-            var body = new
-            {
-                entryId = "root:worker",
-                revision = view.Revision,
-                operations = new[]
-                {
+            Assert.Equal(
+                HttpStatusCode.Conflict,
+                (await client.PostAsJsonAsync(
+                    "/cordis/configuration",
                     new
                     {
-                        op = "set",
-                        path = new[] { "limit" },
-                        value = 2
-                    }
-                }
-            };
-            Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/cordis/settings", body)).StatusCode);
+                        entryId = "root:worker"
+                    })).StatusCode);
             Assert.Equal(original, await File.ReadAllTextAsync(patch));
             client.DefaultRequestHeaders.Add("If-Cordis-Generation", generation);
             Assert.Equal(
                 HttpStatusCode.BadRequest,
-                (await client.PostAsync("/cordis/settings", new StringContent("[", Encoding.UTF8, "application/json")))
-                .StatusCode);
+                (await client.PostAsync(
+                    "/remote/settings/mutate",
+                    new StringContent("[", Encoding.UTF8, "application/json"))).StatusCode);
+            var body = new
+            {
+                args = new
+                {
+                    ns = "worker",
+                    expectedRevision = view.Revision,
+                    ops = new[]
+                    {
+                        new
+                        {
+                            op = "set",
+                            path = new[] { "limit" },
+                            value = 2
+                        }
+                    }
+                }
+            };
             using var saved = JsonDocument.Parse(
-                await (await client.PostAsJsonAsync("/cordis/settings", body)).Content.ReadAsStringAsync());
-            Assert.True(saved.RootElement.GetProperty("applied").GetBoolean());
+                await (await client.PostAsJsonAsync("/remote/settings/mutate", body)).Content.ReadAsStringAsync());
+            Assert.True(saved.RootElement.GetProperty("ok").GetBoolean());
             Assert.Equal(2, (await ReadSettingsAsync(client)).Value);
             Assert.Equal(1, activations);
             using var stale = JsonDocument.Parse(
-                await (await client.PostAsJsonAsync("/cordis/settings", body)).Content.ReadAsStringAsync());
-            Assert.Equal("conflict", stale.RootElement.GetProperty("error").GetString());
+                await (await client.PostAsJsonAsync("/remote/settings/mutate", body)).Content.ReadAsStringAsync());
+            Assert.Equal("settings/conflict", stale.RootElement.GetProperty("error").GetProperty("code").GetString());
             view = await ReadSettingsAsync(client);
             using var reset = JsonDocument.Parse(
                 await (await client.PostAsJsonAsync(
-                    "/cordis/settings",
+                    "/remote/settings/mutate",
                     new
                     {
-                        entryId = "root:worker",
-                        revision = view.Revision,
-                        operations = new[]
+                        args = new
                         {
-                            new
+                            ns = "worker",
+                            expectedRevision = view.Revision,
+                            ops = new[]
                             {
-                                op = "unset",
-                                path = new[] { "limit" }
+                                new
+                                {
+                                    op = "unset",
+                                    path = new[] { "limit" }
+                                }
                             }
-                        },
+                        }
                     })).Content.ReadAsStringAsync());
-            Assert.True(reset.RootElement.GetProperty("applied").GetBoolean());
+            Assert.True(reset.RootElement.GetProperty("ok").GetBoolean());
             Assert.Equal(1, (await ReadSettingsAsync(client)).Value);
-            Assert.Contains(
-                permissions,
-                permission => permission.Operation == "settings-write" && permission.Target == "root:worker");
+            Assert.Contains("settings/mutate", permissions);
             // The CLI edits through the same owner. Ordinary changes are available only
             // through full configuration authority, while Settings remains live-only.
             client.DefaultRequestHeaders.Authorization = new("settings-only");
-            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/cordis/settings?entryId=root:worker")).StatusCode);
+            Assert.Equal(1, (await ReadSettingsAsync(client)).Value);
+            Assert.Equal(
+                HttpStatusCode.Forbidden,
+                (await client.PostAsJsonAsync("/remote/settings/mutate", body)).StatusCode);
             Assert.Equal(
                 HttpStatusCode.Forbidden,
                 (await client.GetAsync("/cordis/configuration?entryId=root:worker")).StatusCode);
@@ -150,6 +186,40 @@ public sealed class ManagementTransportTests
             try
             {
                 var endpoint = server.Urls.Single() + "/cordis";
+                Environment.SetEnvironmentVariable(authVariable, "settings-only");
+                var settingsRead = await RunCliAsync(
+                    "settings",
+                    endpoint,
+                    "worker",
+                    "--authorization-env",
+                    authVariable);
+                Assert.Equal(0, settingsRead.ExitCode);
+                using var settingsView = JsonDocument.Parse(settingsRead.Output);
+                Assert.Equal(JsonValueKind.Number, settingsView.RootElement.GetProperty("revision").ValueKind);
+                Environment.SetEnvironmentVariable(authVariable, "test-host-policy");
+                var settingsOps = Path.Combine(root, "settings-operations.json");
+                await File.WriteAllTextAsync(settingsOps, """[{"op":"set","path":["limit"],"value":1}]""");
+                var withoutRevision = await RunCliAsync(
+                    "edit",
+                    endpoint,
+                    "settings",
+                    "worker",
+                    "-",
+                    settingsOps,
+                    "--authorization-env",
+                    authVariable);
+                Assert.Equal(0, withoutRevision.ExitCode);
+                var nullRevision = await RunCliAsync(
+                    "edit",
+                    endpoint,
+                    "settings",
+                    "worker",
+                    "null",
+                    settingsOps,
+                    "--authorization-env",
+                    authVariable);
+                Assert.Equal(1, nullRevision.ExitCode);
+
                 var read = await RunCliAsync(
                     "configuration",
                     endpoint,
@@ -302,8 +372,7 @@ public sealed class ManagementTransportTests
                 {
                     permissions.Add(permission);
                     return Task.FromResult(permission.Operation == "read" || permission.Target == allowed);
-                },
-                _ => new SettingsPolicy([])).Map(server);
+                }).Map(server);
             await server.StartAsync();
             using var client = new HttpClient
             {
@@ -528,11 +597,21 @@ public sealed class ManagementTransportTests
         return builder.Build();
     }
 
-    private static async Task<(string Revision, int Value)> ReadSettingsAsync(HttpClient client)
+    private static async Task<(double Revision, int Value)> ReadSettingsAsync(HttpClient client)
     {
-        using var view = JsonDocument.Parse(await client.GetStringAsync("/cordis/settings?entryId=root:worker"));
-        return (view.RootElement.GetProperty("revision").GetString()!,
-            view.RootElement.GetProperty("fields")[0].GetProperty("value").GetInt32());
+        using var response = await client.PostAsJsonAsync(
+            "/remote/settings/describe",
+            new
+            {
+                args = new
+                {
+                }
+            });
+        response.EnsureSuccessStatusCode();
+        using var view = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(view.RootElement.GetProperty("ok").GetBoolean());
+        var row = view.RootElement.GetProperty("value").GetProperty("namespaces")[0];
+        return (row.GetProperty("revision").GetDouble(), row.GetProperty("value").GetProperty("limit").GetInt32());
     }
 
     private sealed record EchoService(string Prefix);

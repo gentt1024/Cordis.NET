@@ -60,7 +60,7 @@ internal static class ApplicationCommands
                     case "--settings":
                         var selection = arguments[index].Split('=', 2);
                         if (selection.Length != 2)
-                            throw new ArgumentException("--settings expects entryId=field,field.");
+                            throw new ArgumentException("--settings expects namespace=field,field.");
                         settings[selection[0]] =
                             selection[1].Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
                         break;
@@ -118,6 +118,22 @@ internal static class ApplicationCommands
             try
             {
                 if (address is not null)
+                {
+                    var registry = new TypertRegistry(session.Context);
+                    await session.Context.RunAsync(context =>
+                    {
+                        new SettingsForms(
+                            context,
+                            session.ConfigurationOperations,
+                            ns => new SettingsPolicy(settings.GetValueOrDefault(ns) ?? []));
+                        new SettingsController(context);
+                        registry.Register(context, SettingsControllerTypert.Contribution("Cordis.Cli.Settings"));
+                        return Task.CompletedTask;
+                    });
+                    ((WebApplication)host).MapCordisRemote(
+                        "/remote",
+                        new TypertGateway(session.Context, registry),
+                        (http, _) => Task.FromResult(http.Request.Headers.Authorization == authorization));
                     new CordisManagement(
                         session,
                         (http, permission) =>
@@ -125,8 +141,9 @@ internal static class ApplicationCommands
                                 http.Request.Headers.Authorization == authorization &&
                                 (permission.Operation != "build" || permission.Package is { } package &&
                                     builds.Contains(package.Request.Name + "@" + package.Request.Version))),
-                        entryId => new SettingsPolicy(settings.GetValueOrDefault(entryId) ?? []),
                         toolchain).Map((WebApplication)host);
+                }
+
                 // Help and one-shot commands may request exit during activation. Still await
                 // startup above so a real boot failure wins, then dispose the tree normally.
                 if (exit.IsCompleted)

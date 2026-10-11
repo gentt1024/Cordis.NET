@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Cordis.Composition;
 using Cordis.Extensions;
 
@@ -54,6 +55,17 @@ internal static class ApplicationHost
                 launch,
                 new StaticModuleResolver().Register("worker", plugin));
             var policy = new SettingsPolicy(["limit", "label", "token"], ["token"]);
+            var registry = new TypertRegistry(session.Context);
+            var contribution = SettingsControllerTypert.Contribution("Cordis.Probes.Settings");
+            await session.Context.RunAsync(context =>
+            {
+                new SettingsForms(context, session.ConfigurationOperations, _ => policy);
+                new SettingsController(context);
+                registry.Register(context, contribution);
+                return Task.CompletedTask;
+            });
+            var gateway = new TypertGateway(session.Context, registry);
+
             var generation = new DeploymentGeneration(
                 Path.Combine(home, "profiles"),
                 profile,
@@ -80,49 +92,28 @@ internal static class ApplicationHost
                 try
                 {
                     var route = request.Request.Url!.AbsolutePath;
-                    if (route == "/settings" && request.Request.HttpMethod == "GET")
+                    if (route.StartsWith("/remote/", StringComparison.Ordinal) && request.Request.HttpMethod == "POST")
                     {
-                        var view = await session.ConfigurationOperations.ReadSettingsAsync("root:worker", policy);
+                        using var document = await JsonDocument.ParseAsync(request.Request.InputStream);
+                        var envelope = document.RootElement;
+                        if (envelope.ValueKind != JsonValueKind.Object || envelope.EnumerateObject().Count() != 1 ||
+                            !envelope.TryGetProperty("args", out var arguments))
+                            throw new JsonException("Remote carrier requires exactly one args field.");
+                        var result = await gateway.InvokeAsync(route["/remote/".Length..], arguments);
+                        request.Response.ContentType = "application/json";
+                        await JsonSerializer.SerializeAsync(
+                            request.Response.OutputStream,
+                            result,
+                            TypertJson.Default.TypertRemoteResult);
+                        request.Response.Close();
+                    }
+                    else if (route == "/status" && request.Request.HttpMethod == "GET")
                         await JsonAsync(
                             request,
                             new()
                             {
-                                ["version"] = 1,
-                                ["mode"] = "primitive-live-set",
-                                ["revision"] = view.Revision,
-                                ["fields"] = view
-                                    .Fields.Select(field => new EntryOptions
-                                    {
-                                        ["name"] = field.Name,
-                                        ["kind"] = field.Kind,
-                                        ["value"] = field.Value,
-                                        ["overridden"] = field.Overridden
-                                    })
-                                    .ToList(),
-                                ["diagnostics"] = view.Diagnostics.ToList(),
                                 ["activations"] = activations
                             });
-                    }
-                    else if (route == "/settings" && request.Request.HttpMethod == "POST")
-                    {
-                        using var reader = new StreamReader(request.Request.InputStream, Encoding.UTF8);
-                        var body = (EntryOptions)ConfigurationFile.Parse(await reader.ReadToEndAsync(), true)!;
-                        var result = await session.ConfigurationOperations.EditSettingsFieldAsync(
-                            "root:worker",
-                            (string)body["field"]!,
-                            body["value"],
-                            (string)body["revision"]!,
-                            policy);
-                        await JsonAsync(
-                            request,
-                            new()
-                            {
-                                ["saved"] = result.Saved,
-                                ["applied"] = result.Applied,
-                                ["revision"] = result.Revision,
-                                ["error"] = result.Error
-                            });
-                    }
                     else if (route == "/client" && request.Request.HttpMethod == "GET")
                     {
                         // Polling a content identity is the example's generation notification adaptation.

@@ -10,6 +10,9 @@ using var client = new PrimitivesClient(http, new Uri("https://test.invalid/remo
 if (await client.CountAsync(null, 0, false, null, 0) != 0) throw new Exception("Primitive result wrong.");
 if (await client.TextAsync() is not null) throw new Exception("Nullable string result wrong.");
 if (!(await client.ValuesAsync()).SequenceEqual(new[] { 1, 2 })) throw new Exception("Collection result wrong.");
+using var optional = new OptionalClient(http, new Uri("https://test.invalid/remote"));
+if (await optional.CountAsync() != 7 || await optional.CountAsync(3) != 3)
+    throw new Exception("Optional constants changed in the generated client.");
 foreach (var type in new[] { typeof(int), typeof(string), typeof(int[]) })
     if (PrimitivesClientJson.Default.GetTypeInfo(type) is null)
         throw new Exception("Primitive public root metadata absent.");
@@ -74,6 +77,8 @@ sealed class Replies : HttpMessageHandler
         var args = document.RootElement.GetProperty("args");
         var value = request.RequestUri!.AbsolutePath.Split('/').Last() switch
         {
+            "count" when request.RequestUri!.AbsolutePath.Contains("/optional/", StringComparison.Ordinal) =>
+                args.GetProperty("limit").GetRawText(),
             "count" => Check(args),
             "text" => "null",
             "values" => "[1,2]",

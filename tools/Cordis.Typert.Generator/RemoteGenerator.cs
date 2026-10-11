@@ -134,7 +134,12 @@ public sealed class RemoteGenerator : IIncrementalGenerator
             if (!names.Add(name) || method.IsStatic || method.IsGenericMethod ||
                 method.DeclaredAccessibility != Accessibility.Public ||
                 method.Parameters.Any(parameter =>
-                    parameter.RefKind != RefKind.None || parameter.IsParams || parameter.HasExplicitDefaultValue) ||
+                    parameter.RefKind != RefKind.None || parameter.IsParams ||
+                    parameter.IsOptional && !parameter.HasExplicitDefaultValue ||
+                    parameter.HasExplicitDefaultValue && parameter
+                        .GetAttributes()
+                        .Any(value =>
+                            value.AttributeClass?.ToDisplayString() == "Cordis.Composition.RemoteLookupAttribute")) ||
                 method.ReturnType is not INamedTypeSymbol returnType || returnType.TypeArguments.Length != 1 ||
                 returnType.OriginalDefinition.ToDisplayString() != (stream
                     ? "System.Collections.Generic.IAsyncEnumerable<T>"
@@ -142,19 +147,26 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                 parameters.Any(parameter => parameter.Type.ToDisplayString() == "System.Threading.CancellationToken"))
             {
                 Refuse(
-                    $"{method.Name}: Remote methods require unique export names, ordinary required parameters, and Task<T> or explicitly marked IAsyncEnumerable<T>. CancellationToken may only be the final parameter.");
+                    $"{method.Name}: Remote methods require unique export names, ordinary parameters with explicit constant defaults when optional, and Task<T> or explicitly marked IAsyncEnumerable<T>. Lookups cannot be optional. CancellationToken may only be the final parameter.");
                 return;
             }
 
-            string Codec(ITypeSymbol symbol) =>
-                "global::Cordis.Composition.TypertCodec." +
-                (symbol.IsReferenceType && symbol.NullableAnnotation == NullableAnnotation.Annotated
-                    ? "CreateNullable"
-                    : "Create") +
-                "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" +
-                TypeName(symbol) + ">)" +
-                TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
-                Literal(symbol.ToDisplayString()) + ")";
+            string Codec(ITypeSymbol symbol, bool disallowNull = false)
+            {
+                if (disallowNull)
+                    symbol = symbol is INamedTypeSymbol named &&
+                        named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T
+                            ? named.TypeArguments[0]
+                            : symbol.WithNullableAnnotation(NullableAnnotation.NotAnnotated);
+                return "global::Cordis.Composition.TypertCodec." +
+                    (symbol.IsReferenceType && symbol.NullableAnnotation == NullableAnnotation.Annotated
+                        ? "CreateNullable"
+                        : "Create") +
+                    "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" +
+                    TypeName(symbol) + ">)" +
+                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
+                    Literal(symbol.ToDisplayString()) + ")";
+            }
 
             definitions
                 .Append("new global::Cordis.Composition.TypertInvocationDescriptor(package + ")
@@ -180,13 +192,26 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                     .Append(", ")
                     .Append(Literal(parameterWire))
                     .Append(", ")
-                    .Append(Codec(wireType))
+                    .Append(
+                        Codec(
+                            wireType,
+                            parameter
+                                .GetAttributes()
+                                .Any(value =>
+                                    value.AttributeClass?.ToDisplayString() ==
+                                    "System.Diagnostics.CodeAnalysis.DisallowNullAttribute")))
                     .Append(")");
-                if (lookup is not null)
+                if (lookup is not null || parameter.HasExplicitDefaultValue)
+                {
                     definitions
-                        .Append(" { Lookup = ")
-                        .Append(Literal((string)lookup.ConstructorArguments[0].Value!))
-                        .Append(" }");
+                        .Append(" { ");
+                    if (lookup is not null)
+                        definitions.Append("Lookup = ").Append(Literal((string)lookup.ConstructorArguments[0].Value!));
+                    else
+                        definitions.Append("AcceptsUndefined = true");
+                    definitions.Append(" }");
+                }
+
                 definitions.Append(',');
             }
 
@@ -215,7 +240,11 @@ public sealed class RemoteGenerator : IIncrementalGenerator
             var call = "((" + TypeName(type) + ")service).@" + method.Name + "(" +
                 string.Join(
                     ", ",
-                    parameters.Select((parameter, index) => "(" + TypeName(parameter.Type) + ")args[" + index + "]!")) +
+                    parameters.Select((parameter, index) => parameter.HasExplicitDefaultValue
+                        ? "(global::System.Object.ReferenceEquals(args[" + index +
+                        "], global::Cordis.Undefined.Value) ? " + DefaultValue(parameter) + "! : (" +
+                        TypeName(parameter.Type) + ")args[" + index + "]!)"
+                        : "(" + TypeName(parameter.Type) + ")args[" + index + "]!")) +
                 (cancellation ? (parameters.Length == 0 ? "" : ", ") + "token" : "") + ")";
             if (stream)
             {
@@ -272,4 +301,26 @@ public sealed class RemoteGenerator : IIncrementalGenerator
 
     private static string Literal(string value) => SymbolDisplay.FormatLiteral(value, true);
     private static string TypeName(ITypeSymbol type) => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+    private static string DefaultValue(IParameterSymbol parameter)
+    {
+        var value = parameter.ExplicitDefaultValue;
+        if (value is null)
+            return "default(" + TypeName(parameter.Type) + ")";
+        var text = value switch
+        {
+            float number when float.IsNaN(number) => "global::System.Single.NaN",
+            float number when float.IsPositiveInfinity(number) => "global::System.Single.PositiveInfinity",
+            float number when float.IsNegativeInfinity(number) => "global::System.Single.NegativeInfinity",
+            float number => number.ToString("R", global::System.Globalization.CultureInfo.InvariantCulture) + "F",
+            double number when double.IsNaN(number) => "global::System.Double.NaN",
+            double number when double.IsPositiveInfinity(number) => "global::System.Double.PositiveInfinity",
+            double number when double.IsNegativeInfinity(number) => "global::System.Double.NegativeInfinity",
+            double number => number.ToString("R", global::System.Globalization.CultureInfo.InvariantCulture) + "D",
+            decimal number => number.ToString(global::System.Globalization.CultureInfo.InvariantCulture) + "M",
+            _ => SymbolDisplay.FormatPrimitive(value, quoteStrings: true, useHexadecimalNumbers: false) ??
+                throw new InvalidDataException("Unsupported Remote parameter constant " + parameter.Name)
+        };
+        return parameter.Type.TypeKind == TypeKind.Enum ? "(" + TypeName(parameter.Type) + ")" + text : text;
+    }
 }

@@ -40,14 +40,26 @@ public static class ConfigurationSchemaExporter
     /// <summary>Export the Schemastery uid/refs envelope for supported data nodes, preserving shared and recursive edges.</summary>
     /// <param name="descriptor">The author's declaration or a captured resolved declaration.</param>
     /// <param name="plainValues">Omit volatile wrappers for a browser form's plain values.</param>
-    /// <param name="omitDefaults">Remove all defaults when exporting a redacted settings declaration.</param>
+    /// <param name="omitDefaults">Remove all declaration defaults.</param>
     /// <returns>A distinct Schemastery document and explicit validation limitations.</returns>
     public static ConfigurationSchemaExport ToSchemastery(
         ConfigDescriptor descriptor,
         bool plainValues = false,
-        bool omitDefaults = false)
+        bool omitDefaults = false) => ExportSchemastery(descriptor, plainValues, omitDefaults, null);
+
+    internal static ConfigurationSchemaExport ToSettingsSchemastery(
+        ConfigDescriptor descriptor,
+        Func<ConfigDescriptor, object?, object?> redactDefault) =>
+        ExportSchemastery(descriptor, true, false, redactDefault);
+
+    private static ConfigurationSchemaExport ExportSchemastery(
+        ConfigDescriptor descriptor,
+        bool plainValues,
+        bool omitDefaults,
+        Func<ConfigDescriptor, object?, object?>? redactDefault)
     {
         ArgumentNullException.ThrowIfNull(descriptor);
+        var redacted = omitDefaults || redactDefault is not null;
         var diagnostics = Limitations();
         var nodes = new List<ConfigDescriptor>();
         var ids = new Dictionary<ConfigDescriptor, int>(ReferenceEqualityComparer.Instance);
@@ -86,14 +98,23 @@ public static class ConfigurationSchemaExporter
                     meta[key] = encoded;
                 else
                     diagnostics.Add($"node {index}: annotation {key} is not lossless JSON and was omitted.");
-            if (omitDefaults && node.Annotations.GetValueOrDefault("role") is "secret")
+            var secret = redacted && node.Annotations.GetValueOrDefault("role") is "secret";
+            if (secret)
                 meta.Remove("required");
             if (node.IsVolatile && !plainValues)
                 meta["volatile"] = true;
-            if (!omitDefaults && node.HasDefault && TryJson(node.DefaultValue, out var value))
-                meta["default"] = value;
-            else if (!omitDefaults && node.HasDefault)
-                diagnostics.Add($"node {index}: default is not lossless JSON and was omitted.");
+            if (!omitDefaults && node.HasDefault && !secret)
+            {
+                var value = redactDefault is null ? node.DefaultValue : redactDefault(node, node.DefaultValue);
+                if (TryJson(value, out var encoded))
+                    meta["default"] = encoded;
+                else
+                    diagnostics.Add(
+                        redactDefault is null
+                            ? $"node {index}: default is not lossless JSON and was omitted."
+                            : $"node {index}: default is not lossless redacted JSON and was omitted.");
+            }
+
             var record = new JsonObject
             {
                 ["type"] = type,
@@ -112,7 +133,7 @@ public static class ConfigurationSchemaExporter
                 {
                     var dict = new JsonObject();
                     foreach (var (name, child) in node.Properties)
-                        if (!omitDefaults || child.Annotations.GetValueOrDefault("hidden") is not true)
+                        if (!redacted || child.Annotations.GetValueOrDefault("hidden") is not true)
                             dict[name] = Id(child);
                     record["dict"] = dict;
                 }

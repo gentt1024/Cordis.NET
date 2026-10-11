@@ -15,6 +15,7 @@ PAIRS = [
     ("docs/development.md", "docs/development.zh.md"),
     ("docs/validation.md", "docs/validation.zh.md"),
     ("docs/configuration-description.md", "docs/configuration-description.zh.md"),
+    ("docs/settings-contract-migration.md", "docs/settings-contract-migration.zh.md"),
     ("docs/upgrade-0.2.0-rc.2.md", "docs/upgrade-0.2.0-rc.2.zh.md"),
     ("docs/publication-readiness.md", "docs/publication-readiness.zh.md"),
 ]
@@ -64,7 +65,7 @@ for path in ROOT.rglob("*.md"):
     if relative == "docs/reference/dsh-vendor-readme.snapshot.md":
         continue
     text = path.read_text(encoding="utf-8-sig")
-    for raw in LINK.findall(text):
+    for raw in LINK.findall(FENCE.sub("", text)):
         target = raw.strip().split(maxsplit=1)[0].strip("<>").split("#", 1)[0]
         if not target or re.match(r"^[a-z][a-z0-9+.-]*:", target, re.I):
             continue

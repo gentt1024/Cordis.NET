@@ -9,7 +9,7 @@
 <form id="remove"><label>Package to remove <input name="name" required></label><button>Remove</button></form>
 <button id="inventory">Refresh inventory</button><pre id="plugins"></pre><ul id="plugin-actions"></ul>
 <form id="enable"><label>Bundle <input name="target" value="example-provider" required></label><label><input name="enabled" type="checkbox" checked>Enabled</label><button>Apply selection</button></form>
-<form id="settings"><label>Entry <input name="entry" value="root:example.managedplugin" required></label><label>View <select name="scope"><option value="settings">Settings</option><option value="configuration">Configuration</option></select></label><button>Read settings or configuration</button></form>
+<form id="settings"><label>Entry <input name="entry" value="example.managedplugin" required></label><label>View <select name="scope"><option value="settings">Settings</option><option value="configuration">Configuration</option></select></label><button>Read settings or configuration</button></form>
 <pre id="schema"></pre><pre id="current"></pre>
 <form id="edit"><label>Ordered operations <textarea name="operations" rows="4" cols="70">[{"op":"set","path":["limit"],"value":2}]</textarea></label><button>Apply</button></form>
 <button id="disconnect">Disconnect</button><button id="reconnect">Reconnect</button>
@@ -20,6 +20,9 @@
 <pre id="result" role="status"></pre><pre id="client-diagnostics"></pre><pre id="slot-status"></pre><div id="contributions"></div>
 <script type="module">
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
+import { createRemote } from '/client-runtime/settings.mjs'
+let settingsRemote
+function accepted(result) { if (!result.ok) throw result.error; return result.value }
 const modules = await bootClientModules({graph:{rev:'initial',entries:[],batches:[]}})
 function showModules() {
   document.querySelector('#client-diagnostics').textContent = JSON.stringify(modules.state.getSnapshot(),null,2)
@@ -35,6 +38,8 @@ async function closeOwner() {
   for (const unsubscribe of subscriptions.splice(0)) unsubscribe()
   const previous = client
   client = undefined
+  settingsRemote?.dispose()
+  settingsRemote = undefined
   await previous?.close()
 }
 function connect() {
@@ -43,6 +48,7 @@ function connect() {
     if (disposed) return
     const owner = createManagementClient({baseUrl:'/cordis',modules})
     client = owner
+    settingsRemote = createRemote(location.origin + '/remote')
     const update = () => { document.querySelector('#connection').textContent = owner.connection.getSnapshot().phase }
     subscriptions.push(owner.connection.subscribe(update), owner.subscribe(event => { if(event.kind==='package') show(event.value) }))
     update()
@@ -52,9 +58,11 @@ function connect() {
 async function settings() {
   entry = document.querySelector('#settings').elements.entry.value
   mode = document.querySelector('#settings').elements.scope.value
-  view = mode === 'settings' ? await client.readSettings(entry) : await client.readConfiguration(entry)
+  if (mode === 'configuration' && !entry.startsWith('root:')) entry = 'root:' + entry
+  view = mode === 'settings' ? accepted(await settingsRemote['settings/describe']({})).namespaces.find(row => row.ns === entry) : await client.readConfiguration(entry)
+  if (!view) throw new Error('No live settings namespace with that entry id')
   document.querySelector('#current').textContent = JSON.stringify(view,null,2)
-  document.querySelector('#schema').textContent = JSON.stringify(mode === 'settings' ? await client.readSettingsSchema(entry) : await client.readConfigurationSchema(entry),null,2)
+  document.querySelector('#schema').textContent = JSON.stringify(mode === 'settings' ? view.schema : await client.readConfigurationSchema(entry),null,2)
 }
 function form(id, action) { document.querySelector(id).addEventListener('submit', async event => {
   event.preventDefault(); try { await action(event.target) } catch(error) { show({error:error.message}) }
@@ -71,7 +79,7 @@ form('#settings', settings)
 form('#edit', async form => {
   if (!view) throw new Error('Read settings first')
   const operations=JSON.parse(form.elements.operations.value)
-  show(mode === 'settings' ? await client.mutateSettings(entry,operations,view.revision) : await client.mutateConfiguration(entry,operations,view.revision))
+  show(mode === 'settings' ? accepted(await settingsRemote['settings/mutate']({ns:entry,ops:operations,expectedRevision:view.revision})) : await client.mutateConfiguration(entry,operations,view.revision))
   await settings()
 })
 async function inventory(owner = client) {

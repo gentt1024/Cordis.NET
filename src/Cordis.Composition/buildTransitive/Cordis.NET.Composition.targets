@@ -7,6 +7,8 @@
     <_CordisTypertBaseIntermediate Condition="'$(_CordisTypertBaseIntermediate)' == ''">obj/</_CordisTypertBaseIntermediate>
     <CordisTypertOutputDirectory Condition="'$(CordisTypertOutputDirectory)' == ''">$(_CordisTypertBaseIntermediate)$(Configuration)/$(TargetFramework)/cordis-typert/</CordisTypertOutputDirectory>
     <CordisTypertModelPath Condition="'$(CordisTypertModelPath)' == ''">$(CordisTypertOutputDirectory)$(CordisTypertService).cordis.typert.json</CordisTypertModelPath>
+    <CordisTypertDeclarationModelPath Condition="'$(CordisTypertDeclarationModelPath)' == ''">$(CordisTypertOutputDirectory)$(AssemblyName).cordis.model.json</CordisTypertDeclarationModelPath>
+    <_CordisTypertDeclarationFiles>$(CordisTypertDeclarationModelPath);$(CordisTypertOutputDirectory)model-roots.rsp;$(CordisTypertOutputDirectory)model-sources.rsp;$(CordisTypertOutputDirectory)model-references.rsp</_CordisTypertDeclarationFiles>
     <CordisTypertClientNamespace Condition="'$(CordisTypertClientNamespace)' == ''">$(RootNamespace).Remote</CordisTypertClientNamespace>
     <CordisTypertClientName Condition="'$(CordisTypertClientName)' == ''">RemoteClient</CordisTypertClientName>
     <CordisTypertClientSource>$(CordisTypertOutputDirectory)$(CordisTypertClientName).Generated.g.cs</CordisTypertClientSource>
@@ -19,6 +21,25 @@
     <None Include="$(CordisTypertModelPath)" Pack="true" PackagePath="cordis/typert/" Visible="false" />
     <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
   </ItemGroup>
+  <ItemGroup Condition="'@(CordisTypertModelRoot)' != ''">
+    <None Include="$(CordisTypertDeclarationModelPath)" Pack="true" PackagePath="cordis/typert/" Visible="false" />
+  </ItemGroup>
+  <Target Name="CordisTypertExtractDeclarations" BeforeTargets="CoreCompile"
+          DependsOnTargets="ResolveReferences;GenerateGlobalUsings;GenerateAssemblyInfo"
+          Condition="'@(CordisTypertModelRoot)' != '' and '$(DesignTimeBuild)' != 'true'">
+    <MakeDir Directories="$(CordisTypertOutputDirectory)" />
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)model-roots.rsp" Lines="@(CordisTypertModelRoot)" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)model-sources.rsp" Lines="@(Compile->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)model-references.rsp" Lines="@(ReferencePath->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(_CordisTypertDeclarationFiles)" />
+    </ItemGroup>
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; extract-model --project-directory &quot;$(MSBuildProjectDirectory)&quot; --sources &quot;$(CordisTypertOutputDirectory)model-sources.rsp&quot; --references &quot;$(CordisTypertOutputDirectory)model-references.rsp&quot; --assembly-name &quot;$(AssemblyName)&quot; --language-version &quot;$(_CordisTypertLanguageVersion)&quot; --nullable &quot;$(_CordisTypertNullable)&quot; --defines &quot;$(DefineConstants)&quot; --allow-unsafe &quot;$(AllowUnsafeBlocks)&quot; --check-overflow &quot;$(CheckForOverflowUnderflow)&quot; --output-kind &quot;$(OutputType)&quot; --platform &quot;$(PlatformTarget)&quot; --optimize &quot;$(Optimize)&quot; --roots &quot;$(CordisTypertOutputDirectory)model-roots.rsp&quot; --output &quot;$(CordisTypertDeclarationModelPath)&quot;" />
+  </Target>
+  <Target Name="CordisTypertCleanDeclarations" BeforeTargets="CoreClean">
+    <Delete Files="$(_CordisTypertDeclarationFiles)" />
+  </Target>
   <!-- The source generator cannot supply STJ input in its own generation round. -->
   <Target Name="CordisTypertExtractModel" BeforeTargets="CoreCompile"
           DependsOnTargets="ResolveReferences;GenerateGlobalUsings;GenerateAssemblyInfo"

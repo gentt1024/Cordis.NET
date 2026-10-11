@@ -35,7 +35,8 @@ public static class TypertArtifacts
                         "(" + string.Join(
                             ", ",
                             descriptor.Parameters.Select(parameter =>
-                                parameter.Name + ": " + parameter.Codec.TypeSymbol)) +
+                                parameter.Name + (parameter.AcceptsUndefined ? "?" : "") + ": " +
+                                parameter.Codec.TypeSymbol)) +
                         "): " + (descriptor.IsStream ? "RemoteStream<" : "Promise<") + descriptor.Result.TypeSymbol +
                         ">"))
                     .ToArray(),

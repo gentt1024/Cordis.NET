@@ -94,15 +94,16 @@ public sealed partial class PluginConfigurationOperations
     private async Task<ConfigurationEditResult> MutateConfigurationCoreAsync(
         string entryId,
         IReadOnlyList<ConfigurationPathOperation> operations,
-        string expectedRevision,
+        string? expectedRevision,
         bool liveOnly,
         CancellationToken cancellationToken,
-        SettingsPolicy? settings = null)
+        SettingsChange? settings = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(expectedRevision);
+        if (settings is null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(expectedRevision);
         ArgumentNullException.ThrowIfNull(operations);
-        if (operations.Count == 0)
+        if (operations.Count == 0 && settings is null)
             throw new ArgumentException("At least one edit is required.", nameof(operations));
         var edits = operations
             .Select(operation =>
@@ -131,20 +132,40 @@ public sealed partial class PluginConfigurationOperations
                 try
                 {
                     await ReloadAsync(null);
-                    var refresh = await ProfileComposition.RefreshAsync(launch);
+                    var inputs = await CaptureProfileAsync();
+                    var refresh = await ProfileComposition.RefreshAsync(
+                        inputs.Launch,
+                        ParseManifest(await inputs.ReadAsync(ManifestPath)),
+                        inputs.ReadAsync);
                     Entry entry = null!;
                     EntryOptions next = null!;
-                    var before = await ReadPatchSourceAsync();
+                    var before = await inputs.ReadAsync(PatchPath);
                     var baseRows = ConfigurationFile.ParseEntries(
-                        await File.ReadAllTextAsync(include.Filename),
+                        await inputs.ReadAsync(include.Filename),
                         Path.GetExtension(include.Filename) == ".json");
                     object? inherited = null;
                     await include.Context.RunAsync(context =>
                     {
-                        entry = EditableEntry(entryId);
+                        entry = settings is null
+                            ? EditableEntry(entryId)
+                            : EditableEntry(
+                                include
+                                    .Loader.Entries()
+                                    .SingleOrDefault(row => row.Options.Id == settings.Namespace)
+                                    ?.Id ?? throw new Refusal("unknown-plugin"));
+                        entryId = entry.Id;
                         revision = Revision(entry, refresh.Layers);
-                        if (revision != expectedRevision)
+                        if (settings is null && revision != expectedRevision)
                             throw new Refusal("conflict");
+                        if (settings is not null)
+                        {
+                            var view = DescribeSettings(settings.Owner, refresh.Layers, baseRows)
+                                    .Value.Namespaces.SingleOrDefault(row => row.Ns == settings.Namespace) ??
+                                throw new Refusal("no-settings-form");
+                            if (settings.Expected is { } expected && expected != view.Revision)
+                                throw new SettingsConflictException(settings.Namespace, expected, view.Revision);
+                        }
+
                         var inheritedLayers = refresh
                             .Layers.Where(layer =>
                                 layer.Source != Path.Combine(launch.Home, "cordis.patch.yml") &&
@@ -159,14 +180,12 @@ public sealed partial class PluginConfigurationOperations
                         inherited = Flatten(EntryPatches.Apply(baseRows, ProfileComposition.Flatten(inheritedLayers)))
                             .Single(row => row.Id == entry.Options.Id)
                             .Config;
-                        next = RawObject(entry.Options.Config);
+                        next = settings is null
+                            ? RawObject(entry.Options.Config)
+                            : ApplySettingsChange(entry, inherited, settings);
                         foreach (var edit in edits)
                         {
                             var keys = edit.Path;
-                            if (settings is not null && !AllowsSettingsPath(entry, settings, keys))
-                                throw new Refusal("field-not-offered");
-                            if (settings is not null && edit is ConfigurationSet set && !SettingsData(set.Value))
-                                throw new Refusal("non-json-settings-data");
                             next = ApplyOperation(next, inherited, edit, entry.Fiber!.ConfigDescription);
                         }
 
@@ -213,6 +232,7 @@ public sealed partial class PluginConfigurationOperations
                     if (RawFingerprint(next) != RawFingerprint(effective))
                         throw new Refusal("overridden");
                     cancellationToken.ThrowIfCancellationRequested();
+                    await inputs.VerifyAsync();
                     await ProfileMaintenance.WriteConfigurationSourceAsync(PatchPath, edited);
                     try
                     {
@@ -224,6 +244,8 @@ public sealed partial class PluginConfigurationOperations
                         var saved = true;
                         try
                         {
+                            if (await File.ReadAllTextAsync(PatchPath) != edited)
+                                throw new Refusal("source-changed-during-recovery");
                             await ProfileMaintenance.WriteConfigurationSourceAsync(PatchPath, before);
                             saved = false;
                         }
@@ -254,7 +276,7 @@ public sealed partial class PluginConfigurationOperations
 
                     result = new(entryId, true, RunExclusiveAsync is not null, await CurrentRevisionAsync(entryId));
                 }
-                catch (Exception error) when (error is not OperationCanceledException)
+                catch (Exception error) when (error is not (OperationCanceledException or SettingsConflictException))
                 {
                     result = new(
                         entryId,
@@ -353,7 +375,8 @@ public sealed partial class PluginConfigurationOperations
         EntryOptions root,
         object? inherited,
         ConfigurationPathOperation operation,
-        ConfigDescriptor? descriptor)
+        ConfigDescriptor? descriptor,
+        bool allowScalarContainers = false)
     {
         var path = operation.Path;
         if (path.Count == 0)
@@ -387,7 +410,8 @@ public sealed partial class PluginConfigurationOperations
                 return list;
             }
 
-            if (input is null or Undefined)
+            if (input is null or Undefined ||
+                allowScalarContainers && input is not (IDictionary<string, object?> or JsExpression))
                 input = new EntryOptions();
             if (input is not IDictionary<string, object?> map || map.ContainsKey("__jsExpr"))
                 throw new Refusal("opaque-configuration");

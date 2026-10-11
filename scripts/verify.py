@@ -319,6 +319,8 @@ def main():
         run("cli-usage", cli, expected_exit=2)
         run("cli-invalid-option", [*cli, "validate", fixture, "--unknown"], expected_exit=1)
         run("api", ["dotnet", "run", "--project", "tools/Cordis.ApiCheck", "-c", "Release", "--no-build", "--", "--check"])
+        run("typert-optional", [sys.executable, "scripts/verify-typert-optional.py", "--dotnet", shutil.which("dotnet"),
+                               "--output", OUT / "typert-optional"])
         if options.dsh:
             target = json.loads((ROOT / "upstream.lock.json").read_text(encoding="utf-8"))["harness"]["commit"]
             upgrade = target == "639ed015397290b3745d163aafe02ffee4aa3f84"

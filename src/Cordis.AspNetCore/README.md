@@ -4,11 +4,11 @@ Optional ASP.NET Core management endpoints over a running Cordis profile. Packag
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
 
-The host supplies an authorization callback for every operation, a settings visibility policy per entry and an optional platform package toolchain. Build permission is checked separately from installation permission. The adapter does not provide accounts or login policy.
+The host supplies an authorization callback for every operation and an optional platform package toolchain. Build permission is checked separately from installation permission. The adapter does not provide accounts or login policy.
 
 See `examples/ManagedApplication` for the maintained application example and `docs/authoring.md` for configuration authoring. This package is introduced in `0.2.0-alpha.3`; it is not included in the published `0.2.0-alpha.1` batch.
 
-`Map` exposes management reads, settings and complete configuration edits, package progress and active installation queries. Full configuration and its schema use separate `configuration-read`/`configuration-write` permissions because raw data and defaults can contain secrets. Settings reads and exports use the host's selection/redaction policy.
+`Map` exposes management reads and complete configuration edits, package progress and active installation queries. Full configuration and its schema use separate `configuration-read`/`configuration-write` permissions because raw data and defaults can contain secrets. Settings uses the standard generated Remote over `SettingsForms`, mounted with `MapCordisRemote` and its own host authorization. See [Settings migration](../../docs/settings-contract-migration.md); the old handwritten Settings routes are removed.
 
 Every mutation requires the generation returned by `/state`; reads may also supply `If-Cordis-Generation`. A replacement host refuses the old generation. HTTP/SSE is a native contract, not a Typert wire implementation. Reconnect reads current state and the full client graph; events are bounded notifications, not a durable log.
 

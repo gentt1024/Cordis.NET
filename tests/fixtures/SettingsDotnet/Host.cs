@@ -53,7 +53,7 @@ await using var session = await ProfileSession.StartAsync(
     profile.UserLayer.Source,
     launch,
     resolver,
-    required: new HashSet<string>(["root:one", "root:two"], StringComparer.Ordinal),
+    required: new HashSet<string>(["root:one"], StringComparer.Ordinal),
     prepare: context =>
     {
         registry = new TypertRegistry(context);
@@ -72,15 +72,7 @@ await session.Context.RunAsync(_ =>
 var policy = new SettingsPolicy(
     ["label", "rootSecret", "nested", "hidden", "genuineNull", "defaulted"],
     ["hidden"]);
-var nativeProvider = new ProfileSettingsDescribeProvider(
-    session.ConfigurationOperations,
-    [
-        new("one", "root:one", policy), new("two", "root:two", policy, AutoGenerate: false),
-        new("unavailable", "missing", policy)
-    ],
-    writable: false,
-    hasDocument: true);
-var controls = new FixtureControls(session, resolver, registry, nativeProvider, moduleRequest);
+var controls = new FixtureControls(session, resolver, registry, policy, moduleRequest, profile.UserLayer.Source);
 await controls.InitializeAsync();
 var gateway = new TypertGateway(session.Context, registry);
 var builder = WebApplication.CreateSlimBuilder();
@@ -107,11 +99,14 @@ internal sealed class FixtureControls(
     ProfileSession session,
     ClrModuleResolver resolver,
     TypertRegistry registry,
-    ProfileSettingsDescribeProvider nativeProvider,
-    string moduleRequest)
+    SettingsPolicy policy,
+    string moduleRequest,
+    string patchPath)
 {
     private readonly SemaphoreSlim mutations = new(1);
     private Fiber? providerOwner;
+    private Fiber? formsOwner;
+    private SettingsForms nativeProvider = null!;
     private Fiber? definitionOwner;
     private Fiber? loggerOwner;
     private TypertLoader artifacts = null!;
@@ -123,6 +118,7 @@ internal sealed class FixtureControls(
 
     internal async Task InitializeAsync()
     {
+        await MountFormsAsync();
         await ProvideAsync(new ObservedProvider(nativeProvider, RecordDiagnostics), "live");
         await RegisterDefinitionsAsync();
     }
@@ -159,7 +155,7 @@ internal sealed class FixtureControls(
                     await ProvideAsync(new ObservedProvider(nativeProvider, RecordDiagnostics), "live");
                     break;
                 case "fail":
-                    await ProvideAsync(new FailingProvider(), "failing");
+                    await ProvideAsync(new FailingProvider(nativeProvider), "failing");
                     break;
                 case "hold":
                     if (held is { } previous && !previous.Release.Task.IsCompleted)
@@ -213,6 +209,35 @@ internal sealed class FixtureControls(
                     return Results.Json(
                         new FixtureDiagnostics(Volatile.Read(ref diagnostics)),
                         jsonTypeInfo: FixtureJson.Default.FixtureDiagnostics);
+                case "source":
+                    return Results.Json(
+                        new FixtureSource(await File.ReadAllTextAsync(patchPath)),
+                        jsonTypeInfo: FixtureJson.Default.FixtureSource);
+                case "settings-restart":
+                    await WithdrawProviderAsync();
+                    await MountFormsAsync();
+                    await ProvideAsync(new ObservedProvider(nativeProvider, RecordDiagnostics), "live");
+                    break;
+                case "readonly":
+                    await WithdrawProviderAsync();
+                    await MountFormsAsync(writable: false);
+                    await ProvideAsync(new ObservedProvider(nativeProvider, RecordDiagnostics), "readonly");
+                    break;
+                case "two-disable":
+                case "two-enable":
+                    var changed = await session.ConfigurationOperations.SetPluginEnabledAsync(
+                        "root:two",
+                        command == "two-enable");
+                    if (!changed.Changed || changed.Application != "applied" || changed.Error is not null)
+                        throw new InvalidOperationException(
+                            changed.Diagnostic ?? changed.Error ?? "Entry enablement did not complete.");
+                    if (command == "two-enable")
+                        await session.Context.RunAsync(_ =>
+                        {
+                            nativeProvider.Configure(false, session.Loader.Resolve("root:two").Fiber!);
+                            return Task.CompletedTask;
+                        });
+                    break;
                 case "status":
                     break;
                 default:
@@ -240,7 +265,30 @@ internal sealed class FixtureControls(
             Volatile.Read(ref diagnostics)),
         jsonTypeInfo: FixtureJson.Default.FixtureStatus);
 
-    private async Task ProvideAsync(ISettingsDescribeProvider provider, string mode)
+    private async Task MountFormsAsync(bool writable = true)
+    {
+        if (formsOwner is not null)
+            await formsOwner.DisposeAsync();
+        await session.Context.RunAsync(async context =>
+        {
+            formsOwner = context.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (owner, _) =>
+                    {
+                        nativeProvider = new SettingsForms(
+                            owner.Isolate("settings"),
+                            session.ConfigurationOperations,
+                            _ => policy,
+                            writable: writable);
+                        nativeProvider.Configure(false, session.Loader.Resolve("root:two").Fiber!);
+                    }
+                });
+            await formsOwner.WaitAsync();
+        });
+    }
+
+    private async Task ProvideAsync(ISettingsProvider provider, string mode)
     {
         await WithdrawProviderAsync();
         await session.Context.RunAsync(async context =>
@@ -289,21 +337,51 @@ internal sealed class FixtureControls(
     }
 }
 
-internal sealed class ObservedProvider(
-    ISettingsDescribeProvider inner,
-    Action<IReadOnlyList<string>> report) : ISettingsDescribeProvider
+internal abstract class ForwardingProvider(ISettingsProvider inner) : ISettingsProvider
 {
-    public async Task<SettingsDescribeSnapshot> DescribeAsync()
+    protected ISettingsProvider Inner
     {
-        var snapshot = await inner.DescribeAsync();
+        get;
+    } = inner;
+
+    public virtual Task<SettingsDescribeSnapshot> DescribeAsync() => Inner.DescribeAsync();
+
+    public Task UpdateAsync(
+        string ns,
+        JsonElement patch,
+        [System.Diagnostics.CodeAnalysis.DisallowNull]
+        double? expectedRevision = null!) =>
+        Inner.UpdateAsync(ns, patch, expectedRevision!);
+
+    public Task ReplaceAsync(
+        string ns,
+        JsonElement section,
+        [System.Diagnostics.CodeAnalysis.DisallowNull]
+        double? expectedRevision = null!) =>
+        Inner.ReplaceAsync(ns, section, expectedRevision!);
+
+    public Task MutateAsync(
+        string ns,
+        IReadOnlyList<SettingsPathOp> ops,
+        [System.Diagnostics.CodeAnalysis.DisallowNull]
+        double? expectedRevision = null!) =>
+        Inner.MutateAsync(ns, ops, expectedRevision!);
+}
+
+internal sealed class ObservedProvider(ISettingsProvider inner, Action<IReadOnlyList<string>> report)
+    : ForwardingProvider(inner)
+{
+    public override async Task<SettingsDescribeSnapshot> DescribeAsync()
+    {
+        var snapshot = await Inner.DescribeAsync();
         report(snapshot.Diagnostics);
         return snapshot;
     }
 }
 
-internal sealed class FailingProvider : ISettingsDescribeProvider
+internal sealed class FailingProvider(ISettingsProvider inner) : ForwardingProvider(inner)
 {
-    public Task<SettingsDescribeSnapshot> DescribeAsync()
+    public override Task<SettingsDescribeSnapshot> DescribeAsync()
     {
         using var details = JsonDocument.Parse("""{"ns":"one","stage":"provider"}""");
         return Task.FromException<SettingsDescribeSnapshot>(
@@ -314,7 +392,7 @@ internal sealed class FailingProvider : ISettingsDescribeProvider
     }
 }
 
-internal sealed class HeldProvider(ISettingsDescribeProvider inner) : ISettingsDescribeProvider
+internal sealed class HeldProvider(ISettingsProvider inner) : ForwardingProvider(inner)
 {
     internal TaskCompletionSource Entered
     {
@@ -326,9 +404,9 @@ internal sealed class HeldProvider(ISettingsDescribeProvider inner) : ISettingsD
         get;
     } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public async Task<SettingsDescribeSnapshot> DescribeAsync()
+    public override async Task<SettingsDescribeSnapshot> DescribeAsync()
     {
-        var snapshot = await inner.DescribeAsync();
+        var snapshot = await Inner.DescribeAsync();
         Entered.TrySetResult();
         await Release.Task;
         return snapshot;
@@ -347,8 +425,11 @@ internal sealed record FixtureFailure(string Reason);
 
 internal sealed record FixtureDiagnostics(IReadOnlyList<string> Diagnostics);
 
+internal sealed record FixtureSource(string Document);
+
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(FixtureStatus))]
 [JsonSerializable(typeof(FixtureFailure))]
 [JsonSerializable(typeof(FixtureDiagnostics))]
+[JsonSerializable(typeof(FixtureSource))]
 internal partial class FixtureJson : JsonSerializerContext;

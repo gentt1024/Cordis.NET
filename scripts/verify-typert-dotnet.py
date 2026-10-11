@@ -1,4 +1,4 @@
-"""Exercise a model-only .NET caller against the real Settings describe provider, without Node."""
+"""Exercise ordinary declaration catalogs and a model-only Settings caller using shipped .NET packages."""
 import argparse
 import hashlib
 import json
@@ -12,6 +12,8 @@ import threading
 import xml.etree.ElementTree as ET
 import zipfile
 
+from typert_declaration_consumer import verify_declaration_consumer
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -19,6 +21,8 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--dotnet", default="dotnet")
     parser.add_argument("--aot", action="store_true")
+    parser.add_argument("--declarations-only", action="store_true",
+        help="Run only the ordinary declaration package and catalog checks.")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = options.output.resolve()
@@ -67,6 +71,11 @@ def main():
     try:
         composition = f'<PackageReference Include="Cordis.NET.Composition" Version="{version}"/>'
         clr = f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>'
+        verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project)
+        if options.declarations_only:
+            provider_referenced = False
+            status = "requested-checks-passed"
+            return
         author, author_project = project("Author",
             '<AssemblyName>IndependentSettings.Provider</AssemblyName><PackageId>IndependentSettings.Provider</PackageId>'
             '<Version>1.0.0-alpha</Version><CordisTypertService>settingsController</CordisTypertService>', clr,
@@ -150,7 +159,7 @@ def main():
         shutil.copyfile(root / "tests/fixtures/SettingsDotnet/ProjectionCaller.cs", projection / "Program.cs")
 
         def extract_projection(service, destination, source_response=None, defines=""):
-            # Retain analysis facts for a shape rejected by the ordinary runtime generator.
+            # Include the optional declaration in this source-analysis control.
             if service == "optional":
                 defines = "CORDIS_MODEL_OPTIONAL"
             run(service + "-source-extract", [dotnet, compiler, "--roslyn-directory", roslyn, "extract",
@@ -182,7 +191,7 @@ def main():
             artifact = projection_author / (service + ".model.json")
             extract_projection(service, artifact)
             target = projection / (service + ".Generated.g.cs")
-            refusal = service in {"readonly", "collision", "recordStruct", "optional"}
+            refusal = service in {"readonly", "collision", "recordStruct"}
             if refusal:
                 target.write_text("stale generated output", encoding="utf-8")
             emitted = run(service + "-model-project", [dotnet, compiler, "--roslyn-directory", roslyn, "emit-dotnet",
@@ -197,10 +206,10 @@ def main():
                     assert member["writeAccess"] == "none" and member["getterConstant"]["json"] == '"live"'
                 elif service == "collision":
                     assert b"collide" in emitted
-                elif service == "optional":
-                    facts = json.loads(artifact.read_text(encoding="utf-8"))
-                    argument = facts["services"][0]["methods"][0]["parameters"][0]
-                    assert argument["optional"] and argument["default"]["json"] == "7"
+            elif service == "optional":
+                facts = json.loads(artifact.read_text(encoding="utf-8"))
+                argument = facts["services"][0]["methods"][0]["parameters"][0]
+                assert argument["optional"] and argument["default"]["json"] == "7"
         helper_model = projection_author / "helper-collision.model.json"
         extract_projection("helperCollision", helper_model)
         shutil.copyfile(helper_model, output / "helper-collision-model.json")
@@ -324,7 +333,7 @@ def main():
     finally:
         (output / "results.json").write_text(json.dumps({"status": status, "steps": steps, "independentSourceDirectory": str(source),
             "providerImplementationReferencedByCaller": provider_referenced, "packageReferencesOnly": True,
-            "nodeCommands": [], "aotRequested": options.aot}, indent=2) + "\n", encoding="utf-8")
+            "nodeCommands": [], "aotRequested": options.aot, "declarationsOnly": options.declarations_only}, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

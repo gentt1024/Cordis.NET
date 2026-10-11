@@ -106,10 +106,29 @@ bool Authorized(HttpContext http) =>
 var management = new CordisManagement(
     session,
     (http, _) => Task.FromResult(Authorized(http)),
-    _ => new SettingsPolicy(["limit", "label", "credential"]),
     packages,
     _ => Task.FromResult(catalog!));
 management.Map(app);
+var settingsContracts = SettingsControllerTypert.Contribution("Cordis.ManagedApplication.Settings");
+var settingsRegistry = new TypertRegistry(session.Context);
+await session.Context.RunAsync(context =>
+{
+    new SettingsForms(
+        context,
+        session.ConfigurationOperations,
+        _ => new SettingsPolicy(["limit", "label", "credential"]));
+    new SettingsController(context);
+    settingsRegistry.Register(context, settingsContracts);
+    return Task.CompletedTask;
+});
+app.MapCordisRemote(
+    "/remote",
+    new TypertGateway(session.Context, settingsRegistry),
+    (http, _) => Task.FromResult(Authorized(http)));
+var settingsClient = TypertArtifacts.GenerateClient(settingsContracts);
+app.MapGet("/client-runtime/settings.mjs", () => Results.Text(settingsClient.Module, "text/javascript"));
+app.MapGet("/client-runtime/settings.d.ts", () => Results.Text(settingsClient.Declaration, "text/plain"));
+
 app.MapGet("/", () => Results.File(Path.Combine(app.Environment.ContentRootPath, "index.html"), "text/html"));
 app.MapGet("/client-runtime/client.mjs", () => Results.File(Path.Combine(runtime, "client.mjs"), "text/javascript"));
 app.MapGet("/client-runtime/LICENSES.txt", () => Results.File(Path.Combine(runtime, "LICENSES.txt"), "text/plain"));

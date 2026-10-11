@@ -28,6 +28,34 @@ native carrier is not the complete fixed Typert wire protocol. The [scope reconc
 and [compatibility record](compatibility.md) distinguish verified paths from remaining type-graph,
 transport and production-consumer work; earlier HTTP management acceptance remains historical.
 
+## Current workflow decisions
+
+The fixed DSH source remains the behavioral authority. Its existing comparison with the
+native implementation is applied incrementally, rather than repeated as a new inventory.
+The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
+continues to own completeness. Maker is a consumer of that scope.
+
+| Workflow | Fixed DSH responsibility | Native expression and owner | Observable boundary |
+|---|---|---|---|
+| Ordinary author and caller | Plugin provision, Fiber-owned effects, dependency activation and caller Context | Existing `Plugin`, `Provide`, `Reflect.Read<T>` and explicit `Service<TState>.CreateView` | Analysis selection does not introduce Remote registration or replace Cordis with container scopes. |
+| Model and build | Authored declaration graph precedes codec, catalog and client projections | SDK Roslyn extracts selected declarations; Composition's MSBuild target publishes data-only models before `CoreCompile` | Definitions, constructed references and type-parameter ownership remain distinct. A backend's refusal does not remove analysis facts. |
+| Settings view and write | Active live Entry forms, layers, redaction, optional view revision and ConfigEditor commit | Existing profile/configuration owner supplies layers and performs one complete candidate commit; a service-owned revision projection observes the form | Client view revision and file hash protect different conflicts. Replace resets live fields while retaining ordinary fields. Neither adds a whole-runtime transaction. |
+| Management | Accepted install work belongs to PluginManager, not the waiting connection | Generated management will call existing operations/session/toolchain | Disconnecting a waiter does not cancel installation; explicit cancel and restart-required retain their existing meaning. |
+| Remote and carrier | Context/reference ownership, invocation, streams, events and attachments | Existing Registry/Gateway retain authority; ASP.NET/HttpClient carry the supported native subset | JSON/NDJSON and base64 are current adaptations. Peer, uplink, event and attachment gaps require their own implementation and cross-end evidence. |
+| Artifact update | Installed selection and current activation have separate lifetimes | Stable deployment directories, shared bundle/ALC and existing restart policy | Saving V2 does not change V1's running descriptors/codecs. Unload request, collection and deletion remain separate. |
+
+Ordinary declaration models use an explicit v2 artifact with `.cordis.model.json` extension.
+Legacy Remote artifacts retain their exact v1 records, serializer and identity calculation.
+The source reader shares documentation, source locations and constant extraction; ordinary
+members are not passed through Remote wire normalization. No provider is loaded for analysis.
+External declarations identify their assembly and metadata name with `metadata-reference`
+provenance. Their implementation members and source initializer bodies are not reconstructed.
+The first independent projection is a declaration catalog read from the artifact alone.
+
+Roslyn, STJ, MSBuild/NuGet and the existing transport mechanics remain the selected tools.
+This continuation introduces no new RPC, schema or DI dependency. A complete type graph,
+all model backends and rich protocol interoperability remain separate open responsibilities.
+
 ## ADR 001: one explicit execution domain
 
 Cordis's first activation is scheduled after the current synchronous registration segment.

@@ -432,8 +432,10 @@ def configuration_mutations(gate: Gate):
 
 def application_client(gate: Gate, label: str, executable: Path, *, expected_failure=None, client_source=None):
     package = standalone_directory("cordis-client-package-")
+    generated = package / "settings-client"
+    gate.run(label + "-settings-client", [str(executable), "--settings-client", generated])
     gate.run(label + "-client-build", ["node", "scripts/build-application-client.mjs", package,
-                                      client_source or ROOT / "examples/Probes/client"])
+                                      client_source or ROOT / "examples/Probes/client", generated])
     with socket.socket() as endpoint:
         endpoint.bind(("127.0.0.1", 0))
         port = endpoint.getsockname()[1]
@@ -460,7 +462,7 @@ def application_client(gate: Gate, label: str, executable: Path, *, expected_fai
                      runtime_failure=expected_failure)
             gate.record(label + "-delivery", executableSha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
                         hostStdout=stdout.relative_to(OUT).as_posix(), hostStderr=stderr.relative_to(OUT).as_posix(),
-                        protocol="explicit primitive live SET and immutable self-contained ESM subset",
+                        protocol="generated standard Settings Remote and immutable self-contained ESM",
                         execution="actual Node ESM client; browser UI rendering not asserted")
         finally:
             try:
@@ -483,6 +485,8 @@ def application_contracts(gate: Gate):
         if hashlib.sha256(path.read_bytes()).hexdigest() != source["sha256"]:
             raise RuntimeError(f"Fixed client source identity changed: {source['file']}")
     gate.record("fixed-client-source-identity", **provenance)
+    executable = ROOT / "examples/Probes/bin/Release/net10.0" / ("Probes.exe" if os.name == "nt" else "Probes")
+    gate.run("client-settings-generation", [str(executable), "--settings-client", ROOT / "artifacts/settings-client"])
     gate.run("client-types", ["node", "reference/node_modules/typescript/bin/tsc", "-p", "examples/Probes/client/tsconfig.json"])
     files = source_hashes()
     for name, production, before, after, expected in (
@@ -509,10 +513,10 @@ def application_contracts(gate: Gate):
     shutil.copytree(ROOT / "examples/Probes/client", directory / "client")
     path = directory / "client/application.ts"
     text = path.read_text(encoding="utf-8")
-    before = "this.revisions.get(expectedRevision)"
+    before = "...(expectedRevision === undefined ? {} : { expectedRevision })"
     if text.count(before) != 1:
         raise RuntimeError("Client fence mutation no longer identifies one lookup")
-    path.write_text(text.replace(before, "this.revisions.get(this.nextRevision)"), encoding="utf-8")
+    path.write_text(text.replace(before, "...(this.snapshot.revision === undefined ? {} : { expectedRevision: this.snapshot.revision })"), encoding="utf-8")
     executable = ROOT / "examples/Probes/bin/Release/net10.0" / ("Probes.exe" if os.name == "nt" else "Probes")
     application_client(gate, "client-fence-mutant", executable, client_source=directory / "client",
                        expected_failure="draft keeps original revision fence after refresh")

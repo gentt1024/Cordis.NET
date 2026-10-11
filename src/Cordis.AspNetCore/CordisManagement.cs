@@ -16,12 +16,11 @@ namespace Cordis.AspNetCore;
 public sealed record ManagementPermission(string Operation, string? Target = null, PackageInspection? Package = null);
 
 /// <summary>HTTP/SSE bindings over one running profile. No configuration or plugin lifecycle state is copied into the transport.</summary>
-/// <remarks>The host supplies authorization and settings visibility for every request. A lost installation response must
+/// <remarks>The host supplies authorization for every request. A lost installation response must
 /// be resolved through wait/inventory; a null wait result is unknown, never permission to repeat the mutation.</remarks>
 public sealed class CordisManagement(
     ProfileSession session,
     Func<HttpContext, ManagementPermission, Task<bool>> authorize,
-    Func<string, SettingsPolicy> settingsPolicy,
     IProfilePackageToolchain? packages = null,
     Func<CancellationToken, Task<ClientModuleCatalog>>? clientModules = null)
 {
@@ -39,7 +38,6 @@ public sealed class CordisManagement(
     public void Map(IEndpointRouteBuilder endpoints, string prefix = "/cordis")
     {
         ArgumentNullException.ThrowIfNull(authorize);
-        ArgumentNullException.ThrowIfNull(settingsPolicy);
         Get(
             "/state",
             "read",
@@ -135,70 +133,6 @@ public sealed class CordisManagement(
                         Edits(body),
                         Text(body, "revision"),
                         cancellationToken: http.RequestAborted))));
-        GetTarget(
-            "/settings",
-            "settings-read",
-            http => Query(http, "entryId"),
-            async (http, target) =>
-            {
-                var entryId = target;
-                var settings = await Operations.ReadSettingsAsync(
-                    entryId,
-                    settingsPolicy(entryId),
-                    http.RequestAborted);
-                await WriteAsync(
-                    http,
-                    new EntryOptions
-                    {
-                        ["entryId"] = entryId,
-                        ["revision"] = settings.Revision,
-                        ["diagnostics"] = settings.Diagnostics.ToArray(),
-                        ["secrets"] = settings
-                            .Secrets.Select(secret => new EntryOptions
-                            {
-                                ["path"] = secret.Path.ToArray(),
-                                ["set"] = secret.Set
-                            })
-                            .ToList(),
-                        ["fields"] = settings
-                            .Fields.Select(field => new EntryOptions
-                            {
-                                ["name"] = field.Name,
-                                ["kind"] = field.Kind,
-                                ["value"] = field.Value,
-                                ["overridden"] = field.Overridden
-                            })
-                            .ToList(),
-                    });
-            });
-        GetTarget(
-            "/settings/schema",
-            "settings-read",
-            http => Query(http, "entryId"),
-            async (http, target) =>
-            {
-                var entryId = target;
-                var schema = await Operations.ReadSettingsSchemasAsync(
-                    entryId,
-                    settingsPolicy(entryId),
-                    http.RequestAborted);
-                await WriteAsync(http, SchemaResult(schema));
-            });
-        PostTarget(
-            "/settings",
-            "settings-write",
-            "entryId",
-            async (http, body, target) =>
-            {
-                var entryId = target;
-                var result = await Operations.MutateSettingsAsync(
-                    entryId,
-                    Edits(body),
-                    Text(body, "revision"),
-                    settingsPolicy(entryId),
-                    http.RequestAborted);
-                await WriteAsync(http, EditResult(result));
-            });
         PostTarget(
             "/enable",
             "manage",

@@ -1,5 +1,8 @@
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
+using SettingsClient = Cordis.Cli.Settings.SettingsClient;
+using SettingsClientJson = Cordis.Cli.Settings.SettingsClientJson;
 using Cordis.Composition;
 
 internal static class ManagementCommands
@@ -52,6 +55,42 @@ internal static class ManagementCommands
             };
             if (authorization is not null)
                 client.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(authorization);
+            var settingsCommand = arguments[0] == "settings" ||
+                arguments[0] is "schema" or "edit" && Value(0) == "settings";
+            if (settingsCommand)
+            {
+                using var remote = new SettingsClient(client, new Uri(client.BaseAddress!, "../remote"));
+                var ns = Value(arguments[0] == "settings" ? 0 : 1);
+                Cordis.Cli.Settings.SettingsNamespaceView view;
+                if (arguments[0] == "edit")
+                {
+                    var operations = (IReadOnlyList<Cordis.Cli.Settings.SettingsPathOp>?)JsonSerializer.Deserialize(
+                            await File.ReadAllTextAsync(Value(3)),
+                            typeof(IReadOnlyList<Cordis.Cli.Settings.SettingsPathOp>),
+                            SettingsClientJson.Default) ??
+                        throw new ArgumentException("Settings operations must be an array.");
+                    if (Value(2) == "-")
+                        view = await remote.MutateAsync(ns, operations);
+                    else
+                    {
+                        using var revision = JsonDocument.Parse(Value(2));
+                        if (revision.RootElement.ValueKind != JsonValueKind.Number ||
+                            !revision.RootElement.TryGetDouble(out var expected) || !double.IsFinite(expected))
+                            throw new ArgumentException(
+                                "Settings expectedRevision must be a JSON number; use - to omit it.");
+                        view = await remote.MutateAsync(ns, operations, expected);
+                    }
+                }
+                else
+                    view = (await remote.DescribeAsync()).Namespaces.Single(row => row.Ns == ns);
+
+                Console.WriteLine(
+                    arguments[0] == "schema"
+                        ? view.Schema.GetRawText()
+                        : JsonSerializer.Serialize(view, SettingsClientJson.Default.SettingsNamespaceView));
+                return 0;
+            }
+
             var state = (EntryOptions)(await GetAsync("state"))!;
             var generation = (string)state["generation"]!;
             client.DefaultRequestHeaders.Add("If-Cordis-Generation", generation);
@@ -64,13 +103,10 @@ internal static class ManagementCommands
                 "versions" => await GetAsync(
                     "versions?name=" + Uri.EscapeDataString(Value(0)) + "&source=" +
                     Uri.EscapeDataString(source ?? throw new ArgumentException("--source is required."))),
-                "settings" => await GetAsync("settings?entryId=" + Uri.EscapeDataString(Value(0))),
                 "configuration" => await GetAsync("configuration?entryId=" + Uri.EscapeDataString(Value(0))),
-                "schema" => await GetAsync(
-                    (Value(0) == "settings" ? "settings" :
-                        Value(0) == "configuration" ? "configuration" :
-                        throw new ArgumentException("Choose settings or configuration.")) + "/schema?entryId=" +
-                    Uri.EscapeDataString(Value(1))),
+                "schema" => Value(0) == "configuration"
+                    ? await GetAsync("configuration/schema?entryId=" + Uri.EscapeDataString(Value(1)))
+                    : throw new ArgumentException("Choose settings or configuration."),
                 "edit" => await EditAsync(),
                 "compatibility" => await GetAsync("compatibility"),
                 "grant" => await PostAsync(
@@ -129,7 +165,7 @@ internal static class ManagementCommands
             async Task<object?> EditAsync()
             {
                 var scope = Value(0);
-                if (scope is not ("settings" or "configuration"))
+                if (scope != "configuration")
                     throw new ArgumentException("Choose settings or configuration.");
                 var operations = ConfigurationFile.Parse(await File.ReadAllTextAsync(Value(3)), true);
                 return await PostAsync(

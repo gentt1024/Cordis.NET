@@ -151,6 +151,19 @@ public sealed class Fiber : IAsyncDisposable
     public IReadOnlyDictionary<string, object?> ConfigurationValues =>
         _configurationCell?.State.Values ?? System.Collections.ObjectModel.ReadOnlyDictionary<string, object?>.Empty;
 
+    /// <summary>Detach the captured live projections of an effective value without publishing it.</summary>
+    /// <remarks>Call within the owning execution domain. This executes the author projections, not validation or persistence simplification.</remarks>
+    public IReadOnlyDictionary<string, object?> ProjectConfigurationValues(object? effective)
+    {
+        Context.VerifyAccess();
+        if (State != FiberState.Active || Definition?.Configuration is not { } schema)
+            throw new InvalidOperationException("Configuration projection requires an active declared plugin.");
+        if (!schema.TryProject(effective, out var values))
+            throw new ConfigurationValidationException(
+                ["The effective configuration cannot be projected as declared live values."]);
+        return values;
+    }
+
     /// <summary>Run the active plugin's normal configuration hooks and validator without publishing or saving.</summary>
     /// <remarks>Call within the owning execution domain. Validation callbacks may have their own effects.</remarks>
     public object? ValidateConfiguration(object? raw)

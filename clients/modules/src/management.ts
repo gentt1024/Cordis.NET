@@ -11,7 +11,7 @@ export type ManagementConnection =
   | { readonly phase: 'connecting' | 'disconnected'; readonly diagnostic?: string }
   | { readonly phase: 'connected'; readonly state: ManagementState }
   | { readonly phase: 'closed' }
-export type SettingsOperation =
+export type ConfigurationOperation =
   | { readonly op: 'set'; readonly path: readonly string[]; readonly value: unknown }
   | { readonly op: 'unset'; readonly path: readonly string[] }
 export interface PackageRequest { readonly name: string; readonly version: string; readonly source: string }
@@ -22,12 +22,7 @@ export interface PackageChange {
   readonly error: string | null; readonly diagnostic: string | null
   readonly residuals: readonly string[] | null; readonly toolExitCode: number | null
 }
-export interface SettingsView {
-  readonly entryId: string; readonly revision: string; readonly diagnostics: readonly string[]
-  readonly fields: readonly { readonly name: string; readonly kind: string; readonly value: unknown; readonly overridden: boolean }[]
-  readonly secrets: readonly { readonly path: readonly string[]; readonly set: boolean }[]
-}
-export interface SettingsChange {
+export interface ConfigurationChange {
   readonly saved: boolean; readonly applied: boolean; readonly revision: string | null
   readonly error: string | null; readonly diagnostic: string | null; readonly recoveryErrors: readonly string[] | null
 }
@@ -76,7 +71,7 @@ function managementChange(wire: unknown): ManagementChange {
   const row = record(wire)
   return { changed: boolean(row.changed), application: text(row.application), error: nullableText(row.error), diagnostic: nullableText(row.diagnostic) }
 }
-function settingsChange(wire: unknown): SettingsChange {
+function configurationChange(wire: unknown): ConfigurationChange {
   const row = record(wire)
   return { saved: boolean(row.saved), applied: boolean(row.applied), revision: nullableText(row.revision), error: nullableText(row.error),
     diagnostic: nullableText(row.diagnostic), recoveryErrors: nullableTexts(row.recoveryErrors) }
@@ -100,13 +95,10 @@ export interface ManagementClient {
   readBundles(): Promise<unknown>
   readSources(): Promise<readonly string[]>
   readVersions(name: string, source: string): Promise<readonly string[]>
-  readSettings(entryId: string): Promise<SettingsView>
-  readSettingsSchema(entryId: string): Promise<unknown>
   readConfiguration(entryId: string): Promise<ConfigurationView>
   readConfigurationSchema(entryId: string): Promise<unknown>
-  mutateConfiguration(entryId: string, operations: readonly SettingsOperation[], revision: string): Promise<SettingsChange>
+  mutateConfiguration(entryId: string, operations: readonly ConfigurationOperation[], revision: string): Promise<ConfigurationChange>
   readCompatibility(): Promise<CompatibilityView>
-  mutateSettings(entryId: string, operations: readonly SettingsOperation[], revision: string): Promise<SettingsChange>
   enable(kind: 'plugin' | 'bundle', target: string, enabled: boolean): Promise<ManagementChange>
   inspect(request: PackageRequest): Promise<PackageInspection>
   /** One install attempt. A lost response queries the active result; null remains unknown and is never success. */
@@ -305,33 +297,18 @@ export function createManagementClient(options: ManagementClientOptions = {}): M
     },
     readBundles: () => read('/bundles'), readSources: async () => texts(await read('/sources')),
     readVersions: async (name, sourceName) => texts(await read('/versions?' + new URLSearchParams({ name, source: sourceName }))),
-    async readSettings(entryId) {
-      const row = record(await read('/settings?' + new URLSearchParams({ entryId })))
-      if (!Array.isArray(row.fields)) throw new Error('Settings field array expected')
-      if (!Array.isArray(row.secrets)) throw new Error('Settings secret sidecar expected')
-      return { entryId: text(row.entryId), revision: text(row.revision), diagnostics: texts(row.diagnostics), fields: row.fields.map(value => {
-        const field = record(value)
-        return { name: text(field.name), kind: text(field.kind), value: field.value, overridden: boolean(field.overridden) }
-      }), secrets: row.secrets.map(value => {
-        const secret = record(value)
-        return { path: texts(secret.path), set: boolean(secret.set) }
-      }) }
-    },
-    readSettingsSchema: entryId => read('/settings/schema?' + new URLSearchParams({ entryId })),
     async readConfiguration(entryId) {
       const row = record(await read('/configuration?' + new URLSearchParams({ entryId })))
       return { entryId: text(row.entryId), revision: text(row.revision), raw: row.raw }
     },
     readConfigurationSchema: entryId => read('/configuration/schema?' + new URLSearchParams({ entryId })),
-    mutateConfiguration: (entryId, operations, revision) => mutate('/configuration', { entryId, operations, revision }, settingsChange),
+    mutateConfiguration: (entryId, operations, revision) => mutate('/configuration', { entryId, operations, revision }, configurationChange),
     async readCompatibility() {
       const row = record(await read('/compatibility'))
       return { rewritable: boolean(row.rewritable), warnings: texts(row.warnings),
         exemptions: Object.fromEntries(Object.entries(record(row.exemptions)).map(([name, values]) => [name, texts(values)])) }
     },
-    async mutateSettings(entryId, operations, revision) {
-      return mutate('/settings', { entryId, operations, revision }, settingsChange)
-    },
+
     enable: (kind, target, enabled) => mutate('/enable', { kind, target, enabled }, managementChange),
     async inspect(request) {
       return mutate('/inspect', request, wire => {

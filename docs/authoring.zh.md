@@ -102,11 +102,11 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 完整插件生命周期从 [ManagedPlugin](../examples/ManagedPlugin/README.md) 开始，再按 [ManagedApplication](../examples/ManagedApplication/README.md) 构建本地 feed、安装插件、编辑配置并移除。[CLI 指南](../tools/Cordis.Cli/README.md) 使用同一套宿主操作。下面的 Probes 示例演示较小的客户端消费边界。
 
-复用 Session 既有的 `ConfigurationOperations`。读取新 revision 后，通过 `MutateConfigurationAsync` 或选中字段的 `MutateSettingsAsync` 提交有序 SET/unset。库验证完整最终候选并写入一次；对象 unset 恢复继承，数组 unset 删除元素。普通字段保持原有重启行为；`liveOnly` 另要求已捕获 live 边界及兼容的普通 effective 值。分别处理 `Saved`、`Applied` 与恢复诊断。旧 Config delegate 与高级 `ConfigSchema<T>` 作者入口继续保留。
+复用 Session 既有的 `ConfigurationOperations`。读取新的配置 revision 后，通过 `MutateConfigurationAsync` 提交有序 SET/unset。库验证完整最终候选并写入一次；对象 unset 恢复继承，数组 unset 删除元素。普通字段保持原有重启行为；`liveOnly` 另要求已捕获 live 边界及兼容的普通 effective 值。分别处理 `Saved`、`Applied` 与恢复诊断。旧 Config delegate 与高级 `ConfigSchema<T>` 作者入口继续保留。
 
-通过 `descriptor.WithMetadata(new ConfigurationMetadata { ... })` 显式声明应用元数据。renderer role、本地化 description、badges、hidden/disabled/collapse、link/comment、extra plain 数据，以及 min/max/step/pattern/loose 提示由不可变 Core annotations 承载；它们描述既有 validator，不增加验证行为。嵌套固定 live 路径使用 `ConfigSchema<T>.WithVolatile(path, projection)`。Settings 省略普通兄弟字段，把 secret 值脱敏为仅表示存在性的 sidecar。每项编辑检查可见的声明路径；含不可读 secret/hidden 后代的祖先替换会被拒绝。参见[完整声明、Settings 与发现示例](configuration-description.zh.md)。
+通过 `descriptor.WithMetadata(new ConfigurationMetadata { ... })` 显式声明应用元数据。renderer role、本地化 description、badges、hidden/disabled/collapse、link/comment、extra plain 数据，以及 min/max/step/pattern/loose 提示由不可变 Core annotations 承载；它们描述既有 validator，不增加验证行为。嵌套固定 live 路径使用 `ConfigSchema<T>.WithVolatile(path, projection)`。Settings 省略普通兄弟字段，把 secret 值脱敏为仅表示存在性的 sidecar。提交编辑检查开放路径；不能间接替换宿主隐藏路径。secret 仍可写，整体替换可能重置省略的 secret。参见[完整声明、Settings 与发现示例](configuration-description.zh.md)。
 
-两条导出是独立合同：`ToSchemastery` 生成浏览器表单的 uid/refs envelope，`ToJsonSchema` 生成 JSON Schema 2020-12 声明并明确标注 runtime 限制。`ReadSettingsSchemasAsync` 选择 live 字段，移除 hidden 属性与默认值；完整配置导出需要宿主独立授权。激活前的 `ConfigurationSchemaDiscovery.DiscoverAsync` 接收显式 resolver，读取原生 group/include 源，无须启动 Context，也不写入 include fallback 文件。import/capture 属于受信作者代码；validator、Apply、raw 表达式和 lazy builder 不执行。
+两条导出是独立合同：`ToSchemastery` 生成浏览器表单的 uid/refs envelope，`ToJsonSchema` 生成 JSON Schema 2020-12 声明并明确标注 runtime 限制。标准 Settings describe 响应包含选择的 live schema，移除 hidden 属性，保留脱敏后的安全默认值，并移除 secret 默认值和 required 元数据；完整配置导出需要宿主独立授权。激活前的 `ConfigurationSchemaDiscovery.DiscoverAsync` 接收显式 resolver，读取原生 group/include 源，无须启动 Context，也不写入 include fallback 文件。import/capture 属于受信作者代码；validator、Apply、raw 表达式和 lazy builder 不执行。
 
 示例的 primitive live 视图要求宿主显式选择字段并指定隐藏字段。不要直接把 raw 配置读取暴露成浏览器 Settings 响应。传输只演示 loopback；部署宿主负责认证、授权、请求限制及自身政策。保留的 DSH 表单模型暂存草稿，通过真实宿主保存。SET-only 不支持继承 reset，也不把多字段保存拆成连续写入。在仓库根目录构建运行：
 
@@ -291,8 +291,34 @@ var view = await remote.DescribeAsync();
 
 HttpClient 由调用者拥有。直接 unary 调用返回类型化值或抛出既有 `RemoteError`，保留 owner 错误码及独立 JSON details；这是对现有结果信封的原生适配。客户端 Dispose 停止新调用、取消自己的传输请求并拒绝迟到成功结果，不 Dispose 借用的 HttpClient，也不承诺强制终止 Host。
 
-生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsDescribeProvider`。`ProfileSettingsDescribeProvider` 在一个既有 profile 事务内读取所有 host 选择的 namespace，发布脱敏 live 值和移除 defaults 的 Schemastery 声明，区分真实 JSON null 与省略的 secret，并将原生投影诊断保留在固定响应之外。namespace/页面策略、可写和文档存在事实由 host 提供。本适配不提供 base/user 重建或固定上游的单调 revision：可选层省略，revision 保留既有原生字符串。
+生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsProvider`。将 `SettingsForms` 挂在会话已有 `ConfigurationOperations` 之上；它根据作者的 live Config 声明推导 active、唯一可寻址的表单。数值 revision 观察 Fiber 身份、完整 schema 和原始配置。层级脱敏读取、完整候选校验和写入都归同一个 profile 队列。describe/update/replace/mutate 使用唯一生成合同。公开调用与退出的 Settings hash 路径见[Settings 合同迁移](settings-contract-migration.zh.md)。
 
 [独立 .NET Settings 门禁](../scripts/verify-typert-dotnet.py) 打包作者与合同包，再于仓库外构建仅依赖包的调用者。调用者不引用提供者实现，关闭 reflection fallback 并使用静态 metadata。门禁覆盖类型化 describe、脱敏、provider 缺失/失败、重试、已持视图失效重读、definition 撤销/重注册、局部 suspend 和借用客户端所有权；基础类型根、null/default 参数、空状态注解及拒绝不支持投影另有用例。`--aot` 验证静态调用者；动态 CLR Host 仍属于普通运行时边界。正式平台结果以[验证记录](validation.zh.md)中的确切完成检查点为准。
 
-该路径覆盖直接普通 unary 客户端和实际验证的 Settings 数据形状。完整 Settings 写入/editor、PluginManager/客户端管理迁移、富图、完整源类型分析及从新模型生成 TS 仍未完成。已有 TS/Web 输出继续可用并单独验收。
+该路径覆盖直接普通 unary 客户端和实际验证的 Settings 数据形状。原生文档集成、PluginManager/客户端管理迁移、富图、完整源类型分析及从普通模型生成 TS 仍开放。已有 TS/Web 输出继续可用并单独验收。
+
+
+## 普通声明模型
+
+在引用 Composition 的项目中，按精确 CLR metadata name 选择普通 Plugin、Service、Config 和 object 声明：
+
+```xml
+<ItemGroup>
+  <CordisTypertModelRoot Include="Example.Options" />
+  <CordisTypertModelRoot Include="Example.Store`1" />
+</ItemGroup>
+```
+
+泛型数量使用 CLR backtick 形式，嵌套名称使用 `+`。根必须声明在本项目，且所有包含类型均公开可访问。选择不要求 Remote attribute、partial 声明、serializer context 或注册。分析不执行构造器、initializer 或方法。
+
+正常 build/pack 在包的 `cordis/typert/` 下写入 v2 `<AssemblyName>.cordis.model.json`。`CordisTypertDeclarationModelPath` 可指定输出路径。定义与应用引用分开。保留泛型参数 owner/ordinal/constraints、直接 base/interfaces、成员签名、重载、事件/delegate、required/accessor/nullability/default 事实、initializer 和文档。attributes 包含 return、getter/setter 及 setter-value 目标；参数事实包括扩展 `this` 与 `scoped`。外部声明保留程序集/metadata 身份及 `metadata-reference` 来源，不重建其实现成员及源 initializer 体。
+
+打包 compiler 在不加载、不引用 provider 实现的情况下验证制品并投影声明目录：
+
+```console
+dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-model --model Example.cordis.model.json --output catalog.json
+```
+
+目录保留分析诊断，不生成 binding、Remote 注册、DTO serializer 或可执行 Service。语法错误和重复声明身份会拒绝提取，并清除拥有的旧输出；其他 pre-generator 编译错误明确记录，因为合法构建可能依赖邻近 generator 输出。源图限 256 个具名定义、64 层嵌套引用；未解析类型/function-pointer 签名作为分析缺口诊断。这不是完整 C# 编译器或反射覆盖。既有 .NET Typert 门禁验证仅包引用消费、增量时间戳、包括首次提取失败在内的 Clean、冷重建、引用身份和拒绝输入。
+
+v1 `.cordis.typert.json` 和 `CordisTypertService` 保留既有格式。类型化 Remote 生成现在消费其既有 optional/default 事实，包括非 null 的可省略 wire 字段。扩展名区分合同；`emit-dotnet` 拒绝普通 v2 制品。v2 DTO/STJ/TS 投影、引用模型组合、design-time IDE 和具名 UI 验证仍属后续实施。

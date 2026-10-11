@@ -1,6 +1,7 @@
 using Cordis;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Xunit;
 
 namespace Cordis.Composition.Tests;
@@ -37,8 +38,9 @@ public sealed class ConfigurationEditTests
                     ["nullUnion"] = null
                 }
             });
-        var view = await fixture.Operations.ReadSettingsAsync("root:worker", new SettingsPolicy(["section"]));
-        Assert.Empty(Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(Assert.Single(view.Fields).Value));
+        fixture.Policy = new(["section"]);
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Empty(view.Value.GetProperty("section").EnumerateObject());
         Assert.Equal(
             new[] { "section/nullGetter", "section/missingGetter", "section/nullUnion", "section/missingUnion" },
             view.Secrets.Select(secret => string.Join("/", secret.Path)));
@@ -121,29 +123,29 @@ public sealed class ConfigurationEditTests
                     ["section"] = section
                 },
                 description: ConfigDescriptor.Object(("section", tree)).Volatile());
-            var view = await fixture.Operations.ReadSettingsAsync("root:worker", new SettingsPolicy(["section"]));
-            var value = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(Assert.Single(view.Fields).Value);
-            var serialized = ConfigurationFile.Write(value, true);
+            fixture.Policy = new(["section"]);
+            var snapshot = await fixture.Forms.DescribeAsync();
+            var view = Assert.Single(snapshot.Value.Namespaces);
+            var value = view.Value.GetProperty("section");
+            var serialized = value.GetRawText();
             Assert.DoesNotContain("root-secret", serialized);
             Assert.DoesNotContain("tail-secret", serialized);
             Assert.DoesNotContain("must-not-leak", serialized);
             if (scenario == "finite")
             {
-                Assert.Equal("one", value["value"]);
-                Assert.Equal(
-                    "last",
-                    Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(value["next"])["value"]);
+                Assert.Equal("one", value.GetProperty("value").GetString());
+                Assert.Equal("last", value.GetProperty("next").GetProperty("value").GetString());
             }
 
             if (scenario == "missing")
-                Assert.False(value.ContainsKey("next"));
+                Assert.False(value.TryGetProperty("next", out _));
             if (scenario == "null")
-                Assert.Null(value["next"]);
+                Assert.Equal(JsonValueKind.Null, value.GetProperty("next").ValueKind);
             if (scenario is "lazy-cycle" or "union-cycle" or "union-rebuild-cycle")
             {
-                Assert.False(value.ContainsKey("cycle"));
+                Assert.False(value.TryGetProperty("cycle", out _));
                 Assert.Contains(
-                    view.Diagnostics,
+                    snapshot.Diagnostics,
                     diagnostic => diagnostic.Contains("redaction", StringComparison.Ordinal));
             }
 
@@ -214,11 +216,12 @@ public sealed class ConfigurationEditTests
                     ["second"] = "two"
                 }
             });
-        var view = await fixture.Operations.ReadSettingsAsync("root:worker", new SettingsPolicy(["choice"]));
-        var value = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(Assert.Single(view.Fields).Value);
-        Assert.Equal("one", value["first"]);
-        Assert.Equal("two", value["second"]);
-        Assert.False(value.ContainsKey("password"));
+        fixture.Policy = new(["choice"]);
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        var value = view.Value.GetProperty("choice");
+        Assert.Equal("one", value.GetProperty("first").GetString());
+        Assert.Equal("two", value.GetProperty("second").GetString());
+        Assert.False(value.TryGetProperty("password", out _));
         Assert.True(Assert.Single(view.Secrets).Set);
     }
 
@@ -226,10 +229,9 @@ public sealed class ConfigurationEditTests
     public async Task Nested_live_settings_exclude_ordinary_siblings_and_authorize_each_exact_boundary()
     {
         var descriptor = ConfigDescriptor.Object(
-            ("section",
-                ConfigDescriptor.Object(
-                    ("live", ConfigDescriptor.Number().Volatile()),
-                    ("ordinary", ConfigDescriptor.String()))));
+            ("section", ConfigDescriptor.Object(
+                ("live", ConfigDescriptor.Number().Volatile()),
+                ("ordinary", ConfigDescriptor.String()))));
         var config = new EntryOptions
         {
             ["section"] = new EntryOptions
@@ -238,46 +240,42 @@ public sealed class ConfigurationEditTests
                 ["ordinary"] = "private-ordinary"
             }
         };
-        var schema =
-            new ConfigSchema<object?>(raw => ConfigResult<object?>.Success(raw), descriptor).WithVolatile<object?>(
+        var schema = new ConfigSchema<object?>(raw => ConfigResult<object?>.Success(raw), descriptor)
+            .WithVolatile<object?>(
                 ["section", "live"],
                 raw =>
                     ((IReadOnlyDictionary<string, object?>)((IReadOnlyDictionary<string, object?>)raw!)["section"]!)[
                         "live"]);
         await using var fixture = await Fixture.StartAsync(whole: true, baseConfig: config, schema: schema);
-        var policy = new SettingsPolicy(["section"]);
-        var view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        var section = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(Assert.Single(view.Fields).Value);
-        Assert.Equal(new[] { "live" }, section.Keys);
-        Assert.Equal(1, Convert.ToInt32(section["live"]));
-        var exports = await fixture.Operations.ReadSettingsSchemasAsync("root:worker", policy);
-        Assert.DoesNotContain("ordinary", exports.Schemastery.Document);
-        var refusal = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet(["section", "ordinary"], "changed")],
-            view.Revision,
-            policy);
-        Assert.Equal("field-not-offered", refusal.Error);
-        refusal = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
+        fixture.Policy = new(["section"]);
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        var section = view.Value.GetProperty("section");
+        Assert.Equal(new[] { "live" }, section.EnumerateObject().Select(field => field.Name));
+        Assert.Equal(1, section.GetProperty("live").GetInt32());
+        Assert.DoesNotContain("ordinary", view.Schema.GetRawText());
+        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["section", "ordinary"], "changed")],
+            view.Revision));
+        Assert.Contains("field-not-offered", refusal.Message);
+        refusal = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
             [
-                new ConfigurationSet(
+                Set(
                     ["section"],
                     new EntryOptions
                     {
                         ["live"] = 2
                     })
             ],
-            view.Revision,
-            policy);
-        Assert.Equal("field-not-offered", refusal.Error);
-        var result = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet(["section", "live"], 2)],
-            view.Revision,
-            policy);
-        Assert.True(result.Applied, result.Diagnostic);
+            view.Revision));
+        Assert.Contains("field-not-offered", refusal.Message);
+        await fixture.Forms.MutateAsync("worker", [Set(["section", "live"], 2)], view.Revision);
+        var result = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(2, result.Value.GetProperty("section").GetProperty("live").GetInt32());
         Assert.Equal(1, fixture.Activations);
+        var retained = (IReadOnlyDictionary<string, object?>)fixture.Loader.Resolve("root:worker").Options.Config!;
+        Assert.Equal("private-ordinary", ((IReadOnlyDictionary<string, object?>)retained["section"]!)["ordinary"]);
     }
 
     [Fact]
@@ -338,51 +336,63 @@ public sealed class ConfigurationEditTests
                 },
             }
         };
-        await using var fixture = await Fixture.StartAsync(whole: true, baseConfig: config, description: description);
-        var policy = new SettingsPolicy(["section"]);
-        var view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        var value = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(Assert.Single(view.Fields).Value);
-        Assert.False(value.ContainsKey("password"));
-        Assert.False(value.ContainsKey("hidden"));
-        var item = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(
-            Assert.Single(Assert.IsAssignableFrom<IEnumerable<object?>>(value["items"])));
-        Assert.Equal(new[] { "label" }, item.Keys);
+        await using var fixture = await Fixture.StartAsync(
+            whole: true,
+            baseConfig: config,
+            description: description,
+            source:
+            "- id: worker\n  config:\n    section:\n      public: visible\n      password: saved-secret\n      hidden: hidden-secret\n      items:\n        - token: array-user-secret\n          label: item\n          hiddenNested: hidden-user-secret\n      accounts: { alice: dict-secret }\n");
+        fixture.Policy = new(["section"]);
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        var value = view.Value.GetProperty("section");
+        Assert.False(value.TryGetProperty("password", out _));
+        Assert.False(value.TryGetProperty("hidden", out _));
+        var item = Assert.Single(value.GetProperty("items").EnumerateArray());
+        Assert.Equal(new[] { "label" }, item.EnumerateObject().Select(field => field.Name));
         Assert.Equal(
             new[] { "section/password", "section/items/0/token", "section/accounts/alice" },
             view.Secrets.Select(slot => string.Join("/", slot.Path)));
         Assert.All(view.Secrets, slot => Assert.True(slot.Set));
-        var exports = await fixture.Operations.ReadSettingsSchemasAsync("root:worker", policy);
-        Assert.DoesNotContain("default-secret", exports.Schemastery.Document);
-        Assert.DoesNotContain("hidden", exports.Schemastery.Document);
-        var rejected = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
+        Assert.DoesNotContain("default-secret", view.Schema.GetRawText());
+        Assert.DoesNotContain("hidden", view.Schema.GetRawText());
+        var rejected = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
             [
-                new ConfigurationSet(
+                Set(
                     ["section"],
                     new EntryOptions
                     {
                         ["public"] = "replacement"
                     })
             ],
-            view.Revision,
-            policy);
-        Assert.Equal("field-not-offered", rejected.Error);
-        rejected = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet(["section", "hidden"], "replacement")],
-            view.Revision,
-            policy);
-        Assert.Equal("field-not-offered", rejected.Error);
-        var changed = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet(["section", "password"], "new-secret")],
-            view.Revision,
-            policy);
-        Assert.True(changed.Applied, changed.Diagnostic);
-        view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
+            view.Revision));
+        Assert.Contains("field-not-offered", rejected.Message);
+        rejected = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["section", "hidden"], "replacement")],
+            view.Revision));
+        Assert.Contains("field-not-offered", rejected.Message);
+        await fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["section", "password"], "new-secret")],
+            view.Revision);
+        var changed = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.True(changed.Revision > view.Revision);
+        view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
         Assert.All(view.Secrets, slot => Assert.True(slot.Set));
-        Assert.DoesNotContain("new-secret", ConfigurationFile.Write(Assert.Single(view.Fields).Value, true));
+        Assert.DoesNotContain("new-secret", view.Value.GetRawText());
         Assert.Equal(1, fixture.Activations);
+        var saved = await File.ReadAllTextAsync(fixture.Patch);
+        foreach (var reset in new Func<Task>[]
+                 {
+                     () => fixture.Forms.ReplaceAsync("worker", Json("{}")),
+                     () => fixture.Forms.MutateAsync("worker", [new SettingsPathOp("unset", [])])
+                 })
+        {
+            rejected = await Assert.ThrowsAsync<InvalidOperationException>(reset);
+            Assert.Contains("field-not-offered", rejected.Message);
+            Assert.Equal(saved, await File.ReadAllTextAsync(fixture.Patch));
+        }
     }
 
     [Fact]
@@ -406,48 +416,246 @@ public sealed class ConfigurationEditTests
             baseConfig: CompositeConfig(),
             description: CompositeDescription(),
             validate: Validate);
-        var policy = new SettingsPolicy(["pair", "items", "credential"], ["credential"]);
-        var view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        Assert.Equal(new[] { "pair", "items" }, view.Fields.Select(field => field.Name));
+        fixture.Policy = new(["pair", "items", "credential"], ["credential"]);
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(new[] { "pair", "items" }, view.Value.EnumerateObject().Select(field => field.Name));
         candidates.Clear();
-        var result = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet(["pair", "left"], 2), new ConfigurationSet(["pair", "right"], 2)],
-            view.Revision,
-            policy);
-        Assert.True(result.Saved && result.Applied, result.Diagnostic);
+        await fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["pair", "left"], 2), Set(["pair", "right"], 2)],
+            view.Revision);
+        var result = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(2, result.Value.GetProperty("pair").GetProperty("left").GetInt32());
         Assert.NotEmpty(candidates);
         Assert.All(candidates, candidate => Assert.Equal(candidate.Left, candidate.Right));
         Assert.Equal(1, fixture.Activations);
         var saved = await File.ReadAllTextAsync(fixture.Patch);
-        view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        result = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet(["pair", "left"], 3), new ConfigurationSet(["pair", "right"], 4)],
-            view.Revision,
-            policy);
-        Assert.Equal("invalid-configuration", result.Error);
+        view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["pair", "left"], 3), Set(["pair", "right"], 4)],
+            view.Revision));
+        Assert.Contains("pair must agree", refused.Message);
         Assert.Equal(saved, await File.ReadAllTextAsync(fixture.Patch));
-        result = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet(["pair", "left"], 3), new ConfigurationSet(["credential"], "leak")],
-            view.Revision,
-            policy);
-        Assert.Equal("field-not-offered", result.Error);
+        refused = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["pair", "left"], 3), Set(["credential"], "leak")],
+            view.Revision));
+        Assert.Contains("field-not-offered", refused.Message);
         Assert.Equal(saved, await File.ReadAllTextAsync(fixture.Patch));
-        result = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet([], CompositeConfig())],
-            view.Revision,
-            policy);
-        Assert.Equal("field-not-offered", result.Error);
-        result = await fixture.Operations.MutateSettingsAsync(
-            "root:worker",
-            [new ConfigurationSet(["pair", "left"], double.NaN)],
-            view.Revision,
-            policy);
-        Assert.Equal("non-json-settings-data", result.Error);
+        refused = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set([], CompositeConfig())],
+            view.Revision));
+        Assert.Contains("field-not-offered", refused.Message);
+        refused = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [new SettingsPathOp("set", ["pair", "left"])],
+            view.Revision));
+        Assert.Contains("invalid-settings-operation", refused.Message);
         Assert.Equal(saved, await File.ReadAllTextAsync(fixture.Patch));
+        refused = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.UpdateAsync(
+            "worker",
+            Json("""{"pair":{"left":8}}""")));
+        Assert.Contains("pair must agree", refused.Message);
+        Assert.Equal(saved, await File.ReadAllTextAsync(fixture.Patch));
+        refused = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set([], null)]));
+        Assert.Contains("settings-object-required", refused.Message);
+        Assert.Equal(saved, await File.ReadAllTextAsync(fixture.Patch));
+    }
+
+    [Fact]
+    public async Task Dynamic_live_paths_build_objects_from_scalars_and_preserve_json_keys()
+    {
+        var descriptor = ConfigDescriptor.Object(
+            ("dynamic", ConfigDescriptor.Any().Volatile()),
+            ("choice",
+                ConfigDescriptor
+                    .Union(ConfigDescriptor.String(), ConfigDescriptor.Object(("declared", ConfigDescriptor.String())))
+                    .Volatile()),
+            ("ordinary", ConfigDescriptor.String()));
+        var schema = new ConfigSchema<object?>(raw => ConfigResult<object?>.Success(raw), descriptor)
+            .WithVolatile<object?>(["dynamic"], raw => ((IReadOnlyDictionary<string, object?>)raw!)["dynamic"])
+            .WithVolatile<object?>(["choice"], raw => ((IReadOnlyDictionary<string, object?>)raw!)["choice"])
+            .WithSimplify(raw => raw);
+        await using var fixture = await Fixture.StartAsync(
+            whole: true,
+            schema: schema,
+            baseConfig: new EntryOptions
+            {
+                ["dynamic"] = 1,
+                ["choice"] = "initial",
+                ["ordinary"] = "retained"
+            });
+        var before = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        await fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["dynamic", "", " "], "accepted"), Set(["choice", "newField"], true)],
+            before.Revision);
+        var after = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal("accepted", after.Value.GetProperty("dynamic").GetProperty("").GetProperty(" ").GetString());
+        Assert.True(after.Value.GetProperty("choice").GetProperty("newField").GetBoolean());
+        var raw = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        Assert.Equal("retained", raw.Raw["ordinary"]);
+        Assert.Equal(1, fixture.Activations);
+        var saved = await File.ReadAllTextAsync(fixture.Patch);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [
+                new SettingsPathOp("set", ["dynamic"])
+                {
+                    Value = Json("""{"__jsExpr":"untrusted"}""")
+                }
+            ]));
+        Assert.Equal(saved, await File.ReadAllTextAsync(fixture.Patch));
+    }
+
+    [Fact]
+    public async Task Settings_replace_removes_unknown_live_members_and_retains_hidden_and_ordinary_fields()
+    {
+        var descriptor = ConfigDescriptor.Object(
+            ("section", ConfigDescriptor
+                .Object(
+                    ("label", ConfigDescriptor.String()),
+                    ("hidden", ConfigDescriptor
+                        .String()
+                        .WithAnnotations(
+                            new Dictionary<string, object?>
+                            {
+                                ["hidden"] = true
+                            })))
+                .Volatile()),
+            ("ordinary", ConfigDescriptor.String()));
+        var schema = new ConfigSchema<object?>(raw => ConfigResult<object?>.Success(raw), descriptor)
+            .WithVolatile<object?>(["section"], raw => ((IReadOnlyDictionary<string, object?>)raw!)["section"])
+            .WithSimplify(raw => raw);
+        await using var fixture = await Fixture.StartAsync(
+            whole: true,
+            schema: schema,
+            baseConfig: new EntryOptions
+            {
+                ["section"] = new EntryOptions
+                {
+                    ["label"] = "inherited",
+                    ["hidden"] = "kept-hidden",
+                    ["unknown"] = "remove-live"
+                },
+                ["ordinary"] = "kept-ordinary",
+                ["unknownOutsideLive"] = "kept-outside"
+            });
+        var before = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.False(before.Value.GetProperty("section").TryGetProperty("hidden", out _));
+        await fixture.Forms.ReplaceAsync("worker", Json("""{"section":{"label":"edited"}}"""), before.Revision);
+        var after = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal("edited", after.Value.GetProperty("section").GetProperty("label").GetString());
+        Assert.False(after.Value.GetProperty("section").TryGetProperty("hidden", out _));
+        var raw = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        var section = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(raw.Raw["section"]);
+        Assert.False(section.ContainsKey("unknown"));
+        Assert.Equal("kept-hidden", section["hidden"]);
+        Assert.Equal("kept-ordinary", raw.Raw["ordinary"]);
+        Assert.Equal("kept-outside", raw.Raw["unknownOutsideLive"]);
+    }
+
+    [Fact]
+    public async Task Settings_base_uses_validated_live_projection_independently_of_persistence_simplification()
+    {
+        var descriptor = ConfigDescriptor.Object(("count", ConfigDescriptor.Number().Volatile()));
+        var schema = new ConfigSchema<object?>(
+                raw => ConfigResult<object?>.Success(
+                    new EntryOptions
+                    {
+                        ["count"] = Convert.ToInt32(((IReadOnlyDictionary<string, object?>)raw!)["count"]) + 100
+                    }),
+                descriptor)
+            .WithVolatile<int>(
+                ["count"],
+                value => Convert.ToInt32(((IReadOnlyDictionary<string, object?>)value!)["count"]))
+            .WithSimplify(value => new EntryOptions
+            {
+                ["count"] = Convert.ToInt32(((IReadOnlyDictionary<string, object?>)value!)["count"]) - 100
+            });
+        await using var fixture = await Fixture.StartAsync(
+            whole: true,
+            schema: schema,
+            source: "- id: worker\n  config: { count: 2 }\n",
+            baseConfig: new EntryOptions
+            {
+                ["count"] = 1
+            });
+        var saved = await File.ReadAllTextAsync(fixture.Patch);
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(102, view.Value.GetProperty("count").GetInt32());
+        Assert.Equal(101, view.Base!.Value.GetProperty("count").GetInt32());
+        Assert.Equal(2, view.User!.Value.GetProperty("count").GetInt32());
+        Assert.Equal(saved, await File.ReadAllTextAsync(fixture.Patch));
+    }
+
+    [Fact]
+    public async Task Settings_update_replace_and_secret_parent_edits_preserve_ordinary_configuration()
+    {
+        var descriptor = ConfigDescriptor.Object(
+            ("section", ConfigDescriptor
+                .Object(
+                    ("label", ConfigDescriptor.String()),
+                    ("secret", ConfigDescriptor
+                        .String()
+                        .WithMetadata(
+                            new()
+                            {
+                                Role = "secret"
+                            })))
+                .Volatile()),
+            ("ordinary", ConfigDescriptor.String()));
+        var config = new EntryOptions
+        {
+            ["section"] = new EntryOptions
+            {
+                ["label"] = "inherited",
+                ["secret"] = "inherited-secret"
+            },
+            ["ordinary"] = "keep-ordinary"
+        };
+        var schema = new ConfigSchema<object?>(raw => ConfigResult<object?>.Success(raw), descriptor)
+            .WithVolatile<object?>(["section"], raw => ((IReadOnlyDictionary<string, object?>)raw!)["section"]);
+        await using var fixture = await Fixture.StartAsync(whole: true, baseConfig: config, schema: schema);
+        fixture.Policy = new(["section", "ordinary"]);
+        var initial = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(0, initial.Revision);
+        await fixture.Forms.UpdateAsync(
+            "worker",
+            Json("""{"section":{"label":"merged"}}"""),
+            initial.Revision);
+        var changed = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal("merged", changed.Value.GetProperty("section").GetProperty("label").GetString());
+        var raw = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        Assert.Equal("inherited-secret", ((IReadOnlyDictionary<string, object?>)raw.Raw["section"]!)["secret"]);
+        await fixture.Forms.MutateAsync(
+            "worker",
+            [
+                Set(
+                    ["section"],
+                    new EntryOptions
+                    {
+                        ["label"] = "replaced-parent",
+                        ["secret"] = "written-secret"
+                    })
+            ],
+            changed.Revision);
+        changed = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.DoesNotContain("written-secret", changed.Value.GetRawText());
+        raw = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        Assert.Equal("written-secret", ((IReadOnlyDictionary<string, object?>)raw.Raw["section"]!)["secret"]);
+        Assert.Equal("keep-ordinary", raw.Raw["ordinary"]);
+        await fixture.Forms.ReplaceAsync("worker", Json("{}"), changed.Revision);
+        changed = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal("inherited", changed.Value.GetProperty("section").GetProperty("label").GetString());
+        raw = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        Assert.Equal("inherited-secret", ((IReadOnlyDictionary<string, object?>)raw.Raw["section"]!)["secret"]);
+        Assert.Equal("keep-ordinary", raw.Raw["ordinary"]);
+        Assert.Equal(1, fixture.Activations);
     }
 
     [Fact]
@@ -551,39 +759,253 @@ public sealed class ConfigurationEditTests
             .Volatile();
 
     [Fact]
-    public async Task Settings_exports_obey_selection_and_remove_sensitive_defaults_at_every_depth()
+    public async Task Secret_object_descendants_remain_editable_and_reset_to_inheritance_without_leaking_values()
+    {
+        var descriptor = ConfigDescriptor.Object(
+            ("credentials", ConfigDescriptor
+                .Object(("token", ConfigDescriptor.String()))
+                .WithMetadata(
+                    new()
+                    {
+                        Role = "secret"
+                    })
+                .Volatile()),
+            ("label", ConfigDescriptor.String().Volatile()));
+        var schema = new ConfigSchema<object?>(raw => ConfigResult<object?>.Success(raw), descriptor)
+            .WithVolatile<object?>(["credentials"], raw => ((IReadOnlyDictionary<string, object?>)raw!)["credentials"])
+            .WithVolatile<string>(["label"], raw => (string)((IReadOnlyDictionary<string, object?>)raw!)["label"]!);
+        await using var fixture = await Fixture.StartAsync(
+            whole: true,
+            schema: schema,
+            baseConfig: new EntryOptions
+            {
+                ["credentials"] = new EntryOptions
+                {
+                    ["token"] = "inherited-token"
+                },
+                ["label"] = "public"
+            });
+        fixture.Policy = new(["credentials", "label"]);
+        var initial = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.False(initial.Value.TryGetProperty("credentials", out _));
+        Assert.Equal(new[] { "credentials" }, Assert.Single(initial.Secrets).Path);
+        Assert.True(initial.Secrets[0].Set);
+        await fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["credentials", "token"], "written-token")],
+            initial.Revision);
+        var changed = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.False(changed.Value.TryGetProperty("credentials", out _));
+        Assert.True(Assert.Single(changed.Secrets).Set);
+        var raw = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        Assert.Equal("written-token", ((IReadOnlyDictionary<string, object?>)raw.Raw["credentials"]!)["token"]);
+        await fixture.Forms.MutateAsync(
+            "worker",
+            [new SettingsPathOp("unset", ["credentials", "token"])],
+            changed.Revision);
+        changed = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.False(changed.Value.TryGetProperty("credentials", out _));
+        raw = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        Assert.Equal("inherited-token", ((IReadOnlyDictionary<string, object?>)raw.Raw["credentials"]!)["token"]);
+        Assert.DoesNotContain("written-token", await File.ReadAllTextAsync(fixture.Patch));
+    }
+
+    [Fact]
+    public async Task
+        Settings_schema_keeps_public_defaults_and_fresh_path_wrappers_while_mutations_use_original_defaults()
+    {
+        var liveDefault = new EntryOptions
+        {
+            ["public"] = "public-default",
+            ["number"] = 123456789,
+            ["secret"] = "secret-default",
+            ["requiredSecret"] = "required-secret-value"
+        };
+        var parentDefault = new EntryOptions
+        {
+            ["live"] = liveDefault,
+            ["ordinary"] = "ordinary-from-original-default"
+        };
+        var secret = ConfigDescriptor
+            .String()
+            .WithMetadata(
+                new()
+                {
+                    Role = "secret"
+                });
+        var description = ConfigDescriptor.Object(
+            ("container", ConfigDescriptor
+                .Object(
+                    ("live", ConfigDescriptor
+                        .Object(
+                            ("public", ConfigDescriptor.String().Default("public-default")),
+                            ("number", ConfigDescriptor.Number().Default(123456789)),
+                            ("secret", secret.Default("secret-default")),
+                            ("requiredSecret", secret))
+                        .Default(liveDefault)
+                        .Volatile()),
+                    ("ordinary", ConfigDescriptor.String()))
+                .Optional()
+                .Default(parentDefault)
+                .WithMetadata(
+                    new()
+                    {
+                        Role = "secret",
+                        Description = "ordinary-parent-description"
+                    })));
+        var schema = new ConfigSchema<object?>(
+            raw =>
+            {
+                var input = (IReadOnlyDictionary<string, object?>)raw!;
+                return ConfigResult<object?>.Success(
+                    new EntryOptions
+                    {
+                        ["container"] = input.GetValueOrDefault("container") ?? parentDefault
+                    });
+            },
+            description).WithVolatile<object?>(
+            ["container", "live"],
+            value =>
+                ((IReadOnlyDictionary<string, object?>)((IReadOnlyDictionary<string, object?>)value!)["container"]!)
+                ["live"]);
+        await using var fixture = await Fixture.StartAsync(whole: true, schema: schema, baseConfig: new EntryOptions());
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        var publicMeta = SettingsSchemaNode(view.Schema, "container", "live", "public").GetProperty("meta");
+        Assert.True(
+            publicMeta.TryGetProperty("default", out var publicDefault),
+            "The declared public form default was omitted.");
+        Assert.Equal("public-default", publicDefault.GetString());
+        Assert.Equal(
+            123456789,
+            SettingsSchemaNode(view.Schema, "container", "live", "number")
+                .GetProperty("meta")
+                .GetProperty("default")
+                .GetInt32());
+        foreach (var field in new[] { "secret", "requiredSecret" })
+        {
+            var metadata = SettingsSchemaNode(view.Schema, "container", "live", field).GetProperty("meta");
+            Assert.Equal("secret", metadata.GetProperty("role").GetString());
+            Assert.False(metadata.TryGetProperty("default", out _));
+            Assert.False(metadata.TryGetProperty("required", out _));
+        }
+
+        var wrapper = SettingsSchemaNode(view.Schema, "container");
+        Assert.Equal("object", wrapper.GetProperty("type").GetString());
+        var wrapperMeta = wrapper.GetProperty("meta");
+        Assert.False(wrapperMeta.TryGetProperty("role", out _));
+        Assert.False(wrapperMeta.TryGetProperty("description", out _));
+        Assert.False(wrapperMeta.GetProperty("required").GetBoolean());
+        Assert.Empty(wrapperMeta.GetProperty("default").EnumerateObject());
+        Assert.False(wrapper.GetProperty("dict").TryGetProperty("ordinary", out _));
+        var publicValue = view.Value.GetProperty("container").GetProperty("live");
+        Assert.Equal("public-default", publicValue.GetProperty("public").GetString());
+        Assert.False(publicValue.TryGetProperty("secret", out _));
+        Assert.False(publicValue.TryGetProperty("requiredSecret", out _));
+        Assert.All(view.Secrets, slot => Assert.True(slot.Set));
+        Assert.DoesNotContain("secret-default", view.Schema.GetRawText());
+        Assert.DoesNotContain("required-secret-value", view.Schema.GetRawText());
+        Assert.DoesNotContain("ordinary-parent-description", view.Schema.GetRawText());
+        var full = await fixture.Operations.ReadConfigurationSchemasAsync("root:worker");
+        Assert.Contains("ordinary-parent-description", full.Schemastery.Document);
+        Assert.Contains("secret-default", full.Schemastery.Document);
+        await fixture.Forms.MutateAsync("worker", [Set(["container", "live", "public"], "edited")], view.Revision);
+        var raw = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        var container = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(raw.Raw["container"]);
+        Assert.Equal("ordinary-from-original-default", container["ordinary"]);
+        var live = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(container["live"]);
+        Assert.Equal("edited", live["public"]);
+        Assert.Equal(123456789, Convert.ToInt32(live["number"]));
+        Assert.Equal("secret-default", live["secret"]);
+        Assert.Equal(1, fixture.Activations);
+    }
+
+    [Fact]
+    public async Task Whole_live_settings_root_preserves_public_metadata_and_defaults_with_field_selection()
     {
         var description = ConfigDescriptor
             .Object(
-                ("pair", ConfigDescriptor
-                    .Object(
-                        ("left", ConfigDescriptor.Number().Default(123456789)),
-                        ("right", ConfigDescriptor.Number()))
-                    .Default(
-                        new EntryOptions
+                ("public", ConfigDescriptor.String().Default("field-public-default")),
+                ("secret", ConfigDescriptor
+                    .String()
+                    .Default("field-secret-default")
+                    .WithMetadata(
+                        new()
                         {
-                            ["secret"] = "nested-default-secret"
+                            Role = "secret"
                         })),
-                ("credential", ConfigDescriptor.String().Default("credential-default-secret")))
-            .Volatile();
+                ("excluded", ConfigDescriptor.String()))
+            .Volatile()
+            .Optional()
+            .Default(
+                new EntryOptions
+                {
+                    ["public"] = "root-public-default",
+                    ["secret"] = "root-secret-default",
+                    ["excluded"] = "excluded-default-value"
+                })
+            .WithMetadata(
+                new()
+                {
+                    Description = "whole-live-description"
+                });
         await using var fixture = await Fixture.StartAsync(
             whole: true,
-            baseConfig: CompositeConfig(),
-            description: description);
-        var policy = new SettingsPolicy(["pair", "credential"], ["credential"]);
-        var exports = await fixture.Operations.ReadSettingsSchemasAsync("root:worker", policy);
-        var view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        Assert.Equal(view.Revision, exports.Revision);
-        foreach (var exported in new[] { exports.Schemastery, exports.JsonSchema })
-        {
-            Assert.DoesNotContain("credential", exported.Document);
-            Assert.DoesNotContain("nested-default-secret", exported.Document);
-            Assert.DoesNotContain("123456789", exported.Document);
-            Assert.Contains("pair", exported.Document);
-        }
+            description: description,
+            baseConfig: new EntryOptions
+            {
+                ["public"] = "visible",
+                ["secret"] = "written-secret",
+                ["excluded"] = "not-offered"
+            });
+        fixture.Policy = new(["public", "secret"]);
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        var root = SettingsSchemaNode(view.Schema);
+        var meta = root.GetProperty("meta");
+        Assert.True(
+            meta.TryGetProperty("description", out var descriptionValue),
+            "The whole live root description was omitted.");
+        Assert.Equal("whole-live-description", descriptionValue.GetString());
+        Assert.False(meta.GetProperty("required").GetBoolean());
+        var defaults = meta.GetProperty("default");
+        Assert.Equal("root-public-default", defaults.GetProperty("public").GetString());
+        Assert.False(defaults.TryGetProperty("secret", out _));
+        Assert.False(defaults.TryGetProperty("excluded", out _));
+        Assert.Equal(
+            "field-public-default",
+            SettingsSchemaNode(view.Schema, "public").GetProperty("meta").GetProperty("default").GetString());
+        Assert.False(root.GetProperty("dict").TryGetProperty("excluded", out _));
+        Assert.Equal("visible", view.Value.GetProperty("public").GetString());
+        Assert.False(view.Value.TryGetProperty("secret", out _));
+        Assert.DoesNotContain("field-secret-default", view.Schema.GetRawText());
+        Assert.DoesNotContain("root-secret-default", view.Schema.GetRawText());
+        Assert.DoesNotContain("excluded-default-value", view.Schema.GetRawText());
+    }
 
-        var full = await fixture.Operations.ReadConfigurationSchemasAsync("root:worker");
-        Assert.Contains("credential-default-secret", full.Schemastery.Document);
+    [Fact]
+    public async Task A_secret_live_root_is_omitted_with_a_native_diagnostic_instead_of_leaking_or_failing_describe()
+    {
+        const string secretValue = "whole-root-secret-must-not-escape";
+        var description = ConfigDescriptor
+            .Object(("token", ConfigDescriptor.String()))
+            .Volatile()
+            .WithMetadata(
+                new()
+                {
+                    Role = "secret"
+                });
+        await using var fixture = await Fixture.StartAsync(
+            whole: true,
+            description: description,
+            baseConfig: new EntryOptions
+            {
+                ["token"] = secretValue
+            });
+        Assert.Equal(FiberState.Active, fixture.Loader.Resolve("root:worker").Fiber!.State);
+        var snapshot = await fixture.Forms.DescribeAsync();
+        Assert.Empty(snapshot.Value.Namespaces);
+        Assert.True(snapshot.Value.Writable);
+        Assert.Contains(snapshot.Diagnostics, diagnostic => diagnostic.Contains("worker", StringComparison.Ordinal));
+        Assert.DoesNotContain(secretValue, string.Join("\n", snapshot.Diagnostics));
     }
 
     [Theory]
@@ -656,18 +1078,22 @@ public sealed class ConfigurationEditTests
             ? $"# retained\n[{{ id: worker, insert: {insertion}, note: keep, config: {{ limit: 2, label: worker }} }},\n # unrelated documentation\n {{ id: absent, config: !!js throw new Error('must not run') }}]\n"
             : $"# retained\n- id: worker\n  insert: {insertion}\n  note: keep\n  config: {{ limit: 2, label: worker }}\n# unrelated documentation\n- id: absent\n  config: !!js throw new Error('must not run')\n";
         await using var fixture = await Fixture.StartAsync(source);
-        var policy = new SettingsPolicy(["limit"]);
-        var before = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        Assert.Equal(2, Convert.ToInt32(Assert.Single(before.Fields).Value));
-        Assert.True(Assert.Single(before.Fields).Overridden);
+        fixture.Policy = new(["limit"]);
+        var before = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(2, before.Value.GetProperty("limit").GetInt32());
+        Assert.True(before.User!.Value.TryGetProperty("limit", out _));
         var fiber = fixture.Loader.Resolve("root:worker").Fiber;
-
-        var result = await fixture.Operations.EditConfigurationFieldAsync("root:worker", ["limit"], 1, before.Revision);
+        var configuration = await fixture.Operations.ReadConfigurationAsync("root:worker");
+        var result = await fixture.Operations.EditConfigurationFieldAsync(
+            "root:worker",
+            ["limit"],
+            1,
+            configuration.Revision);
         Assert.True(result.Saved && result.Applied, result.Diagnostic);
-        var view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        Assert.Equal(1, Convert.ToInt32(Assert.Single(view.Fields).Value));
+        var view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(1, view.Value.GetProperty("limit").GetInt32());
         var text = await File.ReadAllTextAsync(fixture.Patch);
-        Assert.False(Assert.Single(view.Fields).Overridden, text);
+        Assert.False(view.User!.Value.TryGetProperty("limit", out _), text);
         var rows = ConfigurationFile.ParseEntries(text);
         var retained = Assert.Single(rows, row => row.Id == "worker");
         Assert.False(retained.ContainsKey("config"));
@@ -686,9 +1112,9 @@ public sealed class ConfigurationEditTests
             await fixture.Include.RefreshAsync();
             await fixture.Loader.WaitAsync();
         });
-        view = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        Assert.Equal(3, Convert.ToInt32(Assert.Single(view.Fields).Value));
-        Assert.False(Assert.Single(view.Fields).Overridden);
+        view = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(3, view.Value.GetProperty("limit").GetInt32());
+        Assert.False(view.User!.Value.TryGetProperty("limit", out _));
         Assert.Same(fiber, fixture.Loader.Resolve("root:worker").Fiber);
         Assert.Equal(text, await File.ReadAllTextAsync(fixture.Patch));
     }
@@ -700,8 +1126,9 @@ public sealed class ConfigurationEditTests
             "# retained\n- insert:\n  - id: worker\n    name: worker\n    config: { limit: 1, label: worker }\n- id: absent\n  insert: null\n  config: !!js throw new Error('must not run')\n";
         await using var fixture = await Fixture.StartAsync(source, inserted: true);
         var snapshot = await fixture.Operations.ReadConfigurationAsync("root:worker");
-        var insertedView = await fixture.Operations.ReadSettingsAsync("root:worker", new SettingsPolicy(["limit"]));
-        Assert.True(Assert.Single(insertedView.Fields).Overridden);
+        fixture.Policy = new(["limit"]);
+        var insertedView = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.True(insertedView.User!.Value.TryGetProperty("limit", out _));
         var result = await fixture.Operations.EditConfigurationFieldAsync(
             "root:worker",
             ["limit"],
@@ -811,40 +1238,30 @@ public sealed class ConfigurationEditTests
     public async Task Settings_read_and_submit_enforce_selection_redaction_and_live_only()
     {
         await using var fixture = await Fixture.StartAsync();
-        var policy = new SettingsPolicy(["limit", "label", "credential"], ["credential"]);
-        var before = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        var field = Assert.Single(before.Fields);
-        Assert.Equal("limit", field.Name);
-        Assert.Equal(1, field.Value);
-        Assert.False(field.Overridden);
-        Assert.Contains("credential: hidden", before.Diagnostics);
-        var hidden = await fixture.Operations.EditSettingsFieldAsync(
-            "root:worker",
-            "credential",
-            "must not save",
-            before.Revision,
-            policy);
-        Assert.Equal("field-not-offered", hidden.Error);
-        var ordinary = await fixture.Operations.EditSettingsFieldAsync(
-            "root:worker",
-            "label",
-            "new",
-            before.Revision,
-            policy);
-        Assert.Equal("field-not-offered", ordinary.Error);
-        var changed = await fixture.Operations.EditSettingsFieldAsync(
-            "root:worker",
-            "limit",
-            2,
-            before.Revision,
-            policy);
-        Assert.True(changed.Applied, changed.Diagnostic);
-        var after = await fixture.Operations.ReadSettingsAsync("root:worker", policy);
-        Assert.Equal(2, Assert.Single(after.Fields).Value);
-        Assert.True(after.Fields[0].Overridden);
+        fixture.Policy = new(["limit", "label", "credential"], ["credential"]);
+        var before = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(new[] { "limit" }, before.Value.EnumerateObject().Select(field => field.Name));
+        Assert.Equal(1, before.Value.GetProperty("limit").GetInt32());
+        Assert.False(before.User!.Value.TryGetProperty("limit", out _));
+        var hidden = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["credential"], "must not save")],
+            before.Revision));
+        Assert.Contains("field-not-offered", hidden.Message);
+        var ordinary = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["label"], "new")],
+            before.Revision));
+        Assert.Contains("field-not-offered", ordinary.Message);
+        await fixture.Forms.MutateAsync("worker", [Set(["limit"], 2)], before.Revision);
+        var after = Assert.Single((await fixture.Forms.DescribeAsync()).Value.Namespaces);
+        Assert.Equal(2, after.Value.GetProperty("limit").GetInt32());
+        Assert.True(after.User!.Value.TryGetProperty("limit", out _));
         Assert.Equal(1, fixture.Activations);
-        changed = await fixture.Operations.EditSettingsFieldAsync("root:worker", "limit", 3, before.Revision, policy);
-        Assert.Equal("conflict", changed.Error);
+        await Assert.ThrowsAsync<SettingsConflictException>(() => fixture.Forms.MutateAsync(
+            "worker",
+            [Set(["limit"], 3)],
+            before.Revision));
     }
 
     private sealed class ReadOnlyView(Dictionary<string, object?> values) : IReadOnlyDictionary<string, object?>
@@ -993,6 +1410,32 @@ public sealed class ConfigurationEditTests
 
     private sealed record Settings(int Limit, string Label);
 
+    private static JsonElement Json(string text)
+    {
+        using var document = JsonDocument.Parse(text);
+        return document.RootElement.Clone();
+    }
+
+    private static JsonElement SettingsSchemaNode(JsonElement schema, params string[] path)
+    {
+        var refs = schema.GetProperty("refs");
+        var node = refs.GetProperty(
+            schema.GetProperty("uid").GetInt32().ToString(System.Globalization.CultureInfo.InvariantCulture));
+        foreach (var key in path)
+            node = refs.GetProperty(
+                node
+                    .GetProperty("dict")
+                    .GetProperty(key)
+                    .GetInt32()
+                    .ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return node;
+    }
+
+    private static SettingsPathOp Set(string[] path, object? value) => new("set", path)
+    {
+        Value = Json(ConfigurationFile.Write(value, true))
+    };
+
     private sealed class Fixture : IAsyncDisposable
     {
         private readonly string directory = Path.Combine(
@@ -1020,6 +1463,18 @@ public sealed class ConfigurationEditTests
             get;
             private set;
         } = null!;
+
+        public SettingsForms Forms
+        {
+            get;
+            private set;
+        } = null!;
+
+        public SettingsPolicy? Policy
+        {
+            get;
+            set;
+        }
 
         public int Activations
         {
@@ -1106,6 +1561,16 @@ public sealed class ConfigurationEditTests
             {
                 RunExclusiveAsync = action => action()
             };
+            await fixture.context.RunAsync(owner =>
+            {
+                fixture.Forms = new SettingsForms(
+                    owner,
+                    fixture.Operations,
+                    _ => fixture.Policy ??
+                        new SettingsPolicy(
+                            fixture.Loader.Resolve("root:worker").Fiber!.ConfigDescription!.Properties.Keys));
+                return Task.CompletedTask;
+            });
             return fixture;
         }
 

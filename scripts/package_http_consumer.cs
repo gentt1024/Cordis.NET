@@ -88,11 +88,25 @@ try
     await using var server = builder.Build();
     new CordisManagement(
         session,
-        (http, permission) =>
+        (http, _) => Task.FromResult(http.Request.Headers.Authorization == "consumer-policy")).Map(server);
+    var registry = new TypertRegistry(session.Context);
+    await session.Context.RunAsync(context =>
+    {
+        new SettingsForms(
+            context,
+            session.ConfigurationOperations,
+            _ => new SettingsPolicy(["left", "right", "password"]));
+        new SettingsController(context);
+        registry.Register(context, SettingsControllerTypert.Contribution("Cordis.PackageConsumer.Settings"));
+        return Task.CompletedTask;
+    });
+    server.MapCordisRemote(
+        "/remote",
+        new TypertGateway(session.Context, registry),
+        (http, endpoint) =>
             Task.FromResult(
                 http.Request.Headers.Authorization == "consumer-policy" ||
-                http.Request.Headers.Authorization == "settings-only" && permission.Operation == "settings-read"),
-        _ => new SettingsPolicy(["left", "right", "password"])).Map(server);
+                http.Request.Headers.Authorization == "settings-only" && endpoint == "settings/describe"));
     server.MapCordisService<EchoService, EchoRequest, EchoResponse>(
         "/echo",
         session.Context,
@@ -113,48 +127,47 @@ try
         Timeout = TimeSpan.FromSeconds(20)
     };
     Require(
-        (await client.GetAsync("/cordis/settings?entryId=root:worker")).StatusCode == HttpStatusCode.Forbidden,
+        (await client.PostAsync("/remote/settings/describe", JsonBody("{\"args\":{}}"))).StatusCode ==
+        HttpStatusCode.Forbidden,
         "unauthorized settings");
     client.DefaultRequestHeaders.Authorization = new("consumer-policy");
     using var state = await Read("/cordis/state");
     var generation = state.RootElement.GetProperty("generation").GetString()!;
-    using var initial = await Read("/cordis/settings?entryId=root:worker");
+    using var initial = await ReadSettings();
     CheckRedaction(initial);
-    var revision = initial.RootElement.GetProperty("revision").GetString()!;
+    var revision = initial.RootElement.GetProperty("revision").GetDouble();
+    Require(revision == 0, "initial form revision");
     var batch = """[{"op":"set","path":["left"],"value":2},{"op":"set","path":["right"],"value":2}]""";
-    using (var unfenced = await client.PostAsync("/cordis/settings", Body(revision, batch)))
+    using (var unfenced = await client.PostAsync("/cordis/configuration", Body("unused", batch)))
         Require(unfenced.StatusCode == HttpStatusCode.Conflict, "missing generation fence");
     client.DefaultRequestHeaders.Add("If-Cordis-Generation", generation);
-    using (var changed = await Edit("settings", revision, batch))
-        CheckApplied(changed);
-    using (var current = await Read("/cordis/settings?entryId=root:worker"))
+    using (var changed = await EditSettings(revision, batch))
+        Require(changed.RootElement.GetProperty("ok").GetBoolean(), "settings batch failed");
+    using (var current = await ReadSettings())
     {
         CheckRedaction(current);
         CheckPair(current, 2);
         Require(activations == 1, "batch settings restarted static plugin");
     }
 
-    using (var stale = await Edit("settings", revision, batch))
+    using (var stale = await EditSettings(revision, batch))
         Require(
-            stale.RootElement.GetProperty("error").GetString() == "conflict" &&
-            !stale.RootElement.GetProperty("saved").GetBoolean(),
+            stale.RootElement.GetProperty("error").GetProperty("code").GetString() == "settings/conflict",
             "stale revision accepted");
-    using (var current = await Read("/cordis/settings?entryId=root:worker"))
-    using (var reset = await Edit(
-               "settings",
-               current.RootElement.GetProperty("revision").GetString()!,
+    using (var current = await ReadSettings())
+    using (var reset = await EditSettings(
+               current.RootElement.GetProperty("revision").GetDouble(),
                """[{"op":"unset","path":["left"]},{"op":"unset","path":["right"]}]"""))
-        CheckApplied(reset);
-    using (var current = await Read("/cordis/settings?entryId=root:worker"))
-        CheckPair(current, 1);
-    using (var schema = await Read("/cordis/settings/schema?entryId=root:worker"))
+        Require(reset.RootElement.GetProperty("ok").GetBoolean(), "settings reset failed");
+    using (var current = await ReadSettings())
     {
+        CheckPair(current, 1);
         Require(
-            !schema.RootElement.ToString().Contains("saved-secret-marker", StringComparison.Ordinal) &&
-            !schema.RootElement.ToString().Contains("default-secret-marker", StringComparison.Ordinal),
+            !current.RootElement.ToString().Contains("saved-secret-marker", StringComparison.Ordinal) &&
+            !current.RootElement.ToString().Contains("default-secret-marker", StringComparison.Ordinal),
             "settings schema leaked a secret");
         Require(
-            schema.RootElement.GetProperty("schemastery").GetProperty("refs").EnumerateObject().Any(),
+            current.RootElement.GetProperty("schema").GetProperty("refs").EnumerateObject().Any(),
             "missing form declaration envelope");
     }
 
@@ -224,6 +237,27 @@ try
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync());
     }
 
+    async Task<JsonDocument> ReadSettings()
+    {
+        using var response = await client.PostAsync("/remote/settings/describe", JsonBody("{\"args\":{}}"));
+        Require(response.StatusCode == HttpStatusCode.OK, "settings read refused");
+        using var envelope = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Require(envelope.RootElement.GetProperty("ok").GetBoolean(), "settings read failed");
+        return JsonDocument.Parse(envelope.RootElement.GetProperty("value").GetProperty("namespaces")[0].GetRawText());
+    }
+
+    async Task<JsonDocument> EditSettings(double expectedRevision, string operations)
+    {
+        using var response = await client.PostAsync(
+            "/remote/settings/mutate",
+            JsonBody(
+                "{\"args\":{\"ns\":\"worker\",\"expectedRevision\":" +
+                expectedRevision.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"ops\":" +
+                operations + "}}"));
+        Require(response.StatusCode == HttpStatusCode.OK, "settings carrier refused write");
+        return JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+    }
+
     async Task<JsonDocument> Edit(string route, string expectedRevision, string operations)
     {
         using var response = await client.PostAsync("/cordis/" + route, Body(expectedRevision, operations));
@@ -248,6 +282,8 @@ finally
     Directory.Delete(directory, recursive: true);
 }
 
+static StringContent JsonBody(string body) => new(body, Encoding.UTF8, "application/json");
+
 static StringContent Body(string revision, string operations) =>
     new(
         "{\"entryId\":\"root:worker\",\"revision\":\"" + JsonEncodedText.Encode(revision) + "\",\"operations\":" +
@@ -269,14 +305,7 @@ static void CheckApplied(JsonDocument result) =>
 static void CheckPair(JsonDocument view, int expected)
 {
     foreach (var name in new[] { "left", "right" })
-        Require(
-            view
-                .RootElement.GetProperty("fields")
-                .EnumerateArray()
-                .Single(field => field.GetProperty("name").GetString() == name)
-                .GetProperty("value")
-                .GetInt32() == expected,
-            "pair value mismatch");
+        Require(view.RootElement.GetProperty("value").GetProperty(name).GetInt32() == expected, "pair value mismatch");
 }
 
 static void CheckRedaction(JsonDocument view)
@@ -289,10 +318,7 @@ static void CheckRedaction(JsonDocument view)
         secret.GetProperty("path")[0].GetString() == "password" && secret.GetProperty("set").GetBoolean(),
         "secret presence sidecar missing");
     Require(
-        view
-            .RootElement.GetProperty("fields")
-            .EnumerateArray()
-            .All(field => field.GetProperty("name").GetString() != "label"),
+        !view.RootElement.GetProperty("value").TryGetProperty("label", out _),
         "ordinary field leaked into settings");
 }
 

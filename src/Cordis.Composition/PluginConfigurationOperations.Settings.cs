@@ -29,127 +29,19 @@ public sealed class SettingsPolicy
         Fields.Contains(field, StringComparer.Ordinal) && !HiddenFields.Contains(field, StringComparer.Ordinal);
 }
 
-/// <summary>One concrete write-only secret position in the selected form.</summary>
-/// <param name="Path">Object keys and concrete dictionary/array positions.</param>
-/// <param name="Set">Whether the published value contains this secret.</param>
-public sealed record SettingsSecret(IReadOnlyList<string> Path, bool Set);
-
-/// <summary>A detached selected published data value; no validator, default or ordinary raw value is exported.</summary>
-/// <param name="Name">The fixed object key.</param>
-/// <param name="Kind">The declared data kind.</param>
-/// <param name="Value">The latest committed live snapshot.</param>
-/// <param name="Overridden">Whether the user source explicitly contains the key, independent of value equality.</param>
-public sealed record SettingsField(string Name, string Kind, object? Value, bool Overridden);
-
-/// <summary>A coherent live-only settings view taken inside the existing profile transaction.</summary>
-/// <param name="EntryId">The live entry.</param>
-/// <param name="Revision">The source and activation fence.</param>
-/// <param name="Fields">Only host-selected, non-hidden data live fields.</param>
-/// <param name="Diagnostics">Reasons other selected fields cannot be offered.</param>
-public sealed record SettingsView(
-    string EntryId,
-    string Revision,
-    IReadOnlyList<SettingsField> Fields,
-    IReadOnlyList<string> Diagnostics)
-{
-    /// <summary>Secret presence without values, including nested concrete positions.</summary>
-    public IReadOnlyList<SettingsSecret> Secrets
-    {
-        get;
-        init;
-    } = [];
-}
-
 public sealed partial class PluginConfigurationOperations
 {
-    /// <summary>Read selected plain live values, redaction and override presence at one management checkpoint.</summary>
-    public async Task<SettingsView> ReadSettingsAsync(
-        string entryId,
-        SettingsPolicy policy,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        SettingsView result = null!;
-        await ConfigurationTransactionAsync(
-            async () =>
-            {
-                await ReloadAsync(null);
-                var layers = (await ProfileComposition.RefreshAsync(launch)).Layers;
-                await include.Context.RunAsync(_ =>
-                {
-                    var entry = EditableEntry(entryId);
-                    var patches = layers.Single(layer => layer.Source == PatchPath).Patches;
-                    var overridden = patches.LastOrDefault(patch =>
-                        patch.Id == entry.Options.Id && !Data.Truthy(patch.GetValueOrDefault("insert")) &&
-                        (patch.Name.Length == 0 || patch.Name == entry.Options.Name) && patch.ContainsKey("config"));
-                    // Inserted entries can originate in the user source too. This source-presence
-                    // view is independent of B's inheritance calculation and never uses effective values.
-                    var inserted = overridden is null
-                        ? Flatten(
-                                patches
-                                    .Where(patch => Data.Truthy(patch.GetValueOrDefault("insert")))
-                                    .SelectMany(patch => Data.Entries(patch["insert"])))
-                            .SingleOrDefault(row => row.Id == entry.Options.Id)
-                        : null;
-                    var user =
-                        (overridden is null ? inserted?.Config : overridden.Config) as
-                        IReadOnlyDictionary<string, object?>;
-                    var captured = CaptureSettings(entry, policy, user);
-                    result = new(entryId, Revision(entry, layers), captured.Fields, captured.Diagnostics)
-                    {
-                        Secrets = captured.Secrets
-                    };
-                    return Task.CompletedTask;
-                });
-            },
-            cancellationToken);
-        return result;
-    }
-
-    /// <summary>Submit one offered live field through the same revision-fenced configuration operation.</summary>
-    /// <remarks>Host authorization and secret policy are mandatory transport responsibilities.</remarks>
-    public Task<ConfigurationEditResult> EditSettingsFieldAsync(
-        string entryId,
-        string field,
-        object? value,
-        string expectedRevision,
-        SettingsPolicy policy,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        if (!policy.Allows(field))
-            return Task.FromResult(new ConfigurationEditResult(entryId, false, false, null, "field-not-offered"));
-        return MutateSettingsAsync(
-            entryId,
-            [new ConfigurationSet([field], value)],
-            expectedRevision,
-            policy,
-            cancellationToken);
-    }
-
-    /// <summary>Apply ordered edits below offered live fields in one revision-fenced configuration commit.</summary>
-    /// <remarks>Every operation must name an offered top-level field. Root edits cannot bypass selection or redaction.</remarks>
-    public Task<ConfigurationEditResult> MutateSettingsAsync(
-        string entryId,
-        IReadOnlyList<ConfigurationPathOperation> operations,
-        string expectedRevision,
-        SettingsPolicy policy,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        return MutateConfigurationCoreAsync(entryId, operations, expectedRevision, true, cancellationToken, policy);
-    }
+    private sealed record SettingsSecret(IReadOnlyList<string> Path, bool Set);
 
     private static SettingsCapture CaptureSettings(
         Entry entry,
         SettingsPolicy policy,
-        IReadOnlyDictionary<string, object?>? user = null)
+        IReadOnlyDictionary<string, object?>? bindings = null)
     {
-        var fields = new List<SettingsField>();
         var values = new Dictionary<string, object?>(StringComparer.Ordinal);
         var secrets = new List<SettingsSecret>();
         var diagnostics = new List<string>();
-        var selected = SelectSettingsFields(entry, policy, diagnostics);
+        var selected = SelectSettingsFields(entry, policy, diagnostics, bindings);
         foreach (var field in selected)
         {
             var redaction = new SettingsRedactionState();
@@ -158,18 +50,19 @@ public sealed partial class PluginConfigurationOperations
                 diagnostics.Add(field.Name + ": unresolved or recursive redaction paths were omitted");
             if (!ReferenceEquals(redacted, Undefined.Value))
                 values.Add(field.Name, redacted);
-            fields.Add(
-                new(
-                    field.Name,
-                    field.Kind,
-                    ReferenceEquals(redacted, Undefined.Value) ? null : redacted,
-                    user?.ContainsKey(field.Name) == true));
+        }
+
+        var descriptor = SelectedSettingsDescriptor(selected, entry.Fiber!.ConfigDescription!);
+        object? value = values;
+        if (Secret(descriptor))
+        {
+            secrets.Clear();
+            value = RedactSettings(descriptor, values, [], secrets);
         }
 
         return new(
-            SelectedSettingsDescriptor(selected),
-            fields.AsReadOnly(),
-            values,
+            descriptor,
+            value,
             secrets.AsReadOnly(),
             diagnostics.AsReadOnly());
     }
@@ -177,9 +70,12 @@ public sealed partial class PluginConfigurationOperations
     private static IReadOnlyList<SelectedSettingsField> SelectSettingsFields(
         Entry entry,
         SettingsPolicy policy,
-        List<string>? diagnostics = null)
+        List<string>? diagnostics = null,
+        IReadOnlyDictionary<string, object?>? bindings = null)
     {
         var selected = new List<SelectedSettingsField>();
+        if (Annotation(entry.Fiber!.ConfigDescription!, "hidden"))
+            return selected.AsReadOnly();
         foreach (var name in policy.Fields)
         {
             if (!policy.Allows(name))
@@ -188,7 +84,7 @@ public sealed partial class PluginConfigurationOperations
                 continue;
             }
 
-            if (!TrySettingsValue(entry, name, out var kind, out var value))
+            if (!TrySettingsValue(entry, name, out var kind, out var value, bindings))
             {
                 diagnostics?.Add(name + ": not a supported data live field");
                 continue;
@@ -202,19 +98,40 @@ public sealed partial class PluginConfigurationOperations
         return selected.AsReadOnly();
     }
 
-    private static ConfigDescriptor SelectedSettingsDescriptor(IReadOnlyList<SelectedSettingsField> selected) =>
-        ConfigDescriptor.Object(selected.Select(field => (field.Name, field.Descriptor)).ToArray());
+    private static ConfigDescriptor SelectedSettingsDescriptor(
+        IReadOnlyList<SelectedSettingsField> selected,
+        ConfigDescriptor complete)
+    {
+        var result = ConfigDescriptor.Object(selected.Select(field => (field.Name, field.Descriptor)).ToArray());
+        return complete.IsVolatile ? PreserveObjectMetadata(result, complete) : result.Default(new EntryOptions());
+    }
+
+    private static ConfigDescriptor PreserveObjectMetadata(ConfigDescriptor result, ConfigDescriptor original)
+    {
+        result = result.WithAnnotations(original.Annotations);
+        if (original.IsOptional)
+            result = result.Optional();
+        if (original.HasDefault)
+            result = result.Default(original.DefaultValue);
+        if (original.IsVolatile)
+            result = result.Volatile();
+        return result;
+    }
 
     private sealed record SelectedSettingsField(string Name, string Kind, object? Value, ConfigDescriptor Descriptor);
 
     private sealed record SettingsCapture(
         ConfigDescriptor Descriptor,
-        IReadOnlyList<SettingsField> Fields,
-        IReadOnlyDictionary<string, object?> Value,
+        object? Value,
         IReadOnlyList<SettingsSecret> Secrets,
         IReadOnlyList<string> Diagnostics);
 
-    private static bool TrySettingsValue(Entry entry, string name, out string kind, out object? value)
+    private static bool TrySettingsValue(
+        Entry entry,
+        string name,
+        out string kind,
+        out object? value,
+        IReadOnlyDictionary<string, object?>? bindings = null)
     {
         kind = "";
         value = null;
@@ -229,7 +146,9 @@ public sealed partial class PluginConfigurationOperations
         bool Read(ConfigDescriptor node, string[] path, out object? output)
         {
             for (var count = path.Length;count >= 0;count--)
-                if (fiber.ConfigurationValues.TryGetValue(DisplayPath(path.Take(count).ToArray()), out var bound) &&
+                if ((bindings ?? fiber.ConfigurationValues).TryGetValue(
+                        DisplayPath(path.Take(count).ToArray()),
+                        out var bound) &&
                     TryPath(bound, path.Skip(count).ToArray(), out output))
                     return true;
             if (node.Kind == "object")
@@ -298,14 +217,10 @@ public sealed partial class PluginConfigurationOperations
                     .ToArray();
                 if (members.Length == 0 && !live)
                     return null;
-                var result = ConfigDescriptor.Object(members).WithAnnotations(node.Annotations);
-                if (node.IsOptional)
-                    result = result.Optional();
-                if (node.HasDefault)
-                    result = result.Default(node.DefaultValue);
-                if (node.IsVolatile)
-                    result = result.Volatile();
-                return result;
+                var result = ConfigDescriptor.Object(members);
+                if (!live)
+                    return result.Default(new EntryOptions());
+                return PreserveObjectMetadata(result, node);
             }
             finally
             {
@@ -486,30 +401,45 @@ public sealed partial class PluginConfigurationOperations
     {
         if (path.Count == 0 || !policy.Allows(path[0]))
             return false;
-        var node = entry.Fiber!.ConfigDescription;
-        var live = false;
-        foreach (var key in path)
+        var visiting = new HashSet<(ConfigDescriptor, int)>();
+
+        bool Allows(ConfigDescriptor? node, int depth, bool live)
         {
-            if (node is null || Annotation(node, "hidden") || Secret(node))
+            if (node is null)
+                return live;
+            if (Annotation(node, "hidden"))
                 return false;
             live |= node.IsVolatile;
-            node = ChildDescriptor(node, key);
+            if (depth == path.Count)
+                return live && !HasHidden(node);
+            if (!visiting.Add((node, depth)))
+                return live;
+            try
+            {
+                if (node.Kind is "union" or "intersect")
+                    return live && node.Children.All(child => Allows(child, depth, true));
+                if (node.Kind is "lazy" or "transform" or "getter")
+                    return Allows(node.Inner, depth, live);
+                return Allows(ChildDescriptor(node, path[depth]), depth + 1, live);
+            }
+            finally
+            {
+                visiting.Remove((node, depth));
+            }
         }
 
-        if (node is null || Annotation(node, "hidden"))
-            return false;
-        live |= node.IsVolatile;
-        if (!live)
-            return false;
+        return Allows(entry.Fiber!.ConfigDescription, 0, false);
+    }
 
-        bool ContainsRestricted(ConfigDescriptor candidate, HashSet<ConfigDescriptor> seen) =>
-            seen.Add(candidate) && (Annotation(candidate, "hidden") || Secret(candidate) ||
-                candidate.Properties.Values.Any(child => ContainsRestricted(child, seen)) ||
-                candidate.Inner is not null && ContainsRestricted(candidate.Inner, seen) ||
-                candidate.Children.Any(child => ContainsRestricted(child, seen)));
+    private static bool HasHidden(ConfigDescriptor node)
+    {
+        var seen = new HashSet<ConfigDescriptor>(ReferenceEqualityComparer.Instance);
 
-        // Write-only leaves are editable. Replacing their ancestor would implicitly erase unreadable values.
-        return Secret(node) || !ContainsRestricted(node, new(ReferenceEqualityComparer.Instance));
+        bool Visit(ConfigDescriptor item) => seen.Add(item) && (Annotation(item, "hidden") ||
+            item.Properties.Values.Any(Visit) || item.Inner is not null && Visit(item.Inner) ||
+            item.Children.Any(Visit));
+
+        return Visit(node);
     }
 
     private static bool SettingsData(object? value)

@@ -284,7 +284,9 @@ public sealed class ProfileSession : IAsyncDisposable
         {
             var inputs = await ProfileInputSnapshotAsync();
             var mappings = MappingSnapshot();
-            if (candidate is not null || inputs != successfulProfileInputs || mappings != successfulMappings)
+            var configurationChanged = candidate is not null || inputs != successfulProfileInputs ||
+                mappings != successfulMappings;
+            if (configurationChanged)
             {
                 if (refreshDeployment is not null)
                 {
@@ -337,12 +339,19 @@ public sealed class ProfileSession : IAsyncDisposable
                 await include.RefreshAsync();
                 await WarnInactiveAsync(await ApplicationBoot.AuditAsync(Loader, required));
                 successfulInputs[include.Filename] = text;
+                configurationChanged = true;
             }
 
             await SynchronizeWatchesAsync();
             RequiresRestart = false;
             LastError = null;
             LastSuccessfulRefresh = DateTimeOffset.UtcNow;
+            if (configurationChanged)
+                await Context.RunAsync(context =>
+                {
+                    context.Events.Emit("app-boot/config-reload");
+                    return Task.CompletedTask;
+                });
             Refreshed?.Invoke();
         }
         catch (Exception error)

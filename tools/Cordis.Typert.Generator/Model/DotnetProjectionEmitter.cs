@@ -49,12 +49,18 @@ internal sealed class DotnetProjectionEmitter
                 method.Parameters.Any(parameter => parameter.Lookup is not null) ||
                 method.ReturnWrapper != "System.Threading.Tasks.Task<TResult>" ||
                 method.Parameters.Any(parameter =>
-                    parameter.RefKind != "None" || parameter.Optional || parameter.Params))
+                    parameter.RefKind != "None" || parameter.Params))
                 throw new InvalidDataException(
                     $"{method.Name}: caller projection supports only direct ordinary unary methods.");
             Visit(method.Result);
             foreach (var parameter in method.Parameters)
+            {
+                if (parameter.Optional && parameter.Default is null)
+                    throw new InvalidDataException(
+                        "An optional native parameter requires its authored constant default: " +
+                        method.Name + "." + parameter.Name);
                 Visit(parameter.Type);
+            }
         }
 
         var relevantIds = reachable.Append(selected.Serializer.Id).ToHashSet(StringComparer.Ordinal);
@@ -257,7 +263,9 @@ internal sealed class DotnetProjectionEmitter
                 EmitAttribute(attribute, "    ");
             output.AppendLine(
                 "    [JsonPropertyName(" + Literal(parameter.Wire) +
-                "), JsonIgnore(Condition = JsonIgnoreCondition.Never)] public " + TypeName(parameter.Type) + " " +
+                "), JsonIgnore(Condition = JsonIgnoreCondition." +
+                (OmitNullDefault(parameter) ? "WhenWritingNull" : "Never") +
+                ")] public " + TypeName(parameter.Type) + " " +
                 Identifier(parameter.Name) + " { get; set; } = default!;");
         }
 
@@ -306,6 +314,7 @@ internal sealed class DotnetProjectionEmitter
             .Serializer.Attributes.Where(value =>
                 value.Name == "System.Text.Json.Serialization.JsonSourceGenerationOptionsAttribute")
             .ToArray();
+        output.AppendLine("/// <summary>Static JSON metadata for the generated client's public data.</summary>");
         foreach (var attribute in options)
             EmitAttribute(attribute);
         var roots = service
@@ -341,6 +350,7 @@ internal sealed class DotnetProjectionEmitter
                   private readonly global::System.Uri remoteBase;
                   private readonly CancellationTokenSource lifetime = new();
                   private int disposed;
+                  /// <summary>Create a Remote client using the supplied caller-owned transport.</summary>
                   public {{client}}(HttpClient borrowedClient, global::System.Uri remoteBase)
                   {
                       global::System.ArgumentNullException.ThrowIfNull(borrowedClient);
@@ -354,6 +364,7 @@ internal sealed class DotnetProjectionEmitter
                       if (global::System.Threading.Volatile.Read(ref disposed) != 0)
                           throw new global::Cordis.Composition.RemoteError("gateway/internal", "The Remote contribution was withdrawn.");
                   }
+                  /// <summary>Withdraw this client and cancel its outstanding transport requests.</summary>
                   public void Dispose()
                   {
                       if (global::System.Threading.Interlocked.Exchange(ref disposed, 1) == 0)
@@ -381,7 +392,11 @@ internal sealed class DotnetProjectionEmitter
                     string.Join(
                         ", ",
                         method.Parameters.Select(parameter =>
-                            TypeName(parameter.Type) + " " + Identifier(parameter.Name))))
+                            ParameterAttributes(parameter.Attributes) + TypeName(parameter.Type) + " " +
+                            Identifier(parameter.Name) +
+                            (parameter.Optional
+                                ? " = " + Constant(parameter.Default!) + (OmitNullDefault(parameter) ? "!" : "")
+                                : ""))))
                 .Append(method.Parameters.Length == 0 ? "" : ", ")
                 .AppendLine("CancellationToken " + token + " = default)")
                 .AppendLine("    {")
@@ -514,6 +529,11 @@ internal sealed class DotnetProjectionEmitter
 
     private static bool Nullable(NativeTypeReference type) =>
         type.Kind == "nullable" || type.Nullability == "Annotated";
+
+    private static bool OmitNullDefault(NativeParameter parameter) => parameter.Optional &&
+        parameter.Default?.Json == "null" && Nullable(parameter.Type) &&
+        parameter.Attributes.Any(attribute =>
+            attribute.Name == "System.Diagnostics.CodeAnalysis.DisallowNullAttribute");
 
     private static string Identifier(string value) => SyntaxFacts.IsValidIdentifier(value) ? value :
         SyntaxFacts.GetKeywordKind(value) != SyntaxKind.None ? "@" + value :

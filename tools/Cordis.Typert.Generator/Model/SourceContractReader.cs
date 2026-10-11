@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cordis.Typert.Generator.Model;
 
-internal sealed class SourceContractReader
+internal sealed partial class SourceContractReader
 {
     private const string JsonPrefix = "System.Text.Json.Serialization.";
     private readonly CSharpCompilation compilation;

@@ -15,7 +15,7 @@ internal static class CompilerRunner
         try
         {
             if (args.Length == 0 || args.Length % 2 != 1)
-                throw new InvalidDataException("Expected extract or emit-dotnet followed by --name value options.");
+                throw new InvalidDataException("Expected a native compiler command followed by --name value options.");
             options = new(StringComparer.Ordinal);
             for (var index = 1;index < args.Length;index += 2)
             {
@@ -26,7 +26,7 @@ internal static class CompilerRunner
 
             var allowed = args[0] switch
             {
-                "extract" => new[]
+                "extract" or "extract-model" => new[]
                 {
                     "project-directory",
                     "sources",
@@ -35,7 +35,7 @@ internal static class CompilerRunner
                     "language-version",
                     "nullable",
                     "defines",
-                    "service",
+                    args[0] == "extract" ? "service" : "roots",
                     "output",
                     "allow-unsafe",
                     "check-overflow",
@@ -44,6 +44,7 @@ internal static class CompilerRunner
                     "optimize"
                 },
                 "emit-dotnet" => new[] { "model", "namespace", "service", "client", "output" },
+                "inspect-model" => new[] { "model", "output" },
                 _ => throw new InvalidDataException("Unknown native compiler command " + args[0])
             };
             foreach (var option in options.Keys)
@@ -52,7 +53,10 @@ internal static class CompilerRunner
             var output = Required(options, "output");
             var content = args[0] switch
             {
-                "extract" => Extract(options),
+                "extract" => Extract(options, false),
+                "extract-model" => Extract(options, true),
+                "inspect-model" => DeclarationModelJson.Catalog(
+                    DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model")))),
                 "emit-dotnet" => DotnetProjectionEmitter.Emit(
                     NativeModelJson.Deserialize(File.ReadAllText(Required(options, "model"))),
                     Required(options, "namespace"),
@@ -83,7 +87,7 @@ internal static class CompilerRunner
         }
     }
 
-    private static string Extract(Dictionary<string, string> options)
+    private static string Extract(Dictionary<string, string> options, bool declarations)
     {
         var directory = Path.GetFullPath(Required(options, "project-directory"));
         if (!LanguageVersionFacts.TryParse(Required(options, "language-version"), out var language))
@@ -127,11 +131,29 @@ internal static class CompilerRunner
                 checkOverflow: Boolean(options, "check-overflow"),
                 platform: platform,
                 optimizationLevel: Boolean(options, "optimize") ? OptimizationLevel.Release : OptimizationLevel.Debug));
-        var model = SourceContractReader.Read(compilation, directory, Required(options, "service"));
-        foreach (var diagnostic in model.Diagnostics)
+        string content;
+        NativeDiagnostic[] diagnostics;
+        if (declarations)
+        {
+            var roots = File
+                .ReadAllLines(Path.GetFullPath(Required(options, "roots"), directory))
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Select(line => line.Trim());
+            var model = SourceContractReader.ReadDeclarations(compilation, directory, roots);
+            content = DeclarationModelJson.Serialize(model);
+            diagnostics = model.Diagnostics;
+        }
+        else
+        {
+            var model = SourceContractReader.Read(compilation, directory, Required(options, "service"));
+            content = NativeModelJson.Serialize(model);
+            diagnostics = model.Diagnostics;
+        }
+
+        foreach (var diagnostic in diagnostics)
             Console.WriteLine(
                 "CORDISTYPERT " + diagnostic.Category + " " + diagnostic.Code + ": " + diagnostic.Message);
-        return NativeModelJson.Serialize(model);
+        return content;
     }
 
     private static string Required(Dictionary<string, string> options, string name) =>

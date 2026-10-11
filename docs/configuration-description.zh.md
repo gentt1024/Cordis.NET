@@ -166,18 +166,19 @@ Core 通过 `ConfigDescriptor.Annotations` 承载不可变、无环的 plain 数
 
 复用 session 既有的 `PluginConfigurationOperations`。`MutateConfigurationAsync` 接收有序 `ConfigurationSet`/`ConfigurationUnset` 与新 revision，组装完整候选后验证最终值，再写入和协调一次源更新；中间候选可以不合法。对象 unset 恢复源继承，数组 unset 删除元素，终端 set 的 index 等于当前长度时追加。数组 index 必须是规范的非负十进制字符串。完整授权的配置端点可编辑根对象；`Saved`、`Applied` 与恢复失败仍是独立结果。
 
-Settings 另要求宿主 `SettingsPolicy`，选择顶层表单 section，再递归保留已声明 live 边界。嵌套固定 live 字段仍需 runtime 所用的显式 `WithVolatile(path, projection)`；普通兄弟字段被省略。live object/array/dict 边界下的数据使用具体路径编辑。每项操作检查祖先和目标，拒绝 hidden、普通路径及根绕过。write-only secret 叶子可以 set/reset；含 secret 或 hidden 后代的祖先替换被拒绝，避免隐式擦除客户端读不到的值。
+将 `SettingsForms` 挂在同一套 operations 之上。它根据声明推导受支持的 live 字段；可选宿主 `SettingsPolicy` 限制可见范围。嵌套固定 live 字段使用 runtime 所用的显式 `WithVolatile(path, projection)`；普通兄弟字段被省略。提交字段及路径必须位于开放的 live 表单内，不能通过祖先绕过宿主隐藏路径。secret 是 write-only 值，按固定上游，替换其祖先可能重置省略的 secret。编辑不完整的脱敏视图时，应使用路径 mutate。
 
 ```csharp
-var policy = new SettingsPolicy(["network"]);
-var view = await operations.ReadSettingsAsync("root:worker", policy);
-var result = await operations.MutateSettingsAsync("root:worker",
-    [new ConfigurationSet(["network", "timeout"], 30),
-     new ConfigurationUnset(["network", "password"])], view.Revision, policy);
-var form = await operations.ReadSettingsSchemasAsync("root:worker", policy);
+var forms = new SettingsForms(ctx, operations, _ => new SettingsPolicy(["network"]));
+var view = (await forms.DescribeAsync()).Value.Namespaces.Single(row => row.Ns == "worker");
+using var timeout = JsonDocument.Parse("30");
+await forms.MutateAsync("worker",
+    [new SettingsPathOp("set", ["network", "timeout"]) { Value = timeout.RootElement },
+     new SettingsPathOp("unset", ["network", "password"])], view.Revision);
+var formSchema = (await forms.DescribeAsync()).Value.Namespaces.Single(row => row.Ns == "worker").Schema;
 ```
 
-`ReadSettingsAsync` 返回脱离 runtime 的选中值，以及仅包含具体路径与 `Set` 存在标记的 `SettingsView.Secrets`。object/dict secret 值被移除，数组位置保留 null 占位。union/intersection 各分支的 secret 保守合并。hidden 值被移除，选中 object 表单不公开未知成员。Settings schema 移除全部默认值和 hidden 属性，移除 secret 的 required 标记，保留 write-only role。完整 `ReadConfigurationSchemasAsync` 可含默认值，宿主须另行授权。两个 active-entry 读取先通过正常生命周期同步；同步可能执行插件代码，随后才做数据投影。
+`DescribeAsync` 返回一次一致的读取，包含脱离 runtime 的选中值、base/user 层、数值观察 revision 和 `SettingsNamespaceView.Secrets`。具体路径与 `Set` 标记只表示存在性。object/dict secret 值被移除，数组位置保留 null 占位。union/intersection 各分支的 secret 保守合并。hidden 值被移除，选中 object 表单不公开未知成员。原生 Settings schema 投影保留脱敏后的公开默认值，省略 hidden 属性，移除 secret 默认值和 required 标记，并保留 write-only role。非 live 对象路径使用默认值为空对象的新包装；进入 live 边界后保留作者元数据。完整 `ReadConfigurationSchemasAsync` 可含默认值，宿主须另行授权。读取先通过正常生命周期同步；同步可能执行插件代码，随后才做数据投影。写入及省略/null 语义见[Settings 迁移指南](settings-contract-migration.zh.md)。
 
 已解析的递归描述只沿实际存在的值后代遍历，缺失或 null 容器终止遍历。lazy/union 无进展环会省略受影响值并记录脱敏诊断，不把未完成遍历的原值返回给客户端。
 

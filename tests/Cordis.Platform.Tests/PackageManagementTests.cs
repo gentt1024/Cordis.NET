@@ -144,7 +144,6 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                     permissions.Add(permission);
                     return Task.FromResult(true);
                 },
-                _ => new SettingsPolicy([]),
                 host.Toolchain).Map(server);
             await server.StartAsync();
             using var client = new HttpClient
@@ -279,7 +278,6 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             new CordisManagement(
                 restarted.Session,
                 (_, _) => Task.FromResult(true),
-                _ => new SettingsPolicy([]),
                 restarted.Toolchain).Map(server);
             await server.StartAsync();
             await RunAsync(
@@ -574,7 +572,6 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                 permissions.Add(permission);
                 return Task.FromResult(permission.Operation != "build");
             },
-            _ => new SettingsPolicy([]),
             host.Toolchain).Map(server);
         await server.StartAsync();
         using var client = new HttpClient
@@ -849,7 +846,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             "--allow-build",
             "IndependentPlugin@1.0.0",
             "--settings",
-            "root:independentplugin=limit");
+            "independentplugin=limit");
         var stderr = host.StandardError.ReadToEndAsync();
         try
         {
@@ -889,7 +886,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             var settings = await Command(
                 "settings",
                 endpoint,
-                "root:independentplugin",
+                "independentplugin",
                 "--authorization-env",
                 "CORDIS_TEST_AUTHORIZATION");
             Assert.True(settings.ExitCode == 0, settings.Output);
