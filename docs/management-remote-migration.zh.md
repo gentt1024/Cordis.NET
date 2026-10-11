@@ -64,7 +64,7 @@ const installed = await manager['pluginManager/installBundle']({
 `authorizedFetch` 提供当前宿主代际与应用请求身份。
 生成 TypeScript API 返回 Remote result；生成 .NET 客户端提供类型化抛错方法，例如
 `InspectAsync`、`InstallBundleAsync`、`WaitForInstallAsync`。
-Composition 在 `cordis/typert/Cordis.Composition.cordis.typert.json` 供应选定服务模型；
+Composition 在 `cordis/typert/Cordis.Composition.cordis.model.json` 供应选定服务模型；
 既有 `emit-dotnet` 命令及 `CordisTypertClientModel` 构建属性消费该模型，不加载 provider。
 
 ## 通知所有权

@@ -104,6 +104,18 @@ internal sealed class DotnetProjectionEmitter
                     throw new InvalidDataException(
                         "An optional native parameter requires its authored constant default: " +
                         method.Name + "." + parameter.Name);
+                if (parameter.Optional && parameter.Default is { Kind: "value" } constant &&
+                    constant.Type.TrimEnd('?') is "double" or "float" or "System.Double" or "System.Single" &&
+                    constant.Json is "\"NaN\"" or "\"Infinity\"" or "\"-Infinity\"" &&
+                    !selected.Serializer.Attributes.Any(attribute =>
+                        attribute.Name == "System.Text.Json.Serialization.JsonSourceGenerationOptionsAttribute" &&
+                        attribute.NamedArguments.Any(argument => argument.Name == "NumberHandling" &&
+                            int.TryParse(argument.Value.Json, out var handling) &&
+                            (handling & (int)System.Text.Json.Serialization.JsonNumberHandling
+                                .AllowNamedFloatingPointLiterals) != 0)))
+                    throw new InvalidDataException(
+                        "ProjectionUnsupported TYPM116: Non-finite optional default cannot be transmitted by the selected JSON number handling: " +
+                        method.Name + "." + parameter.Name + ". Host-side omission remains supported.");
                 Visit(parameter.Type);
             }
         }
@@ -780,28 +792,7 @@ internal sealed class DotnetProjectionEmitter
     private static string Literal(string value) =>
         Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(value, true);
 
-    private static string Constant(NativeConstant value) => value.Kind switch
-    {
-        "carrierDefault" => "default",
-        "emptyCollection" => "[]",
-        "enum" => "(global::" + value.Type + ")" + value.Json,
-        "type" => "typeof(" + JsonSerializer.Deserialize<string>(value.Json) + ")",
-        "value" when value.Json == "null" => "null",
-        "value" => value.Type.TrimEnd('?') switch
-        {
-            "string" or "System.String" => Literal(JsonSerializer.Deserialize<string>(value.Json)!),
-            "char" or "System.Char" => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(
-                JsonSerializer.Deserialize<string>(value.Json)![0],
-                true),
-            "float" or "System.Single" => value.Json + "F",
-            "decimal" or "System.Decimal" => value.Json + "M",
-            "ulong" or "System.UInt64" => value.Json + "UL",
-            "long" or "System.Int64" => value.Json + "L",
-            "uint" or "System.UInt32" => value.Json + "U",
-            _ => value.Json
-        },
-        _ => throw new InvalidDataException("Unsupported projected constant kind " + value.Kind)
-    };
+    private static string Constant(NativeConstant value) => DeclarationConstantEmitter.Emit(value);
 
     private void EmitAttribute(NativeAttribute attribute, string indent = "")
         => output.AppendLine(indent + AttributeText(attribute));

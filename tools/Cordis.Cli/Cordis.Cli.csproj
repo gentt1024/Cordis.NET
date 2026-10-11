@@ -2,7 +2,7 @@
   <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><OutputType>Exe</OutputType><IsPackable>true</IsPackable><PackAsTool>true</PackAsTool><ToolCommandName>cordis</ToolCommandName><PackageId>Cordis.NET.Tool</PackageId><Description>Validate configuration, run modular CLR applications, and manage plugins through Cordis.NET hosts.</Description></PropertyGroup>
   <PropertyGroup>
     <CordisTypertService>settingsController</CordisTypertService>
-    <CordisTypertClientModel>$(MSBuildProjectDirectory)/../../src/Cordis.Composition/obj/$(Configuration)/net10.0/cordis-typert/Cordis.Composition.cordis.typert.json</CordisTypertClientModel>
+    <CordisTypertClientModel>$(MSBuildProjectDirectory)/../../src/Cordis.Composition/obj/$(Configuration)/net10.0/cordis-typert/Cordis.Composition.cordis.model.json</CordisTypertClientModel>
     <CordisTypertCompiler>$(MSBuildProjectDirectory)/../Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.dll</CordisTypertCompiler>
     <CordisTypertClientNamespace>Cordis.Cli.Settings</CordisTypertClientNamespace>
     <CordisTypertClientName>SettingsClient</CordisTypertClientName>

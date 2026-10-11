@@ -11,30 +11,42 @@ internal sealed partial class SourceContractReader
     private readonly CSharpCompilation compilation;
     private readonly string projectDirectory;
     private readonly List<NativeDiagnostic> diagnostics = [];
+    private readonly IReadOnlyDictionary<string, NativeXmlDocumentation>? referenceDocumentation;
 
     private readonly Dictionary<IAssemblySymbol, NativeXmlDocumentation?> metadataDocumentation =
         new(SymbolEqualityComparer.Default);
 
 
-    private SourceContractReader(CSharpCompilation compilation, string projectDirectory)
+    private SourceContractReader(
+        CSharpCompilation compilation,
+        string projectDirectory,
+        IReadOnlyDictionary<string, NativeXmlDocumentation>? referenceDocumentation = null)
     {
         this.compilation = compilation;
         this.projectDirectory = Path.GetFullPath(projectDirectory);
+        this.referenceDocumentation = referenceDocumentation;
     }
 
     internal static DeclarationModelDocument ReadServices(
         CSharpCompilation compilation,
         string projectDirectory,
-        string? service = null) => ReadModel(compilation, projectDirectory, [], service ?? "*");
+        string? service = null,
+        IReadOnlyDictionary<string, NativeXmlDocumentation>? referenceDocumentation = null) =>
+        ReadModel(compilation, projectDirectory, [], service ?? "*", referenceDocumentation);
 
     internal static DeclarationModelDocument ReadModel(
         CSharpCompilation compilation,
         string projectDirectory,
         IEnumerable<string> metadataNames,
-        string? service)
+        string? service,
+        IReadOnlyDictionary<string, NativeXmlDocumentation>? referenceDocumentation = null)
     {
         if (string.IsNullOrWhiteSpace(service))
-            return ReadDeclarations(compilation, projectDirectory, metadataNames);
+            return ReadDeclarations(
+                compilation,
+                projectDirectory,
+                metadataNames,
+                referenceDocumentation: referenceDocumentation);
         var roots = compilation
             .SyntaxTrees
             .SelectMany(tree => tree.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>())
@@ -51,7 +63,12 @@ internal sealed partial class SourceContractReader
         if (service != "*" && roots.Length != 1)
             throw new InvalidDataException(
                 $"Exactly one authored Remote service must match '{service}'; found {roots.Length}.");
-        return ReadDeclarations(compilation, projectDirectory, metadataNames.Concat(roots.Select(MetadataName)), true);
+        return ReadDeclarations(
+            compilation,
+            projectDirectory,
+            metadataNames.Concat(roots.Select(MetadataName)),
+            true,
+            referenceDocumentation);
     }
 
     private NativeConstant? GetterConstant(ISymbol member)
@@ -89,6 +106,11 @@ internal sealed partial class SourceContractReader
     {
         if (symbol.DeclaringSyntaxReferences.Length == 0 && symbol.ContainingAssembly is { } assembly)
         {
+            if (referenceDocumentation is not null && referenceDocumentation.TryGetValue(
+                    assembly.Identity.ToString(),
+                    out var explicitDocumentation) &&
+                symbol.OriginalDefinition.GetDocumentationCommentId() is { } explicitId)
+                return explicitDocumentation.Read(explicitId);
             if (!metadataDocumentation.TryGetValue(assembly, out var documentation))
             {
                 foreach (var reference in compilation.References.OfType<PortableExecutableReference>())
@@ -139,9 +161,18 @@ internal sealed partial class SourceContractReader
         return new(
             value.Kind == TypedConstantKind.Enum ? "enum" : "value",
             value.Type?.ToDisplayString() ?? "",
-            JsonSerializer.Serialize(value.Value));
+            ConstantJson(value.Value));
     }
 
     private static NativeConstant Constant(ITypeSymbol type, object? value) =>
-        new(type.TypeKind == TypeKind.Enum ? "enum" : "value", type.ToDisplayString(), JsonSerializer.Serialize(value));
+        new(type.TypeKind == TypeKind.Enum ? "enum" : "value", type.ToDisplayString(), ConstantJson(value));
+
+    private static string ConstantJson(object? value) => value switch
+    {
+        double number when !double.IsFinite(number) => JsonSerializer.Serialize(
+            number.ToString("R", System.Globalization.CultureInfo.InvariantCulture)),
+        float number when !float.IsFinite(number) => JsonSerializer.Serialize(
+            number.ToString("R", System.Globalization.CultureInfo.InvariantCulture)),
+        _ => JsonSerializer.Serialize(value)
+    };
 }

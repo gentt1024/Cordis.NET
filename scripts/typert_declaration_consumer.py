@@ -31,10 +31,11 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
     owned = [model] + [response / name for name in ("model-roots.rsp", "model-sources.rsp", "model-references.rsp")]
     authored = json.loads(model.read_text(encoding="utf-8"))
     assert authored["declarations"], "Author produced no declaration facts"
-    assert not list(response.glob("*.cordis.typert.json")), "Ordinary author unexpectedly selected the remote pipeline"
     shutil.copyfile(model, output / "ordinary-declaration-model.json")
     with zipfile.ZipFile(feed / "IndependentDeclarations.Provider.1.0.0-alpha.nupkg") as archive:
         assert archive.read("cordis/typert/IndependentDeclarations.Provider.cordis.model.json") == model.read_bytes()
+        assert [name for name in archive.namelist() if name.startswith("cordis/typert/") and name.endswith(".json")] == \
+            ["cordis/typert/" + model.name], "The author package exposes multiple declaration inputs"
     hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in owned}
     stamps = {path.name: path.stat().st_mtime_ns for path in owned}
     run("declaration-author-incremental", [dotnet, "build", author_project, "-c", "Release"])
@@ -394,11 +395,11 @@ def verify_saved_remote_refusals(author, model, composition, compiler, roslyn, d
     refused_source = author / "RefusedClient.Generated.g.cs"
     output_kind = {"DynamicallyLinkedLibrary": "Library", "ConsoleApplication": "Exe", "WindowsApplication": "WinExe"}
 
-    def extract(label, destination):
+    def extract(label, destination, reference_response=None):
         return run("saved-remote-extract-" + label,
             [dotnet, compiler, "--roslyn-directory", roslyn, "extract-model",
              "--project-directory", author, "--sources", response / "model-sources.rsp",
-             "--references", response / "model-references.rsp", "--assembly-name", compilation["assemblyName"],
+             "--references", reference_response or response / "model-references.rsp", "--assembly-name", compilation["assemblyName"],
              "--language-version", "14.0", "--nullable", compilation["nullable"],
              "--defines", ";".join(compilation["defines"]), "--allow-unsafe", str(compilation["allowUnsafe"]).lower(),
              "--check-overflow", str(compilation["checkOverflow"]).lower(), "--output-kind", output_kind[compilation["outputKind"]],
@@ -448,6 +449,32 @@ def verify_saved_remote_refusals(author, model, composition, compiler, roslyn, d
         if label == "private-marked-method":
             shutil.copyfile(model_input, private_model)
         refusals.append({"case": label, "diagnostic": diagnostic, "staleOutputRemoved": True})
+
+    metadata, metadata_project = project("ExternalMetadataContext", "",
+        '<PackageReference Include="IndependentData.Provider" Version="1.0.0-alpha"/>')
+    metadata_source = metadata / "MetadataContext.cs"
+    metadata_source.write_text(
+        'using IndependentDeclarations; using System.Text.Json.Serialization; namespace IndependentExternalContext;\n'
+        '[JsonSourceGenerationOptions(PropertyNamingPolicy=JsonKnownNamingPolicy.CamelCase, RespectNullableAnnotations=true)]\n'
+        '[JsonSerializable(typeof(SharedData))] [JsonSerializable(typeof(int?))]\n'
+        'public partial class MetadataOnlyJson : JsonSerializerContext;\n', encoding="utf-8")
+    run("saved-remote-metadata-context-build", [dotnet, "build", metadata_project, "-c", "Release"])
+    metadata_references = response / "external-metadata-references.rsp"
+    metadata_references.write_text((response / "model-references.rsp").read_text(encoding="utf-8-sig") +
+        "\n" + str(metadata / "bin/Release/net10.0/ExternalMetadataContext.dll") + "\n", encoding="utf-8")
+    try:
+        source_file.write_text(original.replace("typeof(SharedRemoteJson)",
+            "typeof(IndependentExternalContext.MetadataOnlyJson)", 1), encoding="utf-8")
+        extract("external-metadata-context", model_input, metadata_references)
+    finally:
+        source_file.write_text(original, encoding="utf-8")
+    metadata_facts = json.loads(model_input.read_text(encoding="utf-8"))
+    metadata_context = next(value for value in metadata_facts["declarations"]
+        if value["metadataName"] == "IndependentExternalContext.MetadataOnlyJson")
+    assert metadata_context["provenance"] == "metadata-signature", "The context control did not reach actual compiled metadata"
+    emit_refusal("external-metadata-context", "TYPM115")
+    refusals.append({"case": "external-metadata-context", "diagnostic": "TYPM115", "compiledLibraryInput": True,
+        "staleOutputRemoved": True})
 
     try:
         source_file.write_text(original.replace("public partial class SharedRemote", "internal partial class SharedRemote"), encoding="utf-8")
@@ -519,10 +546,11 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
     model = author / "obj/Release/net10.0/cordis-typert/IndependentData.Provider.cordis.model.json"
     with zipfile.ZipFile(feed / "IndependentData.Provider.1.0.0-alpha.nupkg") as archive:
         assert archive.read("cordis/typert/" + model.name) == model.read_bytes()
+        assert [name for name in archive.namelist() if name.startswith("cordis/typert/") and name.endswith(".json")] == \
+            ["cordis/typert/" + model.name], "The shared author package exposes multiple declaration inputs"
     shutil.copyfile(model, output / "ordinary-data-model.json")
     declaration = json.loads(model.read_text(encoding="utf-8"))
     assert declaration["declarations"], "Author produced no declaration facts"
-    assert not list(model.parent.glob("*.cordis.typert.json")), "Author persisted a separate wire model"
     shared = next(value for value in declaration["declarations"] if value["metadataName"] == "IndependentDeclarations.SharedData")
     facts = {value["name"]: value for value in shared["members"] if value["kind"] == "property"}
     assert facts["Count"]["name"] == "Count", "Serializer naming policy leaked into declaration facts"

@@ -7,22 +7,28 @@ namespace Cordis.Typert.Generator.Model;
 internal sealed class NativeXmlDocumentation : DocumentationProvider
 {
     private readonly string path;
-    private readonly Dictionary<string, string> members;
+    private readonly Lazy<Dictionary<string, string>> members;
 
-    internal NativeXmlDocumentation(string path)
+    internal NativeXmlDocumentation(string path) : this(Path.GetFullPath(path), () => XDocument.Load(path))
     {
-        this.path = Path.GetFullPath(path);
-        members = XDocument
-            .Load(this.path)
+    }
+
+    private NativeXmlDocumentation(string identity, Func<XDocument> document)
+    {
+        path = identity;
+        members = new(() => document()
             .Descendants("member")
             .Where(member => member.Attribute("name") is not null)
             .ToDictionary(
                 member => member.Attribute("name")!.Value,
                 member => NormalizeLineEndings(member.ToString()),
-                StringComparer.Ordinal);
+                StringComparer.Ordinal));
     }
 
-    internal string Read(string documentationMemberId) => members.GetValueOrDefault(documentationMemberId, "");
+    internal static NativeXmlDocumentation FromText(string assemblyIdentity, string text) =>
+        new(assemblyIdentity, () => XDocument.Parse(text));
+
+    internal string Read(string documentationMemberId) => members.Value.GetValueOrDefault(documentationMemberId, "");
 
     internal static string NormalizeLineEndings(string value) =>
         value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');

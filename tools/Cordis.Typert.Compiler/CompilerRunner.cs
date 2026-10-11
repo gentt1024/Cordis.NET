@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.Json;
 using Cordis.Typert.Generator.Model;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -27,7 +26,7 @@ internal static class CompilerRunner
 
             var allowed = args[0] switch
             {
-                "extract" or "extract-model" => new[]
+                "extract-model" => new[]
                 {
                     "project-directory",
                     "sources",
@@ -36,7 +35,8 @@ internal static class CompilerRunner
                     "language-version",
                     "nullable",
                     "defines",
-                    args[0] == "extract" ? "service" : "roots",
+                    "service",
+                    "roots",
                     "output",
                     "allow-unsafe",
                     "check-overflow",
@@ -55,8 +55,7 @@ internal static class CompilerRunner
             var output = Required(options, "output");
             var content = args[0] switch
             {
-                "extract" => Extract(options, false),
-                "extract-model" => Extract(options, true),
+                "extract-model" => Extract(options),
                 "inspect-model" => DeclarationModelJson.Catalog(
                     DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model")))),
                 "emit-dotnet-data" => DeclarationDataProjection.Emit(
@@ -101,25 +100,15 @@ internal static class CompilerRunner
     private static string EmitDotnet(Dictionary<string, string> options)
     {
         var service = Required(options, "service");
-        var (model, declarationIdentity) = RemoteModel(File.ReadAllText(Required(options, "model")), service);
-        var source = DotnetProjectionEmitter.Emit(
-            model,
+        var model = DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model")));
+        return DotnetProjectionEmitter.Emit(
+            DeclarationRemoteProjection.Project(model, service),
             Required(options, "namespace"),
             service,
             Required(options, "client"));
-        return declarationIdentity is null ? source : source + "// Declaration model " + declarationIdentity + "\n";
     }
 
-    private static (NativeModelDocument Model, string? DeclarationIdentity) RemoteModel(string json, string service)
-    {
-        using var document = JsonDocument.Parse(json);
-        if (document.RootElement.GetProperty("formatVersion").GetInt32() == NativeModelJson.CurrentVersion)
-            return (NativeModelJson.Deserialize(json), null);
-        var model = DeclarationModelJson.Deserialize(json);
-        return (DeclarationRemoteProjection.Project(model, service), model.ContractIdentity);
-    }
-
-    private static string Extract(Dictionary<string, string> options, bool declarations)
+    private static string Extract(Dictionary<string, string> options)
     {
         var directory = Path.GetFullPath(Required(options, "project-directory"));
         if (!LanguageVersionFacts.TryParse(Required(options, "language-version"), out var language))
@@ -163,29 +152,19 @@ internal static class CompilerRunner
                 checkOverflow: Boolean(options, "check-overflow"),
                 platform: platform,
                 optimizationLevel: Boolean(options, "optimize") ? OptimizationLevel.Release : OptimizationLevel.Debug));
-        string content;
-        NativeDiagnostic[] diagnostics;
-        if (declarations)
-        {
-            var roots = File
-                .ReadAllLines(Path.GetFullPath(Required(options, "roots"), directory))
+        var roots = options.TryGetValue("roots", out var rootsFile)
+            ? File
+                .ReadAllLines(Path.GetFullPath(rootsFile, directory))
                 .Where(line => !string.IsNullOrWhiteSpace(line))
-                .Select(line => line.Trim());
-            var model = SourceContractReader.ReadDeclarations(compilation, directory, roots);
-            content = DeclarationModelJson.Serialize(model);
-            diagnostics = model.Diagnostics;
-        }
-        else
-        {
-            var model = SourceContractReader.Read(compilation, directory, Required(options, "service"));
-            content = NativeModelJson.Serialize(model);
-            diagnostics = model.Diagnostics;
-        }
+                .Select(line => line.Trim())
+                .ToArray()
+            : [];
+        var model = SourceContractReader.ReadModel(compilation, directory, roots, options.GetValueOrDefault("service"));
 
-        foreach (var diagnostic in diagnostics)
+        foreach (var diagnostic in model.Diagnostics)
             Console.WriteLine(
                 "CORDISTYPERT " + diagnostic.Category + " " + diagnostic.Code + ": " + diagnostic.Message);
-        return content;
+        return DeclarationModelJson.Serialize(model);
     }
 
     private static string Required(Dictionary<string, string> options, string name) =>

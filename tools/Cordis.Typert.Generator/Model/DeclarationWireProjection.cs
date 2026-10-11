@@ -4,15 +4,30 @@ namespace Cordis.Typert.Generator.Model;
 
 internal static class DeclarationWireProjection
 {
-    internal static NativeMember Member(DeclarationMember facts, Func<DeclarationReference, NativeTypeReference> reference,
-        NativeAttribute[] attributes, string namingPolicy, NativeConstant? initializer, NativeConstant? getterConstant) =>
-        new(facts.Name, MemberName(facts.Name, attributes, namingPolicy), facts.Kind,
-            reference(facts.Type!), facts.Required,
-            attributes.Any(attribute => attribute.Name == DeclarationAttributeProjection.JsonPrefix + "JsonRequiredAttribute"),
+    internal static NativeMember Member(
+        DeclarationMember facts,
+        Func<DeclarationReference, NativeTypeReference> reference,
+        NativeAttribute[] attributes,
+        string namingPolicy,
+        NativeConstant? initializer,
+        NativeConstant? getterConstant) =>
+        new(
+            facts.Name,
+            MemberName(facts.Name, attributes, namingPolicy),
+            facts.Kind,
+            reference(facts.Type!),
+            facts.Required,
+            attributes.Any(attribute =>
+                attribute.Name == DeclarationAttributeProjection.JsonPrefix + "JsonRequiredAttribute"),
             facts.Getter == "Public" || facts.Kind == "field",
             facts.Setter == "Public" ? facts.InitOnly ? "init" : "set" :
-                facts.Kind == "field" && !facts.Modifiers.Contains("readonly", StringComparer.Ordinal) ? "field" : "none",
-            facts.Accessibility, attributes, initializer, getterConstant, facts.Documentation, facts.Location);
+            facts.Kind == "field" && !facts.Modifiers.Contains("readonly", StringComparer.Ordinal) ? "field" : "none",
+            facts.Accessibility,
+            attributes,
+            initializer,
+            getterConstant,
+            facts.Documentation,
+            facts.Location);
 
     internal static bool Framework(DeclarationType type) =>
         (type.Assembly.StartsWith("System.Runtime, ", StringComparison.Ordinal) ||
@@ -21,7 +36,9 @@ internal static class DeclarationWireProjection
         type.Assembly.StartsWith("System.Text.Json, ", StringComparison.Ordinal) &&
         type.Assembly.EndsWith(", Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51", StringComparison.Ordinal);
 
-    internal static NativeTypeReference? FrameworkReference(DeclarationType type, DeclarationReference reference,
+    internal static NativeTypeReference? FrameworkReference(
+        DeclarationType type,
+        DeclarationReference reference,
         Func<DeclarationReference, NativeTypeReference> project)
     {
         if (!Framework(type))
@@ -39,12 +56,14 @@ internal static class DeclarationWireProjection
             "System.Collections.Generic.ICollection`1" => "System.Collections.Generic.ICollection<T>",
             "System.Collections.Generic.IReadOnlyCollection`1" => "System.Collections.Generic.IReadOnlyCollection<T>",
             "System.Collections.Generic.Dictionary`2" => "System.Collections.Generic.Dictionary<TKey, TValue>",
-            "System.Collections.Generic.IReadOnlyDictionary`2" => "System.Collections.Generic.IReadOnlyDictionary<TKey, TValue>",
+            "System.Collections.Generic.IReadOnlyDictionary`2" =>
+                "System.Collections.Generic.IReadOnlyDictionary<TKey, TValue>",
             "System.Collections.Generic.IDictionary`2" => "System.Collections.Generic.IDictionary<TKey, TValue>",
             _ => null
         };
         return name is not null && reference.Arguments.Length == type.TypeParameters.Length
-            ? new("collection", name, reference.Nullability, reference.Arguments.Select(project).ToArray()) : null;
+            ? new("collection", name, reference.Nullability, reference.Arguments.Select(project).ToArray())
+            : null;
     }
 
     // An authored member name is a declaration fact; its serializer's naming policy is a projection input.

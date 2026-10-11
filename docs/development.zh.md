@@ -2,6 +2,23 @@
 
 [English](development.md)
 
+## 模型管线合同
+
+本次重建让普通根与 Remote 根使用同一个声明事实模型。不完整的移植产物不能反过来定义下一轮架构：缺失能力先校正事实和阶段职责，不自动另开公共协议。本轮不假设实验模型文件或客户端存在兼容承诺。受维护消费者重新提取、生成和构建；应用持久数据、Git 历史与已发布包身份另行保全。
+
+| 阶段 | 输入 → 输出 | 所有者 | 拒绝边界 | 退出路径 |
+|---|---|---|---|---|
+| 选择与提取 | 有效编译输入及显式普通根和／或 service 选择 → 声明事实、引用图与诊断 | Source reader 与 `extract-model` | 无效根、不可用语法、重复身份或缺失必需事实；分析诊断不等于所有后端都必须拒绝 | 只输出 `$(AssemblyName).cordis.model.json`；退出旧 `extract` 入口与独立 wire 制品 |
+| 校验与组合 | 当前保存事实及可选显式引用模型 → 已校验身份与可达定义 | Model reader／composition | 输入不完整或不一致、身份不符、定义缺失／冲突；引用不增加主模型 roots | 拒绝后重新提取；不保留旧格式 reader、转换器或从 DLL 猜补事实 |
+| 按用途解释 | 共同事实加明确后端政策 → 可重新计算的内部投影 | 声明解释器与所选后端 | 不支持的行为由消费后端拒绝，不从分析事实中静默删除 | 替换独立的作者模型语义解释；内部投影不是第二份持久合同 |
+| 绑定 Host | Remote 事实、作者实际实现与显式 STJ metadata → 类型化 binding 和运行 descriptor | Remote generator；Registry／Gateway 持有发布与调用寿命 | 既有 Host 合同、声明漂移与不可用运行能力；独立 caller 限制不自动禁用 Host | 保留正确绑定、取消与撤销行为；删除旧双制品 conformance 桥 |
+| 生成消费者 | 同一保存事实及选定目录／数据／客户端政策 → 对应后端已支持范围内的目录、DTO／STJ 或 .NET／TS 输出 | 各用途 emitter | caller 无法重建必需数据／serializer 行为时拒绝该投影，不复制作者业务代码 | 保留 pre-`CoreCompile` 生成及无 Provider 实现引用的 caller；普通根不要求 Remote 注册 |
+| 构建与交付 | 当前源码、模型及生成结果 → 包与消费者证据 | MSBuild targets、包检查及既有消费者门禁 | 生成失败删除拥有的旧输出；Clean 与增量构建仍是可观察合同 | 只打包 `cordis/typert/$(AssemblyName).cordis.model.json`；退出 `CordisTypertDeclarationModelPath` 及旧模型路径 |
+
+此表定义重建目标，不声称验证已经完成。当前必须接通的消费者包括 Settings、PluginManager、通知、普通目录、DTO／STJ 及受支持的 .NET／TS 路线。完整源码／编译器覆盖、更广引用模型及 Schema／TS 后端、丰富 Remote／owned-value 协议、原生文档与原任务 UI／平台工作继续开放。后端拒绝记录当前能力，不关闭这些义务。新结果必须绑定真实源码和包批次；下方历史检查点不证明本次重建。
+
+MSBuild 按解析得到的完整程序集身份，将引用的 XML 文档作为生成器输入。这样，即使提取器读取实现程序集，而 C# 编译器绑定引用程序集，两边仍保留相同的文档事实。XML 文本参与增量分析，只在引用声明需要时解析。生成器仍使用编译器符号定位实现成员、发射可编译的 C#；调用语义来自共同声明合同。
+
 ## 快速循环
 
 源码构建的包版本统一定义在 [Directory.Build.props](../Directory.Build.props)。项目继承该值，包验证脚本也读取它来构建隔离消费者。需要精确的本地包版本时，查询同一个值：
@@ -103,7 +120,7 @@ B 保留源所有权、raw 不透明性与既有 Session 队列。独立审查�
 |---|---|---|---|---|
 | 模块 specifier、导出归一化与包子路径：[Loader Entry import](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/vendor/loader/src/config/entry.ts#L224)为组合入口调用[Loader.unwrapExports](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/vendor/loader/src/index.ts#L201) | 既有 `DeploymentModuleResolver.Register`、`ClrModuleResolver.Register`、`IClrPluginModule`；工具链 `exports` 元数据与共享 bundle 租约 | 独立 NuGet 作者及仅包引用消费者验证双 Entry、alias 身份、共享程序集/ALC、各自配置、次级子路径交付及最终包移除。两个生成的 TS 客户端实际 HTTP 调用并拒绝错误 DTO 类型 | CLR EntryType 与显式 NuGet 子路径元数据适配模块导出。单入口元数据继续有效，不要求空导出表。模块导出不等于 Cordis `Provide` | 已实现且有证据 |
 | 原生生成式 Remote 子集：[Host tsdown 配置](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/tsdown.config.ts#L33)调用[typertPlugin 与 WorkspaceTypertGenerator](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/tsdown-plugin.ts#L96)，Loader 与 Client Remote assembly 消费其输出 | SDK Roslyn `RemoteGenerator`、`[RemoteService]`、`[RemoteMethod]`、源生成 `JsonSerializerContext`、类型化调用委托与 `TypertArtifacts` | 独立作者包编译 descriptor 和 JSON 元数据；指定不支持的作者以 `CORDISREMOTE001` 拒绝。仅包引用 JIT 消费者调用生成的方法 | 原生生成接受 `net10.0` 的公开、顶层、非泛型 partial class 与显式 JSON context。`TypertCodec.CreateNullable` 保留 JSON 元数据擦除的根引用可空注解。该有界 Roslyn/JSON 适配不提供完整嵌套泛型类型图 | 明确平台适配 |
-| 完整源类型图与反射：generator analyzer/model 供给[生产目录脚本的 projectCordisCatalog](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/scripts/gen-cordis-catalog.ts#L1161)、生成的子系统引用与运行时反射 | 既有 Remote 模型，加上显式选择普通声明的 v2 模型及仅制品目录 | 有界普通声明包／目录消费者通过既有 .NET Typert 门禁，见[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11) | 公开根、泛型定义/应用、直接继承/接口、方法/事件、源码文档及外部引用已有原生路线。完整源/编译器覆盖、引用模型组合及各后端仍开放 | 选择的声明／目录子集已实现且有包证据；完整行仍开放 |
+| 完整源类型图与反射：generator analyzer/model 供给[生产目录脚本的 projectCordisCatalog](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/scripts/gen-cordis-catalog.ts#L1161)、生成的子系统引用与运行时反射 | 普通根与 Remote 根共用的声明模型，以及仅制品目录 | 有界普通声明包／目录消费者通过既有 .NET Typert 门禁，见[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11) | 公开根、泛型定义/应用、直接继承/接口、方法/事件、源码文档及外部引用已有原生路线。完整源/编译器覆盖、引用模型组合及各后端仍开放 | 选择的声明／目录子集已实现且有包证据；完整行仍开放 |
 | 原生 Schema、descriptor、codec 与发布子集：`packages/typert/protocol/src/types.ts`、generator emitter；生成的 `./typert` 与 `./remote` 消费者 | `TypertContribution`、`TypertInvocationDescriptor`、`TypertCodec`、`TypertArtifacts.Contribution` / `GenerateClient` | 包 JIT 调用使用生成的 descriptor 与严格 JSON 元数据，错误参数被拒绝。多 Entry CLR module 从实际 bundle 提供 descriptor 和 Schema | JSON Schema/类型元数据适配可执行 Zod factory。不支持的 Schema keyword 拒绝；完整图 codec 与 owned-value 合同仍未完成 | 已实现且有证据 |
 | 原子、Fiber 持有的原生 registry/provider 子集：`packages/typert/registry/src/service.ts`；Loader 与 Gateway | `TypertRegistry.Register`、`RegisterRemotes`、lookup/Context 注册及配置、schema/package 查询 | 定向原生测试覆盖原子重复拒绝、实际 Fiber 所有权、lookup wire 稳定性、override 与撤销。包消费者证明 provider 移除及 definition tombstone | 既有 Cordis effect 持有 contribution。身份/schema/invocation/endpoint 冲突在提交前拒绝；provider 声明在 resolver 撤销后保留 | 已实现且有证据 |
 | 原生制品发现与撤销：`packages/typert/loader/src/index.ts`；live Loader Entry 与显式贡献包 | `TypertLoader.StartAsync`、`ITypertArtifactResolver`、`StaticTypertArtifactResolver`、CLR `IClrTypertModule` | 包消费者从实际 Entry 发现制品，最后一个 Entry 移除后撤销。原生测试覆盖共享 Entry 与 unmount 后 import 完成 | 静态 factory 支持 AOT，CLR 导出在 bundle ALC 中解析。精确原生 module request 可以贡献制品，固定 Node Loader 则发现包根导出。该差异明确记录 | 已实现且有证据 |
@@ -209,6 +226,8 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 
 ## 实施续建，2026-10-10
 
+> 历史续建记录。本节实现与验证描述仅属于所列检查点；其中的桥接机制已由当前管线合同要求退出。
+
 固定 main 整合与局部生命周期修正保留为独立检查点。多入口消费者现在验证路由撤销后的稳定制品保留，不再要求与 main 冲突的删除；无关 B 的断言也能在 V2 调用成功后拒绝实际旧的全 owner 重建。历史验收记录不改写。
 
 后续实现新增 SDK 提取的独立原生模型、随包 compiler/build target、源事实 conformance 桥和仅消费模型的类型化 .NET 调用者。生产 Settings describe 在一个既有 profile 检查点读取全部选择的 namespace；普通 provider 仍可直接使用，无须 RPC。调用者生成源码在 CoreCompile 前进入编译，STJ 能看到完整 DTO/context；独立消费者关闭 reflection fallback。[新门禁](../scripts/verify-typert-dotnet.py) 并入 `verify.py --package`，TS/Web 仍分开验证。
@@ -264,11 +283,11 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 
 | 既有职责／选定事实 | 分析状态与本轮义务 | 投影／消费者边界 |
 |---|---|---|
-| T01：普通公开声明、Service、Config、事件、显式引用对象 | 选择的普通根现在使用下文的独立 v2 声明路线；完整运行时、事件和对象消费者仍待实施 | 普通 Service 不强制 RPC；事件与对象消费者需要各自路线 |
-| T01/T02：选定成员签名、泛型定义／实参、接口 | 有界 v2 路线保留选择的方法、interface 和 type-parameter 关系；完整引用图组合仍待实施 | C# 与 TS 分别验收；投影暂不支持不能关闭分析职责 |
+| T01：普通公开声明、Service、Config、事件、显式引用对象 | 选择的普通根使用共同声明模型；完整运行时、事件和对象消费者仍待实施 | 普通 Service 不强制 RPC；事件与对象消费者需要各自路线 |
+| T01/T02：选定成员签名、泛型定义／实参、接口 | 有界声明模型保留选择的方法、interface 和 type-parameter 关系；完整引用图组合仍待实施 | C# 与 TS 分别验收；投影暂不支持不能关闭分析职责 |
 | T02：空性、required、支持的常量／默认值、文档／来源／编译事实 | Remote／data 切片及普通根保留有界事实；本候选的包验证证据见下文 | 当前 .NET DTO／客户端投影拒绝不支持形状，不丢弃事实 |
 | T02：跨包身份与外部引用 | 普通路线保留程序集／metadata 身份及可解释外部引用；完整跨包模型组合仍待实施 | Caller 不引用可卸载 Provider 实现；保留 model-only 作者路线 |
-| T03：运行时、Schema、.NET、TS 消费同一模型 | 必须逐步迁移；源码／制品一致性桥是过渡，不是反推模型权威 | 真实调用者迁移期间保留已有运行时和 TS emitter |
+| T03：运行时、Schema、.NET、TS 消费同一模型 | 所有标准入口必须消费共同声明事实；退出双制品 conformance 桥，保留所选 service 漂移拒绝 | 后端政策保持独立；保留正确运行时及 TS 行为，并验证真实 caller |
 | T04：更丰富的 .NET 方法／数据投影 | optional／default 调用已有原生路线；readonly 数据、record struct、名称冲突仍拒绝；其余要求支持的用例继续开放 | 各后端需要有界支持及实际使用证据；不要求每种分析类型都可序列化 |
 | T05：model-only、pre-CoreCompile 后 STJ、无需 Node、不引用 Provider | 既有包消费 Settings 切片有证据；新增事实和客户端需重新验证 | IDE／design-time 和具名 UI 环境仍待验证；控制台或 Node 不替代 |
 
@@ -309,7 +328,7 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 | 方向 | 合同落点与推荐 | 兼容和剩余决策 |
 |---|---|---|
 | D-REV | 标准 Settings 统一采用数值合同。`double` 对应 JavaScript number；观察版本从 0 开始，由 Settings owner 持有。省略 expected revision 只跳过先前视图比较。 | 已批准直接纠正：消费者重新生成与构建；拒绝 string/null expected revision；不新增版本化 Remote 或转换路径。仅保留具有独立职责的完整配置／文件 hash 机制。 |
-| D-MODEL | `CordisTypertModelRoot` 选择精确 CLR metadata name：普通公开根，或为分析保留的显式标记 Remote 根。v3 保存结构化 attribute 引用、partial／成员来源和 JSON context 事实，旧声明须重提取。普通选择不要求 Remote attribute、`partial`、serializer context 或注册。 | v1 保留运行 conformance 及受支持 wire 投影职责。源 Remote 和保存 direct unary 投影使用同一声明解释器；optional/default 事实驱动受支持 binding 和客户端。普通模型不自动成为 v1 generator 输入，分析不使方法成为 RPC。 |
+| D-MODEL | `CordisTypertModelRoot` 选择精确 CLR metadata name；`CordisTypertService` 选择作者 service。两者进入同一声明模型，保留结构化 attribute、来源与 JSON context 事实。普通选择不要求 Remote attribute、`partial`、serializer context 或注册。 | Host 绑定作者实际代码及显式 STJ metadata；独立 caller 对同一事实应用自己的可重建限制。内部投影是派生结果，不是独立公开制品。不完整／旧输入须重新提取，不保留历史兼容路线。 |
 | D-WIRE | Registry/Gateway 继续拥有分发和生命周期。既有原生 HTTP/NDJSON 是 unary、显式 Context/lookup、downlink/base64 的当前 .NET/TS 互通边界。Context/owned references、Peer/uplink/events/attachments 的合同落实后在同一所有者扩展。 | 不承诺整个 DSH 产品 wire，也未选入新 carrier。直接固定客户端互通必须逐边界说明帧、codec、所有权、错误和取消，并通过真实跨端调用。产品 Remote 选择表留在库外。 |
 
 迁移见[Settings 合同迁移](settings-contract-migration.zh.md)。持久 YAML/JSON 格式及 Git 历史不变。标准 Settings 消费者需要重建；未来发布必须使用新的包版本身份。本地源码版本不变。
@@ -321,18 +340,20 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 | 选择的普通 Plugin/Service/Config/object 声明 | 公开源根、可达定义、字段/属性/indexer、重载/泛型方法、事件及 delegate | 已实现且有有界包／目录证据。成员存在不推导执行或 RPC。 |
 | 泛型、继承和引用事实 | 程序集加 metadata 身份，type parameter owner/ordinal/constraints、应用实参、containing type、直接 base/interfaces、tuple 名称及 enum 底层类型 | 有界分析已实现；包 fixture 检查字面事实。不展开外部实现。 |
 | required、nullable、默认值及来源 | 分开的 required/accessor/nullability 标志，类型化常量或未执行 initializer 表达式，XML/源码位置及 provenance | 有界分析已实现，不执行源码体。metadata-reference 的源码体仍不可得。 |
-| 普通独立目录 | 打包当前声明制品，不引用 provider 实现地消费、验证身份及投影声明成员 | 已实现，独立包／目录证据进入 `verify-typert-dotnet.py`，没有另建平行门禁。格式升级须重新提取并取得新包证据。 |
-| Remote/.NET DTO/STJ/TS 投影 | 既有 v1 支持路线及 pre-`CoreCompile` 时序，保存 direct unary 使用共享 v3 声明解释器 | 生成 Settings、管理／通知及显式普通 DTO/STJ 引用模型已在各自绑定的检查点通过。新 v3 保存 unary 路径已有最小 compiler 探针，实际包／HTTP 消费及最终冻结门禁仍在进行。泛型 DTO 发射及更广的 Remote／引用模型后端继续开放。 |
+| 普通独立目录 | 打包当前声明制品，不引用 provider 实现地消费、验证身份及投影声明成员 | 有界目录行为在 `verify-typert-dotnet.py` 有历史包证据；重建链须在同一门禁重新提取并取得新包证据。 |
+| Remote/.NET DTO/STJ/TS 投影 | 同一声明解释器、明确后端政策与 pre-`CoreCompile` caller 生成 | Settings、管理／通知与普通 DTO/STJ 引用模型消费者保留各自历史检查点。重建的共同管线须取得真实包／HTTP 及最终冻结证据。泛型 DTO 发射及更广的 Remote／引用模型后端继续开放。 |
 | 完整 events/reference-object 运行及跨包源组合 | 声明引用保留身份，当前运行时沿用既有显式注册 | 普通 DTO/STJ 源模型组合已通过显式输入实现。更广的 Remote/Schema/TS 组合、owned graph 调用及富协议各行仍开放。 |
 | IDE、UI 及整体交付 | 既有 TFM/analyzer/build/carrier 路线 | design-time IDE、WPF/Avalonia/Godot/Blazor、浏览器管理、跨平台/AOT 和最终冻结范围验收需要具名证据。控制台/目录通过不将这些关项。 |
 
-首片复用 source reader 的事实 helper、打包 compiler 和 MSBuild 工具定位。
-没有新增配置、安装或 Remote 权威。有限的 v1 源事实一致性桥在生产 emitter 消费对应模型事实时检测过期源事实，
-其保留依据是这项验证职责。原生文档集成、完整生成产品 UI/Client assembly、富协议及其他原基础设施义务仍在原范围内开放；标准 PluginManager 与选定通知合同已实现，不新增操作所有者。
+重建按正确职责复用事实 helper、emitter 和构建工具定位，不新增配置、安装或 Remote 权威。声明漂移拒绝属于共同事实，保留该检查不要求第二份作者制品。原生文档集成、完整生成 UI／Client assembly、丰富协议及其他原基础设施义务继续开放。标准 PluginManager 与选定通知合同保留既有操作所有者。
+
+**历史证据：** 以下结果早于当前管线合同。
 
 上述有界检查在 `8d4838af3a500b84c6c5d7b5eca93d92d813c45c` 通过；[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11)和[绑定回执](../verification/settings-model-continuation-2026-10-11/evidence.json)保留包身份及早先失败。生成通知交付单独绑定下面的管理检查点；标准 Settings 文档打开及其余原职责继续开放。
 
 ### 生成式管理／模型检查点2026-10-11
+
+> 历史验证记录。下文模型代际名称与制品安排描述该检查点，不是当前公共合同，也不构成保留要求。
 
 已完成的本地源码检查点为 `6ad9d7f1aac2b4546e23ea5e16ff290d4be312c8`；[验证记录](validation.zh.md#生成式管理与普通模型消费2026-10-11)及其回执绑定实际包消费者。生成 PluginManager 复用既有 operations、活跃安装所有权及宿主授权；一个选定通知 source 属于同一 Gateway。CLI、ManagedApplication 和独立 .NET／TS 调用者采用这些合同，手写管理 HTTP／SSE 及相应浏览器 decoder 已退出。空 Settings namespace 在可选 provider 查找前失败。
 
@@ -341,6 +362,8 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 从原范围表的开放行继续：其他引用模型后端、保存的 v2 重建 Remote、其余丰富 Remote／owned-value 协议、原生文档及不依赖产品的 UI／Client assembly。本批不推导它们完成。重大公开合同／平台取舍及新增依赖仍需讨论，Maker 适配仍属其自己的会话。本批 Windows JIT 验收不将早先 Linux／AOT 证据延伸到新源码；合并和发布是另行且未授权的行动。
 
 ### 显式引用模型检查点，2026-10-11
+
+> 历史验证记录。以下结果仅属于所列源码及包，不证明当前重建。
 
 普通 DTO/STJ 发射现接受 `CordisTypertDataReferenceModel` item，按完整声明身份解析，根仍由主模型选择。它复用 v2 源事实和既有发射器；缺失、冲突或不支持的定义在保留生成输出前拒绝。当前提取器对非公开的显式 JSON 成员报告 `TYPM202`；重新提取这类模型，不猜补遗漏事实。没有改变格式、依赖、持久 profile 或 Remote 协议。
 

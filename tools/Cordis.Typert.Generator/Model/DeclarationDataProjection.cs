@@ -78,8 +78,13 @@ internal sealed class DeclarationDataProjection
         var type = declarations.Resolve(reference.Name);
         if (type.Provenance != "source")
         {
-            if (DeclarationWireProjection.FrameworkReference(type, reference, value => Reference(value, depth + 1)) is { } framework &&
-                (framework.Kind != "collection" || framework.Name is "System.Collections.Generic.List<T>" or "System.Collections.Generic.IReadOnlyList<T>"))
+            var framework = DeclarationWireProjection.FrameworkReference(
+                type,
+                reference,
+                value => Reference(value, depth + 1));
+            if (framework is not null &&
+                (framework.Kind != "collection" || framework.Name is "System.Collections.Generic.List<T>"
+                    or "System.Collections.Generic.IReadOnlyList<T>"))
                 return framework;
             throw Refuse(
                 type.Id,
@@ -109,7 +114,8 @@ internal sealed class DeclarationDataProjection
                 type.Id,
                 "Data projection requires a public top-level non-generic class without inheritance or interfaces.");
         var members = new List<NativeMember>();
-        foreach (var member in type.Members.Where(member => member.Accessibility is "Public" or "Protected" or "ProtectedOrInternal"))
+        foreach (var member in type.Members.Where(member =>
+                     member.Accessibility is "Public" or "Protected" or "ProtectedOrInternal"))
         {
             if (member.Kind == "Constructor" && member.Accessibility == "Public" &&
                 member.Parameters.Length == 0 && member.Attributes.Length == 0)
@@ -131,7 +137,14 @@ internal sealed class DeclarationDataProjection
                     "Only constant data initializers are supported; source expressions are not executed or copied.");
             if (member.Initializer is { Json: not "null" } initializer && !ConstantType(initializer.Type))
                 throw Refuse(member.Id, "Unsupported data initializer type " + initializer.Type + ".");
-            members.Add(DeclarationWireProjection.Member(member, value => Reference(value, depth), attributes, "0", member.Initializer, null));
+            members.Add(
+                DeclarationWireProjection.Member(
+                    member,
+                    value => Reference(value, depth),
+                    attributes,
+                    "0",
+                    member.Initializer,
+                    null));
         }
 
         if (members.Select(member => member.WireName).Distinct(StringComparer.Ordinal).Count() != members.Count)

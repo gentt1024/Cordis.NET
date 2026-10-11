@@ -54,13 +54,14 @@ public partial class SharedRemote
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(new SharedData
-        {
-            Name = value.Name,
-            Note = value.Note,
-            Count = (replacementCount ?? value.Count) + adjustment,
-            Child = value.Child
-        });
+        return Task.FromResult(
+            new SharedData
+            {
+                Name = value.Name,
+                Note = value.Note,
+                Count = (replacementCount ?? value.Count) + adjustment,
+                Child = value.Child
+            });
     }
 }
 

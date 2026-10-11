@@ -141,8 +141,11 @@ internal static class DeclarationModelJson
         }
         catch (JsonException error)
         {
-            throw new InvalidDataException("Declaration model lacks valid required facts. Re-extract with the current tool. " + error.Message, error);
+            throw new InvalidDataException(
+                "Declaration model lacks valid required facts. Re-extract with the current tool. " + error.Message,
+                error);
         }
+
         ValidateStructure(model);
         if (model.ContractIdentity != Identity(model))
             throw new InvalidDataException("Declaration model identity does not match its authored facts.");
@@ -196,7 +199,7 @@ internal static class DeclarationModelJson
         {
             if (reference is null)
                 return;
-            if (reference.Kind is "named" or "tuple" && !ids.Contains(reference.Name))
+            if (reference.Kind is "named" or "tuple" or "unbound" && !ids.Contains(reference.Name))
                 throw new InvalidDataException("Declaration reference has no exact definition: " + reference.Name);
             foreach (var argument in reference.Arguments)
                 Reference(argument);
@@ -223,7 +226,8 @@ internal static class DeclarationModelJson
         void Constant(DeclarationConstant value)
         {
             if (value.Kind == "type" && value.Json != "null" && value.Reference is null)
-                throw new InvalidDataException("A typeof attribute value lacks its structured declaration reference. Re-extract with the current tool.");
+                throw new InvalidDataException(
+                    "A typeof attribute value lacks its structured declaration reference. Re-extract with the current tool.");
             Reference(value.Reference);
             foreach (var element in value.Elements)
                 Constant(element);

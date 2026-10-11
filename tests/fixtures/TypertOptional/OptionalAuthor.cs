@@ -54,6 +54,13 @@ public sealed partial class OptionalService
     }
 }
 
+[RemoteService("nonfinite", typeof(OptionalJson), Namespace = "nonfinite")]
+public sealed partial class NonfiniteService
+{
+    [RemoteMethod("isNaN")]
+    public Task<bool> IsNaN(double value = double.NaN) => Task.FromResult(double.IsNaN(value));
+}
+
 [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault)]
 [JsonSerializable(typeof(double))]
 [JsonSerializable(typeof(double?))]

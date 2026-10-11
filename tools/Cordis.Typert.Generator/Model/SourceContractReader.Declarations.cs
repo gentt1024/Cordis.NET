@@ -18,7 +18,8 @@ internal sealed partial class SourceContractReader
         CSharpCompilation compilation,
         string projectDirectory,
         IEnumerable<string> metadataNames,
-        bool allowEmpty = false)
+        bool allowEmpty = false,
+        IReadOnlyDictionary<string, NativeXmlDocumentation>? referenceDocumentation = null)
     {
         var parseErrors = compilation
             .GetParseDiagnostics()
@@ -30,7 +31,7 @@ internal sealed partial class SourceContractReader
             .GetDeclarationDiagnostics()
             .Where(value => value.Severity == DiagnosticSeverity.Error)
             .ToArray();
-        var reader = new SourceContractReader(compilation, projectDirectory);
+        var reader = new SourceContractReader(compilation, projectDirectory, referenceDocumentation);
         foreach (var diagnostic in declarationErrors)
             reader.diagnostics.Add(
                 new(
@@ -81,6 +82,8 @@ internal sealed partial class SourceContractReader
                 .diagnostics.Concat(reader.declarationDiagnostics)
                 .OrderBy(value => value.Symbol, StringComparer.Ordinal)
                 .ThenBy(value => value.Code, StringComparer.Ordinal)
+                .ThenBy(value => value.Category, StringComparer.Ordinal)
+                .ThenBy(value => value.Message, StringComparer.Ordinal)
                 .ToArray());
         try
         {
@@ -139,10 +142,12 @@ internal sealed partial class SourceContractReader
         }
 
         return new(
-            named.IsTupleType ? "tuple" : "named",
+            named.IsUnboundGenericType ? "unbound" : named.IsTupleType ? "tuple" : "named",
             id,
             nullable,
-            named.TypeArguments.Select(argument => DeclarationReference(argument, depth + 1)).ToArray(),
+            (named.IsUnboundGenericType ? definition.TypeParameters.Cast<ITypeSymbol>() : named.TypeArguments)
+            .Select(argument => DeclarationReference(argument, depth + 1))
+            .ToArray(),
             ContainingType: named.ContainingType is null ? null : DeclarationReference(named.ContainingType, depth + 1),
             ElementNames: named.IsTupleType ? named.TupleElements.Select(element => element.Name).ToArray() : null);
     }
@@ -346,8 +351,9 @@ internal sealed partial class SourceContractReader
         .Select(attribute =>
             new DeclarationAttribute(
                 attribute.AttributeClass?.ToDisplayString() ?? "",
-                attribute.AttributeClass is { } attributeType ? DeclarationReference(attributeType) :
-                    new("unsupported", "unresolved attribute", "None", []),
+                attribute.AttributeClass is { } attributeType
+                    ? DeclarationReference(attributeType)
+                    : new("unsupported", "unresolved attribute", "None", []),
                 attribute.ConstructorArguments.Select(DeclarationConstant).ToArray(),
                 attribute
                     .NamedArguments.OrderBy(pair => pair.Key, StringComparer.Ordinal)
@@ -358,17 +364,24 @@ internal sealed partial class SourceContractReader
     private DeclarationConstant DeclarationConstant(TypedConstant value)
     {
         var constant = Constant(value);
-        return new(constant.Kind, constant.Type, constant.Json,
+        return new(
+            constant.Kind,
+            constant.Type,
+            constant.Json,
             value.Kind == TypedConstantKind.Type && value.Value is ITypeSymbol type ? DeclarationReference(type) : null,
-            value.Kind == TypedConstantKind.Array && !value.IsNull ? value.Values.Select(DeclarationConstant).ToArray() : []);
+            value.Kind == TypedConstantKind.Array && !value.IsNull
+                ? value.Values.Select(DeclarationConstant).ToArray()
+                : []);
     }
 
     private static bool RetainedDeclarationMember(ISymbol member) => PublicDeclarationMember(member) ||
         member is IMethodSymbol { MethodKind: MethodKind.Constructor } ||
         member is IMethodSymbol && Attribute(member, "Cordis.Composition.RemoteMethodAttribute") is not null ||
-        member is IPropertySymbol or IFieldSymbol && Attribute(member, JsonPrefix + "JsonIncludeAttribute") is not null ||
+        member is IPropertySymbol or IFieldSymbol &&
+        Attribute(member, JsonPrefix + "JsonIncludeAttribute") is not null ||
         member.DeclaringSyntaxReferences.Length > 0 &&
-        member.Name is "Default" or "GetTypeInfo" or "GeneratedSerializerOptions" && IsJsonContext(member.ContainingType);
+        member.Name is "Default" or "GetTypeInfo" or "GeneratedSerializerOptions" &&
+        IsJsonContext(member.ContainingType);
 
     private static string Implementation(ISymbol symbol)
     {
@@ -379,8 +392,13 @@ internal sealed partial class SourceContractReader
         if (symbol is not IMethodSymbol method)
             return "declaration";
         var implementation = method.PartialImplementationPart ?? method;
-        return implementation.DeclaringSyntaxReferences.Any(reference => reference.GetSyntax() is BaseMethodDeclarationSyntax
-        { Body: not null } or BaseMethodDeclarationSyntax { ExpressionBody: not null }) ? "body" : "declaration";
+        return implementation.DeclaringSyntaxReferences.Any(reference =>
+            reference.GetSyntax() is BaseMethodDeclarationSyntax
+            {
+                Body: not null
+            } or BaseMethodDeclarationSyntax { ExpressionBody: not null })
+            ? "body"
+            : "declaration";
     }
 
     private static bool IsJsonContext(INamedTypeSymbol? type) =>
@@ -399,8 +417,11 @@ internal sealed partial class SourceContractReader
         var visited = new HashSet<string>(StringComparer.Ordinal);
         while (true)
         {
-            var pending = declarations.Values.Where(type => type.Provenance == "metadata-reference" &&
-                !visited.Contains(type.Id)).OrderBy(type => type.Id, StringComparer.Ordinal).ToArray();
+            var pending = declarations
+                .Values.Where(type => type.Provenance == "metadata-reference" &&
+                    !visited.Contains(type.Id))
+                .OrderBy(type => type.Id, StringComparer.Ordinal)
+                .ToArray();
             if (pending.Length == 0)
                 return;
             foreach (var type in pending)
@@ -420,7 +441,8 @@ internal sealed partial class SourceContractReader
     {
         var values = new List<string>();
         if (symbol is INamedTypeSymbol && symbol.DeclaringSyntaxReferences.Length > 0 &&
-            symbol.DeclaringSyntaxReferences.All(reference => reference.GetSyntax() is TypeDeclarationSyntax declaration &&
+            symbol.DeclaringSyntaxReferences.All(reference =>
+                reference.GetSyntax() is TypeDeclarationSyntax declaration &&
                 declaration.Modifiers.Any(SyntaxKind.PartialKeyword)))
             values.Add("partial");
         if (symbol.IsStatic)

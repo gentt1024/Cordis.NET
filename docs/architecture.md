@@ -38,24 +38,37 @@ continues to own completeness. Maker is a consumer of that scope.
 | Workflow | Fixed DSH responsibility | Native expression and owner | Observable boundary |
 |---|---|---|---|
 | Ordinary author and caller | Plugin provision, Fiber-owned effects, dependency activation and caller Context | Existing `Plugin`, `Provide`, `Reflect.Read<T>` and explicit `Service<TState>.CreateView` | Analysis selection does not introduce Remote registration or replace Cordis with container scopes. |
-| Model and build | Authored declaration graph precedes codec, catalog and client projections | SDK Roslyn extracts selected declarations; Composition's MSBuild target publishes data-only models before `CoreCompile` | Definitions, constructed references and type-parameter ownership remain distinct. A backend's refusal does not remove analysis facts. |
+| Model and build | Authored declaration graph precedes codec, catalog and client projections | SDK Roslyn extracts ordinary roots and selected services into one declaration artifact; Composition's MSBuild target publishes it before `CoreCompile` | Definitions, constructed references and type-parameter ownership remain distinct. A backend's refusal does not remove analysis facts. |
 | Settings view and write | Active live Entry forms, layers, redaction, optional view revision and ConfigEditor commit | Existing profile/configuration owner supplies layers and performs one complete candidate commit; a service-owned revision projection observes the form | Client view revision and file hash protect different conflicts. Replace resets live fields while retaining ordinary fields. Neither adds a whole-runtime transaction. |
 | Management | Accepted install work belongs to PluginManager, not the waiting connection | Generated `PluginManager` calls the existing operations/session/toolchain and active request table | Inspection, hash checks, build approval and preparation share one admitted task. Disconnecting a waiter does not cancel installation. Explicit cancel joins work; updating installed code requires restart. |
 | Remote and carrier | Context/reference ownership, invocation, streams, events and attachments | Existing Registry/Gateway retain authority; ASP.NET/HttpClient carry the supported native subset | JSON/NDJSON and base64 are current adaptations. Peer, uplink, event and attachment gaps require their own implementation and cross-end evidence. |
 | Artifact update | Installed selection and current activation have separate lifetimes | Stable deployment directories, shared bundle/ALC and existing restart policy | Saving V2 does not change V1's running descriptors/codecs. Unload request, collection and deletion remain separate. |
 
-Ordinary declaration models use a v2 artifact with `.cordis.model.json` extension. The supported
-Remote wire projection uses the v1 `.cordis.typert.json` artifact. Both source entry points consume
-the same declaration member, reference, default, attribute and provenance interpretation. Remote
-selection and serializer naming are projections of those facts. Conflicting naming policies on
-the same reachable DTO graph are refused. Historical artifact bytes are not a compatibility duty.
-No provider is loaded for analysis.
-External declarations identify their assembly and metadata name with `metadata-reference`
-provenance. Their implementation members and source initializer bodies are not reconstructed.
-Independent projections include a declaration catalog and selected ordinary .NET DTO/STJ data.
-The same authored DTO can serve as an ordinary root and a Remote boundary. The two artifact entry
-points remain: a saved v2 artifact cannot yet reconstruct a Remote service, and referenced-model
-composition and generic DTO backends remain open.
+Ordinary roots and selected Remote services share one declaration artifact,
+`cordis/typert/$(AssemblyName).cordis.model.json`, produced by `extract-model`. Source and saved
+inputs use the same member, reference, default, attribute and provenance facts. The internal
+`DeclarationRemoteContract` interprets invocation semantics from those facts; it is recomputable,
+not a second persisted authored model. Host binding uses the author's actual implementation and
+explicit STJ metadata. Independent caller projection builds its own supported DTOs and metadata,
+and refuses behavior it cannot reproduce. That refusal does not automatically disable Host
+binding or remove analysis facts. Ordinary roots require no Remote registration.
+
+Saved declarations feed the catalog, ordinary DTO/STJ and supported Remote caller projections.
+The same authored DTO can be an ordinary root and a Remote argument/result. Explicit
+`CordisTypertDataReferenceModel` inputs already support bounded ordinary DTO/STJ composition:
+definitions must match complete assembly-qualified identities, each model's identity is checked,
+and references do not enlarge the primary model's roots. Missing, conflicting or unsupported
+definitions are refused. External signatures retain their metadata provenance; opaque references
+cannot supply missing source facts, and no provider DLL is loaded to fill them. This does not
+establish correspondence to an arbitrary implementation DLL or complete the broader
+Remote/Schema/TS reference-model and generic DTO backends.
+
+The [pipeline contract](development.md#model-pipeline-contract) identifies stage owners and the
+retired extraction, wire-artifact and conformance-bridge paths. An incomplete port cannot define
+the next architecture or justify a second public protocol. Maintained consumers are re-extracted
+and rebuilt without hypothetical compatibility obligations to experimental artifacts. These
+current contract decisions do not establish completed reconstruction validation; historical
+results remain bound to the source and package batches in [validation](validation.md).
 
 Roslyn, STJ, MSBuild/NuGet and the existing transport mechanics remain the selected tools.
 This continuation introduces no new RPC, schema or DI dependency. A complete type graph,

@@ -13,8 +13,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default="dotnet")
     parser.add_argument("--output", type=Path)
-    parser.add_argument("--expect-refusal", action="store_true",
-                        help="Confirm that the unmodified generator refuses the optional declarations.")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = (options.output or root / "artifacts/typert-optional").resolve()
@@ -78,14 +76,30 @@ def main():
     try:
         author, author_project = project("OptionalAuthor")
         shutil.copyfile(root / "tests/fixtures/TypertOptional/OptionalAuthor.cs", author / "Author.cs")
-        built = run("author-build", [dotnet, "build", author_project, "-c", "Release"], options.expect_refusal)
-        if options.expect_refusal:
-            if b"CORDISREMOTE001" not in built:
-                raise RuntimeError("Baseline failed for a reason other than optional Remote refusal.")
-            status = "baseline-refusal-observed"
-            return
+        run("author-build", [dotnet, "build", author_project, "-c", "Release"])
         model = author / "obj/Release/net10.0/cordis-typert/OptionalAuthor.cordis.model.json"
         shutil.copyfile(model, output / "authored-model.json")
+        compilation = json.loads(model.read_text(encoding="utf-8"))["compilation"]
+        sdk = run("selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
+        roslyn = dotnet.parent / "sdk" / sdk / "Roslyn/bincore"
+        nonfinite_model = author / "nonfinite.cordis.model.json"
+        output_kind = {"DynamicallyLinkedLibrary": "Library", "ConsoleApplication": "Exe", "WindowsApplication": "WinExe"}
+        run("nonfinite-source-extract", [dotnet, compiler, "--roslyn-directory", roslyn, "extract-model",
+            "--project-directory", author, "--sources", model.parent / "model-sources.rsp",
+            "--references", model.parent / "model-references.rsp", "--assembly-name", "OptionalAuthor",
+            "--language-version", "14.0", "--nullable", compilation["nullable"],
+            "--defines", ";".join(compilation["defines"]), "--allow-unsafe", str(compilation["allowUnsafe"]).lower(),
+            "--check-overflow", str(compilation["checkOverflow"]).lower(), "--output-kind", output_kind[compilation["outputKind"]],
+            "--platform", compilation["platform"], "--optimize", str(compilation["optimization"] == "Release").lower(),
+            "--service", "nonfinite", "--output", nonfinite_model])
+        shutil.copyfile(nonfinite_model, output / "nonfinite-authored-model.json")
+        refused = author / "NonfiniteClient.Generated.g.cs"
+        refused.write_text("stale generated source", encoding="utf-8")
+        diagnostic = run("nonfinite-client-refused", [dotnet, compiler, "--roslyn-directory", roslyn, "emit-dotnet",
+            "--model", nonfinite_model, "--namespace", "OptionalCaller", "--service", "nonfinite",
+            "--client", "NonfiniteClient", "--output", refused], True)
+        assert b"TYPM116" in diagnostic, diagnostic
+        assert not refused.exists(), "A refused nonfinite client projection retained stale output"
         consumer, consumer_project = project("OptionalConsumer", model)
         shutil.copyfile(root / "tests/fixtures/TypertOptional/OptionalConsumer.cs", consumer / "Program.cs")
         run("consumer-build", [dotnet, "build", consumer_project, "-c", "Release"])

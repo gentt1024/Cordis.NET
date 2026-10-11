@@ -257,6 +257,8 @@ await mounted.dispose();
 
 ## 原生作者模型与 .NET 消费者，2026-10-10
 
+当前合同是一个声明模型，按用途投影，见[管线阶段表](development.zh.md#模型管线合同)。重建必须保留下述运行时及消费者行为。已完成的历史门禁仍只绑定其记录的源码与包，不证明新接线。
+
 普通 Plugin、Service 与 Config 继续在进程内使用。Remote 是面向其他环境消费者的可选边界。C# 作者继续使用现有 Remote 标记和显式 STJ context；设置 `CordisTypertService` 后，该项目才启用源模型提取。Composition 提供 SDK compiler 工具与构建 target；这条路径不需要 Node 或 TypeScript。
 
 ```xml
@@ -265,21 +267,21 @@ await mounted.dispose();
 </PropertyGroup>
 ```
 
-构建会在作者包内发布 `cordis/typert/settingsController.cordis.typert.json`。该版本化、编译器无关制品保存声明与序列化事实，不从 RPC descriptor 反推。普通 Remote generator 将其与当前编译逐项比较，旧源事实以 `CORDISREMOTE002` 拒绝。引用声明使用 CLR 元数据及相邻 XML 文档；元数据中不可得的源码初始化值或 getter 实现不会被重建。完整的引用模型组合仍待建设。
+构建在作者包内发布 `cordis/typert/$(AssemblyName).cordis.model.json`。service 选择与普通根进入同一 `extract-model` 入口和声明图。若作者程序集名为 `Example`，文件即 `Example.cordis.model.json`。Remote generator 将所选 service 事实与当前编译比较，以 `CORDISREMOTE002` 拒绝漂移；无关声明不成为第二份 service 合同。引用声明保留 CLR metadata 来源及相邻 XML 文档，不从 metadata 重建缺失的源 initializer 或实现。完整引用模型组合仍待建设。
 
 独立合同包可以消费该制品的副本，无需引用提供者实现：
 
 ```xml
 <PropertyGroup>
   <CordisTypertService>settingsController</CordisTypertService>
-  <CordisTypertClientModel>settingsController.cordis.typert.json</CordisTypertClientModel>
+  <CordisTypertClientModel>Example.cordis.model.json</CordisTypertClientModel>
   <CordisTypertClientNamespace>IndependentSettings.Client</CordisTypertClientNamespace>
   <CordisTypertClientName>SettingsClient</CordisTypertClientName>
   <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
 </PropertyGroup>
 ```
 
-target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。生成源码由 `Clean` 管理；相同输入的增量输出保持字节和时间戳。已验证边界是这条显式启用的命令行构建路径；IDE/design-time 首次构建仍需单独证据。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
+target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。生成源码由 `Clean` 管理；相同输入的增量输出保持字节和时间戳。消费者门禁以这条显式启用的命令行构建路径为边界；IDE/design-time 首次构建仍需单独证据。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
 
 可空 float/decimal 常量初始化值保留作者类型与默认值。缺少 JSON 成员时保留初始化值，显式 null 则替换它。调用者 DTO 与生成的辅助类型共享所选目标 namespace。名称冲突会在编译前被拒绝，诊断标明双方来源，例如 `CordisTypertClientName` 为 `DemoClient` 时的 `DemoClientFailure`。应选择不同的 DTO 或 client 名称；emitter 不会静默重命名公开类型，拒绝投影时会删除其此前生成的输出。
 
@@ -311,7 +313,7 @@ HttpClient 由调用者拥有。直接 unary 调用返回类型化值或抛出�
 
 泛型数量使用 CLR backtick 形式，嵌套名称使用 `+`。普通根必须声明在本项目，且所有包含类型均公开可访问。显式选择的源码类型若标记 `RemoteService`，也可为非公开类型，使分析能够保留完整合同及诊断。选择不注册能力；运行服务生成仍要求公开、顶层、非泛型的 partial class。普通分析不要求 Remote attribute、partial 声明或 serializer context，不执行构造器、initializer 或方法。
 
-正常 build/pack 在包的 `cordis/typert/` 下写入 v3 `<AssemblyName>.cordis.model.json`。`CordisTypertDeclarationModelPath` 可指定输出路径。定义与应用引用分开。保留泛型参数 owner/ordinal/constraints、直接 base/interfaces、成员签名、重载、事件/delegate、required/accessor/nullability/default 事实、initializer 和文档。attributes 包含 return、getter/setter 及 setter-value 目标；参数事实包括扩展 `this` 与 `scoped`。attribute 类型和 `typeof` 值保留完整声明引用，包括数组值，并进入引用图。源码 partial 声明、隐式成员／成员来源、实例构造器、显式标记的非公开 Remote 方法及作者 JSON metadata 签名作为事实保存，不复制方法体。外部声明保留完整程序集／metadata 身份及记录的签名来源，不重建缺失的源 initializer 或实现。
+普通根与 Remote 根在正常 build/pack 中使用同一 `$(AssemblyName).cordis.model.json`，打包到 `cordis/typert/`。`CordisTypertModelPath` 控制本地输出路径。定义与应用引用分开。保留泛型参数 owner/ordinal/constraints、直接 base/interfaces、成员签名、重载、事件/delegate、required/accessor/nullability/default 事实、initializer 和文档。attributes 包含 return、getter/setter 及 setter-value 目标；参数事实包括扩展 `this` 与 `scoped`。attribute 类型和 `typeof` 值保留完整声明引用，包括数组值，并进入引用图。源码 partial 声明、隐式成员／成员来源、实例构造器、显式标记的非公开 Remote 方法及作者 JSON metadata 签名作为事实保存，不复制方法体。外部声明保留完整程序集／metadata 身份及记录的签名来源，不重建缺失的源 initializer 或实现。
 
 打包 compiler 在不加载、不引用 provider 实现的情况下验证制品并投影声明目录：
 
@@ -321,9 +323,9 @@ dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-mod
 
 目录保留分析诊断，不生成 binding、Remote 注册、DTO serializer 或可执行 Service。语法错误和重复声明身份会拒绝提取，并清除拥有的旧输出；其他 pre-generator 编译错误明确记录，因为合法构建可能依赖邻近 generator 输出。源图限 256 个具名定义、64 层嵌套引用；未解析类型/function-pointer 签名作为分析缺口诊断。这不是完整 C# 编译器或反射覆盖。既有 .NET Typert 门禁验证仅包引用消费、增量时间戳、包括首次提取失败在内的 Clean、冷重建、引用身份和拒绝输入。
 
-v1 `.cordis.typert.json` 保留运行 conformance 及已有客户端子集所需的受限 Remote wire 投影职责。源入口与保存声明投影共享 service、method、DTO、构造器、命名及默认值解释；历史 v1 字节不是另一套兼容权威。`CordisTypertService=*` 将全部受支持的作者 service 选入按程序集命名的同一 wire 制品。选择单个 service 时保留其完整可达图。共享 DTO 的 JSON 命名策略冲突（包括嵌套及递归引用）以 `TYPM113` 拒绝。
+`CordisTypertService=*` 将作者 service 选入同一声明制品；`CordisTypertModelRoot` 添加显式根。CLI 入口是 `extract-model`，`--roots` 指向根响应文件，`--service` 选择 service；两者可单独或共同提供根。保留所选 service 的可达图。源码及保存输入共享 service、method、DTO、构造器、命名及默认值解释。共享 DTO 的 JSON 命名策略冲突（包括嵌套及递归引用）在受影响投影以 `TYPM113` 拒绝。旧 `extract` 入口、`.cordis.typert.json` 制品及 `CordisTypertDeclarationModelPath` 退出，不构成兼容路线。
 
-选定普通 class 可从已保存的 v3 制品生成 DTO 及静态 STJ context，不要求 Remote 声明或引用 provider 程序集：
+选定普通 class 可从保存制品生成 DTO 及静态 STJ context，不要求 Remote 声明或引用 provider 程序集：
 
 ```xml
 <PropertyGroup>
@@ -337,13 +339,13 @@ v1 `.cordis.typert.json` 保留运行 conformance 及已有客户端子集所需
 </ItemGroup>
 ```
 
-可选的 `CordisTypertDataReferenceModel` items 为所选根可达的外部数据定义提供已保存的 v3 模型。每个输入都按模型身份校验。解析要求完整的 assembly-qualified 声明身份精确匹配，包括程序集版本和公钥 token；只同名不会匹配。引用模型为自己的声明提供源事实，仅有 metadata 占位仍不足以投影。引用项不增加公开根：`CordisTypertDataRoot` 仍只能选择主模型发布的 roots。
+可选的 `CordisTypertDataReferenceModel` items 为所选根可达的外部数据定义提供保存模型。每个输入都按模型身份校验。解析要求完整的 assembly-qualified 声明身份精确匹配，包括程序集版本和公钥 token；只同名不会匹配。引用模型为自己的声明提供源事实，仅有 metadata 占位仍不足以投影。引用项不增加公开根：`CordisTypertDataRoot` 仍只能选择主模型发布的 roots。
 
 对应 CLI 接受 `emit-dotnet-data ... --reference-models reference-models.rsp`。响应文件每行列出一个模型路径，相对路径以响应文件所在目录为基准。不需要引用模型时可省略此选项。所有显式引用输入的身份按确定顺序记录在生成源码中。同身份的源定义冲突会被拒绝；多个输入可含相同定义，仅源码位置不同不构成冲突。缺失定义、不一致的声明形状及生成类型名称冲突也会被拒绝。这验证声明身份与制品内容，不证明模型与任意实现 DLL 的对应关系；应将模型与产生它的源码构建一起发布。
 
 target 在 `CoreCompile` 前调用 `emit-dotnet-data`，复用 Remote caller 支持的 JSON 投影。每次构建读取主模型与引用模型内容；生成结果不变时保持字节和时间戳。生成失败删除旧源码，`Clean` 删除生成源码及所属响应文件。成员省略保留受支持的常量默认值；显式 null 仍有独立含义。生成的数据 carrier 不重放作者构造器或 accessor 行为。引用 DTO 与本地 DTO 使用相同的有界公开 class/property 子集；组合不开放泛型 DTO、继承、自定义 converter 或其他已拒绝形状。若源类型的非公开实例数据成员显式标记 `JsonInclude`，却不在公开分析范围内，提取器会为所属类型记录 `TYPM202`。投影拒绝该类型，包括从引用模型到达它的情况，不再静默丢弃 JSON 成员；无关声明仍可使用。
 
-升级后应使用当前 compiler 重新提取声明模型。v3 要求解释保存合同所需的结构化引用及来源事实；v2 和缺少这些事实的输入会被拒绝，并提示重新提取。已保存制品的 hash 只验证已保存的事实，不能补回旧遗漏，也不证明所有作者 JSON 配置。compiler 不从 DLL 猜补事实，不转换旧制品，也不为它们保留第二套投影。
+使用当前 compiler 重新提取声明模型，并重新构建受维护消费者。缺失必需结构化引用或来源事实的输入，以及旧模型输入，直接拒绝，不进行转换。保存制品的身份只验证已保存事实，不能补回遗漏、证明所有作者 JSON 配置或建立与任意 DLL 的对应关系。当前只有一个合同，不保留历史格式 reader 或版本化 Remote 兼容路线。
 
 要从同一声明制品生成直接 unary 客户端，在作者项目中同时选择 DTO 和其标记的 service：
 
@@ -366,6 +368,8 @@ service 的 `typeof` JSON context 及其注册数据进入闭包，包括 intern
 </PropertyGroup>
 ```
 
-对应命令为 `emit-dotnet --model Example.cordis.model.json --service sharedData --namespace Example.Consumer.Remote --client SharedClient --output SharedClient.g.cs`，它直接消费保存事实，不要求作者实现程序集。首个保存声明 Remote 后端支持直接 `Task<T>` unary、受支持数据和常量，以及可选的末尾 CancellationToken。该后端拒绝 lookup、Context、stream、自定义 JSON metadata／converter 和仅有 metadata 的 DTO；已有 wire 后端保留各自支持的职责。显式标记的非公开方法被保留并拒绝，不会静默移除。只有被选中且有效、仅使用注解的 partial STJ context 可以延后 pre-generator 的抽象成员义务，其他声明错误仍使投影失败。投影成功不证明作者构建成功，也不注册活跃服务。
+对应命令为 `emit-dotnet --model Example.cordis.model.json --service sharedData --namespace Example.Consumer.Remote --client SharedClient --output SharedClient.g.cs`，它直接消费保存事实，不要求作者实现程序集。.NET caller 后端覆盖受支持 unary、downlink stream、数据／常量及末尾 CancellationToken 参数。lookup、Context 和更丰富 caller 形状保留明确的后端限制与开放义务。独立 caller 必须拒绝无法重建的 serializer 行为，包括自定义 metadata／converter 或不足的 DTO 事实；这不删除分析事实，也不自动拒绝使用作者实际实现及显式 STJ metadata 的 Host。Host 与 caller 共享事实，不取双方限制的交集。显式标记的非公开方法保留在分析中，由 Remote binding 拒绝。只有被选中且有效、仅使用注解的 partial STJ context 可以延后 pre-generator 抽象成员义务，不抑制无关错误。投影成功不证明作者构建成功，也不注册活跃服务。
 
-独立消费者将一个作者 DTO 同时用作普通 root 和 Remote 参数／结果，使用真实 HTTP 作者宿主及仅包引用的生成调用者。DTO 行为由既有数据消费者负责，此路覆盖保存模型映射和传输。泛型 DTO 投影、更广的 Remote／引用模型后端、design-time IDE 和具名 UI 验证继续开放。完成的平台证据仍绑定在[验证记录](validation.zh.md)中。
+对独立 caller，仅有程序集 metadata 的 JSON context 缺少重建 serializer 所需的源码事实，以 `TYPM115` 拒绝；Host 仍可绑定该实际 context。非有限数值的可选默认值保留为作者事实，Host 在参数省略时可使用它。若所选 JSON number handling 无法传输该值，独立 .NET caller 生成以 `TYPM116` 拒绝，不生成默认调用会在序列化时失败的方法。
+
+独立消费者必须将一个作者 DTO 同时用作普通 root 和 Remote 参数／结果，使用真实 HTTP 作者宿主及仅包引用的生成调用者。DTO 行为由既有数据消费者负责，此路检查保存模型映射和传输。泛型 DTO 投影、更广的 Remote／引用模型后端、design-time IDE 和具名 UI 验证继续开放。完成的平台证据仍绑定在[验证记录](validation.zh.md)中，早先批次不证明本次重建。

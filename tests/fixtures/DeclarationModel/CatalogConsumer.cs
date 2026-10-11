@@ -8,7 +8,6 @@ using var catalogDocument = JsonDocument.Parse(File.ReadAllText(args[1]));
 var model = modelDocument.RootElement;
 var catalog = catalogDocument.RootElement;
 Check(model.GetProperty("declarations").GetArrayLength() > 0, "ordinary declaration facts");
-Check(!model.TryGetProperty("services", out _), "ordinary declarations remain separate from remote services");
 Check(model.GetProperty("diagnostics").GetArrayLength() == 0, "ordinary declarations need no unsupported projection");
 Check(
     Text(model.GetProperty("compilation"), "assemblyName") == "IndependentDeclarations.Provider",
@@ -152,12 +151,25 @@ Named(
     0);
 
 var envelope = byName["IndependentDeclarations.External.Envelope`1"];
-Check(Text(envelope, "provenance") == "metadata-reference", "external package provenance");
+Check(Text(envelope, "provenance") == "metadata-signature", "external package signature provenance");
 Check(
     Text(envelope, "assembly") ==
     "IndependentDeclarations.External, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
     "external assembly identity");
-Check(envelope.GetProperty("members").GetArrayLength() == 0, "external definitions retain reference provenance");
+var externalValue = Member(envelope, "Value");
+Check(
+    Text(externalValue, "kind") == "property" && Text(externalValue, "getter") == "Public" &&
+    Text(externalValue, "setter") == "Public" && Bool(externalValue, "initOnly"),
+    "external property signature retains public accessors");
+Parameter(externalValue.GetProperty("type"), "T", Text(envelope, "id"), 0);
+Check(Text(externalValue.GetProperty("type"), "nullability") == "Annotated", "external nullable type parameter");
+foreach (var externalMember in envelope.GetProperty("members").EnumerateArray())
+    Check(
+        !Bool(externalMember, "source") && Text(externalMember, "implementation") == "metadata" &&
+        externalMember.GetProperty("initializer").ValueKind == JsonValueKind.Null &&
+        externalMember.GetProperty("getterConstant").ValueKind == JsonValueKind.Null &&
+        externalMember.GetProperty("location").ValueKind == JsonValueKind.Null,
+        "external signatures do not invent source implementation or defaults");
 var export = Member(page, "Export").GetProperty("type");
 Named(export, envelope, 1);
 Named(export.GetProperty("arguments")[0], page, 1);

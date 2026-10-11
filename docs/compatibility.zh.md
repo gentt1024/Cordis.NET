@@ -131,9 +131,9 @@ Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provi
 
 ## 独立原生模型与 Settings 边界，2026-10-10
 
-源编译工具现于运行时 descriptor 发射前生成 version-1 原生声明制品，保留方法/参数名称和 wire 选择、类型引用、成员/构造器关系、C# required 与 JSON-required 事实、嵌套可空标注、支持的常量、可选参数默认值、文档、JSON 策略及 STJ 使用的四个空状态注解，并记录有效编译设置。制品身份标识这些事实，不是 activation 或普适替换准入。Roslyn Symbol 是提取输入；序列化模型没有 Symbol、CLR Type、delegate 或 JsonTypeInfo。引用 CLR 声明标记为 external；元数据不能提供所有仅存在于源码的事实。
+源编译工具于运行时 descriptor 发射前生成当前声明制品，保留方法／参数名、类型引用、成员／构造器关系、C# required 与 JSON-required 事实、嵌套可空标注、支持的常量、可选参数默认值、文档、JSON 策略及 STJ 使用的四个空状态注解，并记录有效编译设置。制品身份标识这些事实，不证明 activation、与任意 DLL 对应或普适替换准入。Roslyn Symbol 是提取输入；序列化模型没有 Symbol、CLR Type、delegate 或 JsonTypeInfo。引用 CLR 声明保留 metadata 来源；metadata 不能提供所有仅存在于源码的事实。
 
-现有由 descriptor 形成的 `TypertTypeModel` 仍是有界的旧摘要，新制品不从它反推。普通构建先将源事实与制品比较，再保留现有 descriptor generator。该 conformance 桥在独立提取与 .NET 投影继续建设时保留已成立的 runtime/TS 路径，不宣称所有 emitter 或运行时类型 registry 已消费完整新模型。
+运行 descriptor 与 `TypertTypeModel` 是派生输出，不是反推声明的来源。当前合同只有一份公开制品 `cordis/typert/$(AssemblyName).cordis.model.json`，由同一 `extract-model` 入口合并普通根与 service 选择。所选 service 的漂移检查继续保留，独立 wire 制品及其 conformance 桥退出。内部投影必须可从声明事实和明确后端政策重新计算，不是第二份保存作者模型。所有者和退出路径见[阶段合同](development.zh.md#模型管线合同)。
 
 .NET emitter 当前投影直接 unary 方法、downlink 流及选定普通数据 record/class。实际覆盖包含 bool、string、integer、array、只读 list 接口、JsonElement、可空成员、必需构造器/init 成员、命名/ignore 策略和选定空状态注解。只读数据成员、record struct、数据继承、多态/自定义 converter 和更丰富 Remote 形状保留事实或诊断后被该投影拒绝；不宣称完整 C# 或 TS 类型系统等价。JSON 策略不能省略必填 carrier 参数字段，包括显式 null 和默认值。
 
@@ -153,15 +153,15 @@ Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对�
 本轮标准 Settings 的数值 revision／可省略 expectedRevision、独立模型事实支持矩阵，以及语义对应／固定协议互通的区别，见[已确认续行合同](development.zh.md#已确认的续行合同与-r022026-10-11)。标准 Settings 的合同修正见下文；已有 base64 二进制结果不等价于 connection attachment。
 ## 普通声明分析，2026-10-11
 
-选择的普通声明已有独立 v3 `.cordis.model.json` 路线。它保留作者方法的返回 wrapper 和取消参数，不应用 Remote 规范化。声明定义使用完整程序集身份及 CLR metadata name；构造引用保留实参、包含泛型类型和空性。泛型参数标明类型／方法 owner 和 ordinal。直接 base/interface 边、public/protected 成员、事件/delegate、accessor、required/default 事实、常量、未执行 initializer 和源码文档均为模型数据。结构化 attribute 类型和 `typeof` 值进入引用图；partial 声明、隐式成员／成员来源、构造器、显式非公开 Remote 标记及作者 JSON metadata 签名为准确解释及拒绝而保留。这些事实不注册运行能力，也不承诺可执行投影。
+普通根与 Remote 根共享声明提取及同一保存模型。模型在 Remote 投影前保留作者方法返回 wrapper 和取消参数。声明定义使用完整程序集身份及 CLR metadata name；构造引用保留实参、包含泛型类型和空性。泛型参数标明类型／方法 owner 和 ordinal。直接 base/interface 边、public/protected 成员、事件/delegate、accessor、required/default 事实、常量、未执行 initializer 和源码文档均为模型数据。结构化 attribute 类型和 `typeof` 值进入引用图；partial 声明、隐式成员／成员来源、构造器、显式非公开 Remote 标记及作者 JSON metadata 签名为准确解释及拒绝而保留。这些事实不注册运行能力，也不承诺可执行投影。
 
-源 Remote 提取与保存 Remote 投影由同一个声明事实解释器处理 service、method、DTO、构造器、serializer 命名及默认值。声明制品保留丰富分析；v1 保留受限 Remote wire 投影及运行 conformance 职责。普通 carrier 与 Remote 构造器准入仍是明确的后端选择。共享可达 DTO 图的命名策略冲突以 TYPM113 拒绝，包括嵌套与递归引用。历史 v1 字节及身份不是独立兼容要求。普通制品不自动进入 Remote AdditionalFiles。外部签名保留 metadata 来源，不重建实现体。Native 源投影保留已有 metadata 签名职责；首个保存 Remote 后端要求 DTO 源事实，不加载实现 DLL 补缺。
+源码及保存输入对 service、method、DTO、构造器、serializer 命名与默认值使用同一声明事实解释。Host binding 使用作者实际实现及显式 STJ metadata；独立 caller 生成自己受支持的数据与 metadata。caller 限制不能静默成为分析或 Host 准入规则；保留事实也不等于后端已经支持。共享可达 DTO 图的命名策略冲突由受影响投影以 `TYPM113` 拒绝，包括嵌套与递归引用。外部签名保留 metadata 来源，不重建实现体。完整 metadata 签名与不透明 metadata 占位不同；任何后端都不能虚构缺失源码事实或加载实现 DLL 猜补。
 
-普通数据投影可显式接收引用 v3 模型，解析可达外部 DTO 定义。每个输入均校验模型身份，声明必须按完整的 assembly-qualified 身份精确匹配。只有明确提供的源定义能补足 metadata 引用；未解析引用和冲突定义会被拒绝。根仍从主模型选择，跨模型继续使用既有有界数据 carrier 规则。源码位置不同不构成不同定义。生成源码记录所有显式输入身份。提取器为通过 `JsonInclude` 显式纳入 JSON 的非公开实例数据在所属类型上记录 `TYPM202`，避免公开数据投影静默省略 JSON 成员。这项源码制品组合适配复用既有 emitter，不加载实现程序集，也不新增依赖。它不证明任意 DLL 与源码制品对应，不重放作者行为，也不建立通用 Remote/Schema/TS 引用模型支持。
+普通数据投影可显式接收引用模型，解析可达外部 DTO 定义。每个输入均校验模型身份，声明必须按完整的 assembly-qualified 身份精确匹配。只有明确提供的源定义能补足 metadata 引用；未解析引用和冲突定义会被拒绝。根仍从主模型选择，跨模型继续使用既有有界数据 carrier 规则。源码位置不同不构成不同定义。生成源码记录所有显式输入身份。提取器为通过 `JsonInclude` 显式纳入 JSON 的非公开实例数据在所属类型上记录 `TYPM202`，避免公开数据投影静默省略 JSON 成员。这项源码制品组合适配复用既有 emitter，不加载实现程序集，也不新增依赖。它不证明任意 DLL 与源码制品对应，不重放作者行为，也不建立通用 Remote/Schema/TS 引用模型支持。
 
-v3 将新必需的结构化引用与来源事实显式化。v2 声明及不完整的 v3 输入会被拒绝，并提示重新提取；没有转换或旧保存模型投影。身份校验检查已有事实，不能补回旧遗漏，也不证明完整作者 JSON 行为。不从实现 DLL 或旧文件猜补事实，包验证须用当前工具提取模型。
+必需的结构化引用与来源事实属于唯一当前模型合同。不完整及旧输入被拒绝并提示重新提取，不保留历史格式 reader、转换或旧投影。身份校验检查已有事实，不能补回遗漏，也不证明完整作者 JSON 行为。受维护消费者重新提取和构建，不以假想的实验模型兼容承诺保留第二条公共路线。
 
-首个保存声明 Remote 后端将同一 DTO 用作普通数据及直接 `Task<T>` unary 参数／结果，支持已有默认值和末尾 CancellationToken。该后端继续拒绝 lookup、Context、stream 和自定义 JSON metadata／converter。分析可保留显式选择的非公开标记 service 及其 internal JSON context；运行生成继续要求 public／顶层／非泛型／partial。显式 private Remote 方法在收集后拒绝。只有被选中且有效、仅使用注解的 STJ context 可延后 pre-generator 抽象成员义务，无关或不支持的声明错误仍使投影失败。泛型 DTO、更广的保存 Remote 及其他后端继续开放；[验证记录](validation.zh.md)将完成的消费证据与这些实现边界分别记录。
+重建必须让受支持的 unary、downlink 及标准 Settings／PluginManager／通知消费者接入共同事实。独立 caller 拒绝无法重建的 serializer 行为；Host 保留其已成立的实际 STJ binding 合同。分析可保留显式选择的非公开标记 service 及其 internal JSON context；运行生成继续要求 public／顶层／非泛型／partial。显式 private Remote 方法在收集后拒绝。只有被选中且有效、仅使用注解的 STJ context 可延后 pre-generator 抽象成员义务，不抑制无关错误。泛型 DTO、更广引用模型后端、丰富 Remote／owned-value 协议及其他原职责继续开放。当前后端拒绝不关闭要求支持的范围项。本合同不声称重建门禁已完成；[验证记录](validation.zh.md)将每个真实结果绑定到源码与包。
 
 上游将标记为 secret 的整个 live 根脱敏为 JavaScript undefined。原生 JSON namespace 要求有值，因此省略该根并返回原生诊断，其他 namespace 仍可读取。hidden 根按宿主政策省略。这项有界 JSON 适配不公开 secret，也不伪造替代值。
 

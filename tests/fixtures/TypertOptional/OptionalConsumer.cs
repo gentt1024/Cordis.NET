@@ -15,6 +15,8 @@ await root.RunAsync(owner =>
 {
     owner.Provide("optional", service);
     registry.Register(owner, OptionalServiceTypert.Contribution("optional-fixture"));
+    owner.Provide("nonfinite", new NonfiniteService());
+    registry.Register(owner, NonfiniteServiceTypert.Contribution("optional-fixture.nonfinite"));
     return Task.CompletedTask;
 });
 var gateway = new TypertGateway(root, registry);
@@ -44,6 +46,9 @@ if ((await gateway.InvokeAsync("optional/defaults", Json("{}"))).Value!.Value.Ge
 if ((await gateway.InvokeAsync("optional/defaults", Json("{\"limit\":3,\"text\":null,\"enabled\":true}")))
     .Value!.Value.GetString() != "3:null:True:1.25:0.1")
     throw new Exception("Explicit nullable/default values changed in the binding.");
+var nonfinite = await gateway.InvokeAsync("nonfinite/isNaN", Json("{}"));
+if (!nonfinite.Ok || !nonfinite.Value!.Value.GetBoolean())
+    throw new Exception("The Host binding lost its authored nonfinite default when the argument was omitted.");
 
 if (await client.NullableAsync() is not null ||
     transport.LastArguments.GetProperty("revision").ValueKind != JsonValueKind.Null)
@@ -84,7 +89,7 @@ if (await client.RequiredAsync(9) != 9)
     throw new Exception("A required numeric input failed.");
 
 Console.WriteLine(
-    "GREEN optional numeric omission/value/null refusal; authored constant defaults; nullable explicit null; required wire validation; generated .NET carrier and binding.");
+    "GREEN optional numeric omission/value/null refusal; authored finite/nonfinite constant defaults; nullable explicit null; required wire validation; generated .NET carrier and binding.");
 
 static JsonElement Json(string text)
 {

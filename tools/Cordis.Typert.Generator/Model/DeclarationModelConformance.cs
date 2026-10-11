@@ -5,31 +5,48 @@ namespace Cordis.Typert.Generator.Model;
 
 internal static class DeclarationModelConformance
 {
-    internal static string[] Compare(DeclarationModelDocument artifact, DeclarationModelDocument authored, string service)
+    internal static string[] Compare(
+        DeclarationModelDocument artifact,
+        DeclarationModelDocument authored,
+        string service)
     {
         var differences = new List<string>();
-        CompareNode(DeclarationModelJson.ContractFacts(Select(artifact, service)),
-            DeclarationModelJson.ContractFacts(Select(authored, service)), "$", differences);
+        CompareNode(
+            DeclarationModelJson.ContractFacts(Select(artifact, service)),
+            DeclarationModelJson.ContractFacts(Select(authored, service)),
+            "$",
+            differences);
         return differences.ToArray();
     }
 
     internal static DeclarationModelDocument Select(DeclarationModelDocument model, string service)
     {
         var declarations = model.Declarations.ToDictionary(type => type.Id, StringComparer.Ordinal);
-        var selected = model.Roots.Select(id => declarations[id]).Where(type =>
-            Attribute(type.Attributes, "Cordis.Composition.RemoteServiceAttribute") is { } marker &&
-            (type.MetadataName.Replace('+', '.') == service || String(marker.Arguments.FirstOrDefault()) == service)).ToArray();
+        var selected = model
+            .Roots.Select(id => declarations[id])
+            .Where(type =>
+                Attribute(type.Attributes, "Cordis.Composition.RemoteServiceAttribute") is { } marker &&
+                (type.MetadataName.Replace('+', '.') == service ||
+                    String(marker.Arguments.FirstOrDefault()) == service))
+            .ToArray();
         if (selected.Length != 1)
-            throw new InvalidDataException($"Declaration model must contain exactly one selected Remote service '{service}'.");
+            throw new InvalidDataException(
+                $"Declaration model must contain exactly one selected Remote service '{service}'.");
         var reachable = new HashSet<string>(StringComparer.Ordinal);
         var symbols = new HashSet<string>(StringComparer.Ordinal);
         Visit(selected[0].Id);
         return model with
         {
             Roots = [selected[0].Id],
-            Declarations = model.Declarations.Where(type => reachable.Contains(type.Id)).OrderBy(type => type.Id, StringComparer.Ordinal).ToArray(),
-            Diagnostics = model.Diagnostics.Where(value => value.Symbol is null || symbols.Contains(value.Symbol) ||
-                reachable.Any(id => value.Symbol.StartsWith(id + ".", StringComparison.Ordinal))).ToArray()
+            Declarations =
+            model
+                .Declarations.Where(type => reachable.Contains(type.Id))
+                .OrderBy(type => type.Id, StringComparer.Ordinal)
+                .ToArray(),
+            Diagnostics = model
+                .Diagnostics.Where(value => value.Symbol is null || symbols.Contains(value.Symbol) ||
+                    reachable.Any(id => value.Symbol.StartsWith(id + ".", StringComparison.Ordinal)))
+                .ToArray()
         };
 
         void Visit(string id)
@@ -69,7 +86,7 @@ internal static class DeclarationModelConformance
         {
             if (reference is null)
                 return;
-            if (reference.Kind is "named" or "tuple")
+            if (reference.Kind is "named" or "tuple" or "unbound")
                 Visit(reference.Name);
             foreach (var argument in reference.Arguments)
                 Reference(argument);

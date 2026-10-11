@@ -76,7 +76,7 @@ const installed = await manager['pluginManager/installBundle']({
 The generated TypeScript API returns a Remote result. The generated .NET client has typed
 throwing methods such as `InspectAsync`, `InstallBundleAsync` and `WaitForInstallAsync`.
 Composition ships the selected service model at
-`cordis/typert/Cordis.Composition.cordis.typert.json`; the existing `emit-dotnet` command and
+`cordis/typert/Cordis.Composition.cordis.model.json`; the existing `emit-dotnet` command and
 `CordisTypertClientModel` build property consume that model without loading a provider.
 
 ## Notification ownership
