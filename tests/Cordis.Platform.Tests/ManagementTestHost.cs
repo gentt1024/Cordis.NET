@@ -9,7 +9,7 @@ namespace Cordis.Platform.Tests;
 
 internal static class ManagementTestHost
 {
-    internal static async Task MountAsync(
+    internal static async Task<EffectHandle> MountAsync(
         WebApplication server,
         ProfileSession session,
         CordisManagement management,
@@ -18,6 +18,7 @@ internal static class ManagementTestHost
     {
         registry ??= new(session.Context);
         var gateway = new TypertGateway(session.Context, registry);
+        EffectHandle notifications = null!;
         await management.MountPluginManagerAsync(
             session.Context,
             registry,
@@ -26,7 +27,7 @@ internal static class ManagementTestHost
         {
             new RemoteNotifications(context, gateway);
             registry.Register(context, RemoteNotificationsTypert.Contribution("Cordis.Tests.Notifications"));
-            gateway.RegisterRemoteEvents(
+            notifications = gateway.RegisterRemoteEvents(
                 context,
                 TypertRemoteEvents.FromCordis(
                     context,
@@ -45,5 +46,6 @@ internal static class ManagementTestHost
         });
         management.Map(server);
         server.MapCordisRemote("/remote", gateway, authorize ?? ((_, _) => Task.FromResult(true)));
+        return notifications;
     }
 }

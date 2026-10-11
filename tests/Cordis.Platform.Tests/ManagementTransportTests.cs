@@ -73,7 +73,7 @@ public sealed class ManagementTransportTests
                 return Task.CompletedTask;
             });
             var permissions = new List<string>();
-            await ManagementTestHost.MountAsync(
+            var notifications = await ManagementTestHost.MountAsync(
                 server,
                 session,
                 management,
@@ -332,8 +332,7 @@ public sealed class ManagementTransportTests
             using var ready = JsonDocument.Parse((await stream.ReadLineAsync())!);
             Assert.True(ready.RootElement.GetProperty("ok").GetBoolean());
             Assert.Equal("ready", ready.RootElement.GetProperty("value").GetProperty("kind").GetString());
-            await session.Context.DisposeAsync();
-            Assert.Equal(HttpStatusCode.Gone, (await client.GetAsync("/cordis/state")).StatusCode);
+            await notifications.DisposeAsync();
             using var withdrawn =
                 JsonDocument.Parse((await stream.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3)))!);
             Assert.False(withdrawn.RootElement.GetProperty("ok").GetBoolean());
@@ -341,6 +340,8 @@ public sealed class ManagementTransportTests
                 "gateway/service-unavailable",
                 withdrawn.RootElement.GetProperty("error").GetProperty("code").GetString());
             Assert.Null(await stream.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3)));
+            await session.Context.DisposeAsync();
+            Assert.Equal(HttpStatusCode.Gone, (await client.GetAsync("/cordis/state")).StatusCode);
         }
         finally
         {
