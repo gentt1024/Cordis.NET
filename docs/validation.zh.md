@@ -385,3 +385,15 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 修复前，普通和 Remote 作者均在冻结的 `7937ee8` 包上因空引用提取失败。另一次构建使用相同隔离旧包缓存，移除显式提取根后，在 Host generator 触发 `CORDISREMOTE001`。这些是实际执行的失败。更早的直接 generator 尝试使用全局缓存，因缺少属性失败，不作为 null 数组红例。首轮脚本自检选择了错误的系统 SDK；一项新增断言把既有 primitive 字符串引用误写为 named 声明；相应日志分别保留，均未要求改变生产合同。
 
 现行 architecture 保留 TypertLoader owner，使用精确请求暂停与恢复，并说明稳定 CLR 原地加载和显式开发 ShadowCopy。配对作者指南说明可选常量默认值、省略与 null 的区别，以及末尾 CancellationToken 的默认值。历史验证回执不变。本检查点未执行 Linux、Native AOT、原始 DSH 源码／跨运行时差分、浏览器或具名 UI、托管 CI、Maker、源码归档构建或远端 SourceLink 获取。更广模型和协议工作继续开放；未改变依赖、pin 或包版本，未合并、发布或部署。
+
+## 生成式 scoped 调用者，2026-10-11
+
+源码 `9bb56ac801a62faeabd09a93d256e3bdf2e0481d` 在 SDK 10.0.111 上完成 Windows x64 JIT 本地包门禁，使用新的私有 feed。[回执](../verification/scoped-clients-2026-10-11/evidence.json) 绑定冻结源码、消费者实际还原的 Cordis 包和保留的失败证据。Release Rebuild 为零警告、零错误；848 项测试通过，无失败或跳过。完整门禁完成 47 步，生成式 .NET／TypeScript 消费者完成 141 步，其中 49 项为预期拒绝；检查了 18 个包／符号归档。四阶段格式检查在 241 个 C# 文件上达成一致，38 项验证脚本自测通过。门禁运行期间源码哈希保持不变。
+
+现有保存声明的包消费者通过真实 HTTP 验证两种不同的 scoped 合同。Context-bound 方法用有类型的身份选择 Host receiver；只有一个匹配 lookup 的 direct 方法保留 direct 签名，并增加仅补入 lookup 身份的 scoped 签名，其 receiver 仍为 direct。同一个调用者还消费 scoped 下行流。调用者只引用生成的合同包，不引用 Provider 实现，不启用反射回退。
+
+保留的视图观察身份变化、Client adapter 撤销／替换及 Host provider 撤销。传输计数证明缺少身份或 adapter 时在发送前失败；显式 null 则发送请求，由 Host 返回 `gateway/input-invalid`。释放父客户端后视图失效，借用的 HttpClient 仍可使用。完整门禁继续保留 required／optional／null／默认值、冷构建／增量／Clean、配置、管理和生命周期回归。声明拒绝覆盖缺少 Context 事实、wire 类型不匹配及重复 wire 字段。
+
+第一次定向 HTTP 调用暴露了显式 null 身份导致的本地 STJ 序列化失败。修正只调整内部请求封套，没有放松 Host codec 或其他参数规则。该失败日志和后续使用混合探测 feed 的定向检查分别保留身份；只有上述冻结源码、新 feed 的完整门禁属于本批验收证据。
+
+本检查点未执行 Linux、Native AOT、原版 DSH 源测试／跨运行时差分、真实浏览器或具名 UI、托管 CI、Maker、源码归档构建及远端 SourceLink 获取。历史结果继续绑定原源码身份。浏览器 scoped 装配、owned Context／引用值、Peer、上行／双向流、完整事件及附件仍未完成。没有修改依赖、上游 pin、包版本，也没有合并、发布或部署。

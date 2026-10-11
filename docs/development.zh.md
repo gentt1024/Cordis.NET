@@ -378,3 +378,7 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 独立静态审查已关闭 `bc18038` 的 F01 和 D01，其 runtime／package 源码仍为 `54ae030`。该审查读取固定源码、差异、断言和回执身份，未重跑 .NET 或对原始包重新计算哈希，不覆盖本次续建。
 
 当前工作接通保存的 Context 声明、自动推导的 lookup scope、Host descriptor 和生成的 .NET Context 视图。程序集属性表达固定 `TypertContextMap`，已有 registry 拥有活跃 adapter。接收方选择与 lookup 参数投影保持区别。[作者用法](authoring.zh.md)和[兼容说明](compatibility.zh.md#scoped-net-caller-适配2026-10-11)记录公开用法与显式视图适配。主要验证入口为 `verify-typert-dotnet.py --saved-remote-only`，随后执行仓库包门禁；[验证记录](validation.zh.md)将完成结果绑定到源码。更广引用模型后端、浏览器 scoped assembly、owned values、Peer／uplink、丰富事件及原范围其余平台职责继续开放。
+
+scoped 调用者源码检查点 `9bb56ac801a62faeabd09a93d256e3bdf2e0481d` 已完成[本地包门禁](validation.zh.md#生成式-scoped-调用者2026-10-11)。这关闭了生成式 .NET receiver／lookup-scoped 路径及当前 adapter／传输边界，不关闭剩余丰富 Context 工作组。已重新核对最新 main 为 `3342a967f4e57206bec272684a40a437fc051b77`，没有需要纳入的新主线增量。
+
+下一交付组通过正常 build／pack 接通标准制品和真实消费者。首先补齐一个具体缺口：普通 DTO 发射已接受显式引用模型，Remote 调用者投影仍只读取主模型。复用现有声明组合、完整类型身份、根选择及后端诊断，将引用输入接入 CLI／MSBuild，打包所选输出，并验证不引用 Provider 程序集的独立调用者。随后沿已有所有者接通所选 TS／浏览器制品生成及标准模块交付。选择普通声明不自动注册 Service 或暴露 Remote 成员。冷构建／增量／Clean、失败输出清理及 CoreCompile／STJ 前可见性继续作为要求。这些工作沿用现有范围表、操作权威和平台义务，不另建账本、模型代际或兼容路线。
