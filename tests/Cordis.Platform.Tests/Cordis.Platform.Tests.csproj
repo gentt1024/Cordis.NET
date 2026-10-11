@@ -28,6 +28,7 @@
       <CliFixture Include="../../tools/Cordis.Cli/bin/$(Configuration)/net10.0/**/*" />
     </ItemGroup>
     <Copy SourceFiles="@(V1Fixture)" DestinationFiles="@(V1Fixture->'$(OutDir)fixtures/v1/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(V1Fixture)" DestinationFiles="@(V1Fixture->'$(OutDir)fixtures/other-v1/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(V2Fixture)" DestinationFiles="@(V2Fixture->'$(OutDir)fixtures/v2/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(BadFixture)" DestinationFiles="@(BadFixture->'$(OutDir)fixtures/bad/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(ProbeV1Fixture)" DestinationFiles="@(ProbeV1Fixture->'$(OutDir)fixtures/probe-v1/%(RecursiveDir)%(Filename)%(Extension)')" />

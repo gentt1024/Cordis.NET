@@ -462,7 +462,10 @@ public sealed class ClrTests
                     Assert.Same(previous, old);
                     Assert.NotSame(old, candidate);
                     Assert.Same(old, await resolver.ResolveAsync("fixture", new Uri("file:///")));
-                    Assert.NotNull(await resolver.ResolveAsync("dependency", new Uri("file:///")));
+                    Assert.Same(old, await resolver.ResolveAsync("dependency", new Uri("file:///")));
+                    Assert.Throws<InvalidOperationException>(() => resolver.Register(
+                        "candidate-alias",
+                        Definition("v2")));
                     await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.DisposeAsync().AsTask());
                     await Assert.ThrowsAsync<InvalidOperationException>(() =>
                         resolver.ReplaceAsync("fixture", Definition("v1"), (_, _) => ValueTask.CompletedTask).AsTask());
@@ -477,7 +480,7 @@ public sealed class ClrTests
         release.SetResult();
         await replacement.WaitAsync(TimeSpan.FromSeconds(10));
         await disposal.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.Equal(3, resolver.Unloads.Count);
+        Assert.Equal(2, resolver.Unloads.Count);
         Assert.All(resolver.Unloads, item => Assert.True(item.UnloadRequested));
         await Assert.ThrowsAsync<ObjectDisposedException>(() =>
             resolver.ResolveAsync("fixture", new Uri("file:///")).AsTask());

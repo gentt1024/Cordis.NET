@@ -94,41 +94,10 @@ public sealed partial class PluginConfigurationOperations
                     var user =
                         (overridden is null ? inserted?.Config : overridden.Config) as
                         IReadOnlyDictionary<string, object?>;
-                    var fields = new List<SettingsField>();
-                    var secrets = new List<SettingsSecret>();
-                    var diagnostics = new List<string>();
-                    foreach (var name in policy.Fields)
+                    var captured = CaptureSettings(entry, policy, user);
+                    result = new(entryId, Revision(entry, layers), captured.Fields, captured.Diagnostics)
                     {
-                        if (!policy.Allows(name))
-                        {
-                            diagnostics.Add(name + ": hidden");
-                            continue;
-                        }
-
-                        if (!TrySettingsValue(entry, name, out var kind, out var value))
-                        {
-                            diagnostics.Add(name + ": not a supported data live field");
-                            continue;
-                        }
-
-                        var field = SettingsDescriptor(
-                            entry.Fiber!.ConfigDescription!.Properties[name],
-                            entry.Fiber.ConfigDescription.IsVolatile)!;
-                        var redaction = new SettingsRedactionState();
-                        var redacted = RedactSettings(field, value, [name], secrets, state: redaction);
-                        if (redaction.Incomplete)
-                            diagnostics.Add(name + ": unresolved or recursive redaction paths were omitted");
-                        fields.Add(
-                            new(
-                                name,
-                                kind,
-                                ReferenceEquals(redacted, Undefined.Value) ? null : redacted,
-                                user?.ContainsKey(name) == true));
-                    }
-
-                    result = new(entryId, Revision(entry, layers), fields.AsReadOnly(), diagnostics.AsReadOnly())
-                    {
-                        Secrets = secrets.AsReadOnly()
+                        Secrets = captured.Secrets
                     };
                     return Task.CompletedTask;
                 });
@@ -170,6 +139,80 @@ public sealed partial class PluginConfigurationOperations
         ArgumentNullException.ThrowIfNull(policy);
         return MutateConfigurationCoreAsync(entryId, operations, expectedRevision, true, cancellationToken, policy);
     }
+
+    private static SettingsCapture CaptureSettings(
+        Entry entry,
+        SettingsPolicy policy,
+        IReadOnlyDictionary<string, object?>? user = null)
+    {
+        var fields = new List<SettingsField>();
+        var values = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var secrets = new List<SettingsSecret>();
+        var diagnostics = new List<string>();
+        var selected = SelectSettingsFields(entry, policy, diagnostics);
+        foreach (var field in selected)
+        {
+            var redaction = new SettingsRedactionState();
+            var redacted = RedactSettings(field.Descriptor, field.Value, [field.Name], secrets, state: redaction);
+            if (redaction.Incomplete)
+                diagnostics.Add(field.Name + ": unresolved or recursive redaction paths were omitted");
+            if (!ReferenceEquals(redacted, Undefined.Value))
+                values.Add(field.Name, redacted);
+            fields.Add(
+                new(
+                    field.Name,
+                    field.Kind,
+                    ReferenceEquals(redacted, Undefined.Value) ? null : redacted,
+                    user?.ContainsKey(field.Name) == true));
+        }
+
+        return new(
+            SelectedSettingsDescriptor(selected),
+            fields.AsReadOnly(),
+            values,
+            secrets.AsReadOnly(),
+            diagnostics.AsReadOnly());
+    }
+
+    private static IReadOnlyList<SelectedSettingsField> SelectSettingsFields(
+        Entry entry,
+        SettingsPolicy policy,
+        List<string>? diagnostics = null)
+    {
+        var selected = new List<SelectedSettingsField>();
+        foreach (var name in policy.Fields)
+        {
+            if (!policy.Allows(name))
+            {
+                diagnostics?.Add(name + ": hidden");
+                continue;
+            }
+
+            if (!TrySettingsValue(entry, name, out var kind, out var value))
+            {
+                diagnostics?.Add(name + ": not a supported data live field");
+                continue;
+            }
+
+            var description = entry.Fiber!.ConfigDescription!;
+            selected.Add(
+                new(name, kind, value, SettingsDescriptor(description.Properties[name], description.IsVolatile)!));
+        }
+
+        return selected.AsReadOnly();
+    }
+
+    private static ConfigDescriptor SelectedSettingsDescriptor(IReadOnlyList<SelectedSettingsField> selected) =>
+        ConfigDescriptor.Object(selected.Select(field => (field.Name, field.Descriptor)).ToArray());
+
+    private sealed record SelectedSettingsField(string Name, string Kind, object? Value, ConfigDescriptor Descriptor);
+
+    private sealed record SettingsCapture(
+        ConfigDescriptor Descriptor,
+        IReadOnlyList<SettingsField> Fields,
+        IReadOnlyDictionary<string, object?> Value,
+        IReadOnlyList<SettingsSecret> Secrets,
+        IReadOnlyList<string> Diagnostics);
 
     private static bool TrySettingsValue(Entry entry, string name, out string kind, out object? value)
     {

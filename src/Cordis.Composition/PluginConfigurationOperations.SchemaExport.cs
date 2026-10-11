@@ -49,15 +49,7 @@ public sealed partial class PluginConfigurationOperations
                     var descriptor = entry.Fiber!.ConfigDescription ??
                         throw new Refusal("no-configuration-description");
                     if (policy is not null)
-                    {
-                        descriptor = ConfigDescriptor.Object(
-                            policy
-                                .Fields.Where(name =>
-                                    policy.Allows(name) && TrySettingsValue(entry, name, out _, out _))
-                                .Select(name => (name,
-                                    SettingsDescriptor(descriptor.Properties[name], descriptor.IsVolatile)!))
-                                .ToArray());
-                    }
+                        descriptor = SelectedSettingsDescriptor(SelectSettingsFields(entry, policy));
 
                     result = new(
                         entryId,

@@ -1,6 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Runtime.Loader;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Cordis.Composition;
 
@@ -13,6 +16,14 @@ public interface IClrPluginModule
     /// Creates plugin.
     /// </summary>
     IPlugin CreatePlugin();
+}
+
+/// <summary>Optional generated Typert artifact export of an explicitly named CLR module entry.</summary>
+/// <remarks>The factory runs in the same bundle load context as CreatePlugin. It does not activate a Fiber.</remarks>
+public interface IClrTypertModule
+{
+    /// <summary>Return this entry's generated package contribution.</summary>
+    TypertContribution CreateTypertContribution();
 }
 
 /// <summary>Controls the physical files used by an independent collectible load context.</summary>
@@ -127,12 +138,30 @@ public sealed class ClrUnloadObservation
 /// Explicit module mapping for ordinary CLR deployments. The owner must stop all fibers before
 /// disposing this resolver. It neither discovers packages nor restores NuGet at runtime.
 /// </summary>
+/// <remarks>
+/// Entries from one normalized bundle directory share physical loading mode, assembly identity and a collectible load context.
+/// StableDirectory loads retained files in place; ShadowCopy creates one development copy per bundle.
+/// Each loaded main assembly contributes a dependency resolver and private managed directory. Resolution
+/// checks all registered roots; the same path or byte-identical copies reuse identity. Before adding a root,
+/// read-only inspection rejects declared, resolver-located managed and P/Invoke binary conflicts, including
+/// transitively referenced managed images and already selected dependencies. Arbitrary dynamic loading and
+/// factory side effects are not a rollback transaction. Explicit shared contracts and framework fallback
+/// retain their existing rules; unresolved native libraries retain CLR/OS lookup. This is a conservative
+/// binary identity rule, not an ABI compatibility check. Retained references can prevent cooperative unload.
+/// </remarks>
 [RequiresDynamicCode("Loading plugin DLLs requires the ordinary CLR; use static modules in Native AOT.")]
 [RequiresUnreferencedCode("Plugin entry point types are named explicitly in external DLLs.")]
-public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
+public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver, IAsyncDisposable
 {
     private readonly Dictionary<string, ClrModuleDefinition> definitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Lease> loaded = new(StringComparer.Ordinal);
+
+    private readonly Dictionary<string, Bundle> bundles = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+    private readonly HashSet<string> replacingTargets = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
     private readonly Dictionary<string, Assembly> shared;
     // Late callers still enter these gates to observe disposal; no WaitHandle is allocated.
 #pragma warning disable CA2213
@@ -161,7 +190,12 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
     public ClrModuleResolver(string shadowRoot, IEnumerable<Assembly>? sharedContracts = null)
     {
         this.shadowRoot = Path.GetFullPath(shadowRoot);
-        shared = new[] { typeof(IPlugin).Assembly, typeof(IClrPluginModule).Assembly }
+        shared = new[]
+            {
+                typeof(IPlugin).Assembly,
+                typeof(IClrPluginModule).Assembly,
+                typeof(ITypertArtifactResolver).Assembly
+            }
             .Concat(sharedContracts ?? [])
             .Distinct()
             .ToDictionary(a => a.GetName().Name!, StringComparer.OrdinalIgnoreCase);
@@ -212,6 +246,13 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             ObjectDisposedException.ThrowIf(disposed, this);
             if (loaded.ContainsKey(specifier))
                 throw new InvalidOperationException("Use ReplaceAsync to change a loaded module.");
+            if (bundles.TryGetValue(BundleSource(definition), out var bundle) && bundle.Replacing)
+                throw new InvalidOperationException(
+                    "Cannot register another export while its CLR bundle is being replaced.");
+            if (replacingTargets.Contains(BundleSource(definition)) ||
+                definitions.TryGetValue(specifier, out var current) &&
+                bundles.TryGetValue(BundleSource(current), out var previous) && previous.Replacing)
+                throw new InvalidOperationException("Cannot change an export while its CLR bundle is being replaced.");
             definitions[specifier] = definition;
         }
         finally
@@ -232,18 +273,51 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         try
         {
             ObjectDisposedException.ThrowIf(disposed, this);
-            if (loaded.TryGetValue(specifier, out var lease))
-                return lease.Plugin!;
-            if (!definitions.TryGetValue(specifier, out var definition))
-                throw new KeyNotFoundException($"No CLR module mapping for '{specifier}'.");
-            lease = Prepare(definition);
-            loaded.Add(specifier, lease);
-            return lease.Plugin!;
+            return GetLease(specifier).Plugin!;
         }
         finally
         {
             gate.Release();
         }
+    }
+
+    async ValueTask<TypertContribution?> ITypertArtifactResolver.ResolveAsync(
+        string specifier,
+        Uri baseUri,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            var lease = GetLease(specifier);
+            var definition = definitions[specifier];
+            var key = DefinitionExport(definition);
+            if (lease.Bundle.Artifacts.TryGetValue(key, out var artifact))
+                return artifact;
+            artifact = lease.Bundle.Modules[key] is IClrTypertModule module
+                ? module.CreateTypertContribution() ??
+                throw new InvalidOperationException("The CLR Typert module returned no contribution.")
+                : null;
+            lease.Bundle.Artifacts.Add(key, artifact);
+            return artifact;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private Lease GetLease(string specifier)
+    {
+        if (loaded.TryGetValue(specifier, out var lease))
+            return lease;
+        if (!definitions.TryGetValue(specifier, out var definition))
+            throw new KeyNotFoundException($"No CLR module mapping for '{specifier}'.");
+        lease = Prepare(definition);
+        loaded.Add(specifier, lease);
+        bundles[lease.Bundle.Source] = lease.Bundle;
+        return lease;
     }
 
     /// <summary>
@@ -260,19 +334,104 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(switchFibers);
+        Dictionary<string, ClrModuleDefinition> replacements;
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            replacements = definitions.TryGetValue(specifier, out var current)
+                ? definitions
+                    .Where(pair => bundles.Comparer.Equals(BundleSource(pair.Value), BundleSource(current)) &&
+                        DefinitionExport(pair.Value) == DefinitionExport(current))
+                    .ToDictionary(pair => pair.Key, _ => definition, StringComparer.Ordinal)
+                : new Dictionary<string, ClrModuleDefinition>(StringComparer.Ordinal)
+                {
+                    [specifier] = definition
+                };
+        }
+        finally
+        {
+            gate.Release();
+        }
+
+        return await ReplaceAsync(
+                replacements,
+                pairs => switchFibers(pairs.First().Key, pairs.First().Value),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Prepare and switch every registered export of one CLR bundle in a shared candidate load context.</summary>
+    /// <remarks>All registered specifiers for the current bundle must be supplied, including unloaded exports.
+    /// The callback owns Fiber switching and recovery; only route publication is atomic. Candidate side effects
+    /// and product-wide rollback are not a transaction. Registering another alias during the callback is refused.</remarks>
+    public async ValueTask<ClrUnloadObservation> ReplaceAsync(
+        IReadOnlyDictionary<string, ClrModuleDefinition> replacements,
+        Func<IReadOnlyDictionary<IPlugin, IPlugin>, ValueTask> switchFibers,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(replacements);
+        ArgumentNullException.ThrowIfNull(switchFibers);
+        if (replacements.Count == 0)
+            throw new ArgumentException("At least one registered CLR export must be replaced.", nameof(replacements));
+        replacements = replacements.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         if (replacementScope.Value is { Active: true })
             throw new InvalidOperationException("CLR replacements cannot be nested.");
         await mutation.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            Lease previous, candidate;
+            var candidates = new Dictionary<string, Lease>(StringComparer.Ordinal);
+            var pairs = new Dictionary<IPlugin, IPlugin>(ReferenceEqualityComparer.Instance);
+            Bundle previousBundle, candidateBundle;
             await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 ObjectDisposedException.ThrowIf(disposed, this);
-                if (!loaded.TryGetValue(specifier, out previous!))
+                var first = replacements.Keys.FirstOrDefault(loaded.ContainsKey);
+                if (first is null)
                     throw new InvalidOperationException("Resolve the module before replacing it.");
-                candidate = Prepare(definition);
+                previousBundle = loaded[first].Bundle;
+                var registered = definitions
+                    .Where(pair => bundles.Comparer.Equals(BundleSource(pair.Value), previousBundle.Source))
+                    .Select(pair => pair.Key)
+                    .ToHashSet(StringComparer.Ordinal);
+                if (!registered.SetEquals(replacements.Keys))
+                    throw new InvalidOperationException(
+                        "Replace every registered export of the shared CLR bundle together.");
+                var sources = replacements.Values.Select(BundleSource).Distinct(bundles.Comparer).ToArray();
+                if (sources.Length != 1)
+                    throw new ArgumentException(
+                        "Replacement exports must belong to one candidate CLR bundle.",
+                        nameof(replacements));
+                if (bundles.TryGetValue(sources[0], out var existing) && !ReferenceEquals(existing, previousBundle))
+                    throw new InvalidOperationException(
+                        "The candidate bundle already belongs to another loaded generation.");
+                candidateBundle = null!;
+                try
+                {
+                    foreach (var (specifier, definition) in replacements)
+                    {
+                        var candidate = Prepare(definition, candidateBundle, reuseCurrent: false);
+                        candidateBundle = candidate.Bundle;
+                        candidates.Add(specifier, candidate);
+                        if (!loaded.TryGetValue(specifier, out var lease))
+                            continue;
+                        if (pairs.TryGetValue(lease.Plugin!, out var duplicate) &&
+                            !ReferenceEquals(duplicate, candidate.Plugin))
+                            throw new InvalidOperationException(
+                                "Aliases of one CLR export must retain the same replacement export.");
+                        pairs[lease.Plugin!] = candidate.Plugin!;
+                    }
+                }
+                catch
+                {
+                    foreach (var candidate in candidates.Values)
+                        Retire(candidate);
+                    throw;
+                }
+
+                previousBundle.Replacing = true;
+                replacingTargets.Add(candidateBundle.Source);
             }
             finally
             {
@@ -285,7 +444,8 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             {
                 try
                 {
-                    await switchFibers(previous.Plugin!, candidate.Plugin!).ConfigureAwait(false);
+                    await switchFibers(new System.Collections.ObjectModel.ReadOnlyDictionary<IPlugin, IPlugin>(pairs))
+                        .ConfigureAwait(false);
                 }
                 catch
                 {
@@ -294,7 +454,8 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
 #pragma warning restore CA2016
                     try
                     {
-                        Retire(candidate);
+                        foreach (var candidate in candidates.Values)
+                            Retire(candidate);
                     }
                     finally
                     {
@@ -310,9 +471,18 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
 #pragma warning restore CA2016
                 try
                 {
-                    loaded[specifier] = candidate;
-                    definitions[specifier] = definition;
-                    return Retire(previous);
+                    // A callback may import another alias of an already cached old export.
+                    var retiring =
+                        loaded.Values.Where(lease => ReferenceEquals(lease.Bundle, previousBundle)).ToArray();
+                    foreach (var (specifier, definition) in replacements)
+                        definitions[specifier] = definition;
+                    foreach (var (specifier, candidate) in candidates)
+                        loaded[specifier] = candidate;
+                    bundles[candidateBundle.Source] = candidateBundle;
+                    ClrUnloadObservation? observation = null;
+                    foreach (var lease in retiring)
+                        observation = Retire(lease) ?? observation;
+                    return observation!;
                 }
                 finally
                 {
@@ -321,6 +491,17 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             }
             finally
             {
+                await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+                try
+                {
+                    previousBundle.Replacing = false;
+                    replacingTargets.Remove(candidateBundle.Source);
+                }
+                finally
+                {
+                    gate.Release();
+                }
+
                 scope.Active = false;
                 replacementScope.Value = null;
             }
@@ -331,11 +512,25 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         }
     }
 
-    private Lease Prepare(ClrModuleDefinition definition)
+    private static string BundleSource(ClrModuleDefinition definition) =>
+        Path.TrimEndingDirectorySeparator(Path.GetFullPath(definition.BundleDirectory));
+
+    private static (string Assembly, string Entry) ExportKey(string assembly, string entry) =>
+        (OperatingSystem.IsWindows() ? assembly.ToUpperInvariant() : assembly, entry);
+
+    private static (string Assembly, string Entry) DefinitionExport(ClrModuleDefinition definition)
     {
+        var source = BundleSource(definition);
+        return ExportKey(
+            Path.GetRelativePath(source, Path.GetFullPath(definition.AssemblyPath, source)),
+            definition.EntryType);
+    }
+
+    private Lease Prepare(ClrModuleDefinition definition, Bundle? bundle = null, bool reuseCurrent = true)
+    {
+        var source = BundleSource(definition);
         if (!Enum.IsDefined(definition.LoadMode))
             throw new ArgumentOutOfRangeException(nameof(definition), "Unknown CLR module load mode.");
-        var source = Path.GetFullPath(definition.BundleDirectory);
         var shadowRelative = Path.GetRelativePath(source, shadowRoot);
         if (definition.LoadMode == ClrModuleLoadMode.ShadowCopy &&
             !Path.IsPathRooted(shadowRelative) && shadowRelative != ".." && !shadowRelative.StartsWith(
@@ -352,28 +547,55 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
             throw new ArgumentException("The entry assembly must be inside its bundle directory.", nameof(definition));
         if (!File.Exists(main))
             throw new FileNotFoundException("The plugin entry assembly is missing.", main);
-        var shadowDirectory = definition.LoadMode == ClrModuleLoadMode.ShadowCopy
-            ? Path.Combine(shadowRoot, Guid.NewGuid().ToString("N"))
-            : null;
-        var destination = shadowDirectory ?? source;
-        if (shadowDirectory is not null)
-            Directory.CreateDirectory(shadowDirectory);
-        BundleContext? context = null;
+        if (bundle is null && reuseCurrent)
+            bundles.TryGetValue(source, out bundle);
+        if (reuseCurrent && bundle is null && replacingTargets.Contains(source))
+            throw new InvalidOperationException("Cannot import the candidate CLR bundle before replacement commits.");
+        if (reuseCurrent && bundle is { Replacing: true } &&
+            !bundle.Plugins.ContainsKey(ExportKey(relative, definition.EntryType)))
+            throw new InvalidOperationException(
+                "Cannot import an uncached export while its CLR bundle is being replaced.");
+        if (bundle is not null && (bundle.ShadowDirectory is not null) !=
+            (definition.LoadMode == ClrModuleLoadMode.ShadowCopy))
+            throw new InvalidOperationException("Entries of one CLR bundle must use the same load mode.");
+        var fresh = bundle is null;
+        var shadowDirectory = bundle?.ShadowDirectory;
+        if (fresh && definition.LoadMode == ClrModuleLoadMode.ShadowCopy)
+            shadowDirectory = Path.Combine(shadowRoot, Guid.NewGuid().ToString("N"));
+        var destination = bundle?.Directory ?? shadowDirectory ?? source;
+        BundleContext? context = bundle?.Context;
         try
         {
-            PrepareDirectory(source, shadowDirectory);
+            if (fresh)
+            {
+                if (shadowDirectory is not null)
+                    Directory.CreateDirectory(shadowDirectory);
+                PrepareDirectory(source, shadowDirectory);
+            }
+
             var shadowMain = Path.Combine(destination, relative);
-            context = new BundleContext(shadowMain, shared);
-            var assembly = context.LoadFromAssemblyPath(shadowMain);
-            var type = assembly.GetType(definition.EntryType, throwOnError: true)!;
-            if (Activator.CreateInstance(type) is not IClrPluginModule module)
-                throw new InvalidOperationException(
-                    $"'{definition.EntryType}' must implement the shared IClrPluginModule contract.");
-            var plugin = module.CreatePlugin() ?? throw new InvalidOperationException("The module returned no plugin.");
-            return new Lease(context, plugin, destination, shadowDirectory);
+            context ??= new BundleContext(shared);
+            bundle ??= new Bundle(source, context, destination, shadowDirectory);
+            var key = ExportKey(relative, definition.EntryType);
+            if (!bundle.Plugins.TryGetValue(key, out var plugin))
+            {
+                var assembly = context.LoadEntry(shadowMain);
+                var type = assembly.GetType(definition.EntryType, throwOnError: true)!;
+                if (Activator.CreateInstance(type) is not IClrPluginModule module)
+                    throw new InvalidOperationException(
+                        $"'{definition.EntryType}' must implement the shared IClrPluginModule contract.");
+                plugin = module.CreatePlugin() ?? throw new InvalidOperationException("The module returned no plugin.");
+                bundle.Plugins.Add(key, plugin);
+                bundle.Modules.Add(key, module);
+            }
+
+            bundle.References++;
+            return new Lease(bundle, plugin);
         }
         catch
         {
+            if (!fresh)
+                throw;
             if (context is null)
             {
                 if (shadowDirectory is not null)
@@ -435,12 +657,20 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         }
     }
 
-    private ClrUnloadObservation Retire(Lease lease)
+    private ClrUnloadObservation? Retire(Lease lease)
     {
         lease.Plugin = null;
-        var context = lease.Context!;
-        lease.Context = null;
-        return RequestUnload(context, lease.Directory, lease.ShadowDirectory);
+        var bundle = lease.Bundle;
+        if (--bundle.References != 0)
+            return null;
+        if (bundles.TryGetValue(bundle.Source, out var current) && ReferenceEquals(bundle, current))
+            bundles.Remove(bundle.Source);
+        bundle.Plugins.Clear();
+        bundle.Modules.Clear();
+        bundle.Artifacts.Clear();
+        var context = bundle.Context!;
+        bundle.Context = null;
+        return RequestUnload(context, bundle.Directory, bundle.ShadowDirectory);
     }
 
     private ClrUnloadObservation RequestUnload(BundleContext context, string directory, string? shadowDirectory)
@@ -506,20 +736,187 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         }
     }
 
-    private sealed class Lease(BundleContext context, IPlugin plugin, string directory, string? shadowDirectory)
+    private sealed class Bundle(string source, BundleContext context, string directory, string? shadowDirectory)
     {
+        public string Source = source;
         public BundleContext? Context = context;
-        public IPlugin? Plugin = plugin;
         public string Directory = directory;
+        public readonly Dictionary<(string Assembly, string Entry), IPlugin> Plugins = [];
+        public readonly Dictionary<(string Assembly, string Entry), IClrPluginModule> Modules = [];
+        public readonly Dictionary<(string Assembly, string Entry), TypertContribution?> Artifacts = [];
+        public int References;
+        public bool Replacing;
         public string? ShadowDirectory = shadowDirectory;
     }
 
-    private sealed class BundleContext(string main, IReadOnlyDictionary<string, Assembly> shared)
+    private sealed class Lease(Bundle bundle, IPlugin plugin)
+    {
+        public Bundle Bundle = bundle;
+        public IPlugin? Plugin = plugin;
+    }
+
+    private sealed class BundleContext(IReadOnlyDictionary<string, Assembly> shared)
         : AssemblyLoadContext($"Cordis:{Guid.NewGuid():N}", isCollectible: true)
     {
         private static readonly HashSet<string> FrameworkAssemblies = ReadFrameworkAssemblies();
-        private readonly AssemblyDependencyResolver resolver = new(main);
-        private readonly string directory = Path.GetDirectoryName(main)!;
+        private readonly object dependencyGate = new();
+        private readonly List<DependencyRoot> roots = [];
+        private readonly Dictionary<string, string> managedPaths = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> nativePaths = new(PathComparer);
+
+        private static readonly StringComparer PathComparer =
+            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+        private sealed class DependencyRoot(string main)
+        {
+            public string Main
+            {
+                get;
+            } = main;
+
+            public AssemblyName Name
+            {
+                get;
+            } = AssemblyName.GetAssemblyName(main);
+
+            public AssemblyDependencyResolver Resolver
+            {
+                get;
+            } = new(main);
+
+            private readonly string directory = Path.GetDirectoryName(main)!;
+
+            public string? ResolveManaged(AssemblyName name)
+            {
+                if (string.Equals(Name.Name, name.Name, StringComparison.OrdinalIgnoreCase))
+                    return Main;
+                var path = Resolver.ResolveAssemblyToPath(name);
+                if (path is not null)
+                    return path;
+                var local = Path.Combine(directory, name.Name + ".dll");
+                return File.Exists(local) ? local : null;
+            }
+        }
+
+        public Assembly LoadEntry(string main)
+        {
+            string path;
+            lock (dependencyGate)
+            {
+                var root = roots.Find(root => PathComparer.Equals(root.Main, main));
+                if (root is null)
+                {
+                    root = new DependencyRoot(main);
+                    var candidates = roots.Append(root).ToArray();
+                    // The CLR can reuse a loaded assembly without calling Load again.
+                    foreach (var selected in managedPaths)
+                    {
+                        var name = AssemblyName.GetAssemblyName(selected.Value);
+                        SelectPath(
+                            candidates
+                                .Select(candidate =>
+                                    candidate.ResolveManaged(name))
+                                .Append(selected.Value),
+                            "managed",
+                            selected.Key);
+                    }
+
+                    foreach (var selected in nativePaths)
+                        SelectPath(
+                            candidates
+                                .Select(candidate =>
+                                    candidate.Resolver.ResolveUnmanagedDllToPath(selected.Key))
+                                .Append(selected.Value),
+                            "native",
+                            selected.Key);
+                    CheckDeclarations(candidates);
+                    path = SelectPath(
+                        candidates.Select(candidate => candidate.ResolveManaged(root.Name)),
+                        "managed",
+                        root.Name.Name!)!;
+                    roots.Add(root);
+                    managedPaths.TryAdd(root.Name.Name!, path);
+                }
+                else
+                    path = managedPaths[root.Name.Name!];
+            }
+
+            return LoadFromAssemblyPath(path);
+        }
+
+        private void CheckDeclarations(IReadOnlyList<DependencyRoot> candidates)
+        {
+            var pending = new Stack<string>(candidates.Select(root => root.Main));
+            var visited = new HashSet<string>(PathComparer);
+            while (pending.TryPop(out var path))
+            {
+                if (!visited.Add(path))
+                    continue;
+                using var stream = File.OpenRead(path);
+                using var image = new PEReader(stream);
+                var metadata = image.GetMetadataReader();
+                foreach (var handle in metadata.AssemblyReferences)
+                {
+                    var reference = metadata.GetAssemblyReference(handle);
+                    var name = new AssemblyName
+                    {
+                        Name = metadata.GetString(reference.Name),
+                        Version = reference.Version,
+                        CultureName = metadata.GetString(reference.Culture),
+                    };
+                    if (shared.ContainsKey(name.Name!))
+                        continue;
+                    var key = metadata.GetBlobBytes(reference.PublicKeyOrToken);
+                    if ((reference.Flags & AssemblyFlags.PublicKey) != 0)
+                        name.SetPublicKey(key);
+                    else
+                        name.SetPublicKeyToken(key);
+                    var dependency = SelectPath(
+                        candidates.Select(root => root.ResolveManaged(name)),
+                        "managed",
+                        name.Name!);
+                    if (dependency is not null)
+                        pending.Push(dependency);
+                }
+
+                foreach (var handle in metadata.MethodDefinitions)
+                {
+                    var method = metadata.GetMethodDefinition(handle);
+                    if ((method.Attributes & MethodAttributes.PinvokeImpl) == 0)
+                        continue;
+                    var import = method.GetImport();
+                    var name = metadata.GetString(metadata.GetModuleReference(import.Module).Name);
+                    SelectPath(
+                        candidates.Select(root => root.Resolver.ResolveUnmanagedDllToPath(name)),
+                        "native",
+                        name);
+                }
+            }
+        }
+
+        private static string? SelectPath(IEnumerable<string?> candidates, string kind, string name)
+        {
+            string? selected = null;
+            foreach (var candidate in candidates.OfType<string>().Distinct(PathComparer))
+            {
+                if (selected is null)
+                {
+                    selected = candidate;
+                    continue;
+                }
+
+                using var first = File.OpenRead(selected);
+                using var second = File.OpenRead(candidate);
+                if (!SHA256.HashData(first).AsSpan().SequenceEqual(SHA256.HashData(second)))
+                {
+                    var message = $"Conflicting {kind} dependency '{name}' in the CLR bundle: " +
+                        $"'{selected}' and '{candidate}' contain different binaries.";
+                    throw kind == "managed" ? new FileLoadException(message) : new DllNotFoundException(message);
+                }
+            }
+
+            return selected;
+        }
 
         private static HashSet<string> ReadFrameworkAssemblies()
         {
@@ -609,12 +1006,15 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
         {
             if (shared.TryGetValue(assemblyName.Name!, out var contract))
                 return contract;
-            var path = resolver.ResolveAssemblyToPath(assemblyName);
-            if (path is null)
+            string? path;
+            lock (dependencyGate)
             {
-                var local = Path.Combine(directory, assemblyName.Name + ".dll");
-                if (File.Exists(local))
-                    path = local;
+                path = SelectPath(
+                    roots.Select(root => root.ResolveManaged(assemblyName)),
+                    "managed",
+                    assemblyName.Name!);
+                if (path is not null)
+                    managedPaths.TryAdd(assemblyName.Name!, path);
             }
 
             if (path is not null)
@@ -628,7 +1028,17 @@ public sealed class ClrModuleResolver : IModuleResolver, IAsyncDisposable
 
         protected override nint LoadUnmanagedDll(string unmanagedDllName)
         {
-            var path = resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
+            string? path;
+            lock (dependencyGate)
+            {
+                path = SelectPath(
+                    roots.Select(root => root.Resolver.ResolveUnmanagedDllToPath(unmanagedDllName)),
+                    "native",
+                    unmanagedDllName);
+                if (path is not null)
+                    nativePaths.TryAdd(unmanagedDllName, path);
+            }
+
             return path is null ? 0 : LoadUnmanagedDllFromPath(path);
         }
     }

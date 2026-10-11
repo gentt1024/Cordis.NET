@@ -148,3 +148,151 @@ python scripts/verify.py
 ```
 
 Consult [validation](validation.md) for executed environments and limitations, and [compatibility](compatibility.md) for the fixed DSH target and evidence vocabulary. A listed test or deployment command is not by itself a claim that its latest run completed.
+
+## Module exports and generated Remote contracts, 2026-10-09
+
+This source continuation belongs to the existing application infrastructure scope; see the [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09). It does not announce a published package batch. The following contracts require a package batch built from this continuation.
+
+### Multiple CLR entries in one author package
+
+Keep the existing single-entry `assembly` and `entryType` fields in `cordis.plugin.json`. An optional `exports` object declares additional explicit subpaths in that assembly. For the [independent author fixture](../tests/fixtures/ClrMultiEntry/Plugin.cs), the declaration is:
+
+```json
+{
+  "assembly": "IndependentMultiEntry.dll",
+  "entryType": "IndependentMultiEntry.First",
+  "exports": {
+    "./second": "IndependentMultiEntry.Second"
+  }
+}
+```
+
+`DotnetPluginToolchain` registers the package root as `nuget:independentmultientry` and the additional entry as `nuget:independentmultientry/second`. Single-entry authors need no empty export table. Static hosts can continue to register exact requests through their existing resolvers. Module selection and Cordis service `Provide` remain separate operations; neither a Core `Exports` member nor an application `ApiCatalog` is required.
+
+`ClrModuleResolver` loads exports with the same normalized bundle directory in one collectible assembly load context. StableDirectory loads the retained files in place; explicit ShadowCopy shares one development copy. All entries of a loaded bundle must use the same mode. Aliases of the same assembly/entry type reuse the plugin instance; different entry types retain separate plugins. Loader entries retain their own raw configuration, Fiber activation and effect cleanup. Removing one resolver lease preserves other exports; the final lease requests bundle unload. Stop the relevant Fibers before removing their resolver mappings. Unload request, collection and shadow deletion remain separate observations.
+
+The resolver shares Core, Clr and Composition contract assemblies with the host by default. Pass other exact host contract assemblies through `sharedContracts`; private plugin dependencies stay in the bundle. This includes the identity required for generated `ITypertRemoteService` bindings and `IClrTypertModule` contributions.
+
+Explicit resolver registrations can select different main assemblies under one bundle directory. Each main assembly contributes its own dependency resolver and directory before loading. Private managed and native resolution queries all registered roots. The same path or byte-identical copies reuse one dependency; different binaries for the same dependency name are refused, including when a new entry would otherwise reuse an already loaded assembly. This is a conservative native bundle rule, not an ABI or assembly-version compatibility algorithm. Native libraries not located by those resolvers retain CLR/OS lookup behavior. The [multi-assembly fixture](../tests/fixtures/ClrMultiAssembly/Consumer.cs) checks both entry orders and actual private native calls.
+
+Before admitting a dependency root, the resolver reads managed references and P/Invoke declarations, recursively follows resolver-located managed images, and checks their candidate paths without executing a factory. This covers declared, locatable conflicts even when the original entry has not yet called its dependency. Already selected dependencies are checked too. Arbitrary dynamic loads and factory side effects do not become a rollback transaction.
+
+Replace a bundle containing distinct exports with the dictionary overload of `ClrModuleResolver.ReplaceAsync`, supplying every registered request, including unloaded exports and aliases. Its callback can use `Loader.ReplacePluginsAsync` to transfer existing raw configurations and switch the affected Fibers together. The single-entry overload remains available for one export and its aliases. Candidate preparation and route publication preserve a single bundle generation; callback effects and product state are not a transaction. Activation failure uses the existing Loader recovery path, and a settled Pending Fiber remains legal.
+
+### Declare and generate native Remote contracts
+
+`Cordis.NET.Composition` carries its Roslyn analyzer in the NuGet analyzer directory. An author consuming the package can declare a public, top-level, non-generic partial class with `RemoteService` and explicit `RemoteMethod` attributes. Supply a source-generated `JsonSerializerContext` for boundary types. This reduced declaration follows the [independent Remote author](../tests/fixtures/TypertConsumer/Author.cs):
+
+```csharp
+using System.Text.Json.Serialization;
+using Cordis.Composition;
+
+public sealed record EchoRequest(string Text, int Count);
+public sealed record EchoReply(string Text, int Count);
+
+[JsonSourceGenerationOptions(
+    RespectNullableAnnotations = true,
+    RespectRequiredConstructorParameters = true)]
+[JsonSerializable(typeof(EchoRequest))]
+[JsonSerializable(typeof(EchoReply))]
+public partial class RemoteJson : JsonSerializerContext;
+
+[RemoteService("sample:remote", typeof(RemoteJson), Namespace = "sample")]
+public partial class EchoService
+{
+    [RemoteMethod]
+    public Task<EchoReply> Echo(EchoRequest request) =>
+        Task.FromResult(new EchoReply(request.Text, request.Count));
+}
+```
+
+The generator emits `EchoServiceTypert.Contribution("IndependentRemote")`, descriptors and direct typed invocation bindings. The plugin still provides its actual `EchoService` under `sample:remote` using `Context.Provide`. Contract registration does not create or activate that service. JSON naming, member nullability and required constructor fields follow the supplied metadata; the two `Respect...` settings above are author choices, not implicit generator defaults. Declare metadata for every ordinary argument and result type. Unsupported declarations fail compilation; unsupported client schema shapes fail client generation.
+
+An explicit Remote class may derive from `Service<TState>`. Its `CreateView` can create a fresh caller-bound view sharing the provider's State, as in the [independent author](../tests/fixtures/TypertConsumer/Author.cs). Generated bindings invoke that view. The Gateway checks the underlying registration and original provider value; view allocation does not retire a provider. Ordinary in-process Service consumption still uses the Core API directly.
+
+Root nullable reference annotations, such as a `string?` argument or `Task<string?>` result, are supplied by Roslyn through `TypertCodec.CreateNullable`: runtime JSON type metadata erases these annotations. The codec adds a null branch and relocates local schema references, preserving non-null recursive children. Generated declarations therefore expose `string | null` for these boundaries. This does not claim complete nested generic nullability analysis or add result-schema validation to the Gateway.
+
+`TypertCodec` prepares and checks its schema lazily when `Schema` or `Decode` is first used, including nullable input. Decode validates the supported native subset and then deserializes. Encode serializes with the supplied metadata without preparing or validating the result schema. Unsupported schema features fail explicitly. Client projection preserves `prefixItems` as readonly tuples, including bounded optional prefix elements, nested local references, and unbounded typed or unknown tails. A minimum beyond the prefix or a finite tail length limit is rejected. The [tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) supplies an explicit schema to a generated binding and distinguishes the real closed-tuple HTTP call from codec/projection-only variants. It does not demonstrate Roslyn inference of CLR tuple types or the complete source type graph.
+
+Remote methods currently use required ordinary parameters and `Task<T>`, or explicit `RemoteMethod(Stream = true)` with `IAsyncEnumerable<T>`. A final `CancellationToken` parameter may be included for cooperative cancellation, without a default value. Explicit Context and object lookup declarations have host-owned registration APIs; the complete scoped/lookup example is in the same fixture.
+
+### Register, call and withdraw contracts
+
+Create a `TypertRegistry` and `TypertGateway` in the existing Cordis context. `TypertLoader.StartAsync` discovers contributions for live Loader entries through an explicit artifact resolver; it does not scan assemblies. A static author uses `StaticTypertArtifactResolver.Register` with its generated contribution factory. A dynamic entry can implement `IClrTypertModule.CreateTypertContribution()` alongside `IClrPluginModule.CreatePlugin()`; `ClrModuleResolver` then supplies the artifacts from the same loaded bundle and factory identity. See the [static consumer](../tests/fixtures/TypertConsumer/Consumer.cs) and [multi-entry consumer](../tests/fixtures/ClrMultiEntry/Consumer.cs).
+
+The Typert loader's owner Fiber owns registrations and its activation-lifetime import cache. Multiple live entries of one exact module request share a contribution; removing the last matching entry withdraws it unless that request was explicitly configured. Registry registration validates the contribution before publishing it and rejects conflicts. Gateway calls resolve the live Cordis provider and check registration validity; withdrawing a definition invalidates retained invocations.
+
+The native Gateway also checks provider generations after successful resolution and before encoding successful business results or stream items. Withdrawing a Service, lookup or Context provider does not actively abort work already running. A withdrawn provider's successful result is refused even if the generated definition remains active. The [independent lifetime cases](../tests/fixtures/TypertConsumer/LifetimeCases.cs) hold each provider at its actual asynchronous boundary, replace it, and verify both rejection of old success and admission through the current provider. These checks are a native validity adaptation, not product retirement or draining policy.
+
+For dynamic bundle replacement, keep the Typert loader owner and call `SuspendAsync` with the affected exact Loader request names after candidate preparation and before switching provider Fibers. These names can differ from CLR resolver keys when deployment routing supplies aliases. After the resolver returns and commits, call `ResumeAsync` for those requests. On failure, resume only when `PluginReplacementFailure.Recovery` confirms `Succeeded`; otherwise keep that scope suspended. Resume propagates registration errors and withdraws its selected batch on failure. Same-request lifecycle reentry from registration or withdrawal observers is refused. Suspension detaches unfinished imports without forcibly stopping resolver code; retained tasks can still retain their old code until they settle. The independent multi-entry consumer verifies unchanged contribution identity and calls for an unrelated package, refreshed CLR codecs after replacement, recovery ordering and old invocation rejection. Retained contributions, clients, service objects or errors can still keep collectible code alive; release them when their ownership ends.
+
+`MapCordisRemote` maps a host-authorized `TypertGateway` to native unary JSON and downlink NDJSON routes. The host supplies the authorization callback. Request abort and generated-client `AbortSignal` convey cancellation; `byte[]` results use JSON base64. Host unary dispatch passes the signal to the binding and normalizes a business failure while cancelled; it does not preempt successful business execution. Downlink reads race cancellation, then cleanup waits for a pending native read before disposing the enumerator in its invocation Context. A body or cleanup that never settles can prevent termination, as in the pinned stream cleanup boundary. This carrier does not promise the complete pinned Typert wire protocol.
+
+Dispose or drain active Gateway iterators before closing their Cordis root. Iterator cleanup re-enters that execution domain; a closed root cannot run it.
+
+Generate `.mjs` and `.d.mts` artifacts with `TypertArtifacts.GenerateClient(contribution)`. The result uses the same descriptors and schemas as the host. Generated clients expose typed calls and the Remote result/error envelope:
+
+```typescript
+import { createRemote, mountRemote } from "./remote.mjs";
+
+const client = createRemote("/remote");
+const echo = client["sample/Echo"];
+const result = await echo({
+  request: { Text: "hello", Count: 1 },
+});
+client.dispose();
+
+const mounted = await mountRemote(ctx, "/remote");
+await mounted.dispose();
+```
+
+Here `ctx` is the client Cordis owner. Await `mountRemote`: it registers owner cleanup and contributes methods to the shared root `remote.<namespace>` service. Contributions with disjoint methods can share that namespace; duplicate methods or an unrelated existing service are refused. Withdrawal removes only that contribution's methods, and final withdrawal removes the namespace service. Disposing either client stops admission and aborts its active fetches.
+
+### Consumer evidence and remaining scope
+
+The [multi-entry gate](../scripts/verify-clr-multi-entry.py) independently packs an author package, consumes it through `PackageReference`, installs its root/subpath entries and exercises shared identity, separate configurations, failed and successful replacement, withdrawal, generated TypeScript calls over real HTTP and invalid arguments. The separate [Remote gate](../scripts/verify-typert.py) covers the native Remote author chain. Use a fresh local package batch and the required Node/TypeScript dependencies. Platform acceptance remains governed by the completed results in [validation](validation.md); these examples alone do not establish Windows/Linux or Native AOT closure. Dynamic CLR loading requires the ordinary runtime.
+
+The remaining source type graph, rich Context/owned-value graph, Peer/uplink/event remotes and binary attachment protocol remain open scope. Migration of existing PluginManager, Settings/configuration and client management consumers to generated Typert contracts remains open. Existing handwritten `MapCordisService` endpoints are still usable, but do not close those gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
+
+
+## Native authored models and .NET consumers, 2026-10-10
+
+Ordinary Plugin, Service and Config use remains in process. Remote is an optional boundary for consumers in another environment. A C# author keeps the existing Remote attributes and explicit STJ context; setting `CordisTypertService` opts that project into source-model extraction. Composition supplies the SDK compiler tool and build target. Node and TypeScript are not prerequisites for this path.
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>settingsController</CordisTypertService>
+</PropertyGroup>
+```
+
+The build publishes `cordis/typert/settingsController.cordis.typert.json` in the author package. This versioned, compiler-independent artifact retains declaration and serializer facts instead of reconstructing them from RPC descriptors. The normal Remote generator compares it with the current compilation and refuses stale source facts with `CORDISREMOTE002`. Referenced declarations use CLR metadata and adjacent XML documentation; source-only initializer/getter bodies unavailable from metadata are not reconstructed. Full referenced-model composition remains open.
+
+A separate contract package can consume a copy of that artifact without referencing the provider implementation:
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>settingsController</CordisTypertService>
+  <CordisTypertClientModel>settingsController.cordis.typert.json</CordisTypertClientModel>
+  <CordisTypertClientNamespace>IndependentSettings.Client</CordisTypertClientNamespace>
+  <CordisTypertClientName>SettingsClient</CordisTypertClientName>
+  <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+</PropertyGroup>
+```
+
+The target writes ordinary DTO/client source before `CoreCompile`, so STJ sees it in the same compilation. Same-round source-generator output cannot serve as STJ input. Generated source is owned by `Clean`; identical incremental emission preserves its bytes and timestamp. This opt-in command-line build is the verified boundary; first-build IDE/design-time integration still needs separate evidence. The selected SDK must provide the matching Roslyn assemblies; the package does not redistribute them.
+
+Nullable float and decimal constant initializers retain their authored types and defaults. An absent JSON member keeps its initializer; explicit null replaces it. Caller DTOs share the selected target namespace with generated helper types. A conflicting name, such as `DemoClientFailure` when `CordisTypertClientName` is `DemoClient`, is rejected before compilation with both origins in the diagnostic. Choose a distinct DTO or client name; the emitter does not silently rename public types and removes its previous generated output when it refuses a projection.
+
+```csharp
+using var http = new HttpClient();
+using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
+var view = await remote.DescribeAsync();
+```
+
+The caller owns the supplied HttpClient. Direct unary calls return typed values or throw the existing `RemoteError`, preserving owner codes and detached JSON details. This is a native adaptation of the existing result envelope. Client disposal stops admission, cancels its transport requests and rejects late successful completions; it does not dispose the borrowed HttpClient or promise forced Host termination.
+
+The production `SettingsController` resolves the optional ordinary `ISettingsDescribeProvider` service named `settings` on each call. `ProfileSettingsDescribeProvider` reads all host-selected namespaces through one existing profile transaction. It publishes redacted live values and Schemastery declarations without defaults, keeps genuine JSON null distinct from absent secrets, and retains native projection diagnostics outside the fixed response. The host supplies namespace/page policy, writability and document-presence facts. Base/user reconstruction and the pinned monotonic revision are not supplied: this adapter omits those optional layers and retains the existing native revision string.
+
+The [independent .NET Settings gate](../scripts/verify-typert-dotnet.py) packs an author and contract package, then builds a package-only caller outside this repository. The caller does not reference the provider implementation and uses static metadata with reflection fallback disabled. It covers typed describe, redaction, missing/failed provider, retry, held-view invalidation, definition withdrawal/re-registration, scoped suspension and borrowed-client ownership. Primitive roots, null/default arguments, nullable-state annotations and unsupported projections have separate cases. Run with `--aot` for the static caller; the dynamic CLR Host remains an ordinary-runtime boundary. Formal platform results belong to the exact completed checkpoint in [validation](validation.md).
+
+This path covers direct ordinary unary callers and the exercised Settings data shapes. Complete Settings writes/editors, PluginManager/client-management migration, rich graphs, full source-type analysis and TS generation from this new model remain open. Existing TS/Web output stays available and retains its separate gate.

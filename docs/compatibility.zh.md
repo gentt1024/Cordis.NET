@@ -70,6 +70,10 @@ HTTP 管理授权与执行使用同一个端点资源。插件/bundle 启停使�
 
 ## 证据
 
+配置 watch 注册从最近存在的规范父目录开始，与固定 HMR watcher 一致。目标父目录已存在时，原生监听不包含子目录，对应 DSH depth 为零；无关 SDK 工作子目录不应进入该 watch 的事件缓冲或元数据解析。祖先缺失时，FileSystemWatcher 需要递归监听：布尔深度无法精确表达 DSH 的有限正整数深度，这一较宽的原生边界明确保留。原生缓冲溢出保留原 warning/error，再通过正常串行队列刷新，补读已丢通知。这是 FileSystemWatcher 的必要适配；固定 DSH 对运行期 watcher 错误只警告。其他原生错误保留诊断，已关闭 watch 不接受新刷新。
+
+配置 watch 事件首先匹配规范化事件路径，与固定 HMR watcher 一致。匹配的修改、删除及祖先目录创建无需读取变化文件的属性，直接排队刷新。原生别名解析保留为后备路径；失败通过现有 warning/error 通道报告原异常，后续事件仍可恢复。rename 的两个路径分别处理。初始注册仍拒绝不可访问路径，已关闭的 watch 忽略排队事件。
+
 Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 Prepare 前读取的 manifest 覆盖后续编辑。这是原生适配：固定 DSH 成功路径在 `selectBundle` 重读，但没有提供完整产品候选批准合同。两者都不保证能对忽略协作锁的任意编辑器执行条件替换。
 
 `PluginConfigurationOperations.AdmitProfileAsync` 接收库持有的不可变 manifest 文本和原始根配置候选，组合仍使用现有 Profile/Include 逻辑。修改分离的 composition 视图不会改变保存候选。安装与 bundle 选择在发布/持久化前准入，并通过 `ProfileSession` 应用该候选；移除分别准入其持久步骤，其中删除依赖候选在工具解除运行时映射前准入。CLR 制品保留并单独报告，直至显式离线删除。拒绝第二步时，包保持已安装、已取消选择。重复选择仍在重新应用前准入。普通消费可以省略准入。仅使用旧 `ReconcileAsync` 的宿主在未启用产品准入时保留原回调；启用产品准入时必须支持候选 reconciliation，不能静默退回重新读盘组合。
@@ -81,3 +85,63 @@ Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 P
 在线 metadata 编辑使用同一所有者的 `ReadProfileAsync` 与 `SaveProfileMetadataAsync`。保存先等待已有 mutation，再核对原修订；不能修改管理入口拥有的 dependencies 或 `dsh` 政策/选择。宿主决定怎样呈现等待、草稿和冲突，不代替产品同意缩减作者体验。低层 `PackageManifest.Write` 和静态维护函数仍要求调用者排除并发，或在离线 Profile 使用。所有受支持的并发写者必须遵守同一 Profile 锁协议和队列顺序。指纹检查检测已观察到的变化，不能关闭最后比较到 rename 之间非协作写者的竞态。产品自身政策输入和后续运行时/插件副作用不构成新的全局事务。后续协作请求独立于本次安装提交，最终 Profile 可以合法地不同。
 
 最近完成的运行汇总见[验证记录](validation.zh.md)。`docs/upstream-tests.json` 是不可变候选清单；`docs/test-map.json` 保存当前处置；`docs/scenario-map.json` 记录差分场景。上游源码执行、.NET 测试、配对 trace 与人工断言审阅仍是彼此独立的证据类别。
+
+## 2026-10-09 模块导出与 Typert 续建
+
+[范围续账](development.zh.md#2026-10-09-应用基础设施范围续账) 将起始 HEAD 的遗漏与本次实施分别记录。行为依据仍是 DSH `639ed015397290b3745d163aafe02ffee4aa3f84`。历史完成记录与固定基线保持不变。本次源码续建不声明已发布包批次。
+
+### CLR 模块身份与所有权
+
+固定 Loader 的模块导入和默认导出归一化独立于服务 `Provide` 选择插件入口。原生适配使用显式 CLR 入口类型：既有包根 `assembly`/`entryType` 元数据继续有效，可选 `exports` 将包子路径映射到同一程序集中的入口类型。不增加 Core 导出表，也不要求单入口插件声明空表。
+
+归一化 bundle 目录相同的请求共享物理加载模式、程序集身份与可收集加载上下文。稳定加载保留原文件；显式 ShadowCopy 共享一个开发副本。同一已加载 bundle 的入口混用加载模式时，在导入新增入口之前拒绝。Resolver 租约按请求拥有，生命周期与配置仍按 Loader Fiber 拥有。最后一个租约移除时请求卸载；保留引用与 unload observer 失败可能延迟收集或 shadow 删除。Core、Clr、Composition 默认作为共享合同程序集；其他合同需要宿主显式选择。无关默认上下文程序集不能满足插件私有依赖。
+
+`ClrModuleResolver.ReplaceAsync` 的整组重载要求提供 bundle 的每个已登记请求，包括别名及尚未加载的导出。它准备单一候选代际并共同提交路由。`Loader.ReplacePluginsAsync` 复用既有 Fiber 稳定与恢复语义，Pending 仍合法。回调拥有 teardown 与恢复。原子路由发布不表示候选副作用回滚或产品全局事务。合同 descriptor 不新增统一替换准入算法。
+
+### 原生 Typert 合同与传输
+
+本次续建提供 Roslyn 作者生成器、编译器无关 descriptor、System.Text.Json 元数据 codec 与 Schema、Fiber 拥有的 registry、显式 artifact resolver 的 Loader 集成、Gateway，以及生成的 TypeScript 模块/声明制品。生成器在 `Cordis.NET.Composition` 的 analyzer 目录内交付。这覆盖显式声明的原生 Remote 边界，不等同于固定 TypeScript 编译器的完整源类型图。显式 JSON 元数据及其命名、成员空性与必需字段选项定义原生数据合同。Roslyn 通过 `TypertCodec.CreateNullable` 补入运行时丢失的根可空引用标注；其可空 Schema 投影保留非空递归子节点。结果保留固定调用语义，不增加 Schema 准入。公开声明与包消费者见[作者指南](authoring.zh.md#2026-10-09-模块导出与生成式-remote-合同)。
+
+`IClrTypertModule` 从插件工厂所在的同一已加载 CLR bundle 导出贡献。Typert 导入按 owner Fiber 激活期缓存。在动态模块代际边界，候选准备完成后、退役 provider 前，暂停受影响的精确 Loader 请求；仅在路由提交或确认旧 provider 恢复后恢复。暂停撤销相应登记、失效制品缓存并脱离旧导入；其他贡献者保持登记身份和 owner。旧导入晚到也不能登记进恢复后的新代。这样释放 loader 对旧生成 delegate 与 CLR 序列化类型的引用；仅有类型名相同，不能让旧贡献适配替换后的新程序集。登记有效性同时阻止撤销后的旧调用。Registry 元数据不代替 Cordis 服务权威或产品政策。
+
+原生 Gateway 支持直接调用、显式登记的 Context 选择/对象 lookup、Remote 错误、协作取消、downlink 流及 JSON base64 字节结果。ASP.NET 传输使用 HTTP JSON/NDJSON，由宿主提供 endpoint 授权。生成 TypeScript `createRemote` 消费该传输；异步 `mountRemote` 等待 owner 登记，将互不重叠的方法装入共享 root `remote.<namespace>` 服务，并按贡献撤销。这些是显式平台适配，不承诺完整固定 Typert wire protocol。
+
+Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号已取消而被拒绝，已取消信号下的业务失败则成为 `gateway/cancelled`。Downlink 读取与信号竞争，完成清理后才暴露失败。原生枚举器必须先结束未完成的读取再释放；迟到读取错误会被观察，不替换取消结果，释放错误仍是清理失败。固定 Host 和此适配都不承诺强制终止始终不结束的业务或清理。提供者/定义撤销后的检查属于单独的原生代际适配，不是上游活动调用中止机制。
+
+客户端安装串行修改 namespace，并在该队列之外等待同名 provider 退役，使依赖清理能继续。重复方法在发布前拒绝。同步 `internal/service` observer 在发布时抛错，保留固定 Cordis provider 的失败行为：即使挂载拒绝，仍可能留下已提供的 namespace。适配层不承诺任意 observer 的回滚；应先修复该 observer 并退役其 owner，再重试。
+
+### 未闭合范围与证据边界
+
+后续质量修复在共享 CLR bundle 内保留每个主程序集的依赖根并拒绝冲突的私有 binary，避免只依赖第一入口的 resolver 或 CLR 已加载程序集缓存。字节相同的副本可以共享身份。这项显式 .NET 规则不推导上游 ABI 兼容算法。原生 Schema 投影也保留位置 tuple 合同，不再丢弃 `prefixItems`；不支持的长度约束会拒绝生成。这些修复不增加完整源类型分析。
+
+提供者代际检查独立于 definition 撤销验证：等待中的 unary Service、lookup、Context 和 downlink 操作保留活跃 descriptor，同时替换其提供者。撤销本身不会中止这些操作；旧成功结果由原生代际检查拒绝。JSON codec 输入校验、结果序列化与流清理限制分别在公开 API 和[作者指南](authoring.zh.md)中说明。修复后的精确源码与包检查点以最新验证记录为准；早期平台结果只适用于其记录的检查点。
+
+Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provider 值。caller-bound view 是实际调用 receiver；`Service<TState>.CreateView` 每次新建视图不会使活跃 provider 失效。准入在 contextual tracing 前捕获注册及原始值。后续每次检查先执行正常 contextual 查询，再读取最终注册及原始值，因此同步重入不能掩盖 provider 变化。重新提供同一个对象，包括在同一个 Fiber 内重提供，都会形成不同注册，使此前准入失效。设置不同原始值也会使其失效，即使注册身份未变；同值 `Set`、普通 `Notify` 和无关隔离 realm 的变化保持准入。这些观察仅在 Core 与 Composition 内部使用，不新增公开 API、服务 registry 或持久代数。未完成调用可以保留其注册及 provider，直至结束，仍遵循既有 CLR 协作寿命边界。
+
+完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流与 event remotes 及完整二进制 attachment 协议仍未实现。PluginManager、Settings/配置与客户端管理生产消费者向生成合同的迁移仍未完成。既有配置 Schema 导出、手写 `MapCordisService` 与 HTTP/SSE 管理保留当前合同，不能据此计为已完成 Typert 消费者。
+
+[独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
+
+产品替换接受、业务退休/排空、权限、Project authority、basis 与 receipt/outbox 规则仍由产品拥有。不引入应用 `ApiCatalog` 标准或竞争总规划。剩余通用缺口继续记在原应用基础设施范围中。
+
+
+## 独立原生模型与 Settings 边界，2026-10-10
+
+源编译工具现于运行时 descriptor 发射前生成 version-1 原生声明制品，保留方法/参数名称和 wire 选择、类型引用、成员/构造器关系、C# required 与 JSON-required 事实、嵌套可空标注、支持的常量、可选参数默认值、文档、JSON 策略及 STJ 使用的四个空状态注解，并记录有效编译设置。制品身份标识这些事实，不是 activation 或普适替换准入。Roslyn Symbol 是提取输入；序列化模型没有 Symbol、CLR Type、delegate 或 JsonTypeInfo。引用 CLR 声明标记为 external；元数据不能提供所有仅存在于源码的事实。
+
+现有由 descriptor 形成的 `TypertTypeModel` 仍是有界的旧摘要，新制品不从它反推。普通构建先将源事实与制品比较，再保留现有 descriptor generator。该 conformance 桥在独立提取与 .NET 投影继续建设时保留已成立的 runtime/TS 路径，不宣称所有 emitter 或运行时类型 registry 已消费完整新模型。
+
+.NET emitter 当前投影直接普通 unary 方法及支持的数据 record/class。实际覆盖包含 bool、string、integer、array、只读 list 接口、JsonElement、可空成员、必需构造器/init 成员、命名/ignore 策略和选定空状态注解。只读数据成员、record struct、数据继承、多态/自定义 converter 和更丰富 Remote 形状保留事实或诊断后被该投影拒绝；不宣称完整 C# 或 TS 类型系统等价。JSON 策略不能省略必填 carrier 参数字段，包括显式 null 和默认值。
+
+常量投影保留可空基本数值初始化值，包括 float/decimal 字面量后缀和显式 null，不改变模型格式。写入调用者源码前，emitter 检查目标 namespace 中全部投影 DTO、生成 client、JSON context、failure 和逐方法 envelope 的类型名。冲突明确标出双方来源后拒绝；拒绝时删除拥有的旧输出，不把冲突推迟到 C# 编译。
+
+生成客户端复用原生 HTTP 结果信封和 RemoteError。DTO/抛错 API 是 .NET 适配；TS 保持独立输出，沿用既有结果 API 与 carrier。compiler 只使用所选 SDK Roslyn、STJ 和既有框架传输，本次没有选入新的 NuGet 依赖。
+
+Settings describe 经既有 profile 队列、Include 和 schema/脱敏 helper 暴露选择的 live 配置。本适配仍未实现 base/user 层及数字单调 revision；provider 诊断保留在原生侧，不加入固定 wire 响应。已准入的异步 snapshot 可以在可选普通 `settings` provider 退休后完成：固定上游 describe 是同步调用，没有嵌套 provider lease。这是显式异步适配，与 controller service 或 Remote definition 撤销保留的原生 Gateway generation fence 有区别；后续调用重新查找 provider。不推导任何产品准入、权限或排空规则。
+
+[仅依赖包的 Settings 门禁](../scripts/verify-typert-dotnet.py) 验证源制品、模型独立合同包、pre-CoreCompile/STJ 时序、类型化调用及不同生命周期场景，不调用 Node。静态 Native AOT 适用于调用者，不适用于 collectible CLR Host。IDE/design-time 首次构建、任意引用模型组合、完整 Settings 操作及富图/协议范围继续开放。进行中运行不计作平台验收，正式冻结证据见[验证记录](validation.zh.md)。
+
+Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对应固定上游对 `cordis:include` 的处理。这些插件由 Loader 自身导入，其请求不属于 CLR 制品 resolver。显式将内建入口配置为制品贡献者仍会失败；错误的已声明 CLR 制品与未知 resolver 请求继续报错。真实 Profile Settings 消费者验证了这一边界。
+
+
+原生 Gateway 仍先串行解析参数，再验证当前 Service/binding，与固定 Host 先验证再并发 lookup 的顺序不同。这仍是架构审查中未闭合的兼容项。无参数的 Settings 消费者没有提供该时序证据，不能将其关项。

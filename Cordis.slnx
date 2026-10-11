@@ -39,6 +39,8 @@
     <Project Path="tests/fixtures/Shared/Shared.csproj" />
   </Folder>
   <Folder Name="/Tools/">
+    <Project Path="tools/Cordis.Typert.Compiler/Cordis.Typert.Compiler.csproj" />
+    <Project Path="tools/Cordis.Typert.Generator/Cordis.Typert.Generator.csproj" />
     <Project Path="tools/Cordis.ApiCheck/Cordis.ApiCheck.csproj" />
     <Project Path="tools/Cordis.Cli/Cordis.Cli.csproj" />
   </Folder>

@@ -409,7 +409,7 @@ def configuration_mutations(gate: Gate):
         directory = standalone_directory("cordis-configuration-mutant-")
         for relative in files:
             # Only copy the production libraries, actual consumer, and their build inputs.
-            if not (relative.startswith(("src/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/"))
+            if not (relative.startswith(("src/", "tools/Cordis.Typert.Compiler/", "tools/Cordis.Typert.Generator/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/"))
                     or "/" not in relative):
                 continue
             source = ROOT / relative
@@ -491,7 +491,7 @@ def application_contracts(gate: Gate):
     ):
         directory = standalone_directory("cordis-application-mutant-")
         for relative in files:
-            if not (relative.startswith(("src/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/")) or "/" not in relative):
+            if not (relative.startswith(("src/", "tools/Cordis.Typert.Compiler/", "tools/Cordis.Typert.Generator/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/")) or "/" not in relative):
                 continue
             target = directory / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -519,7 +519,7 @@ def application_contracts(gate: Gate):
 
     directory = standalone_directory("cordis-client-boundary-mutant-")
     for relative in files:
-        if not (relative.startswith(("src/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/", "tests/Cordis.Composition.Tests/")) or "/" not in relative):
+        if not (relative.startswith(("src/", "tools/Cordis.Typert.Compiler/", "tools/Cordis.Typert.Generator/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/", "tests/Cordis.Composition.Tests/")) or "/" not in relative):
             continue
         target = directory / relative
         target.parent.mkdir(parents=True, exist_ok=True)

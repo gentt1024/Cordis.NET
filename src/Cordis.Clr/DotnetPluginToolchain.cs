@@ -96,9 +96,13 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     /// including their original package-name spelling; it does not load assemblies or rewrite metadata.</remarks>
     public PackageManifest? LocateManifest(string specifier, Uri parent)
     {
-        if (specifier.StartsWith("nuget:", StringComparison.Ordinal) &&
-            bundles.TryGetValue(specifier["nuget:".Length..], out var directory))
-            return PackageManifest.Read(Path.Combine(directory, "package.json"));
+        if (specifier.StartsWith("nuget:", StringComparison.Ordinal))
+        {
+            var name = specifier["nuget:".Length..].Split('/')[0];
+            if (bundles.TryGetValue(name, out var directory))
+                return PackageManifest.Read(Path.Combine(directory, "package.json"));
+        }
+
         return DshProfilePolicy.LocateManifest(specifier, parent);
     }
 
@@ -271,7 +275,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                 inspection.ContentHash)
                 throw new InvalidOperationException("The restored root package differs from the inspected archive.");
             var assembly = RequiredString(metadata, "assembly");
-            var entryType = RequiredString(metadata, "entryType");
+            _ = ReadExports(metadata);
             if (Path.GetFileName(assembly) != assembly ||
                 !assembly.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
                 !File.Exists(Path.Combine(outputDirectory, assembly)))
@@ -386,7 +390,15 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             throw new KeyNotFoundException("No profile-owned CLR deployment is registered.");
         cancellationToken.ThrowIfCancellationRequested();
         RequireOwned(directory, packagesDirectory);
-        await resolver.RemoveAsync(ModuleName(name), cancellationToken);
+        var metadata = (EntryOptions)ConfigurationFile.Parse(
+            File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
+            true)!;
+        foreach (var (subpath, _) in ReadExports(metadata))
+        {
+            // Once withdrawal begins, finish every export even if the caller cancels.
+            await resolver.RemoveAsync(ModuleName(name, subpath), CancellationToken.None);
+        }
+
         retired.Add(name);
         // Keep both artifact and route: other processes, lazy loads and Workers may still use the files.
     }
@@ -408,9 +420,10 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         var metadata = (EntryOptions)ConfigurationFile.Parse(
             File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
             true)!;
-        resolver.Register(
-            ModuleName(name),
-            new(directory, RequiredString(metadata, "assembly"), RequiredString(metadata, "entryType")));
+        foreach (var (subpath, entryType) in ReadExports(metadata))
+            resolver.Register(
+                ModuleName(name, subpath),
+                new(directory, RequiredString(metadata, "assembly"), entryType));
         bundles.Add(name, directory);
     }
 
@@ -569,7 +582,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         var metadata = ConfigurationFile.Parse(reader.ReadToEnd(), true) as EntryOptions ??
             throw new FormatException("Plugin metadata must be an object.");
         _ = RequiredString(metadata, "assembly");
-        _ = RequiredString(metadata, "entryType");
+        _ = ReadExports(metadata);
         return metadata;
     }
 
@@ -578,7 +591,32 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             ? value
             : throw new FormatException($"Plugin metadata requires {key}.");
 
-    private static string ModuleName(string name) => "nuget:" + name.ToLowerInvariant();
+    private static IReadOnlyList<(string Subpath, string EntryType)> ReadExports(EntryOptions metadata)
+    {
+        var result = new List<(string Subpath, string EntryType)>
+        {
+            (".", RequiredString(metadata, "entryType"))
+        };
+        if (!metadata.TryGetValue("exports", out var exports))
+            return result;
+        if (exports is not IDictionary<string, object?> entries)
+            throw new FormatException("Plugin exports must map explicit './subpath' names to CLR entry type names.");
+        foreach (var (subpath, entryType) in entries)
+        {
+            if (!subpath.StartsWith("./", StringComparison.Ordinal) ||
+                subpath[2..].Split('/').Any(segment => string.IsNullOrWhiteSpace(segment) || segment is "." or "..") ||
+                subpath.IndexOfAny(['\\', '?', '#', ':']) >= 0 ||
+                entryType is not string type || string.IsNullOrWhiteSpace(type))
+                throw new FormatException(
+                    "Plugin exports require explicit './subpath' names and nonempty CLR entry type names.");
+            result.Add((subpath, type));
+        }
+
+        return result;
+    }
+
+    private static string ModuleName(string name, string subpath = ".") =>
+        "nuget:" + name.ToLowerInvariant() + (subpath == "." ? "" : subpath[1..]);
 
     private string PackageDirectory(string name, string version)
     {

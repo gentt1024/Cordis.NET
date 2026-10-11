@@ -882,12 +882,33 @@ public sealed class Loader : EntryTree
     /// <remarks>Original exceptions carry PluginReplacementFailure details. The caller owns admission,
     /// business-quiescence verification and failure closure; disposal cannot stop untracked plugin work.</remarks>
     public Task ReplacePluginAsync(IPlugin previous, IPlugin replacement) =>
-        Context.RunAsync(async _ =>
+        ReplacePluginsAsync(
+            new Dictionary<IPlugin, IPlugin>(ReferenceEqualityComparer.Instance)
+            {
+                [previous] = replacement
+            });
+
+    /// <summary>Switch a prepared module group together, restoring all previous plugins if candidate activation fails.</summary>
+    /// <remarks>Reuses each Fiber's parent and raw configuration. Cleanup and reactivation are cooperative;
+    /// external plugin effects are not a product-wide transaction.</remarks>
+    public Task ReplacePluginsAsync(IReadOnlyDictionary<IPlugin, IPlugin> replacements)
+    {
+        ArgumentNullException.ThrowIfNull(replacements);
+        var pairs = replacements.ToArray();
+        foreach (var pair in pairs)
         {
-            var fibers = Context.Registry.Get(previous)?.Fibers.ToArray() ?? [];
-            var rows = fibers
-                .Select(f => (Fiber: f, Entry: roots.GetValueOrDefault(f), Parent: f.Parent,
-                    Raw: roots.TryGetValue(f, out var entry) ? entry.Options.RawConfig : f.RawConfig))
+            ArgumentNullException.ThrowIfNull(pair.Key);
+            ArgumentNullException.ThrowIfNull(pair.Value);
+        }
+
+        return Context.RunAsync(async _ =>
+        {
+            var rows = pairs
+                .SelectMany(pair =>
+                    (Context.Registry.Get(pair.Key)?.Fibers.ToArray() ?? []).Select(f =>
+                        (Fiber: f, Entry: roots.GetValueOrDefault(f), Parent: f.Parent,
+                            Raw: roots.TryGetValue(f, out var entry) ? entry.Options.RawConfig : f.RawConfig,
+                            Previous: pair.Key, Replacement: pair.Value)))
                 .ToArray();
             foreach (var row in rows)
                 if (row.Entry is not null)
@@ -913,7 +934,7 @@ public sealed class Loader : EntryTree
                     {
                         if (row.Parent.Fiber.Uid is null)
                             continue;
-                        var fiber = row.Parent.Plugin(replacement, row.Raw);
+                        var fiber = row.Parent.Plugin(row.Replacement, row.Raw);
                         activated.Add((fiber, row.Entry));
                         if (row.Entry is not null)
                             row.Entry.Fiber = fiber;
@@ -934,7 +955,7 @@ public sealed class Loader : EntryTree
                         {
                             if (row.Parent.Fiber.Uid is null)
                             {
-                                if (!fibers.Contains(row.Parent.Fiber))
+                                if (!rows.Any(candidate => ReferenceEquals(candidate.Fiber, row.Parent.Fiber)))
                                 {
                                     var error = new InvalidOperationException(
                                         "The original plugin owner is no longer live.");
@@ -947,7 +968,7 @@ public sealed class Loader : EntryTree
 
                             try
                             {
-                                var fiber = row.Parent.Plugin(previous, row.Raw);
+                                var fiber = row.Parent.Plugin(row.Previous, row.Raw);
                                 restored.Add(fiber);
                                 if (row.Entry is not null)
                                     row.Entry.Fiber = fiber;
@@ -1002,6 +1023,7 @@ public sealed class Loader : EntryTree
                         row.Entry.Removing = false;
             }
         });
+    }
 
     private async Task<List<Exception>> StopReplacementFibersAsync(IEnumerable<Fiber> fibers)
     {

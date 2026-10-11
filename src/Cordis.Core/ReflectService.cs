@@ -48,6 +48,13 @@ public sealed class ReflectService(Context context)
     /// </summary>
     public T? Get<T>(string name, bool strict = true) => (T?)Get(name, strict);
 
+    internal (object? Identity, object? Value) GetRegistration(string name)
+    {
+        context.VerifyAccess();
+        var registration = context._runtime.Resolve(context, name, false);
+        return (registration, registration?.Value);
+    }
+
     /// <summary>
     /// Cast property-style access to the contract type after the existing injection, interception
     /// and caller tracing rules. The type does not participate in service identity or add Inject.

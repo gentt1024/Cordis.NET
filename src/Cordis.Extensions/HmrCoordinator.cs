@@ -141,6 +141,16 @@ public sealed class HmrCoordinator : IAsyncDisposable
     /// <summary>
     /// Watches config.
     /// </summary>
+    /// <remarks>
+    /// Registration propagates path and watcher activation failures. Matching change and deletion
+    /// events queue a refresh without reading the changed file's metadata. Alias resolution failures
+    /// are reported through <see cref="Warning"/> and <see cref="Error"/>; later events can recover.
+    /// An existing target parent is watched without its subdirectories; missing ancestors require
+    /// recursive observation. A native buffer overflow reports the original error and queues a
+    /// refresh because individual change notifications may have been lost.
+    /// Disposing the watch stops new refreshes. Outside a coordinator transaction, disposal also
+    /// waits for any refresh already in progress.
+    /// </remarks>
     public IAsyncDisposable WatchConfig(string filename, Func<Task> refresh, bool refreshExisting = true)
     {
         var path = ResolvePath(filename, readAttributes);
@@ -564,7 +574,7 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 _watcher = created;
             }
 
-            _watcher.IncludeSubdirectories = true;
+            _watcher.IncludeSubdirectories = !PathComparer.Equals(directory, Path.GetDirectoryName(filename));
             _watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite;
             _watcher.Changed += OnChange;
             _watcher.Created += OnChange;
@@ -574,7 +584,7 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 Check(e.FullPath);
                 Check(e.OldFullPath);
             };
-            _watcher.Error += (_, e) => owner.Report(e.GetException());
+            _watcher.Error += OnError;
             owner.ActivateWatcher(_watcher);
             if (refreshExisting && File.Exists(filename))
                 Signal();
@@ -582,15 +592,39 @@ public sealed class HmrCoordinator : IAsyncDisposable
 
         private void OnChange(object sender, FileSystemEventArgs e) => Check(e.FullPath);
 
-        private void Check(string path)
+        private void OnError(object sender, ErrorEventArgs e)
         {
-            // Parent creation can contain an already-populated subtree.
-            var canonical = CanonicalPath(path);
-            if (PathComparer.Equals(canonical, filename) || filename.StartsWith(
-                    canonical + Path.DirectorySeparatorChar,
-                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            lock (_sync)
+                if (_closed)
+                    return;
+            var error = e.GetException();
+            owner.Report(error);
+            if (error is InternalBufferOverflowException)
                 Signal();
         }
+
+        private void Check(string path)
+        {
+            lock (_sync)
+                if (_closed)
+                    return;
+            try
+            {
+                // An unlink event must not depend on metadata for the file being removed.
+                var full = Path.GetFullPath(path);
+                if (Matches(full) || Matches(ResolvePath(full, owner.readAttributes)))
+                    Signal();
+            }
+            catch (Exception error)
+            {
+                owner.Report(error);
+            }
+        }
+
+        private bool Matches(string path) =>
+            PathComparer.Equals(path, filename) || filename.StartsWith(
+                path + Path.DirectorySeparatorChar,
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
         private void Signal()
         {

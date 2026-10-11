@@ -195,7 +195,7 @@ public sealed class OnlineReplacementProbeTests
         {
             var host = new ProbeHost(exclusiveResources);
             host.Resolver.Register("fixture", Definition("v1"));
-            host.Resolver.Register("other", Definition("v1"));
+            host.Resolver.Register("other", Definition("other-v1"));
             await host.Context.RunAsync(async ctx =>
             {
                 ctx.Provide("retirement-probe", host.Probe);

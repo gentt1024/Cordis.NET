@@ -493,7 +493,7 @@ public sealed class ReplacementHostTests
         {
             var host = new FixtureApplication(mode);
             host.Resolver.Register("fixture", host.Definition("v1"));
-            host.Resolver.Register("other", host.Definition("v1"));
+            host.Resolver.Register("other", host.Definition("other-v1"));
             var builder = WebApplication.CreateBuilder();
             builder.Logging.ClearProviders();
             builder.WebHost.ConfigureKestrel(server => server.Listen(IPAddress.Loopback, 0));
