@@ -380,7 +380,9 @@ internal static class LifetimeCases
             return Task.CompletedTask;
         });
         var arguments = Json("{\"leftId\":\"one\",\"rightId\":\"two\"}");
-        Error(await gateway.InvokeAsync("sample/LookupPair", arguments).WaitAsync(Limit), "gateway/service-unavailable");
+        Error(
+            await gateway.InvokeAsync("sample/LookupPair", arguments).WaitAsync(Limit),
+            "gateway/service-unavailable");
         Require(
             !leftStarted.Task.IsCompleted && !rightStarted.Task.IsCompleted,
             "An unavailable service started lookup work.");

@@ -305,3 +305,5 @@ R02 从已合入 main `424cfb98823e9867de5198118b26f3973b9b397d` 续行。运行
 这两次审查没有重跑运行时门禁，也未独立复验每份消费归档／包。解析器完成屏障本身不证明垃圾收集或未观察异常行为；迟到失败结论还依据各解析器的 catch 路径。合作式保留边界仍有明确记录。审查无需修改运行时或 fixture。
 
 维护者随后仅授权 R02 分支推送、PR／CI，以及审查和必需检查通过后的合入。其余基础设施职责仍由新会话承担。托管检查和 main 合入以 PR 及 workflow run 的实际 checkout 提交记录，不替代原 `679f57f` 本地证据身份。仓库要求线性历史及双平台 verify 检查，因此依既有 squash 惯例合入，不绕过门禁。
+
+第一次托管尝试 [run 38107202823](https://github.com/gentt1024/Cordis.NET/actions/runs/38107202823) 对 PR head `8f1042a6c726717a5eecf5ea9eee89697b3e348a` 的合并 checkout `6ad0b11f2cbd44078fca6a46fa660baf2aa16c68` 执行检查。两个 runtime job 均因最终 fixture 的 WaitAsync 调用不符合 JB 格式而停止，尚未执行运行时验证或打包。此前本地 formatter 通过早于该 fixture 改动，未证明 `679f57f` 的格式通过。这次失败保留为证据，不计作验收。修正仅将该调用换行，没有改变 token 或 Gateway 行为；fixture 字节已变，必须建立新候选并执行新的完整托管门禁，不将旧双平台结果归算给新源码。
