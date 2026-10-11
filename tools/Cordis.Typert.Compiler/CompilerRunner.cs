@@ -103,14 +103,18 @@ internal static class CompilerRunner
         var model = DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model")));
         var references = options.TryGetValue("reference-models", out var referenceModels)
             ? ResponseFile(referenceModels, Path.GetDirectoryName(Path.GetFullPath(referenceModels))!)
-                .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path))).ToArray()
+                .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
+                .ToArray()
             : [];
         return DotnetProjectionEmitter.Emit(
             DeclarationRemoteProjection.Project(model, service, references),
             Required(options, "namespace"),
             service,
-            Required(options, "client")) + string.Concat(references.Select(reference => reference.ContractIdentity)
-                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
+            Required(options, "client")) + string.Concat(
+            references
+                .Select(reference => reference.ContractIdentity)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
                 .Select(identity => "// Referenced declaration model " + identity + "\n"));
     }
 

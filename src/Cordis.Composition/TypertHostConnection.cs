@@ -9,12 +9,22 @@ public sealed class TypertPeer
 
     internal TypertPeer(Context owner)
     {
-        scope = owner.Plugin(new Plugin<object?> { Name = "remote-peer", Apply = (_, _) => { } });
+        scope = owner.Plugin(
+            new Plugin<object?>
+            {
+                Name = "remote-peer",
+                Apply = (_, _) =>
+                {
+                }
+            });
         Context = scope.Context;
     }
 
     /// <summary>Opaque identity stable across this Connection's requests and physical sockets.</summary>
-    public string Id { get; } = Guid.NewGuid().ToString();
+    public string Id
+    {
+        get;
+    } = Guid.NewGuid().ToString();
 
     /// <summary>The child scope for Peer-owned registrations. Borrowers do not own this Context.</summary>
     public Context Context
@@ -47,14 +57,21 @@ public sealed class TypertHostConnection : IAsyncDisposable
     }
 
     /// <summary>Dispatch a request as this Connection's operator.</summary>
-    public Task<TypertRemoteResult> InvokeAsync(string endpoint, JsonElement arguments, CancellationToken cancellationToken = default)
+    public Task<TypertRemoteResult> InvokeAsync(
+        string endpoint,
+        JsonElement arguments,
+        CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(!Peer.Active, this);
         return gateway.InvokeAsync(endpoint, arguments, cancellationToken, Peer);
     }
 
     /// <summary>Dispatch a logical stream as this Connection's operator.</summary>
-    public IAsyncEnumerable<TypertRemoteResult> StreamAsync(string endpoint, JsonElement arguments, CancellationToken cancellationToken = default, IAsyncEnumerable<JsonElement>? uplink = null)
+    public IAsyncEnumerable<TypertRemoteResult> StreamAsync(
+        string endpoint,
+        JsonElement arguments,
+        CancellationToken cancellationToken = default,
+        IAsyncEnumerable<JsonElement>? uplink = null)
     {
         ObjectDisposedException.ThrowIf(!Peer.Active, this);
         return gateway.StreamAsync(endpoint, arguments, cancellationToken, Peer, uplink);

@@ -69,7 +69,12 @@ internal sealed class TypertCallLifetime : IAsyncDisposable
     internal sealed class Lease(TypertCallLifetime owner, CancellationToken token) : IDisposable
     {
         private readonly TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public CancellationToken Token { get; } = token;
+
+        public CancellationToken Token
+        {
+            get;
+        } = token;
+
         public Task Completion => completion.Task;
 
         public void Dispose()

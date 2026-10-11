@@ -10,8 +10,20 @@ await using var client = new ReferencedClient(connection);
 var expected = int.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
 var value = new ReferencedData
 {
-    External = new ImportedData { Name = "referenced", Code = null, Note = null },
-    Items = [new ImportedData { Name = "item", Code = "code" }]
+    External = new ImportedData
+    {
+        Name = "referenced",
+        Code = null,
+        Note = null
+    },
+    Items =
+    [
+        new ImportedData
+        {
+            Name = "item",
+            Code = "code"
+        }
+    ]
 };
 var result = await client.EchoAsync(value);
 if (!result.Ok) throw result.Error;

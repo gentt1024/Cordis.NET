@@ -116,22 +116,31 @@ public sealed class RemoteLookupAttribute(string key, string wire, Type wireType
 public abstract partial class TypertCodec
 {
     /// <summary>The absent result of an authored Task method. An explicit JSON null is not absence.</summary>
-    public static TypertCodec Void { get; } = new VoidCodec();
+    public static TypertCodec Void
+    {
+        get;
+    } = new VoidCodec();
 
     private sealed class VoidCodec : TypertCodec
     {
         private static readonly JsonElement EmptySchema = CreateSchema();
+
         private static JsonElement CreateSchema()
         {
             using var document = JsonDocument.Parse("false");
             return document.RootElement.Clone();
         }
+
         public override string TypeSymbol => "void";
         public override JsonElement Schema => EmptySchema;
+
         public override object Decode(JsonElement value) => value.ValueKind == JsonValueKind.Undefined
-            ? Undefined.Value : throw new JsonException("A void result must be absent.");
+            ? Undefined.Value
+            : throw new JsonException("A void result must be absent.");
+
         public override JsonElement Encode(object? value) => ReferenceEquals(value, Undefined.Value)
-            ? default : throw new JsonException("A void result must be absent.");
+            ? default
+            : throw new JsonException("A void result must be absent.");
     }
 
     /// <summary>Gets the stable declaration identity used to match dependency providers.</summary>
@@ -230,8 +239,6 @@ public abstract partial class TypertCodec
             using var document = JsonDocument.Parse(buffer.ToArray());
             return document.RootElement.Clone();
         }
-
-
     }
 
     private static void WriteNestedSchema(Utf8JsonWriter writer, JsonElement value, string prefix)
@@ -300,7 +307,9 @@ public abstract partial class TypertCodec
         }
 
         public override JsonElement Encode(object? value) => JsonSerializer.SerializeToElement((T)value!, metadata);
-        public override TypertRemoteResult EncodeResult(object? value) => TypertBinaryResult.Encode(Encode(value), metadata);
+
+        public override TypertRemoteResult EncodeResult(object? value) =>
+            TypertBinaryResult.Encode(Encode(value), metadata);
 
         private JsonElement ExportSchema()
         {

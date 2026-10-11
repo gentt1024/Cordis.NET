@@ -56,7 +56,9 @@ public sealed record SharedAttachments(byte[][] Items, Dictionary<string, byte[]
 public partial class SharedRemote
 {
     [RemoteMethod("inputText", Stream = true)]
-    public async IAsyncEnumerable<string> InputTextAsync(string prefix, [RemoteUplink] IAsyncEnumerable<string> input,
+    public async IAsyncEnumerable<string> InputTextAsync(
+        string prefix,
+        [RemoteUplink] IAsyncEnumerable<string> input,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await foreach (var item in input.WithCancellation(cancellationToken))
@@ -65,7 +67,8 @@ public partial class SharedRemote
     }
 
     [RemoteMethod("inputNullable", Stream = true)]
-    public async IAsyncEnumerable<string> InputNullableAsync([RemoteUplink] IAsyncEnumerable<string?> input,
+    public async IAsyncEnumerable<string> InputNullableAsync(
+        [RemoteUplink] IAsyncEnumerable<string?> input,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await foreach (var item in input.WithCancellation(cancellationToken))
@@ -76,13 +79,20 @@ public partial class SharedRemote
     public async IAsyncEnumerable<string> InputCaughtAsync([RemoteUplink] IAsyncEnumerable<string> input)
     {
         await using var reader = input.GetAsyncEnumerator();
-        try { await reader.MoveNextAsync(); }
-        catch (Exception) { }
+        try
+        {
+            await reader.MoveNextAsync();
+        }
+        catch (Exception)
+        {
+        }
+
         yield return "must-not-escape";
     }
 
     [RemoteMethod("inputNumber", Stream = true)]
-    public async IAsyncEnumerable<string> InputNumberAsync([RemoteUplink] IAsyncEnumerable<int?> input,
+    public async IAsyncEnumerable<string> InputNumberAsync(
+        [RemoteUplink] IAsyncEnumerable<int?> input,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await foreach (var item in input.WithCancellation(cancellationToken))
@@ -90,7 +100,8 @@ public partial class SharedRemote
     }
 
     [RemoteMethod("inputList", Stream = true)]
-    public async IAsyncEnumerable<string> InputListAsync([RemoteUplink] IAsyncEnumerable<List<string?>?> input,
+    public async IAsyncEnumerable<string> InputListAsync(
+        [RemoteUplink] IAsyncEnumerable<List<string?>?> input,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await foreach (var item in input.WithCancellation(cancellationToken))
@@ -98,7 +109,8 @@ public partial class SharedRemote
     }
 
     [RemoteMethod("inputOptional", Stream = true)]
-    public async IAsyncEnumerable<string> InputOptionalAsync([RemoteUplink] IAsyncEnumerable<RemoteOptional<string?>> input,
+    public async IAsyncEnumerable<string> InputOptionalAsync(
+        [RemoteUplink] IAsyncEnumerable<RemoteOptional<string?>> input,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await foreach (var item in input.WithCancellation(cancellationToken))
@@ -109,8 +121,15 @@ public partial class SharedRemote
     public Task<byte[]> BytesAsync() => Task.FromResult(new byte[] { 0, 13, 10, 255 });
 
     [RemoteMethod("attachments")]
-    public Task<SharedAttachments> AttachmentsAsync() => Task.FromResult(new SharedAttachments(
-        [new byte[] { 0, 13, 10, 255 }, []], new() { ["part/name"] = [1, 2], ["empty"] = [] }, "AA0K/w=="));
+    public Task<SharedAttachments> AttachmentsAsync() => Task.FromResult(
+        new SharedAttachments(
+            [new byte[] { 0, 13, 10, 255 }, []],
+            new()
+            {
+                ["part/name"] = [1, 2],
+                ["empty"] = []
+            },
+            "AA0K/w=="));
 
     [RemoteMethod("acknowledge")]
     public Task AcknowledgeAsync() => Task.CompletedTask;
@@ -122,7 +141,8 @@ public partial class SharedRemote
     public Task<string> PeerAsync() => Task.FromResult(TypertInvocation.Current!.Peer!.Id);
 
     [RemoteMethod("hold", Stream = true)]
-    public async IAsyncEnumerable<string> HoldAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<string> HoldAsync(
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         yield return TypertInvocation.Current!.Peer!.Id;
         await Task.Delay(Timeout.Infinite, cancellationToken);

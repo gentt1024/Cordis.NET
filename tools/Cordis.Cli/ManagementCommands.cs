@@ -105,20 +105,22 @@ internal static class ManagementCommands
                 "plugins" => RequireSuccess(await manager.ListPluginsAsync()),
                 "bundles" => RequireSuccess(await manager.ListBundlesAsync()),
                 "sources" => RequireSuccess(await manager.SourcesAsync()),
-                "versions" => RequireSuccess(await manager.VersionsAsync(
-                    Value(0),
-                    source ?? throw new ArgumentException("--source is required."))),
+                "versions" => RequireSuccess(
+                    await manager.VersionsAsync(
+                        Value(0),
+                        source ?? throw new ArgumentException("--source is required."))),
                 "configuration" => await GetAsync("configuration?entryId=" + Uri.EscapeDataString(Value(0))),
                 "schema" => Value(0) == "configuration"
                     ? await GetAsync("configuration/schema?entryId=" + Uri.EscapeDataString(Value(1)))
                     : throw new ArgumentException("Choose settings or configuration."),
                 "edit" => await EditAsync(),
                 "compatibility" => RequireSuccess(await manager.ListVersionExemptionsAsync()),
-                "grant" => RequireSuccess(await manager.SetVersionExemptionAsync(
-                    Value(0),
-                    Value(1),
-                    bool.Parse(Value(2)),
-                    bool.Parse(Value(3)))),
+                "grant" => RequireSuccess(
+                    await manager.SetVersionExemptionAsync(
+                        Value(0),
+                        Value(1),
+                        bool.Parse(Value(2)),
+                        bool.Parse(Value(3)))),
                 "wait" => RequireSuccess(await manager.WaitForInstallAsync(Value(0))),
                 "cancel" => RequireSuccess(await manager.CancelInstallAsync(Value(0))),
                 "remove" => RequireSuccess(await manager.RemoveBundleAsync(Value(0))),

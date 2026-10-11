@@ -133,7 +133,8 @@ if (args.Contains("--serve"))
     app.MapCordisRemote(
         "/remote",
         remoteConnection,
-        (_, endpoint) => Task.FromResult(endpoint == "remote.mux" || endpoint.StartsWith("sample/", StringComparison.Ordinal)));
+        (_, endpoint) =>
+            Task.FromResult(endpoint == "remote.mux" || endpoint.StartsWith("sample/", StringComparison.Ordinal)));
     await app.StartAsync();
     Console.WriteLine(app.Urls.Single());
     Console.Out.Flush();
@@ -263,7 +264,8 @@ using (var cancellation = new CancellationTokenSource())
 var binary = await gateway.InvokeAsync("sample/Binary", Json("{\"text\":\"bytes\"}"));
 Require(
     binary.Ok && binary.Value!.Value.ValueKind == JsonValueKind.Null && binary.Attachments.Count == 1 &&
-    binary.Attachments[0].Path.Count == 0 && System.Text.Encoding.UTF8.GetString(binary.Attachments[0].Bytes.Span) == "bytes",
+    binary.Attachments[0].Path.Count == 0 &&
+    System.Text.Encoding.UTF8.GetString(binary.Attachments[0].Bytes.Span) == "bytes",
     "Native binary projection failed.");
 using (var cancellation = new CancellationTokenSource())
 {

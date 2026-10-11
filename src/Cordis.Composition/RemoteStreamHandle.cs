@@ -4,7 +4,8 @@ using System.Text.Json;
 namespace Cordis.Composition;
 
 /// <summary>A failure of the physical carrier, distinct from a Remote error frame.</summary>
-public sealed class RemoteStreamCarrierException(string message, Exception? innerException = null) : Exception(message, innerException);
+public sealed class RemoteStreamCarrierException(string message, Exception? innerException = null)
+    : Exception(message, innerException);
 
 /// <summary>One eagerly opened, single-consumer Remote downlink. Disposal cancels only this logical stream.</summary>
 public sealed class RemoteStreamHandle<T> : IAsyncEnumerable<T>, IAsyncDisposable

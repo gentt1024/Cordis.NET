@@ -114,8 +114,10 @@ sealed class GatewayTransport(TypertGateway gateway) : HttpMessageHandler
         var result = await gateway.InvokeAsync(endpoint, LastArguments);
         var json = result.Ok
             ? "{\"ok\":true,\"value\":" + result.Value!.Value.GetRawText() + "}"
-            : "{\"ok\":false,\"error\":{\"code\":\"" + result.Error!.Code + "\",\"message\":\"fixture refusal\",\"details\":{}}}";
-        json = "{\"type\":\"server-response\",\"rpcId\":" + body.RootElement.GetProperty("rpcId").GetRawText() + ",\"result\":" + json + "}";
+            : "{\"ok\":false,\"error\":{\"code\":\"" + result.Error!.Code +
+            "\",\"message\":\"fixture refusal\",\"details\":{}}}";
+        json = "{\"type\":\"server-response\",\"rpcId\":" + body.RootElement.GetProperty("rpcId").GetRawText() +
+            ",\"result\":" + json + "}";
         return new(HttpStatusCode.OK)
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")

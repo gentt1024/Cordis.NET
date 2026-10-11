@@ -33,11 +33,19 @@ public abstract partial class TypertCodec
     public virtual bool AcceptsUndefined => false;
 
     /// <summary>Use an explicitly declared item codec with the supplied collection serialization metadata.</summary>
-    public static TypertCodec CreateSequence<T>(JsonTypeInfo<T> metadata, TypertCodec item, string? typeSymbol = null, bool nullable = false) =>
+    public static TypertCodec CreateSequence<T>(
+        JsonTypeInfo<T> metadata,
+        TypertCodec item,
+        string? typeSymbol = null,
+        bool nullable = false) =>
         Collection(metadata, item, JsonTypeInfoKind.Enumerable, typeSymbol, nullable);
 
     /// <summary>Use an explicitly declared value codec with the supplied JSON object serialization metadata.</summary>
-    public static TypertCodec CreateDictionary<T>(JsonTypeInfo<T> metadata, TypertCodec value, string? typeSymbol = null, bool nullable = false) =>
+    public static TypertCodec CreateDictionary<T>(
+        JsonTypeInfo<T> metadata,
+        TypertCodec value,
+        string? typeSymbol = null,
+        bool nullable = false) =>
         Collection(metadata, value, JsonTypeInfoKind.Dictionary, typeSymbol, nullable);
 
     /// <summary>Allow absence while retaining the inner value's independent null and validation rules.</summary>
@@ -47,13 +55,22 @@ public abstract partial class TypertCodec
         return new OptionalCodec<T>(value);
     }
 
-    private static TypertCodec Collection<T>(JsonTypeInfo<T> metadata, TypertCodec item, JsonTypeInfoKind kind, string? symbol, bool nullable)
+    private static TypertCodec Collection<T>(
+        JsonTypeInfo<T> metadata,
+        TypertCodec item,
+        JsonTypeInfoKind kind,
+        string? symbol,
+        bool nullable)
     {
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentNullException.ThrowIfNull(item);
         if (metadata.Kind != kind)
             throw new NotSupportedException("The declared collection requires ordinary collection JSON metadata.");
-        TypertCodec codec = new CollectionCodec<T>(metadata, item, kind, symbol ?? metadata.Type.FullName ?? metadata.Type.Name);
+        TypertCodec codec = new CollectionCodec<T>(
+            metadata,
+            item,
+            kind,
+            symbol ?? metadata.Type.FullName ?? metadata.Type.Name);
         return nullable ? new NullableCodec(codec) : codec;
     }
 
@@ -67,7 +84,8 @@ public abstract partial class TypertCodec
         {
             _ = inner.Schema;
             return value.ValueKind == JsonValueKind.Undefined
-                ? RemoteOptional<T>.Undefined : new RemoteOptional<T>((T)inner.Decode(value)!);
+                ? RemoteOptional<T>.Undefined
+                : new RemoteOptional<T>((T)inner.Decode(value)!);
         }
 
         public override JsonElement Encode(object? value)
@@ -77,7 +95,11 @@ public abstract partial class TypertCodec
         }
     }
 
-    private sealed class CollectionCodec<T>(JsonTypeInfo<T> metadata, TypertCodec item, JsonTypeInfoKind kind, string symbol) : TypertCodec
+    private sealed class CollectionCodec<T>(
+        JsonTypeInfo<T> metadata,
+        TypertCodec item,
+        JsonTypeInfoKind kind,
+        string symbol) : TypertCodec
     {
         private TypertCodec? inner;
         private TypertCodec Inner => inner ??= Create(metadata, symbol, ExportSchema());
@@ -99,6 +121,7 @@ public abstract partial class TypertCodec
                 WriteNestedSchema(writer, item.Schema, "#/" + field);
                 writer.WriteEndObject();
             }
+
             using var document = JsonDocument.Parse(buffer.ToArray());
             return document.RootElement.Clone();
         }

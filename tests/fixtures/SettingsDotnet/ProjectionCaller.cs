@@ -11,7 +11,8 @@ await using var connection = new TypertConnection(http, new Uri("https://test.in
 await using var client = new PrimitivesClient(connection);
 if ((await client.CountAsync(null, 0, false, null, 0)).Value != 0) throw new Exception("Primitive result wrong.");
 if ((await client.TextAsync()).Value is not null) throw new Exception("Nullable string result wrong.");
-if (!((await client.ValuesAsync()).Value).SequenceEqual(new[] { 1, 2 })) throw new Exception("Collection result wrong.");
+if (!((await client.ValuesAsync()).Value).SequenceEqual(new[] { 1, 2 }))
+    throw new Exception("Collection result wrong.");
 await using var optional = new OptionalClient(connection);
 if ((await optional.CountAsync()).Value != 7 || (await optional.CountAsync(3)).Value != 3)
     throw new Exception("Optional constants changed in the generated client.");
@@ -89,7 +90,11 @@ sealed class Replies : HttpMessageHandler
         };
         return new(HttpStatusCode.OK)
         {
-            Content = new StringContent("{\"type\":\"server-response\",\"rpcId\":" + document.RootElement.GetProperty("rpcId").GetRawText() + ",\"result\":{\"ok\":true,\"value\":" + value + "}}", Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                "{\"type\":\"server-response\",\"rpcId\":" + document.RootElement.GetProperty("rpcId").GetRawText() +
+                ",\"result\":{\"ok\":true,\"value\":" + value + "}}",
+                Encoding.UTF8,
+                "application/json")
         };
     }
 

@@ -95,18 +95,28 @@ public static class TypertArtifacts
                 if (uplink.AcceptsUndefined)
                     input += " | undefined";
             }
+
             methods
                 .Append("  ")
                 .Append(Quote(descriptor.Endpoint))
                 .Append("(args: { ")
                 .Append(string.Join("; ", fields))
                 .Append(" }, signal?: AbortSignal): ")
-                .Append(descriptor.IsStream ? input is null ? "RemoteStreamHandle<" : "RemoteDuplexHandle<" : "Promise<RemoteResult<")
+                .Append(
+                    descriptor.IsStream
+                        ? input is null ? "RemoteStreamHandle<" : "RemoteDuplexHandle<"
+                        : "Promise<RemoteResult<")
                 .Append(result)
                 .Append(input is null ? "" : ", " + input)
                 .Append(descriptor.IsStream ? ">;\n" : ">>;\n");
-            runtime.Append("  [").Append(Quote(descriptor.Endpoint)).Append(", ")
-                .Append(descriptor.IsStream ? "true" : "false").Append(", ").Append(input is null ? "false" : "true").Append("],\n");
+            runtime
+                .Append("  [")
+                .Append(Quote(descriptor.Endpoint))
+                .Append(", ")
+                .Append(descriptor.IsStream ? "true" : "false")
+                .Append(", ")
+                .Append(input is null ? "false" : "true")
+                .Append("],\n");
         }
 
         methods.Append("}\nexport declare function createRemote(connection: TypertConnection): RemoteClient;\n");
@@ -123,8 +133,10 @@ public static class TypertArtifacts
                         group.Select(descriptor =>
                             "[" + Quote(descriptor.Method) + ", " + Quote(descriptor.Endpoint) + "]")))
                 .Append("]],\n");
-        runtime.Append("];\nexport function mountRemote(ctx, connection) { return mountClient(ctx, createRemote(connection), namespaceSpecs); }\n");
-        methods.Append("export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
+        runtime.Append(
+            "];\nexport function mountRemote(ctx, connection) { return mountClient(ctx, createRemote(connection), namespaceSpecs); }\n");
+        methods.Append(
+            "export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
         return new(runtime.ToString(), definitions.Append(methods).ToString());
     }
 
@@ -173,9 +185,12 @@ public static class TypertArtifacts
                 return alias;
             }
 
-            if (binaryResult && node.TryGetProperty("contentEncoding", out var encoding) && encoding.GetString() == "base64")
+            if (binaryResult && node.TryGetProperty("contentEncoding", out var encoding) &&
+                encoding.GetString() == "base64")
                 return node.TryGetProperty("type", out var binaryKind) && binaryKind.ValueKind == JsonValueKind.Array &&
-                    binaryKind.EnumerateArray().Any(value => value.GetString() == "null") ? "Uint8Array | null" : "Uint8Array";
+                    binaryKind.EnumerateArray().Any(value => value.GetString() == "null")
+                        ? "Uint8Array | null"
+                        : "Uint8Array";
             if (node.TryGetProperty("enum", out var values))
                 return string.Join(" | ", values.EnumerateArray().Select(value => value.GetRawText()));
             if (node.TryGetProperty("const", out var constant))
@@ -255,5 +270,4 @@ public static class TypertArtifacts
             return "{ " + string.Join("; ", fields) + " }";
         }
     }
-
 }

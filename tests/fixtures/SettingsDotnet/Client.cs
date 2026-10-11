@@ -39,13 +39,19 @@ var missingSecrets = serialized.Replace("\"secrets\":", "\"omittedSecrets\":", S
 ExpectJsonFailure(missingSecrets, "Missing required secrets was accepted.");
 var missingApplies = serialized.Replace("\"applies\":", "\"omittedApplies\":", StringComparison.Ordinal);
 ExpectJsonFailure(missingApplies, "Missing required applies was accepted.");
-using (var bad = new StringContent("""{"type":"client-request","rpcId":"bad-argument","method":"settings/describe","payload":{"args":{"unexpected":1}}}""", Encoding.UTF8, "application/json"))
+using (var bad = new StringContent(
+           """{"type":"client-request","rpcId":"bad-argument","method":"settings/describe","payload":{"args":{"unexpected":1}}}""",
+           Encoding.UTF8,
+           "application/json"))
 using (var response = await http.PostAsync(new Uri(host, "/remote/settings/describe"), bad))
 using (var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync()))
 {
-    Assert(!document.RootElement.GetProperty("result").GetProperty("ok").GetBoolean(), "Unexpected Remote argument was accepted.");
     Assert(
-        document.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString() == "gateway/arguments-invalid",
+        !document.RootElement.GetProperty("result").GetProperty("ok").GetBoolean(),
+        "Unexpected Remote argument was accepted.");
+    Assert(
+        document.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString() ==
+        "gateway/arguments-invalid",
         "Argument rejection lost its contract code.");
 }
 
@@ -264,7 +270,11 @@ async Task<string> Source()
 
 async Task RawFailure(string method, string arguments, string code)
 {
-    using var body = new StringContent("{\"type\":\"client-request\",\"rpcId\":\"raw-check\",\"method\":\"settings/" + method + "\",\"payload\":{\"args\":" + arguments + "}}", Encoding.UTF8, "application/json");
+    using var body = new StringContent(
+        "{\"type\":\"client-request\",\"rpcId\":\"raw-check\",\"method\":\"settings/" + method +
+        "\",\"payload\":{\"args\":" + arguments + "}}",
+        Encoding.UTF8,
+        "application/json");
     using var response = await http.PostAsync(new Uri(host, "/remote/settings/" + method), body);
     response.EnsureSuccessStatusCode();
     using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -430,8 +440,10 @@ internal sealed class DescribeMirror(SettingsClient remote)
                 SettingsDescribeValue? result = null;
                 string? error = null;
                 var response = await remote.DescribeAsync();
-                if (response.Ok) result = response.Value;
-                else error = response.Error.Message;
+                if (response.Ok)
+                    result = response.Value;
+                else
+                    error = response.Error.Message;
 
                 if (readGeneration != generation)
                     continue;

@@ -69,7 +69,9 @@ await Failure(
     () => manager.InstallBundleAsync(request, new("resource-denied", inspected.ContentHash)),
     "plugin-manager/forbidden");
 await Deny("install", false);
-Assert((await manager.WaitForInstallAsync("resource-denied")).Value is null, "Resource refusal admitted an installation.");
+Assert(
+    (await manager.WaitForInstallAsync("resource-denied")).Value is null,
+    "Resource refusal admitted an installation.");
 var stale = (await manager.InstallBundleAsync(request, new("stale", "wrong-hash"))).Value;
 Assert(
     stale.Stage == "inspect" && stale.Application == "failed" && stale.Error == "inspection-changed" && stale.Installed,
@@ -133,7 +135,8 @@ var inspectionCancellation = (await manager.CancelInstallAsync("request-inspecti
 var inspectedCancellation = (await inspecting).Value;
 Assert(
     inspectionCancellation.Status == "cancelled" && inspectedCancellation.Stage == "inspect" &&
-    inspectedCancellation.Application == "cancelled" && ((await inspectingWait).Value)?.RequestId == "request-inspecting",
+    inspectedCancellation.Application == "cancelled" &&
+    ((await inspectingWait).Value)?.RequestId == "request-inspecting",
     "Blocked inspection did not belong to the request task owner.");
 using (var probe = await Probe())
 {
@@ -201,7 +204,8 @@ Assert(
 var waiting = manager.WaitForInstallAsync("disconnected-update");
 await Control("wait-observed", "disconnected-update");
 await Control("release", "existing", "2.0.0");
-var updated = (await waiting).Value ?? throw new InvalidOperationException("The original active request was not observed.");
+var updated = (await waiting).Value ??
+    throw new InvalidOperationException("The original active request was not observed.");
 Assert(
     updated.RequestId == "disconnected-update" && updated.Target == "existing" && updated.Installed &&
     updated.Selected &&
@@ -267,12 +271,20 @@ foreach (var control in new[] { "terminal", "incomplete", "malformed" })
     if (control == "terminal")
     {
         var error = await StreamFailure(() => reader.MoveNextAsync().AsTask(), "fixture/stream");
-        Assert(error.Details!.Value.GetProperty("stage").GetString() == "source", "Terminal stream error lost its details.");
+        Assert(
+            error.Details!.Value.GetProperty("stage").GetString() == "source",
+            "Terminal stream error lost its details.");
     }
     else
     {
-        try { await reader.MoveNextAsync(); throw new InvalidOperationException("Expected a carrier failure."); }
-        catch (RemoteStreamCarrierException) { }
+        try
+        {
+            await reader.MoveNextAsync();
+            throw new InvalidOperationException("Expected a carrier failure.");
+        }
+        catch (RemoteStreamCarrierException)
+        {
+        }
     }
 }
 
@@ -305,7 +317,9 @@ var shutdownResult = await shutdownInstall;
 if (shutdownResult.Ok)
     Assert(shutdownResult.Value.Application == "cancelled", "Session shutdown reported successful inspection install.");
 else
-    Assert(shutdownResult.Error.Code is "gateway/internal" or "gateway/cancelled", "Retired installation observation lost its generation failure.");
+    Assert(
+        shutdownResult.Error.Code is "gateway/internal" or "gateway/cancelled",
+        "Retired installation observation lost its generation failure.");
 
 using (var probe = await Probe())
 {
@@ -372,15 +386,30 @@ static async Task<RemoteError> Failure<T>(Func<Task<Cordis.Composition.RemoteRes
 
 static async Task Cancelled(Task read)
 {
-    try { await read.WaitAsync(TimeSpan.FromSeconds(20)); }
-    catch (OperationCanceledException) { return; }
+    try
+    {
+        await read.WaitAsync(TimeSpan.FromSeconds(20));
+    }
+    catch (OperationCanceledException)
+    {
+        return;
+    }
+
     throw new InvalidOperationException("Expected stream cancellation.");
 }
 
 static async Task<RemoteError> StreamFailure(Func<Task> read, string code)
 {
-    try { await read().WaitAsync(TimeSpan.FromSeconds(20)); }
-    catch (RemoteError error) { Assert(error.Code == code, "Wrong stream failure: " + error.Code); return error; }
+    try
+    {
+        await read().WaitAsync(TimeSpan.FromSeconds(20));
+    }
+    catch (RemoteError error)
+    {
+        Assert(error.Code == code, "Wrong stream failure: " + error.Code);
+        return error;
+    }
+
     throw new InvalidOperationException("Expected remote stream failure: " + code);
 }
 
@@ -391,8 +420,12 @@ static async Task IgnoreWithdrawal(Task<bool> pending)
     {
         await pending.WaitAsync(TimeSpan.FromSeconds(20));
     }
-    catch (OperationCanceledException) { }
-    catch (InvalidOperationException error) when (error.Message.Contains("withdrawn", StringComparison.Ordinal)) { }
+    catch (OperationCanceledException)
+    {
+    }
+    catch (InvalidOperationException error) when (error.Message.Contains("withdrawn", StringComparison.Ordinal))
+    {
+    }
 }
 
 static void Assert(bool value, string reason)

@@ -20,21 +20,25 @@ public static class CordisRemoteEndpoints
         ArgumentNullException.ThrowIfNull(authorize);
         var group = endpoints.MapGroup(prefix);
         group.MapPost("/{remoteNamespace}/{method}", (RequestDelegate)(http => HandleUnary(http, Endpoint(http))));
-        group.MapGet("/remote.mux", (RequestDelegate)(async http =>
-        {
-            if (!await authorize(http, "remote.mux"))
+        group.MapGet(
+            "/remote.mux",
+            (RequestDelegate)(async http =>
             {
-                http.Response.StatusCode = StatusCodes.Status403Forbidden;
-                return;
-            }
-            if (!http.WebSockets.IsWebSocketRequest)
-            {
-                http.Response.StatusCode = StatusCodes.Status400BadRequest;
-                return;
-            }
-            await using var mux = new CordisRemoteMux(http, connection, authorize);
-            await mux.RunAsync();
-        }));
+                if (!await authorize(http, "remote.mux"))
+                {
+                    http.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return;
+                }
+
+                if (!http.WebSockets.IsWebSocketRequest)
+                {
+                    http.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    return;
+                }
+
+                await using var mux = new CordisRemoteMux(http, connection, authorize);
+                await mux.RunAsync();
+            }));
         return group;
 
         static string Endpoint(HttpContext http) =>
@@ -48,7 +52,10 @@ public static class CordisRemoteEndpoints
                 return;
             }
 
-            if (!string.Equals(http.Request.ContentType?.Split(';')[0].Trim(), "application/json", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(
+                    http.Request.ContentType?.Split(';')[0].Trim(),
+                    "application/json",
+                    StringComparison.OrdinalIgnoreCase))
             {
                 http.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
                 return;
@@ -69,10 +76,13 @@ public static class CordisRemoteEndpoints
             {
                 var root = document.RootElement;
                 var objectRoot = root.ValueKind == JsonValueKind.Object;
-                var rpcId = objectRoot && root.TryGetProperty("rpcId", out var id) && id.ValueKind == JsonValueKind.String
-                    ? id.GetString()! : "invalid-request";
+                var rpcId = objectRoot && root.TryGetProperty("rpcId", out var id) &&
+                    id.ValueKind == JsonValueKind.String
+                        ? id.GetString()!
+                        : "invalid-request";
                 if (!objectRoot ||
-                    !root.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String || type.GetString() != "client-request" ||
+                    !root.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String ||
+                    type.GetString() != "client-request" ||
                     !root.TryGetProperty("rpcId", out id) || id.ValueKind != JsonValueKind.String ||
                     !root.TryGetProperty("method", out var method) || method.ValueKind != JsonValueKind.String)
                 {
@@ -86,8 +96,11 @@ public static class CordisRemoteEndpoints
                     return;
                 }
 
-                var arguments = root.TryGetProperty("payload", out var payload) && payload.ValueKind == JsonValueKind.Object &&
-                    payload.TryGetProperty("args", out var args) ? args : default;
+                var arguments = root.TryGetProperty("payload", out var payload) &&
+                    payload.ValueKind == JsonValueKind.Object &&
+                    payload.TryGetProperty("args", out var args)
+                        ? args
+                        : default;
                 await Write(http, rpcId, await connection.InvokeAsync(endpoint, arguments, http.RequestAborted));
             }
         }
@@ -114,6 +127,7 @@ public static class CordisRemoteEndpoints
                     writer.WritePropertyName("value");
                     value.WriteTo(writer);
                 }
+
                 if (!result.Ok)
                 {
                     writer.WriteStartObject("error");
@@ -127,8 +141,10 @@ public static class CordisRemoteEndpoints
                         writer.WriteStartObject();
                         writer.WriteEndObject();
                     }
+
                     writer.WriteEndObject();
                 }
+
                 writer.WriteEndObject();
                 if (result.Ok && result.Attachments.Count != 0)
                 {
@@ -144,15 +160,19 @@ public static class CordisRemoteEndpoints
                         writer.WriteEndArray();
                         writer.WriteEndObject();
                     }
+
                     writer.WriteEndArray();
                 }
+
                 writer.WriteEndObject();
             }
+
             if (!result.Ok || result.Attachments.Count == 0)
             {
                 await http.Response.Body.WriteAsync(buffer.ToArray(), http.RequestAborted);
                 return;
             }
+
             using var multipart = new MultipartFormDataContent();
             multipart.Add(new StringContent(System.Text.Encoding.UTF8.GetString(buffer.ToArray())), "\"metadata\"");
             for (var index = 0;index < result.Attachments.Count;index++)
@@ -166,9 +186,9 @@ public static class CordisRemoteEndpoints
                 };
                 multipart.Add(bytes);
             }
+
             http.Response.ContentType = multipart.Headers.ContentType!.ToString();
             await multipart.CopyToAsync(http.Response.Body, http.RequestAborted);
         }
-
     }
 }

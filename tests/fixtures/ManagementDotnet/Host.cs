@@ -124,7 +124,9 @@ server.UseWebSockets();
 server.MapCordisRemote(
     "/remote",
     remoteConnection,
-    (http, _) => Task.FromResult((http.Request.Headers.Authorization == "consumer-policy" || http.Request.Query["consumer"] == "consumer-policy")));
+    (http, _) => Task.FromResult(
+        (http.Request.Headers.Authorization == "consumer-policy" ||
+            http.Request.Query["consumer"] == "consumer-policy")));
 foreach (var pair in new[]
          {
              (Name: "management", Contract: managerContracts),
@@ -250,28 +252,36 @@ server.MapPost(
         return Results.Text("ok");
     });
 foreach (var kind in new[] { "terminal", "incomplete", "malformed" })
-    server.MapGet("/" + kind + "/remote.mux", async (HttpContext http) =>
-    {
-        using var socket = await http.WebSockets.AcceptWebSocketAsync();
-        using var message = new MemoryStream();
-        var buffer = new byte[4096];
-        ValueWebSocketReceiveResult read;
-        do
+    server.MapGet(
+        "/" + kind + "/remote.mux",
+        async (HttpContext http) =>
         {
-            read = await socket.ReceiveAsync(buffer.AsMemory(), http.RequestAborted);
-            message.Write(buffer, 0, read.Count);
-        } while (!read.EndOfMessage);
-        using var open = JsonDocument.Parse(message.ToArray());
-        var id = open.RootElement.GetProperty("streamId").GetRawText();
-        var frame = kind switch
-        {
-            "terminal" => "{\"type\":\"error\",\"streamId\":" + id + ",\"error\":{\"code\":\"fixture/stream\",\"message\":\"notification source failed\",\"details\":{\"stage\":\"source\"}}}",
-            "incomplete" => "{\"type\":",
-            _ => "not-json"
-        };
-        await socket.SendAsync(Encoding.UTF8.GetBytes(frame).AsMemory(), WebSocketMessageType.Text, true, http.RequestAborted);
-        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "fixture complete", http.RequestAborted);
-    });
+            using var socket = await http.WebSockets.AcceptWebSocketAsync();
+            using var message = new MemoryStream();
+            var buffer = new byte[4096];
+            ValueWebSocketReceiveResult read;
+            do
+            {
+                read = await socket.ReceiveAsync(buffer.AsMemory(), http.RequestAborted);
+                message.Write(buffer, 0, read.Count);
+            } while (!read.EndOfMessage);
+
+            using var open = JsonDocument.Parse(message.ToArray());
+            var id = open.RootElement.GetProperty("streamId").GetRawText();
+            var frame = kind switch
+            {
+                "terminal" => "{\"type\":\"error\",\"streamId\":" + id +
+                    ",\"error\":{\"code\":\"fixture/stream\",\"message\":\"notification source failed\",\"details\":{\"stage\":\"source\"}}}",
+                "incomplete" => "{\"type\":",
+                _ => "not-json"
+            };
+            await socket.SendAsync(
+                Encoding.UTF8.GetBytes(frame).AsMemory(),
+                WebSocketMessageType.Text,
+                true,
+                http.RequestAborted);
+            await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "fixture complete", http.RequestAborted);
+        });
 await server.StartAsync();
 Console.WriteLine("READY " + server.Urls.Single());
 await server.WaitForShutdownAsync();

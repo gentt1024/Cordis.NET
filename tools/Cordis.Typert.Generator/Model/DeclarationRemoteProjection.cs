@@ -19,15 +19,20 @@ internal sealed class DeclarationRemoteProjection
         declarations = new(model, references);
     }
 
-    internal static RemoteProjection Project(DeclarationModelDocument model, string? service, DeclarationModelDocument[]? references = null) =>
+    internal static RemoteProjection Project(
+        DeclarationModelDocument model,
+        string? service,
+        DeclarationModelDocument[]? references = null) =>
         new DeclarationRemoteProjection(model, references ?? []).ProjectServices(service);
 
     private RemoteProjection ProjectServices(string? service)
     {
         var selected = DeclarationRemoteContract.Read(model, service);
         var services = selected.Select(Service).ToArray();
-        diagnostics.AddRange(declarations.Diagnostics.Where(diagnostic => diagnostic.Symbol is null ||
-            types.Keys.Any(id => diagnostic.Symbol == id || diagnostic.Symbol.StartsWith(id + ".", StringComparison.Ordinal))));
+        diagnostics.AddRange(
+            declarations.Diagnostics.Where(diagnostic => diagnostic.Symbol is null ||
+                types.Keys.Any(id =>
+                    diagnostic.Symbol == id || diagnostic.Symbol.StartsWith(id + ".", StringComparison.Ordinal))));
         foreach (var contract in selected)
         {
             diagnostics.AddRange(contract.Diagnostics);
@@ -185,7 +190,8 @@ internal sealed class DeclarationRemoteProjection
             { } framework)
             return framework;
         if (type.Provenance != "source")
-            throw Refuse(type.Id,
+            throw Refuse(
+                type.Id,
                 "TYPM114: External data declarations require an explicit referenced source model; metadata signatures do not retain all authored DTO facts.");
 
         ValidateCachedWireNames(new("named", type.Id, reference.Nullability, []), new(StringComparer.Ordinal));

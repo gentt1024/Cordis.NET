@@ -23,10 +23,23 @@ builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Logging.ClearProviders();
 await using var server = builder.Build();
 server.UseWebSockets();
-server.MapCordisRemote("/remote", connection,
+server.MapCordisRemote(
+    "/remote",
+    connection,
     (_, endpoint) => Task.FromResult(endpoint is "remote.mux" or "remoteNotifications/watch"));
-server.MapPost("/changed", () => root.RunAsync(owner => { owner.Emit("client-modules/changed"); return Task.CompletedTask; }));
-server.MapPost("/stop", () => { server.Lifetime.StopApplication(); });
+server.MapPost(
+    "/changed",
+    () => root.RunAsync(owner =>
+    {
+        owner.Emit("client-modules/changed");
+        return Task.CompletedTask;
+    }));
+server.MapPost(
+    "/stop",
+    () =>
+    {
+        server.Lifetime.StopApplication();
+    });
 await server.StartAsync();
 Console.WriteLine("READY " + server.Urls.Single());
 await server.WaitForShutdownAsync();

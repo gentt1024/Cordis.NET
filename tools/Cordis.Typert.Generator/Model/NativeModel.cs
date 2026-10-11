@@ -104,7 +104,8 @@ internal sealed record NativeMethod(
 {
     internal NativeUplink? Uplink
     {
-        get; init;
+        get;
+        init;
     }
 }
 

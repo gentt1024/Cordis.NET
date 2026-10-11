@@ -9,18 +9,25 @@ public sealed partial class TypertConnection
     private readonly object streamGate = new();
     private Mux? mux;
 
-    internal TypertStreamCall Open(string endpoint, Func<JsonElement> arguments, CancellationToken token, IDisposable owner)
+    internal TypertStreamCall Open(
+        string endpoint,
+        Func<JsonElement> arguments,
+        CancellationToken token,
+        IDisposable owner)
     {
         Mux selected;
         lock (streamGate)
         {
             if (mux is null || mux.Finished)
             {
-                var connectionLease = lifetime.Enter() ?? throw new InvalidOperationException("The Remote Connection is closed.");
+                var connectionLease = lifetime.Enter() ??
+                    throw new InvalidOperationException("The Remote Connection is closed.");
                 mux = new(this, connectionLease);
             }
+
             selected = mux;
         }
+
         return selected.Open(endpoint, arguments, token, owner);
     }
 
@@ -58,7 +65,11 @@ public sealed partial class TypertConnection
             }
         }
 
-        public TypertStreamCall Open(string endpoint, Func<JsonElement> arguments, CancellationToken token, IDisposable owner)
+        public TypertStreamCall Open(
+            string endpoint,
+            Func<JsonElement> arguments,
+            CancellationToken token,
+            IDisposable owner)
         {
             var id = Guid.NewGuid().ToString();
             var call = new TypertStreamCall(token, owner);
@@ -77,6 +88,7 @@ public sealed partial class TypertConnection
                     call.Start(() => RunAsync(id, endpoint, arguments, call));
                 }
             }
+
             return call;
         }
 
@@ -89,16 +101,19 @@ public sealed partial class TypertConnection
                 // Encoding belongs to the logical call, before entering the physical carrier.
                 var encoded = arguments();
                 await connected.WaitAsync(call.Token).ConfigureAwait(false);
-                await SendAsync(writer =>
-                {
-                    writer.WriteString("type", "open");
-                    writer.WriteString("streamId", id);
-                    writer.WriteString("endpoint", endpoint);
-                    writer.WriteStartObject("payload");
-                    writer.WritePropertyName("args");
-                    encoded.WriteTo(writer);
-                    writer.WriteEndObject();
-                }, call.Token).ConfigureAwait(false);
+                await SendAsync(
+                        writer =>
+                        {
+                            writer.WriteString("type", "open");
+                            writer.WriteString("streamId", id);
+                            writer.WriteString("endpoint", endpoint);
+                            writer.WriteStartObject("payload");
+                            writer.WritePropertyName("args");
+                            encoded.WriteTo(writer);
+                            writer.WriteEndObject();
+                        },
+                        call.Token)
+                    .ConfigureAwait(false);
                 opened = true;
                 input = PumpInputAsync(id, call);
                 await call.Terminated.WaitAsync(call.Token).ConfigureAwait(false);
@@ -109,8 +124,10 @@ public sealed partial class TypertConnection
             }
             catch (Exception error)
             {
-                call.Fail(error is WebSocketException or HttpRequestException
-                    ? new RemoteStreamCarrierException("Remote stream connection failed.", error) : error);
+                call.Fail(
+                    error is WebSocketException or HttpRequestException
+                        ? new RemoteStreamCarrierException("Remote stream connection failed.", error)
+                        : error);
             }
             finally
             {
@@ -120,17 +137,22 @@ public sealed partial class TypertConnection
                 if (opened && !call.RemoteTerminal && socket.State == WebSocketState.Open)
                     try
                     {
-                        await SendAsync(writer =>
-                        {
-                            writer.WriteString("type", "cancel");
-                            writer.WriteString("streamId", id);
-                        }, lease.Token).ConfigureAwait(false);
+                        await SendAsync(
+                                writer =>
+                                {
+                                    writer.WriteString("type", "cancel");
+                                    writer.WriteString("streamId", id);
+                                },
+                                lease.Token)
+                            .ConfigureAwait(false);
                     }
                     catch (Exception error)
                     {
-                        FailAll(new RemoteStreamCarrierException("Remote stream cancellation could not be sent.", error));
+                        FailAll(
+                            new RemoteStreamCarrierException("Remote stream cancellation could not be sent.", error));
                         socket.Abort();
                     }
+
                 lock (gate)
                     streams.Remove(id);
             }
@@ -144,19 +166,24 @@ public sealed partial class TypertConnection
                 {
                     if (call.RemoteTerminal)
                         return;
-                    await SendAsync(writer =>
-                    {
-                        writer.WriteString("type", value.HasValue ? "item" : "end");
-                        writer.WriteString("streamId", id);
-                        if (value is { ValueKind: not JsonValueKind.Undefined } item)
-                        {
-                            writer.WritePropertyName("value");
-                            item.WriteTo(writer);
-                        }
-                    }, call.Token).ConfigureAwait(false);
+                    await SendAsync(
+                            writer =>
+                            {
+                                writer.WriteString("type", value.HasValue ? "item" : "end");
+                                writer.WriteString("streamId", id);
+                                if (value is { ValueKind: not JsonValueKind.Undefined } item)
+                                {
+                                    writer.WritePropertyName("value");
+                                    item.WriteTo(writer);
+                                }
+                            },
+                            call.Token)
+                        .ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException) when (call.Token.IsCancellationRequested) { }
+            catch (OperationCanceledException) when (call.Token.IsCancellationRequested)
+            {
+            }
             catch (Exception error)
             {
                 FailAll(new RemoteStreamCarrierException("Remote stream input could not be sent.", error));
@@ -173,11 +200,14 @@ public sealed partial class TypertConnection
                 content(writer);
                 writer.WriteEndObject();
             }
+
             await sendGate.WaitAsync(token).ConfigureAwait(false);
             try
             {
                 token.ThrowIfCancellationRequested();
-                await socket.SendAsync(bytes.ToArray().AsMemory(), WebSocketMessageType.Text, true, lease.Token).ConfigureAwait(false);
+                await socket
+                    .SendAsync(bytes.ToArray().AsMemory(), WebSocketMessageType.Text, true, lease.Token)
+                    .ConfigureAwait(false);
             }
             finally
             {
@@ -199,16 +229,21 @@ public sealed partial class TypertConnection
                     {
                         received = await socket.ReceiveAsync(buffer.AsMemory(), lease.Token).ConfigureAwait(false);
                         if (received.MessageType != WebSocketMessageType.Text)
-                            throw new RemoteStreamCarrierException("Remote stream socket closed or sent a non-text frame.");
+                            throw new RemoteStreamCarrierException(
+                                "Remote stream socket closed or sent a non-text frame.");
                         message.Write(buffer, 0, received.Count);
                     } while (!received.EndOfMessage);
+
                     using var document = JsonDocument.Parse(message.ToArray());
                     Dispatch(document.RootElement);
                 }
             }
             catch (Exception error)
             {
-                FailAll(error is RemoteStreamCarrierException ? error : new RemoteStreamCarrierException("Remote stream carrier failed.", error));
+                FailAll(
+                    error is RemoteStreamCarrierException
+                        ? error
+                        : new RemoteStreamCarrierException("Remote stream carrier failed.", error));
             }
             finally
             {
@@ -229,7 +264,8 @@ public sealed partial class TypertConnection
         {
             if (frame.ValueKind != JsonValueKind.Object ||
                 !frame.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String ||
-                !frame.TryGetProperty("streamId", out var id) || id.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(id.GetString()))
+                !frame.TryGetProperty("streamId", out var id) || id.ValueKind != JsonValueKind.String ||
+                string.IsNullOrEmpty(id.GetString()))
                 throw new JsonException("Invalid Remote stream frame.");
             var kind = type.GetString();
             var expected = kind switch
@@ -253,6 +289,7 @@ public sealed partial class TypertConnection
                     throw new JsonException("Unexpected Remote stream error field.");
                 failure = new(code.GetString()!, text.GetString()!, details.Clone());
             }
+
             TypertStreamCall? call;
             lock (gate)
                 streams.TryGetValue(id.GetString()!, out call);
@@ -278,7 +315,13 @@ public sealed partial class TypertConnection
 
 internal sealed class TypertStreamCall : IAsyncDisposable
 {
-    private readonly Channel<JsonElement> inbox = Channel.CreateUnbounded<JsonElement>(new() { SingleReader = false, SingleWriter = false });
+    private readonly Channel<JsonElement> inbox = Channel.CreateUnbounded<JsonElement>(
+        new()
+        {
+            SingleReader = false,
+            SingleWriter = false
+        });
+
     private readonly Channel<JsonElement?> outbox = Channel.CreateUnbounded<JsonElement?>();
     private bool inputEnded;
     private bool inputClosed;
@@ -303,6 +346,7 @@ internal sealed class TypertStreamCall : IAsyncDisposable
     {
         get;
     }
+
     public Task Terminated => terminated.Task;
     public Task Completion => completion.Task;
     public bool RemoteTerminal => Volatile.Read(ref remoteTerminal) != 0;
@@ -349,6 +393,7 @@ internal sealed class TypertStreamCall : IAsyncDisposable
             }
         }
     }
+
     public void Start(Func<Task> run) => _ = RunAsync(run);
 
     private async Task RunAsync(Func<Task> run)
@@ -364,18 +409,21 @@ internal sealed class TypertStreamCall : IAsyncDisposable
                 settled = true;
                 cancellation.Dispose();
             }
+
             owner.Dispose();
             completion.TrySetResult();
         }
     }
 
     public void Push(JsonElement value) => inbox.Writer.TryWrite(value);
+
     public void End(Exception? error)
     {
         Interlocked.Exchange(ref remoteTerminal, 1);
         CloseInput();
         inbox.Writer.TryComplete(error);
     }
+
     public void Fail(Exception error)
     {
         Interlocked.CompareExchange(ref failure, error, null);
@@ -384,8 +432,10 @@ internal sealed class TypertStreamCall : IAsyncDisposable
         while (inbox.Reader.TryRead(out _))
         {
         }
+
         terminated.TrySetResult();
     }
+
     public async ValueTask<JsonElement?> ReadAsync(CancellationToken token)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, Token);
@@ -407,6 +457,7 @@ internal sealed class TypertStreamCall : IAsyncDisposable
             throw;
         }
     }
+
     public ValueTask DisposeAsync()
     {
         lock (gate)
@@ -417,6 +468,7 @@ internal sealed class TypertStreamCall : IAsyncDisposable
                 if (!settled)
                     cancellation.Cancel();
             }
+
             return new(disposal);
         }
     }

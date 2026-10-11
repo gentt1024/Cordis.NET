@@ -24,7 +24,12 @@ builder.Logging.ClearProviders();
 await using var server = builder.Build();
 server.UseWebSockets();
 server.MapCordisRemote("/remote", connection, (_, endpoint) => Task.FromResult(endpoint == "referencedData/echo"));
-server.MapPost("/stop", () => { server.Lifetime.StopApplication(); });
+server.MapPost(
+    "/stop",
+    () =>
+    {
+        server.Lifetime.StopApplication();
+    });
 await server.StartAsync();
 Console.WriteLine("READY " + server.Urls.Single());
 await server.WaitForShutdownAsync();

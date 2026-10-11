@@ -8,10 +8,15 @@ using Microsoft.AspNetCore.Http;
 namespace Cordis.AspNetCore;
 
 internal sealed class CordisRemoteMux(
-    HttpContext http, TypertHostConnection connection, Func<HttpContext, string, Task<bool>> authorize) : IAsyncDisposable
+    HttpContext http,
+    TypertHostConnection connection,
+    Func<HttpContext, string, Task<bool>> authorize) : IAsyncDisposable
 {
     private readonly SemaphoreSlim sends = new(1, 1);
-    private readonly CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(http.RequestAborted);
+
+    private readonly CancellationTokenSource lifetime =
+        CancellationTokenSource.CreateLinkedTokenSource(http.RequestAborted);
+
     private readonly object gate = new();
     private readonly Dictionary<string, Call> calls = [];
     private readonly HashSet<Task> pendingCalls = [];
@@ -43,6 +48,7 @@ internal sealed class CordisRemoteMux(
                         await CloseAsync(WebSocketCloseStatus.InvalidMessageType, "text messages required");
                         return;
                     }
+
                     message.Write(buffer, 0, read.Count);
                 } while (!read.EndOfMessage);
 
@@ -58,7 +64,8 @@ internal sealed class CordisRemoteMux(
                 }
             }
         }
-        catch (Exception error) when (error is WebSocketException or OperationCanceledException or ObjectDisposedException)
+        catch (Exception error) when (error is WebSocketException or OperationCanceledException
+                                          or ObjectDisposedException)
         {
             // The physical request owns draining the calls after carrier failure.
         }
@@ -78,7 +85,8 @@ internal sealed class CordisRemoteMux(
     {
         if (frame.ValueKind != JsonValueKind.Object ||
             !frame.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String ||
-            !frame.TryGetProperty("streamId", out var id) || id.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(id.GetString()))
+            !frame.TryGetProperty("streamId", out var id) || id.ValueKind != JsonValueKind.String ||
+            string.IsNullOrEmpty(id.GetString()))
             throw new JsonException("Invalid Remote stream frame.");
         var kind = type.GetString();
         var fields = kind switch
@@ -102,8 +110,11 @@ internal sealed class CordisRemoteMux(
                 if (calls.ContainsKey(streamId) || !frame.TryGetProperty("endpoint", out var endpoint) ||
                     endpoint.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(endpoint.GetString()))
                     throw new JsonException("Invalid or duplicate Remote open.");
-                var args = frame.TryGetProperty("payload", out var payload) && payload.ValueKind == JsonValueKind.Object &&
-                    payload.TryGetProperty("args", out var arguments) ? arguments.Clone() : default;
+                var args = frame.TryGetProperty("payload", out var payload) &&
+                    payload.ValueKind == JsonValueKind.Object &&
+                    payload.TryGetProperty("args", out var arguments)
+                        ? arguments.Clone()
+                        : default;
                 var call = new Call(lifetime.Token, endpoint.GetString()!);
                 pendingCalls.RemoveWhere(task => task.IsCompleted);
                 pendingCalls.Add(call.Completion);
@@ -150,10 +161,15 @@ internal sealed class CordisRemoteMux(
                 if (!item.Ok)
                     return;
             }
+
             if (call.Error is { } error)
                 throw error;
             if (!call.Token.IsCancellationRequested)
-                await SendAsync(writer => { writer.WriteString("type", "end"); writer.WriteString("streamId", id); });
+                await SendAsync(writer =>
+                {
+                    writer.WriteString("type", "end");
+                    writer.WriteString("streamId", id);
+                });
         }
         catch (Exception error)
         {
@@ -192,6 +208,7 @@ internal sealed class CordisRemoteMux(
             writer.WriteStartObject();
             writer.WriteEndObject();
         }
+
         writer.WriteEndObject();
     }
 
@@ -204,12 +221,16 @@ internal sealed class CordisRemoteMux(
             content(writer);
             writer.WriteEndObject();
         }
+
         await sends.WaitAsync(lifetime.Token);
         try
         {
             await socket!.SendAsync(buffer.ToArray().AsMemory(), WebSocketMessageType.Text, true, lifetime.Token);
         }
-        finally { sends.Release(); }
+        finally
+        {
+            sends.Release();
+        }
     }
 
     private async ValueTask CloseAsync(WebSocketCloseStatus status, string reason)
@@ -277,7 +298,8 @@ internal sealed class CordisRemoteMux(
 
         private RemoteError InputError(string code, string message)
         {
-            using var details = JsonDocument.Parse("{\"endpoint\":" + JsonSerializer.Serialize(endpoint, TypertJson.Default.String) + "}");
+            using var details = JsonDocument.Parse(
+                "{\"endpoint\":" + JsonSerializer.Serialize(endpoint, TypertJson.Default.String) + "}");
             return new(code, message, details.RootElement);
         }
 
@@ -290,7 +312,8 @@ internal sealed class CordisRemoteMux(
             }
         }
 
-        public async IAsyncEnumerable<JsonElement> ReadUplink([EnumeratorCancellation] CancellationToken token = default)
+        public async IAsyncEnumerable<JsonElement> ReadUplink(
+            [EnumeratorCancellation] CancellationToken token = default)
         {
             if (Interlocked.Exchange(ref consumed, 1) != 0)
                 throw new InvalidOperationException("A Remote stream has one uplink consumer.");
@@ -305,11 +328,15 @@ internal sealed class CordisRemoteMux(
                             continue;
                         bufferedBytes -= item.Bytes;
                     }
+
                     token.ThrowIfCancellationRequested();
                     yield return item.Value;
                 }
             }
-            finally { CloseInput(); }
+            finally
+            {
+                CloseInput();
+            }
         }
 
         private void CloseInput()
@@ -321,30 +348,41 @@ internal sealed class CordisRemoteMux(
                 while (input.Reader.TryRead(out _))
                 {
                 }
+
                 bufferedBytes = 0;
             }
         }
 
         public RemoteError? Error
         {
-            get; private set;
+            get;
+            private set;
         }
+
         public void Cancel() => cancellation.Cancel();
+
         public void Fail(RemoteError error)
         {
             Error ??= error;
             CloseInput();
             Cancel();
         }
+
         public void Start(Func<Task> pump) => _ = RunAsync(pump);
+
         private async Task RunAsync(Func<Task> pump)
         {
             try
             {
                 await pump();
             }
-            finally { Dispose(); completion.TrySetResult(); }
+            finally
+            {
+                Dispose();
+                completion.TrySetResult();
+            }
         }
+
         public void Dispose()
         {
             CloseInput();

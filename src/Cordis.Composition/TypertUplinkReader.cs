@@ -15,8 +15,11 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
     private bool taken;
     private bool closed;
 
-    internal TypertUplinkReader(IAsyncEnumerable<JsonElement> source, Func<JsonElement, object?> decode,
-        CancellationToken invocation, Action<Exception> reject)
+    internal TypertUplinkReader(
+        IAsyncEnumerable<JsonElement> source,
+        Func<JsonElement, object?> decode,
+        CancellationToken invocation,
+        Action<Exception> reject)
     {
         this.invocation = invocation;
         this.decode = decode;
@@ -26,7 +29,11 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
         {
             this.source = source.GetAsyncEnumerator(lifetime.Token);
         }
-        catch { lifetime.Dispose(); throw; }
+        catch
+        {
+            lifetime.Dispose();
+            throw;
+        }
     }
 
     internal IAsyncEnumerable<T> Take<T>()
@@ -37,6 +44,7 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
                 throw new InvalidOperationException("A Remote invocation has one uplink consumer.");
             taken = true;
         }
+
         return new TypedEnumerable<T>(this);
     }
 
@@ -53,6 +61,7 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
                 throw new InvalidOperationException("A Remote uplink has one pending read.");
             move = pending = source.MoveNextAsync().AsTask();
         }
+
         using var registration = token.Register(() =>
         {
             lock (gate)
@@ -71,6 +80,7 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
                     return (false, null);
                 current = source.Current;
             }
+
             try
             {
                 return (true, decode(current));
@@ -81,7 +91,8 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
                 throw;
             }
         }
-        catch (OperationCanceledException) when (closed && !invocation.IsCancellationRequested && !token.IsCancellationRequested)
+        catch (OperationCanceledException) when (closed && !invocation.IsCancellationRequested &&
+                                                 !token.IsCancellationRequested)
         {
             return (false, null);
         }
@@ -109,17 +120,24 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
             {
                 await read.ConfigureAwait(false);
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+            }
+
         try
         {
             await source.DisposeAsync().ConfigureAwait(false);
         }
-        finally { lifetime.Dispose(); }
+        finally
+        {
+            lifetime.Dispose();
+        }
     }
 
     private sealed class TypedEnumerable<T>(TypertUplinkReader owner) : IAsyncEnumerable<T>
     {
         private int consumed;
+
         public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
             if (Interlocked.Exchange(ref consumed, 1) != 0)
@@ -130,7 +148,12 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
 
     private sealed class TypedEnumerator<T>(TypertUplinkReader owner, CancellationToken token) : IAsyncEnumerator<T>
     {
-        public T Current { get; private set; } = default!;
+        public T Current
+        {
+            get;
+            private set;
+        } = default!;
+
         public async ValueTask<bool> MoveNextAsync()
         {
             var next = await owner.ReadAsync(token).ConfigureAwait(false);
@@ -138,6 +161,7 @@ internal sealed class TypertUplinkReader : IAsyncDisposable
                 Current = (T)next.Value!;
             return next.Moved;
         }
+
         public ValueTask DisposeAsync() => owner.DisposeAsync();
     }
 }

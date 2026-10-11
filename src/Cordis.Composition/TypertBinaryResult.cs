@@ -28,20 +28,26 @@ internal static class TypertBinaryResult
         return document.RootElement.Clone();
     }
 
-    private static void Write(Utf8JsonWriter writer, JsonElement value, JsonTypeInfo metadata,
-        List<JsonElement> path, List<TypertBinaryAttachment> attachments)
+    private static void Write(
+        Utf8JsonWriter writer,
+        JsonElement value,
+        JsonTypeInfo metadata,
+        List<JsonElement> path,
+        List<TypertBinaryAttachment> attachments)
     {
         if (value.ValueKind == JsonValueKind.Null)
         {
             value.WriteTo(writer);
             return;
         }
+
         if (metadata.Type == typeof(byte[]))
         {
             attachments.Add(new(path.ToArray(), value.GetBytesFromBase64()));
             writer.WriteNullValue();
             return;
         }
+
         if (metadata.Kind == JsonTypeInfoKind.Object && value.ValueKind == JsonValueKind.Object)
         {
             writer.WriteStartObject();
@@ -58,9 +64,11 @@ internal static class TypertBinaryResult
                     path.RemoveAt(path.Count - 1);
                 }
             }
+
             writer.WriteEndObject();
             return;
         }
+
         if (metadata.ElementType is { } elementType)
         {
             var element = metadata.Options.GetTypeInfo(elementType);
@@ -74,9 +82,11 @@ internal static class TypertBinaryResult
                     Write(writer, child, element, path, attachments);
                     path.RemoveAt(path.Count - 1);
                 }
+
                 writer.WriteEndArray();
                 return;
             }
+
             if (metadata.Kind == JsonTypeInfoKind.Dictionary && value.ValueKind == JsonValueKind.Object)
             {
                 writer.WriteStartObject();
@@ -87,10 +97,12 @@ internal static class TypertBinaryResult
                     Write(writer, field.Value, element, path, attachments);
                     path.RemoveAt(path.Count - 1);
                 }
+
                 writer.WriteEndObject();
                 return;
             }
         }
+
         value.WriteTo(writer);
     }
 }

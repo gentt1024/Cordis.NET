@@ -138,7 +138,8 @@ try
         Timeout = TimeSpan.FromSeconds(20)
     };
     Require(
-        (await client.PostAsync("/remote/settings/describe", RemoteBody("settings/describe", "{\"args\":{}}"))).StatusCode ==
+        (await client.PostAsync("/remote/settings/describe", RemoteBody("settings/describe", "{\"args\":{}}")))
+        .StatusCode ==
         HttpStatusCode.Forbidden,
         "unauthorized settings");
     client.DefaultRequestHeaders.Authorization = new("consumer-policy");
@@ -220,7 +221,8 @@ try
             "ordinary inheritance restoration missing");
     using (var refused = await client.PostAsync(
                "/remote/pluginManager/installBundle",
-               RemoteBody("pluginManager/installBundle",
+               RemoteBody(
+                   "pluginManager/installBundle",
                    """{"args":{"request":{"name":"new-code","version":"1.0.0","source":"explicit"},"options":{"requestId":"static-install","inspectedHash":"unused","enabled":true}}}""")))
     {
         Require(refused.StatusCode == HttpStatusCode.OK, "standard static host carrier refused the request");
@@ -259,18 +261,22 @@ try
 
     async Task<JsonDocument> ReadSettings()
     {
-        using var response = await client.PostAsync("/remote/settings/describe", RemoteBody("settings/describe", "{\"args\":{}}"));
+        using var response = await client.PostAsync(
+            "/remote/settings/describe",
+            RemoteBody("settings/describe", "{\"args\":{}}"));
         Require(response.StatusCode == HttpStatusCode.OK, "settings read refused");
         using var envelope = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Require(envelope.RootElement.GetProperty("result").GetProperty("ok").GetBoolean(), "settings read failed");
-        return JsonDocument.Parse(envelope.RootElement.GetProperty("result").GetProperty("value").GetProperty("namespaces")[0].GetRawText());
+        return JsonDocument.Parse(
+            envelope.RootElement.GetProperty("result").GetProperty("value").GetProperty("namespaces")[0].GetRawText());
     }
 
     async Task<JsonDocument> EditSettings(double expectedRevision, string operations)
     {
         using var response = await client.PostAsync(
             "/remote/settings/mutate",
-            RemoteBody("settings/mutate",
+            RemoteBody(
+                "settings/mutate",
                 "{\"args\":{\"ns\":\"worker\",\"expectedRevision\":" +
                 expectedRevision.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"ops\":" +
                 operations + "}}"));
@@ -304,7 +310,9 @@ finally
 }
 
 static StringContent RemoteBody(string endpoint, string payload) =>
-    JsonBody("{\"type\":\"client-request\",\"rpcId\":\"" + Guid.NewGuid() + "\",\"method\":\"" + JsonEncodedText.Encode(endpoint) + "\",\"payload\":" + payload + "}");
+    JsonBody(
+        "{\"type\":\"client-request\",\"rpcId\":\"" + Guid.NewGuid() + "\",\"method\":\"" +
+        JsonEncodedText.Encode(endpoint) + "\",\"payload\":" + payload + "}");
 
 static StringContent JsonBody(string body) => new(body, Encoding.UTF8, "application/json");
 

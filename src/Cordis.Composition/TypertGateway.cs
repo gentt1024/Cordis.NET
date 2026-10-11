@@ -37,17 +37,21 @@ public sealed record TypertInvocation(Context Context, string Endpoint, Cancella
 {
     internal TypertUplinkReader? Input
     {
-        get; init;
+        get;
+        init;
     }
 
     /// <summary>Take this stream's single typed uplink consumer. Generated bindings supply it to the marked author parameter.</summary>
     public IAsyncEnumerable<T> ReadUplink<T>() =>
         (Input ?? throw new InvalidOperationException("This invocation has no stream input.")).Take<T>();
+
     /// <summary>The admitted Host operator, absent for an in-process Gateway call without a Connection.</summary>
     public TypertPeer? Peer
     {
-        get; init;
+        get;
+        init;
     }
+
     private static readonly AsyncLocal<TypertInvocation?> CurrentCall = new();
 
     /// <summary>Gets the current call. Native methods use this instead of JavaScript's rebound this.ctx.</summary>
@@ -73,10 +77,17 @@ public sealed record TypertRemoteFailure(string Code, string Message, JsonElemen
 public sealed record TypertRemoteResult(bool Ok, JsonElement? Value, TypertRemoteFailure? Error)
 {
     /// <summary>Typed bytes extracted from a successful unary result, relative to its value.</summary>
-    public IReadOnlyList<TypertBinaryAttachment> Attachments { get; init; } = [];
+    public IReadOnlyList<TypertBinaryAttachment> Attachments
+    {
+        get;
+        init;
+    } = [];
 
     /// <summary>Create a successful encoded result.</summary>
-    public static TypertRemoteResult Success(JsonElement value) => new(true, value.ValueKind == JsonValueKind.Undefined ? null : value, null);
+    public static TypertRemoteResult Success(JsonElement value) => new(
+        true,
+        value.ValueKind == JsonValueKind.Undefined ? null : value,
+        null);
 
     /// <summary>Create an encoded failure preserving a Remote owner's code and JSON details.</summary>
     public static TypertRemoteResult Failure(Exception error) => error switch
@@ -110,7 +121,10 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         CancellationToken cancellationToken = default) => InvokeAsync(endpoint, arguments, cancellationToken, null);
 
     internal async Task<TypertRemoteResult> InvokeAsync(
-        string endpoint, JsonElement arguments, CancellationToken cancellationToken, TypertPeer? peer)
+        string endpoint,
+        JsonElement arguments,
+        CancellationToken cancellationToken,
+        TypertPeer? peer)
     {
         TypertRemoteResult? result = null;
         try
@@ -126,10 +140,11 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                         endpoint,
                         "The active binding has no method for this descriptor.");
                 object? value;
-                using (TypertInvocation.Enter(new(prepared.Receiver, endpoint, cancellationToken)
-                {
-                    Peer = peer
-                }))
+                using (TypertInvocation.Enter(
+                           new(prepared.Receiver, endpoint, cancellationToken)
+                           {
+                               Peer = peer
+                           }))
                 {
                     try
                     {
@@ -172,11 +187,16 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
     public IAsyncEnumerable<TypertRemoteResult> StreamAsync(
         string endpoint,
         JsonElement arguments,
-        CancellationToken cancellationToken = default, IAsyncEnumerable<JsonElement>? uplink = null) => StreamAsync(endpoint, arguments, cancellationToken, null, uplink);
+        CancellationToken cancellationToken = default,
+        IAsyncEnumerable<JsonElement>? uplink = null) =>
+        StreamAsync(endpoint, arguments, cancellationToken, null, uplink);
 
     internal async IAsyncEnumerable<TypertRemoteResult> StreamAsync(
-        string endpoint, JsonElement arguments,
-        [EnumeratorCancellation] CancellationToken cancellationToken, TypertPeer? peer, IAsyncEnumerable<JsonElement>? uplink = null)
+        string endpoint,
+        JsonElement arguments,
+        [EnumeratorCancellation] CancellationToken cancellationToken,
+        TypertPeer? peer,
+        IAsyncEnumerable<JsonElement>? uplink = null)
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         Prepared? prepared = null;
@@ -193,17 +213,23 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                 if (!prepared.Descriptor.IsStream ||
                     !prepared.Binding.Streams.TryGetValue(prepared.Descriptor.Method, out var invoke))
                     throw Fault("gateway/signature-invalid", endpoint, "This endpoint has no active stream binding.");
-                input = new(uplink ?? EmptyUplink(), value => prepared.Descriptor.Uplink is { } codec
-                    ? Decode(codec, value, endpoint, "uplink") : value, lifetime.Token, error =>
+                input = new(
+                    uplink ?? EmptyUplink(),
+                    value => prepared.Descriptor.Uplink is { } codec
+                        ? Decode(codec, value, endpoint, "uplink")
+                        : value,
+                    lifetime.Token,
+                    error =>
                     {
                         Interlocked.CompareExchange(ref inputFailure, error, null);
                         lifetime.Cancel();
                     });
-                using (TypertInvocation.Enter(new(prepared.Receiver, endpoint, lifetime.Token)
-                {
-                    Peer = peer,
-                    Input = input
-                }))
+                using (TypertInvocation.Enter(
+                           new(prepared.Receiver, endpoint, lifetime.Token)
+                           {
+                               Peer = peer,
+                               Input = input
+                           }))
                     iterator = invoke(prepared.Service, prepared.Arguments, lifetime.Token)
                         .GetAsyncEnumerator(lifetime.Token);
             });
@@ -233,11 +259,12 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                     {
                         prepared!.Check();
                         lifetime.Token.ThrowIfCancellationRequested();
-                        using (TypertInvocation.Enter(new(prepared.Receiver, endpoint, lifetime.Token)
-                        {
-                            Peer = peer,
-                            Input = input
-                        }))
+                        using (TypertInvocation.Enter(
+                                   new(prepared.Receiver, endpoint, lifetime.Token)
+                                   {
+                                       Peer = peer,
+                                       Input = input
+                                   }))
                         {
                             pendingMove = iterator!.MoveNextAsync().AsTask();
                             moved = await pendingMove.WaitAsync(lifetime.Token);
@@ -280,18 +307,22 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                     if (input is not null)
                         await input.DisposeAsync();
                 }
-                finally { await lifetime.CancelAsync(); }
+                finally
+                {
+                    await lifetime.CancelAsync();
+                }
             }
             finally
             {
                 if (iterator is not null)
                     await caller.RunAsync(async _ =>
                     {
-                        using (TypertInvocation.Enter(new(prepared!.Receiver, endpoint, lifetime.Token)
-                        {
-                            Peer = peer,
-                            Input = input
-                        }))
+                        using (TypertInvocation.Enter(
+                                   new(prepared!.Receiver, endpoint, lifetime.Token)
+                                   {
+                                       Peer = peer,
+                                       Input = input
+                                   }))
                         {
                             if (pendingMove is not null)
                             {
@@ -527,7 +558,9 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
     {
         try
         {
-            return unary ? descriptor.Result.EncodeResult(value) : TypertRemoteResult.Success(descriptor.Result.Encode(value));
+            return unary
+                ? descriptor.Result.EncodeResult(value)
+                : TypertRemoteResult.Success(descriptor.Result.Encode(value));
         }
         catch (Exception error) when (error is JsonException or NotSupportedException or InvalidCastException)
         {

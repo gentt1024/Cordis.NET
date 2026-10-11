@@ -94,7 +94,9 @@ internal sealed class DotnetProjectionEmitter
         {
             if (method.ReturnWrapper != (method.Stream
                     ? "System.Collections.Generic.IAsyncEnumerable<T>"
-                    : method.Result.Name == "System_Void" ? "System.Threading.Tasks.Task" : "System.Threading.Tasks.Task<TResult>") ||
+                    : method.Result.Name == "System_Void"
+                        ? "System.Threading.Tasks.Task"
+                        : "System.Threading.Tasks.Task<TResult>") ||
                 method.Parameters.Any(parameter =>
                     parameter.RefKind != "None" || parameter.Params))
                 throw new InvalidDataException(
@@ -420,13 +422,16 @@ internal sealed class DotnetProjectionEmitter
                 value.Name == "System.Text.Json.Serialization.JsonSourceGenerationOptionsAttribute")
             .ToArray();
         var roots = service
-            .Methods.SelectMany(method => method.Parameters.Select(parameter => parameter.Type).Append(method.Result)
+            .Methods.SelectMany(method => method
+                .Parameters.Select(parameter => parameter.Type)
+                .Append(method.Result)
                 .Concat(method.Uplink is { } input ? [input.Type] : []))
             .Where(type => type.Name != "System_Void")
             .Select(type => type.Kind == "nullable" ? TypeName(type) : TypeName(type).TrimEnd('?'))
             .Concat(reachable.Select(id => Identifier(declarations[id].Name)))
             .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal).ToArray();
+            .Order(StringComparer.Ordinal)
+            .ToArray();
         if (roots.Length > 0)
         {
             output.AppendLine("/// <summary>Static JSON metadata for the generated client's public data.</summary>");
@@ -436,6 +441,7 @@ internal sealed class DotnetProjectionEmitter
                 output.AppendLine("[JsonSerializable(typeof(" + root + "))]");
             output.AppendLine("public partial class " + client + "Json : JsonSerializerContext;");
         }
+
         foreach (var attribute in options)
             EmitAttribute(attribute);
         foreach (var method in service.Methods)
@@ -474,10 +480,17 @@ internal sealed class DotnetProjectionEmitter
         var local = "__cordis";
         while (parameters.Any(parameter => parameter.Name.StartsWith(local, StringComparison.Ordinal)))
             local += "_";
-        var token = parameters.Any(parameter => parameter.Name == "cancellationToken") ? local + "CancellationToken" : "cancellationToken";
-        var signature = string.Join(", ", parameters.Select(parameter =>
-            ParameterAttributes(parameter.Attributes) + TypeName(parameter.Type) + " " + Identifier(parameter.Name) +
-            (parameter.Optional ? " = " + Constant(parameter.Default!) + (OmitNullDefault(parameter) ? "!" : "") : "")));
+        var token = parameters.Any(parameter => parameter.Name == "cancellationToken")
+            ? local + "CancellationToken"
+            : "cancellationToken";
+        var signature = string.Join(
+            ", ",
+            parameters.Select(parameter =>
+                ParameterAttributes(parameter.Attributes) + TypeName(parameter.Type) + " " +
+                Identifier(parameter.Name) +
+                (parameter.Optional
+                    ? " = " + Constant(parameter.Default!) + (OmitNullDefault(parameter) ? "!" : "")
+                    : "")));
         if (signature.Length > 0)
             signature += ", ";
         signature += "CancellationToken " + token + " = default";
@@ -490,14 +503,17 @@ internal sealed class DotnetProjectionEmitter
         var inputType = method.Uplink is { } input ? TypeName(input.Type) : null;
         if (method.Uplink?.Optional == true)
             inputType = "global::Cordis.Composition.RemoteOptional<" + inputType + ">";
-        var returnType = noValue ? "RemoteResult" : method.Stream
-            ? "RemoteStreamHandle<" + result + (inputType is null ? "" : ", " + inputType) + ">"
-            : "RemoteResult<" + result + ">";
+        var returnType = noValue
+            ? "RemoteResult"
+            : method.Stream
+                ? "RemoteStreamHandle<" + result + (inputType is null ? "" : ", " + inputType) + ">"
+                : "RemoteResult<" + result + ">";
         var invoke = inputType is not null ? "OpenDuplexAsync<" + prefix + "Args, " + result + ", " + inputType + ">"
             : method.Stream ? "OpenStreamAsync" : "InvokeAsync";
         Docs(method.Documentation, "    ");
         output
-            .AppendLine("    public Task<global::Cordis.Composition." + returnType + "> " + name + "(" + signature + ")")
+            .AppendLine(
+                "    public Task<global::Cordis.Composition." + returnType + "> " + name + "(" + signature + ")")
             .AppendLine("    {")
             .AppendLine("        return " + owner + "." + invoke + "(")
             .AppendLine("            " + Literal(service.Namespace + "/" + method.Name) + ",");
@@ -505,26 +521,46 @@ internal sealed class DotnetProjectionEmitter
             output.AppendLine("            () => Task.FromResult(new " + prefix + "Args {");
         else
         {
-            output.AppendLine("            async () => {")
-                .AppendLine("                var " + local + "Identity = await " + owner + ".ReadIdentityAsync<" + TypeName(bound.Type) + ">(this.callerContext, this.registry, " + Literal(key!) + ").ConfigureAwait(false);")
+            output
+                .AppendLine("            async () => {")
+                .AppendLine(
+                    "                var " + local + "Identity = await " + owner + ".ReadIdentityAsync<" +
+                    TypeName(bound.Type) + ">(this.callerContext, this.registry, " + Literal(key!) +
+                    ").ConfigureAwait(false);")
                 .AppendLine("                return new " + prefix + "Args {");
         }
-        output.AppendLine(string.Join(",\n", method.Parameters.Select(parameter =>
-            "                    " + Identifier(parameter.Name) + " = " + (ReferenceEquals(parameter, bound) ? local + "Identity" : Identifier(parameter.Name)))));
-        output.AppendLine(bound is null ? "            })," : "                };\n            },")
-            .AppendLine("            (JsonTypeInfo<" + prefix + "Args>)" + client + "CarrierJson.Default.GetTypeInfo(typeof(" + prefix + "Args))!,");
+
+        output.AppendLine(
+            string.Join(
+                ",\n",
+                method.Parameters.Select(parameter =>
+                    "                    " + Identifier(parameter.Name) + " = " + (ReferenceEquals(parameter, bound)
+                        ? local + "Identity"
+                        : Identifier(parameter.Name)))));
+        output
+            .AppendLine(bound is null ? "            })," : "                };\n            },")
+            .AppendLine(
+                "            (JsonTypeInfo<" + prefix + "Args>)" + client + "CarrierJson.Default.GetTypeInfo(typeof(" +
+                prefix + "Args))!,");
         if (!noValue)
             output
-            .AppendLine("            (JsonTypeInfo<" + result + ">)" + client + "Json.Default.GetTypeInfo(typeof(" + runtimeResult + "))!,")
-            .AppendLine("            " + (method.Result.Kind == "json" || Nullable(method.Result) ? "true" : "false") + ",");
+                .AppendLine(
+                    "            (JsonTypeInfo<" + result + ">)" + client + "Json.Default.GetTypeInfo(typeof(" +
+                    runtimeResult + "))!,")
+                .AppendLine(
+                    "            " + (method.Result.Kind == "json" || Nullable(method.Result) ? "true" : "false") +
+                    ",");
         if (method.Uplink is { } uplink)
         {
             var codec = UplinkCodec(uplink.Type);
             if (uplink.Optional)
-                codec = "global::Cordis.Composition.TypertCodec.CreateOptional<" + TypeName(uplink.Type) + ">(" + codec + ")";
+                codec = "global::Cordis.Composition.TypertCodec.CreateOptional<" + TypeName(uplink.Type) + ">(" +
+                    codec + ")";
             output.AppendLine("            " + codec + ",");
         }
-        output.AppendLine("            " + token + ");")
+
+        output
+            .AppendLine("            " + token + ");")
             .AppendLine("    }");
     }
 
@@ -532,7 +568,8 @@ internal sealed class DotnetProjectionEmitter
     {
         var name = TypeName(type);
         var runtime = type.Kind == "nullable" ? name : name.TrimEnd('?');
-        var metadata = "(JsonTypeInfo<" + runtime + ">)" + client + "Json.Default.GetTypeInfo(typeof(" + runtime + "))!";
+        var metadata = "(JsonTypeInfo<" + runtime + ">)" + client + "Json.Default.GetTypeInfo(typeof(" + runtime +
+            "))!";
         var collection = type.Kind == "collection" || type.Kind == "array" && type.Arguments[0].Name != "System_Byte";
         if (collection)
         {
@@ -541,7 +578,9 @@ internal sealed class DotnetProjectionEmitter
                 "(" + metadata + ", " + UplinkCodec(type.Arguments[dictionary ? 1 : 0]) +
                 ", nullable: " + (Nullable(type) ? "true" : "false") + ")";
         }
-        return "global::Cordis.Composition.TypertCodec." + (Nullable(type) && type.Kind != "nullable" ? "CreateNullable" : "Create") +
+
+        return "global::Cordis.Composition.TypertCodec." +
+            (Nullable(type) && type.Kind != "nullable" ? "CreateNullable" : "Create") +
             "(" + metadata + ")";
     }
 

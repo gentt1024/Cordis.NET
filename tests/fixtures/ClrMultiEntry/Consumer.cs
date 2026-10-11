@@ -264,7 +264,9 @@ await installedRoot.RunAsync(async context =>
     {
         var client = TypertArtifacts.GenerateClient(registry.GetPackage("multi-entry." + name)!);
         await File.WriteAllTextAsync(Path.Combine(clientDirectory, "cordis-remote.mjs"), TypertClientRuntime.Module);
-        await File.WriteAllTextAsync(Path.Combine(clientDirectory, "cordis-remote.d.mts"), TypertClientRuntime.Declaration);
+        await File.WriteAllTextAsync(
+            Path.Combine(clientDirectory, "cordis-remote.d.mts"),
+            TypertClientRuntime.Declaration);
         await File.WriteAllTextAsync(Path.Combine(clientDirectory, name + ".client.mjs"), client.Module);
         await File.WriteAllTextAsync(Path.Combine(clientDirectory, name + ".client.d.mts"), client.Declaration);
     }

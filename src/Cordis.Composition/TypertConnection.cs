@@ -47,13 +47,18 @@ public sealed partial class TypertConnection : IAsyncDisposable
         var url = new Uri(remoteBase.AbsoluteUri.TrimEnd('/') + "/" + endpoint);
         using var response = await http.PostAsync(url, content, linked.Token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException("Remote transport failure: HTTP " + (int)response.StatusCode, null, response.StatusCode);
+            throw new HttpRequestException(
+                "Remote transport failure: HTTP " + (int)response.StatusCode,
+                null,
+                response.StatusCode);
         using var document = await ReadResponseAsync(response.Content, linked.Token).ConfigureAwait(false);
         linked.Token.ThrowIfCancellationRequested();
         var envelope = document.RootElement;
         if (envelope.ValueKind != JsonValueKind.Object ||
-            !envelope.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String || type.GetString() != "server-response" ||
-            !envelope.TryGetProperty("rpcId", out var id) || id.ValueKind != JsonValueKind.String || id.GetString() != rpcId ||
+            !envelope.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String ||
+            type.GetString() != "server-response" ||
+            !envelope.TryGetProperty("rpcId", out var id) || id.ValueKind != JsonValueKind.String ||
+            id.GetString() != rpcId ||
             !envelope.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Object ||
             !result.TryGetProperty("ok", out var ok) || ok.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
             throw new JsonException("Invalid or uncorrelated Remote response.");
