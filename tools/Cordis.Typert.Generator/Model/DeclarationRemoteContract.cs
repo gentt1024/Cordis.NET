@@ -3,6 +3,7 @@ using static Cordis.Typert.Generator.Model.DeclarationAttributeProjection;
 namespace Cordis.Typert.Generator.Model;
 
 internal sealed record RemoteScopeContract(string Context, string Wire);
+internal sealed record RemoteUplinkContract(string Parameter, DeclarationReference Type, bool Optional);
 
 internal sealed record RemoteParameterContract(
     DeclarationParameter Facts,
@@ -22,7 +23,13 @@ internal sealed record RemoteMethodContract(
     string ContextWire,
     DeclarationReference? ContextWireType,
     RemoteScopeContract? Scope,
-    RemoteParameterContract[] Parameters);
+    RemoteParameterContract[] Parameters)
+{
+    internal RemoteUplinkContract? Uplink
+    {
+        get; init;
+    }
+}
 
 internal sealed record RemoteServiceContract(
     DeclarationType Facts,
@@ -97,12 +104,35 @@ internal static class DeclarationRemoteContract
                     last.Type,
                     "System.Threading.CancellationToken");
                 var parameters = cancellation ? method.Parameters[..^1] : method.Parameters;
+                if (cancellation && Attribute(method.Parameters[^1].Attributes, "Cordis.Composition.RemoteUplinkAttribute") is not null)
+                    Diagnose("TYPM012", "A CancellationToken cannot be the Remote uplink.", method.Id);
+                var uplinks = parameters.Where(parameter => Attribute(parameter.Attributes, "Cordis.Composition.RemoteUplinkAttribute") is not null).ToArray();
+                RemoteUplinkContract? uplink = null;
+                if (uplinks.Length > 0)
+                {
+                    var source = uplinks[0];
+                    if (uplinks.Length != 1 || !stream || source.Optional ||
+                        source.Type.Nullability == "Annotated" ||
+                        !Is(source.Type, "System.Collections.Generic.IAsyncEnumerable`1") || source.Type.Arguments.Length != 1 ||
+                        Attribute(source.Attributes, "Cordis.Composition.RemoteLookupAttribute") is not null)
+                        Diagnose("TYPM012", "Remote uplink requires one non-optional IAsyncEnumerable<T> parameter on a streaming method, without a lookup marker.", method.Id);
+                    else
+                    {
+                        var item = source.Type.Arguments[0];
+                        var optional = item.Kind == "named" && declarations.TryGetValue(item.Name, out var declared) &&
+                            declared.Assembly.StartsWith("Cordis.Composition,", StringComparison.Ordinal) &&
+                            declared.MetadataName == "Cordis.Composition.RemoteOptional`1" && item.Arguments.Length == 1;
+                        uplink = new(source.Name, optional ? item.Arguments[0] : item, optional);
+                    }
+                    parameters = parameters.Except(uplinks).ToArray();
+                }
                 var expected =
                     stream ? "System.Collections.Generic.IAsyncEnumerable`1" : "System.Threading.Tasks.Task`1";
-                if (method.Type is null || !Is(method.Type, expected) || method.Type.Arguments.Length != 1)
+                var noValue = !stream && method.Type is { } returnType && Is(returnType, "System.Threading.Tasks.Task");
+                if (!noValue && (method.Type is null || !Is(method.Type, expected) || method.Type.Arguments.Length != 1))
                     Diagnose(
                         "TYPM002",
-                        "Remote return wrapper is not the declared Task<T>/IAsyncEnumerable<T> boundary.",
+                        "Remote return wrapper is not the declared Task/Task<T>/IAsyncEnumerable<T> boundary.",
                         method.Id);
                 if (method.Modifiers.Contains("static", StringComparer.Ordinal) || method.TypeParameters.Length > 0 ||
                     method.Accessibility != "Public")
@@ -120,7 +150,7 @@ internal static class DeclarationRemoteContract
                         "TYPM008",
                         "Remote parameters require ordinary values and explicit constant defaults when optional; lookups cannot be optional and CancellationToken must be final.",
                         method.Id);
-                var result = method.Type is { Arguments.Length: 1 }
+                var result = noValue ? new DeclarationReference("primitive", "System_Void", "NotAnnotated", []) : method.Type is { Arguments.Length: 1 }
                     ? method.Type.Arguments[0]
                     : method.Type ?? new("unsupported", "missing return", "None", []);
                 var contextKey = String(Named(annotation, "Context"));
@@ -168,7 +198,7 @@ internal static class DeclarationRemoteContract
                 return new(
                     method,
                     String(Named(annotation, "Name")) ?? String(annotation.Arguments.FirstOrDefault()) ?? method.Name,
-                    stream ? "System.Collections.Generic.IAsyncEnumerable<T>" : "System.Threading.Tasks.Task<TResult>",
+                    stream ? "System.Collections.Generic.IAsyncEnumerable<T>" : noValue ? "System.Threading.Tasks.Task" : "System.Threading.Tasks.Task<TResult>",
                     result,
                     stream,
                     cancellation,
@@ -176,7 +206,10 @@ internal static class DeclarationRemoteContract
                     contextWire,
                     contextType,
                     scope,
-                    input);
+                    input)
+                {
+                    Uplink = uplink
+                };
             }
 
             void Diagnose(string code, string message, string symbol) =>

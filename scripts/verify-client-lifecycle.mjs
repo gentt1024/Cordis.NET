@@ -7,7 +7,7 @@ globalThis.location = new URL('http://localhost/')
 globalThis.document = { querySelectorAll() { return [] } }
 const runtime = resolve(process.argv[2] ?? 'clients/modules/lib')
 const { bootClientModules, createManagementClient, ManagementOutcomeUnknown } = await import(pathToFileURL(resolve(runtime, 'client.mjs')).href)
-const { createRemote } = await import(pathToFileURL(resolve(runtime, 'notifications.mjs')).href)
+const { createRemote, TypertConnection } = await import(pathToFileURL(resolve(runtime, 'notifications.mjs')).href)
 const empty = { rev: 'empty', entries: [], batches: [] }
 const graph = { rev: 'one', entries: [{ id: 'panel', url: '/panel.js?rev=one', rev: 'one', inject: [], external: [] }],
   batches: [{ phase: 'application', url: '/panel.js?rev=one', rev: 'one', entries: ['panel'] }] }
@@ -38,23 +38,50 @@ const transport = {
     throw new Error('Unexpected request: ' + url)
   },
 }
-// Controlled HTTP bytes pass through the actual generated notification client. No SDK protocol wrapper is supplied.
+// The controller's recovery and plugin ownership are tested through the shared
+// mux client. The fixture controls only socket frames, not notification semantics.
 function notifications() {
-  return createRemote('http://localhost/remote', async (url, init) => {
-    assert.ok(url.endsWith('/remoteNotifications/watch/stream'))
-    let output
-    const stream = { closed: false,
-      send(value) { if (!this.closed) output.enqueue(new TextEncoder().encode(JSON.stringify({ ok: true, value }) + '\n')) },
-      fail(error) { if (!this.closed) { this.closed = true; output.error(error) } },
+  class Socket extends EventTarget {
+    calls = new Map()
+    closed = false
+    constructor(url) {
+      super()
+      assert.equal(url.pathname, '/remote/remote.mux')
+      queueMicrotask(() => this.dispatchEvent(new Event('open')))
     }
-    const abort = () => stream.fail(new Error('Notification request aborted'))
-    const body = new ReadableStream({
-      start(controller) { output = controller; streams.push(stream); init.signal.addEventListener('abort', abort, { once: true }) },
-      cancel() { stream.closed = true; init.signal.removeEventListener('abort', abort) },
-    })
-    queueMicrotask(() => stream.send({ kind: 'ready' }))
-    return new Response(body, { headers: { 'content-type': 'application/x-ndjson' } })
-  })
+    send(text) {
+      const frame = JSON.parse(text)
+      if (frame.type === 'cancel') {
+        this.calls.get(frame.streamId).closed = true
+        this.calls.delete(frame.streamId)
+        return
+      }
+      assert.equal(frame.type, 'open')
+      assert.equal(frame.endpoint, 'remoteNotifications/watch')
+      const socket = this
+      const stream = { closed: false,
+        send(value) {
+          if (!this.closed) socket.dispatchEvent(new MessageEvent('message', {
+            data: JSON.stringify({ type: 'item', streamId: frame.streamId, value }),
+          }))
+        },
+        fail() { socket.close() },
+      }
+      this.calls.set(frame.streamId, stream)
+      streams.push(stream)
+      queueMicrotask(() => stream.send({ kind: 'ready' }))
+    }
+    close() {
+      if (this.closed) return
+      this.closed = true
+      for (const stream of this.calls.values()) stream.closed = true
+      this.calls.clear()
+      this.dispatchEvent(new Event('close'))
+    }
+  }
+  const connection = new TypertConnection('http://localhost/remote', fetch, url => new Socket(url))
+  const remote = createRemote(connection)
+  return { ...remote, async dispose() { await remote.dispose(); await connection.dispose() } }
 }
 const modules = await bootClientModules({ graph, loadBundle })
 const initial = modules.context.get('panel')
@@ -105,7 +132,7 @@ try {
   await delay(15)
   assert.equal(streams.length, count, 'Close prevents further recovery')
   assert.equal(client.connection.getSnapshot().phase, 'closed')
-} finally { await client.close(); notificationClient.dispose(); await modules.dispose() }
+} finally { await client.close(); await notificationClient.dispose(); await modules.dispose() }
 console.log('PASS generated notification recovery queries state, preserves plugins and never replays writes')
 
 for (const mode of ['import', 'apply', 'pending']) {
@@ -145,7 +172,7 @@ await until(() => cancellationClient.connection.getSnapshot().phase === 'connect
 assert.equal(pendingSignal.aborted, true)
 assert.equal(aborted, true)
 await cancellationClient.close()
-cancellationNotifications.dispose()
+await cancellationNotifications.dispose()
 console.log('PASS reconnect cancels an in-flight query before replacement readiness')
 
 const network = new EventTarget()
@@ -164,7 +191,7 @@ const paused = streams.length
 await delay(20)
 assert.equal(streams.length, paused)
 await networkClient.close()
-networkNotifications.dispose()
+await networkNotifications.dispose()
 network.dispatchEvent(new Event('online'))
 await delay(20)
 assert.equal(streams.length, paused)
@@ -195,6 +222,6 @@ await delay(5)
 assert.equal(closed, false, 'close must await async plugin withdrawal')
 releaseCleanup()
 await closing
-closingNotifications.dispose()
+await closingNotifications.dispose()
 await closingModules.dispose()
 console.log('PASS close fences new operations and joins asynchronous withdrawal')

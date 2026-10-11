@@ -66,9 +66,23 @@ server.MapPost(
         return Results.Ok();
     });
 #endif
+TypertHostConnection remoteConnection = null!;
+await context.RunAsync(owner =>
+{
+    remoteConnection = new(owner, new TypertGateway(context, registry));
+    return Task.CompletedTask;
+});
+server.UseWebSockets();
+#if !CORDIS_READONLY_HOST
+var clientArtifact = TypertArtifacts.GenerateClient(SharedRemoteTypert.Contribution("IndependentData.Provider"));
+server.MapGet("/client-runtime/shared.mjs", () => Results.Text(clientArtifact.Module, "text/javascript"));
+server.MapGet("/client-runtime/shared.d.mts", () => Results.Text(clientArtifact.Declaration, "text/plain"));
+server.MapGet("/client-runtime/cordis-remote.mjs", () => Results.Text(TypertClientRuntime.Module, "text/javascript"));
+server.MapGet("/client-runtime/cordis-remote.d.mts", () => Results.Text(TypertClientRuntime.Declaration, "text/plain"));
+#endif
 server.MapCordisRemote(
     "/remote",
-    new TypertGateway(context, registry),
+    remoteConnection,
     (http, _) => Task.FromResult(http.Request.Headers.Authorization == "consumer-policy"));
 server.MapPost(
     "/control/stop",

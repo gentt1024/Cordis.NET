@@ -85,6 +85,8 @@ internal sealed record NativeParameter(
     NativeAttribute[] Attributes,
     string Documentation);
 
+internal sealed record NativeUplink(NativeTypeReference Type, bool Optional);
+
 internal sealed record NativeMethod(
     string Name,
     string Implementation,
@@ -98,7 +100,13 @@ internal sealed record NativeMethod(
     RemoteScopeContract? Scope,
     NativeParameter[] Parameters,
     string Documentation,
-    NativeLocation? Location);
+    NativeLocation? Location)
+{
+    internal NativeUplink? Uplink
+    {
+        get; init;
+    }
+}
 
 internal sealed record NativeSerializerContext(
     string Id,

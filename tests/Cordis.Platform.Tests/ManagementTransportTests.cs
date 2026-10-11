@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using System.Net;
 using System.Diagnostics;
 using System.Net.Http.Json;
@@ -93,7 +94,7 @@ public sealed class ManagementTransportTests
             Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/cordis/state")).StatusCode);
             Assert.Equal(
                 HttpStatusCode.Forbidden,
-                (await client.PostAsJsonAsync(
+                (await PostRemoteAsync(client,
                     "/remote/settings/describe",
                     new
                     {
@@ -141,16 +142,16 @@ public sealed class ManagementTransportTests
                 }
             };
             using var saved = JsonDocument.Parse(
-                await (await client.PostAsJsonAsync("/remote/settings/mutate", body)).Content.ReadAsStringAsync());
-            Assert.True(saved.RootElement.GetProperty("ok").GetBoolean());
+                await (await PostRemoteAsync(client, "/remote/settings/mutate", body)).Content.ReadAsStringAsync());
+            Assert.True(saved.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
             Assert.Equal(2, (await ReadSettingsAsync(client)).Value);
             Assert.Equal(1, activations);
             using var stale = JsonDocument.Parse(
-                await (await client.PostAsJsonAsync("/remote/settings/mutate", body)).Content.ReadAsStringAsync());
-            Assert.Equal("settings/conflict", stale.RootElement.GetProperty("error").GetProperty("code").GetString());
+                await (await PostRemoteAsync(client, "/remote/settings/mutate", body)).Content.ReadAsStringAsync());
+            Assert.Equal("settings/conflict", stale.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
             view = await ReadSettingsAsync(client);
             using var reset = JsonDocument.Parse(
-                await (await client.PostAsJsonAsync(
+                await (await PostRemoteAsync(client,
                     "/remote/settings/mutate",
                     new
                     {
@@ -168,7 +169,7 @@ public sealed class ManagementTransportTests
                             }
                         }
                     })).Content.ReadAsStringAsync());
-            Assert.True(reset.RootElement.GetProperty("ok").GetBoolean());
+            Assert.True(reset.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
             Assert.Equal(1, (await ReadSettingsAsync(client)).Value);
             Assert.Contains("settings/mutate", permissions);
             // The CLI edits through the same owner. Ordinary changes are available only
@@ -177,7 +178,7 @@ public sealed class ManagementTransportTests
             Assert.Equal(1, (await ReadSettingsAsync(client)).Value);
             Assert.Equal(
                 HttpStatusCode.Forbidden,
-                (await client.PostAsJsonAsync("/remote/settings/mutate", body)).StatusCode);
+                (await PostRemoteAsync(client, "/remote/settings/mutate", body)).StatusCode);
             Assert.Equal(
                 HttpStatusCode.Forbidden,
                 (await client.GetAsync("/cordis/configuration?entryId=root:worker")).StatusCode);
@@ -300,7 +301,7 @@ public sealed class ManagementTransportTests
 
             client.DefaultRequestHeaders.Remove("If-Cordis-Generation");
             client.DefaultRequestHeaders.Add("If-Cordis-Generation", "retired-host");
-            using var retired = await client.PostAsJsonAsync(
+            using var retired = await PostRemoteAsync(client,
                 "/remote/pluginManager/waitForInstall",
                 new
                 {
@@ -311,35 +312,27 @@ public sealed class ManagementTransportTests
                 });
             retired.EnsureSuccessStatusCode();
             using var refused = JsonDocument.Parse(await retired.Content.ReadAsStringAsync());
-            Assert.False(refused.RootElement.GetProperty("ok").GetBoolean());
+            Assert.False(refused.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
             Assert.Equal(
                 "plugin-manager/generation-changed",
-                refused.RootElement.GetProperty("error").GetProperty("code").GetString());
+                refused.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
             client.DefaultRequestHeaders.Remove("If-Cordis-Generation");
-            using var subscribe = new HttpRequestMessage(HttpMethod.Post, "/remote/remoteNotifications/watch/stream")
-            {
-                Content = JsonContent.Create(
-                    new
-                    {
-                        args = new
-                        {
-                        }
-                    })
-            };
-            using var events = await client.SendAsync(subscribe, HttpCompletionOption.ResponseHeadersRead);
-            Assert.Equal(HttpStatusCode.OK, events.StatusCode);
-            using var stream = new StreamReader(await events.Content.ReadAsStreamAsync());
-            using var ready = JsonDocument.Parse((await stream.ReadLineAsync())!);
-            Assert.True(ready.RootElement.GetProperty("ok").GetBoolean());
+            using var socket = new ClientWebSocket();
+            socket.Options.SetRequestHeader("Authorization", client.DefaultRequestHeaders.Authorization!.ToString());
+            var streamUri = new UriBuilder(new Uri(client.BaseAddress!, "/remote/remote.mux")) { Scheme = "ws" }.Uri;
+            await socket.ConnectAsync(streamUri, CancellationToken.None);
+            await socket.SendAsync(Encoding.UTF8.GetBytes(
+                """{"type":"open","streamId":"notifications","endpoint":"remoteNotifications/watch","payload":{"args":{}}}""").AsMemory(),
+                WebSocketMessageType.Text, true, CancellationToken.None);
+            using var ready = await ReadFrameAsync(socket);
+            Assert.Equal("item", ready.RootElement.GetProperty("type").GetString());
             Assert.Equal("ready", ready.RootElement.GetProperty("value").GetProperty("kind").GetString());
             await notifications.DisposeAsync();
-            using var withdrawn =
-                JsonDocument.Parse((await stream.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3)))!);
-            Assert.False(withdrawn.RootElement.GetProperty("ok").GetBoolean());
-            Assert.Equal(
-                "gateway/service-unavailable",
-                withdrawn.RootElement.GetProperty("error").GetProperty("code").GetString());
-            Assert.Null(await stream.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3)));
+            using var withdrawn = await ReadFrameAsync(socket);
+            Assert.Equal("error", withdrawn.RootElement.GetProperty("type").GetString());
+            Assert.Equal("notifications", withdrawn.RootElement.GetProperty("streamId").GetString());
+            Assert.Equal("gateway/service-unavailable", withdrawn.RootElement.GetProperty("error").GetProperty("code").GetString());
+            await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "consumer done", CancellationToken.None);
             await session.Context.DisposeAsync();
             Assert.Equal(HttpStatusCode.Gone, (await client.GetAsync("/cordis/state")).StatusCode);
         }
@@ -436,7 +429,7 @@ public sealed class ManagementTransportTests
                 arguments["source"] = "selected-source";
             if (endpoint == "installBundle")
                 arguments["options"] = new PluginInstallOptions("unrelated-task", "inspected-hash");
-            using var response = await client.PostAsJsonAsync(
+            using var response = await PostRemoteAsync(client,
                 "/remote/pluginManager/" + endpoint + "?entryId=" + Uri.EscapeDataString(allowed) +
                 "&name=" + Uri.EscapeDataString(allowed) + "&target=" + Uri.EscapeDataString(allowed),
                 new
@@ -454,15 +447,15 @@ public sealed class ManagementTransportTests
                     .OrderBy(pair => pair.Key));
             response.EnsureSuccessStatusCode();
             using var refused = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            Assert.False(refused.RootElement.GetProperty("ok").GetBoolean());
+            Assert.False(refused.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
             Assert.Equal(
                 "plugin-manager/forbidden",
-                refused.RootElement.GetProperty("error").GetProperty("code").GetString());
+                refused.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
             Assert.Equal(blocked, permissions.Last().Target);
             if (endpoint == "setPluginEnabled")
             {
                 arguments["id"] = allowed;
-                using var accepted = await client.PostAsJsonAsync(
+                using var accepted = await PostRemoteAsync(client,
                     "/remote/pluginManager/setPluginEnabled?entryId=" + Uri.EscapeDataString(blocked),
                     new
                     {
@@ -470,8 +463,8 @@ public sealed class ManagementTransportTests
                     });
                 Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
                 using var changed = JsonDocument.Parse(await accepted.Content.ReadAsStringAsync());
-                Assert.True(changed.RootElement.GetProperty("ok").GetBoolean());
-                Assert.True(changed.RootElement.GetProperty("value").GetProperty("changed").GetBoolean());
+                Assert.True(changed.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+                Assert.True(changed.RootElement.GetProperty("result").GetProperty("value").GetProperty("changed").GetBoolean());
                 var after = await session.ConfigurationOperations.ListPluginsAsync();
                 Assert.False(after.Single(plugin => plugin.EntryId == allowed).Enabled);
                 Assert.True(after.Single(plugin => plugin.EntryId == blocked).Enabled);
@@ -495,16 +488,16 @@ public sealed class ManagementTransportTests
         server.MapGet("/cordis/state", () => Results.Text("{\"generation\":\"original\"}", "application/json"));
         server.MapPost(
             "/remote/pluginManager/inspect",
-            () => RemoteValue(
+            (HttpContext http) => RemoteValue(http,
                 new PackageInspection(new("new-package", "1.0.0", "explicit-feed"), "inspected", "test package", true),
                 PluginManagerJson.Default.PackageInspection));
         server.MapPost("/remote/pluginManager/installBundle", () => Results.StatusCode(status));
         server.MapPost(
             "/remote/pluginManager/waitForInstall",
-            () =>
+            (HttpContext http) =>
             {
                 Interlocked.Increment(ref waits);
-                return RemoteValue(
+                return RemoteValue(http,
                     new PackageChange("reused", "previous-package", "complete", true, true, "applied"),
                     PluginManagerJson.Default.PackageChange);
             });
@@ -539,7 +532,7 @@ public sealed class ManagementTransportTests
             () => Results.Text("{\"generation\":\"" + generation + "\"}", "application/json"));
         server.MapPost(
             "/remote/pluginManager/inspect",
-            () => RemoteValue(
+            (HttpContext http) => RemoteValue(http,
                 new PackageInspection(new("package", "1.0.0", "explicit-feed"), "inspected", "test package", true),
                 PluginManagerJson.Default.PackageInspection));
         server.MapPost(
@@ -554,10 +547,10 @@ public sealed class ManagementTransportTests
             });
         server.MapPost(
             "/remote/pluginManager/waitForInstall",
-            () =>
+            (HttpContext http) =>
             {
                 Interlocked.Increment(ref waits);
-                return RemoteValue(
+                return RemoteValue(http,
                     new PackageChange("reused", "package", "complete", true, true, "applied"),
                     PluginManagerJson.Default.PackageChange);
             });
@@ -578,11 +571,17 @@ public sealed class ManagementTransportTests
         Assert.Contains(replaceHost ? "unknown-result" : "applied", result.Output);
     }
 
-    private static IResult RemoteValue<T>(T value, JsonTypeInfo<T> metadata) => Results.Text(
-        JsonSerializer.Serialize(
+    private static async Task RemoteValue<T>(HttpContext http, T value, JsonTypeInfo<T> metadata)
+    {
+        using var request = await JsonDocument.ParseAsync(http.Request.Body);
+        Assert.Equal("client-request", request.RootElement.GetProperty("type").GetString());
+        Assert.Equal(http.Request.Path.Value!["/remote/".Length..], request.RootElement.GetProperty("method").GetString());
+        var result = JsonSerializer.Serialize(
             new TypertRemoteResult(true, JsonSerializer.SerializeToElement(value, metadata), null),
-            TypertJson.Default.TypertRemoteResult),
-        "application/json");
+            TypertJson.Default.TypertRemoteResult);
+        await Results.Text("{\"type\":\"server-response\",\"rpcId\":" +
+            request.RootElement.GetProperty("rpcId").GetRawText() + ",\"result\":" + result + "}", "application/json").ExecuteAsync(http);
+    }
 
     private static async Task<(int ExitCode, string Output, string Error)> RunCliAsync(params string[] arguments)
     {
@@ -664,6 +663,30 @@ public sealed class ManagementTransportTests
         Assert.Equal(HttpStatusCode.Gone, (await client.PostAsJsonAsync("/echo", new EchoRequest("value"))).StatusCode);
     }
 
+    private static Task<HttpResponseMessage> PostRemoteAsync(HttpClient client, string path, object payload) =>
+        client.PostAsJsonAsync(path, new
+        {
+            type = "client-request",
+            rpcId = Guid.NewGuid().ToString(),
+            method = path.Split('?')[0]["/remote/".Length..],
+            payload
+        });
+
+    private static async Task<JsonDocument> ReadFrameAsync(ClientWebSocket socket)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        using var content = new MemoryStream();
+        var buffer = new byte[4096];
+        ValueWebSocketReceiveResult frame;
+        do
+        {
+            frame = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token);
+            Assert.Equal(WebSocketMessageType.Text, frame.MessageType);
+            content.Write(buffer, 0, frame.Count);
+        } while (!frame.EndOfMessage);
+        return JsonDocument.Parse(content.ToArray());
+    }
+
     private static WebApplication CreateServer()
     {
         var builder = WebApplication.CreateSlimBuilder();
@@ -674,7 +697,7 @@ public sealed class ManagementTransportTests
 
     private static async Task<(double Revision, int Value)> ReadSettingsAsync(HttpClient client)
     {
-        using var response = await client.PostAsJsonAsync(
+        using var response = await PostRemoteAsync(client,
             "/remote/settings/describe",
             new
             {
@@ -684,8 +707,8 @@ public sealed class ManagementTransportTests
             });
         response.EnsureSuccessStatusCode();
         using var view = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.True(view.RootElement.GetProperty("ok").GetBoolean());
-        var row = view.RootElement.GetProperty("value").GetProperty("namespaces")[0];
+        Assert.True(view.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+        var row = view.RootElement.GetProperty("result").GetProperty("value").GetProperty("namespaces")[0];
         return (row.GetProperty("revision").GetDouble(), row.GetProperty("value").GetProperty("limit").GetInt32());
     }
 

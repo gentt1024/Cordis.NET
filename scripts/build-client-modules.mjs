@@ -49,6 +49,8 @@ licenses.push(`@standard-schema/spec 1.0.0\n${await readFile(resolve(standardSch
 await writeFile(resolve(output, 'LICENSES.txt'), licenses.join('\n'))
 await cp(resolve(source, '.types/vendor'), resolve(output, 'types/vendor'), { recursive: true })
 await cp(standard, resolve(output, 'types/standard'), { recursive: true })
+await cp(resolve(standard, 'cordis-remote.mjs'), resolve(output, 'cordis-remote.mjs'))
+await cp(resolve(standard, 'cordis-remote.d.mts'), resolve(output, 'cordis-remote.d.mts'))
 for (const name of ['management', 'notifications', 'settings']) {
   await cp(resolve(standard, name + '.mjs'), resolve(output, name + '.mjs'))
   await cp(resolve(standard, name + '.d.ts'), resolve(output, name + '.d.ts'))

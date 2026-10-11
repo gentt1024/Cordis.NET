@@ -1,3 +1,5 @@
+using RemoteStreamCarrierException = Cordis.Composition.RemoteStreamCarrierException;
+using TypertConnection = Cordis.Composition.TypertConnection;
 using System.Text.Json;
 using IndependentManagement.Manager;
 using IndependentManagement.Notifications;
@@ -9,12 +11,13 @@ using var http = new HttpClient
 };
 http.DefaultRequestHeaders.Authorization = new("consumer-policy");
 var address = new Uri(args.Single());
-using var manager = new PluginManagerClient(http, new Uri(address, "/remote"));
-using var notifications = new NotificationsClient(http, new Uri(address, "/remote"));
+await using var connection = new TypertConnection(http, new Uri(address, "/remote"));
+await using var manager = new PluginManagerClient(connection);
+await using var notifications = new NotificationsClient(connection);
 using var observation = new CancellationTokenSource();
-await using var events = notifications.WatchAsync(observation.Token).GetAsyncEnumerator();
+await using var events = (await notifications.WatchAsync(observation.Token)).GetAsyncEnumerator();
 Assert(await Next(events) && events.Current.Kind == "ready", "Subscribe before querying inventory.");
-var plugins = await manager.ListPluginsAsync();
+var plugins = (await manager.ListPluginsAsync()).Value;
 var worker = plugins.Single(row => row.EntryId == "root:worker");
 Assert(
     worker.Enabled && worker.PatchId == "worker" && worker.ReadOnlyReason is null,
@@ -23,41 +26,41 @@ Assert(
     plugins.Single(row => row.EntryId == "root").ReadOnlyReason == "management-required",
     "Typed inventory lost the protected root.");
 Assert(
-    (await manager.ListBundlesAsync()).Any(row => row.Name == "existing" && row.Version == "1.0.0"),
+    ((await manager.ListBundlesAsync()).Value).Any(row => row.Name == "existing" && row.Version == "1.0.0"),
     "Typed bundle inventory lost its installed version.");
-var disabled = await manager.SetPluginEnabledAsync("root:worker", false);
+var disabled = (await manager.SetPluginEnabledAsync("root:worker", false)).Value;
 Assert(
     disabled.Changed && disabled.Application == "applied" && disabled.Error is null,
     "Typed enablement lost separate persistence/application facts.");
 Assert(
-    !(await manager.ListPluginsAsync()).Single(row => row.EntryId == "root:worker").Enabled,
+    !((await manager.ListPluginsAsync()).Value).Single(row => row.EntryId == "root:worker").Enabled,
     "Plugin disable was not applied.");
-await manager.SetPluginEnabledAsync("root:worker", true);
+_ = (await manager.SetPluginEnabledAsync("root:worker", true)).Value;
 await Event(events, frame => frame.Event == "plugin-manager/changed");
-var bundleDisabled = await manager.SetBundleEnabledAsync("existing", false);
+var bundleDisabled = (await manager.SetBundleEnabledAsync("existing", false)).Value;
 Assert(
     bundleDisabled.Changed && bundleDisabled.Application == "applied" &&
-    !(await manager.ListBundlesAsync()).Single(row => row.Name == "existing").Enabled,
+    !((await manager.ListBundlesAsync()).Value).Single(row => row.Name == "existing").Enabled,
     "Typed bundle selection was not saved.");
-await manager.SetBundleEnabledAsync("existing", true);
+_ = (await manager.SetBundleEnabledAsync("existing", true)).Value;
 Assert(
-    (await manager.ListBundlesAsync()).Single(row => row.Name == "existing").Enabled,
+    ((await manager.ListBundlesAsync()).Value).Single(row => row.Name == "existing").Enabled,
     "Typed bundle selection was not restored.");
-var missingRemoval = await manager.RemoveBundleAsync("missing");
+var missingRemoval = (await manager.RemoveBundleAsync("missing")).Value;
 Assert(
     missingRemoval.Application == "failed" && missingRemoval.Error == "not-removable",
     "Typed removal lost the actual refusal result.");
-var source = (await manager.SourcesAsync()).Single();
+var source = ((await manager.SourcesAsync()).Value).Single();
 Assert(
-    (await manager.VersionsAsync("existing", source)).SequenceEqual(["1.0.0", "2.0.0"]),
+    ((await manager.VersionsAsync("existing", source)).Value).SequenceEqual(["1.0.0", "2.0.0"]),
     "Typed versions lost the selected platform source.");
-Assert(await manager.WaitForInstallAsync("never-admitted") is null, "Unknown wait was presented as success.");
+Assert((await manager.WaitForInstallAsync("never-admitted")).Value is null, "Unknown wait was presented as success.");
 Assert(
-    (await manager.CancelInstallAsync("never-admitted")).Status == "not-running",
+    ((await manager.CancelInstallAsync("never-admitted")).Value).Status == "not-running",
     "Unknown cancellation lost its status.");
 
 var request = new PackageRequest("existing", "2.0.0", source);
-var inspected = await manager.InspectAsync(request);
+var inspected = (await manager.InspectAsync(request)).Value;
 Assert(
     inspected.Request.Name == request.Name && inspected.RequiresBuildApproval && inspected.ContentHash.Length == 64,
     "Typed inspection lost approval identity.");
@@ -66,13 +69,13 @@ await Failure(
     () => manager.InstallBundleAsync(request, new("resource-denied", inspected.ContentHash)),
     "plugin-manager/forbidden");
 await Deny("install", false);
-Assert(await manager.WaitForInstallAsync("resource-denied") is null, "Resource refusal admitted an installation.");
-var stale = await manager.InstallBundleAsync(request, new("stale", "wrong-hash"));
+Assert((await manager.WaitForInstallAsync("resource-denied")).Value is null, "Resource refusal admitted an installation.");
+var stale = (await manager.InstallBundleAsync(request, new("stale", "wrong-hash"))).Value;
 Assert(
     stale.Stage == "inspect" && stale.Application == "failed" && stale.Error == "inspection-changed" && stale.Installed,
     "Admitted stale inspection lost its installation outcome.");
 await Deny("build", true);
-var deniedBuild = await manager.InstallBundleAsync(request, new("build-denied", inspected.ContentHash));
+var deniedBuild = (await manager.InstallBundleAsync(request, new("build-denied", inspected.ContentHash))).Value;
 Assert(
     deniedBuild.Stage == "inspect" && deniedBuild.Application == "failed" &&
     deniedBuild.Error == "build-not-approved" && deniedBuild.Installed,
@@ -84,10 +87,10 @@ using (var probe = await Probe())
 await Deny("build", false);
 
 var incompatible = new PackageRequest("incompatible", "1.0.0", source);
-var incompatibleInspection = await manager.InspectAsync(incompatible);
-var refusedVersion = await manager.InstallBundleAsync(
+var incompatibleInspection = (await manager.InspectAsync(incompatible)).Value;
+var refusedVersion = (await manager.InstallBundleAsync(
     incompatible,
-    new("version-refused", incompatibleInspection.ContentHash));
+    new("version-refused", incompatibleInspection.ContentHash))).Value;
 Assert(
     refusedVersion.Application == "failed" && !refusedVersion.Installed && refusedVersion.Stage == "inspect",
     "Build approval silently granted a DSH version exemption.");
@@ -102,35 +105,35 @@ await Failure(
     "plugin-manager/forbidden");
 await Deny("compatibility-grant", false);
 await Deny("compatibility-write", false);
-var grant = await manager.SetVersionExemptionAsync("incompatible@1.0.0", "0.2.0-rc.2", true, true);
+var grant = (await manager.SetVersionExemptionAsync("incompatible@1.0.0", "0.2.0-rc.2", true, true)).Value;
 Assert(
     grant.Changed && grant.Error is null && grant.Application == "applied",
     $"Typed exact-version grant failed: {grant.Application}/{grant.Error}: {grant.Diagnostic}");
-var grants = await manager.ListVersionExemptionsAsync();
+var grants = (await manager.ListVersionExemptionsAsync()).Value;
 Assert(
     grants.Exemptions["incompatible@1.0.0"].Contains("0.2.0-rc.2"),
     "Typed dictionary projection lost the exact grant.");
 await Deny("build", true);
-var deniedAfterGrant = await manager.InstallBundleAsync(
+var deniedAfterGrant = (await manager.InstallBundleAsync(
     incompatible,
-    new("grant-does-not-build", incompatibleInspection.ContentHash));
+    new("grant-does-not-build", incompatibleInspection.ContentHash))).Value;
 Assert(
     deniedAfterGrant.Error == "build-not-approved" && !deniedAfterGrant.Installed,
     "A version grant authorized build execution.");
 await Deny("build", false);
 
 var inspectingRequest = new PackageRequest("inspection-cancelled", "1.0.0", source);
-var inspectingFacts = await manager.InspectAsync(inspectingRequest);
+var inspectingFacts = (await manager.InspectAsync(inspectingRequest)).Value;
 await Control("hold", inspectingRequest.Name, inspectingRequest.Version, "inspect");
 var inspecting = manager.InstallBundleAsync(inspectingRequest, new("request-inspecting", inspectingFacts.ContentHash));
 await Control("wait-preparing", inspectingRequest.Name, inspectingRequest.Version);
 var inspectingWait = manager.WaitForInstallAsync("request-inspecting");
 await Control("wait-observed", "request-inspecting");
-var inspectionCancellation = await manager.CancelInstallAsync("request-inspecting");
-var inspectedCancellation = await inspecting;
+var inspectionCancellation = (await manager.CancelInstallAsync("request-inspecting")).Value;
+var inspectedCancellation = (await inspecting).Value;
 Assert(
     inspectionCancellation.Status == "cancelled" && inspectedCancellation.Stage == "inspect" &&
-    inspectedCancellation.Application == "cancelled" && (await inspectingWait)?.RequestId == "request-inspecting",
+    inspectedCancellation.Application == "cancelled" && ((await inspectingWait).Value)?.RequestId == "request-inspecting",
     "Blocked inspection did not belong to the request task owner.");
 using (var probe = await Probe())
 {
@@ -146,7 +149,7 @@ using (var probe = await Probe())
 }
 
 var policyRequest = new PackageRequest("policy-cancelled", "1.0.0", source);
-var policyFacts = await manager.InspectAsync(policyRequest);
+var policyFacts = (await manager.InspectAsync(policyRequest)).Value;
 await Control("hold-policy", policyRequest.Name);
 var policyInstall = manager.InstallBundleAsync(policyRequest, new("request-policy", policyFacts.ContentHash));
 await Control("wait-policy", policyRequest.Name);
@@ -161,8 +164,8 @@ Assert(
     "Explicit cancellation abandoned the host's pending build decision.");
 await Control("release-policy", policyRequest.Name);
 Assert(
-    (await policyCancel).Status == "cancelled" && (await policyInstall).Application == "cancelled" &&
-    (await policyWait)?.Application == "cancelled",
+    ((await policyCancel).Value).Status == "cancelled" && ((await policyInstall).Value).Application == "cancelled" &&
+    ((await policyWait).Value)?.Application == "cancelled",
     "Settled build decision lost the admitted cancellation outcome.");
 using (var probe = await Probe())
     Assert(
@@ -181,7 +184,7 @@ await Event(
     frame => frame.Event == "plugin-manager/install-log" &&
         frame.Args![0].GetProperty("requestId").GetString() == "disconnected-update");
 var nextBeforeDispose = events.MoveNextAsync().AsTask();
-notifications.Dispose();
+await notifications.DisposeAsync();
 await IgnoreWithdrawal(nextBeforeDispose);
 responseLifetime.Cancel();
 await Failure(() => installing, "gateway/cancelled");
@@ -189,23 +192,23 @@ using (var probe = await Probe())
     Assert(
         probe.RootElement.GetProperty("cancellations").GetInt32() == 1,
         "Disconnect cancelled installation preparation.");
-using var reconnected = new NotificationsClient(http, new Uri(address, "/remote"));
-await using var resumed = reconnected.WatchAsync().GetAsyncEnumerator();
+await using var reconnected = new NotificationsClient(connection);
+await using var resumed = (await reconnected.WatchAsync()).GetAsyncEnumerator();
 Assert(await Next(resumed) && resumed.Current.Kind == "ready", "Fresh notification observer did not become ready.");
 Assert(
-    (await manager.ListBundlesAsync()).Any(row => row.Name == "existing" && row.Version == "1.0.0"),
+    ((await manager.ListBundlesAsync()).Value).Any(row => row.Name == "existing" && row.Version == "1.0.0"),
     "Reconnect inferred installation success without querying.");
 var waiting = manager.WaitForInstallAsync("disconnected-update");
 await Control("wait-observed", "disconnected-update");
 await Control("release", "existing", "2.0.0");
-var updated = await waiting ?? throw new InvalidOperationException("The original active request was not observed.");
+var updated = (await waiting).Value ?? throw new InvalidOperationException("The original active request was not observed.");
 Assert(
     updated.RequestId == "disconnected-update" && updated.Target == "existing" && updated.Installed &&
     updated.Selected &&
     updated.Application == "restart-required" && updated.Error is null && updated.ToolExitCode is null,
     $"Wait lost the real installed update/restart outcome: {updated.Stage}/{updated.Application}/{updated.Error}: {updated.Diagnostic}");
 Assert(
-    (await manager.ListBundlesAsync()).Single(row => row.Name == "existing").Version == "1.0.0",
+    ((await manager.ListBundlesAsync()).Value).Single(row => row.Name == "existing").Version == "1.0.0",
     "Install rewrote the live package mapping before restart.");
 await Event(resumed, frame => frame.Event == "plugin-manager/changed");
 using (var probe = await Probe())
@@ -220,7 +223,7 @@ using (var probe = await Probe())
 }
 
 Assert(
-    await manager.WaitForInstallAsync("disconnected-update") is null,
+    (await manager.WaitForInstallAsync("disconnected-update")).Value is null,
     "Completed requests became a fabricated durable task history.");
 
 foreach (var mode in new[] { "cancelled", "failed" })
@@ -228,15 +231,15 @@ foreach (var mode in new[] { "cancelled", "failed" })
     var name = "cleanup-" + mode;
     var requestId = "request-" + name;
     var candidate = new PackageRequest(name, "1.0.0", source);
-    var inspection = await manager.InspectAsync(candidate);
+    var inspection = (await manager.InspectAsync(candidate)).Value;
     await Control("hold", name, "1.0.0", mode);
     var operation = manager.InstallBundleAsync(candidate, new(requestId, inspection.ContentHash));
     await Control("wait-preparing", name, "1.0.0");
     var wait = manager.WaitForInstallAsync(requestId);
     await Control("wait-observed", requestId);
-    var cancel = await manager.CancelInstallAsync(requestId);
-    var result = await operation;
-    var observed = await wait;
+    var cancel = (await manager.CancelInstallAsync(requestId)).Value;
+    var result = (await operation).Value;
+    var observed = (await wait).Value;
     Assert(
         cancel.Status == mode && result.Application == mode && observed?.RequestId == requestId,
         "Explicit cancel lost cleanup failure distinction.");
@@ -246,31 +249,35 @@ foreach (var mode in new[] { "cancelled", "failed" })
         "Typed cancellation discarded actual residual files or exit status.");
 }
 
-using (var cancelledNotifications = new NotificationsClient(http, new Uri(address, "/remote")))
+await using (var cancelledNotifications = new NotificationsClient(connection))
 using (var lifetime = new CancellationTokenSource())
-await using (var reader = cancelledNotifications.WatchAsync(lifetime.Token).GetAsyncEnumerator())
+await using (var reader = (await cancelledNotifications.WatchAsync(lifetime.Token)).GetAsyncEnumerator())
 {
     Assert(await Next(reader) && reader.Current.Kind == "ready", "Cancellation observer was never subscribed.");
     var reading = ReadUntilEnd(reader);
     lifetime.Cancel();
-    await Failure(() => reading, "gateway/cancelled");
+    await Cancelled(reading);
 }
 
 foreach (var control in new[] { "terminal", "incomplete", "malformed" })
 {
-    using var invalid = new NotificationsClient(http, new Uri(address, "/" + control));
-    await using var reader = invalid.WatchAsync().GetAsyncEnumerator();
-    var error = await Failure(
-        () => reader.MoveNextAsync().AsTask(),
-        control == "terminal" ? "fixture/stream" : "gateway/internal");
+    await using var invalidConnection = new TypertConnection(http, new Uri(address, "/" + control));
+    await using var invalid = new NotificationsClient(invalidConnection);
+    await using var reader = (await invalid.WatchAsync()).GetAsyncEnumerator();
     if (control == "terminal")
-        Assert(
-            error.Details!.Value.GetProperty("stage").GetString() == "source",
-            "Terminal stream error lost its details.");
+    {
+        var error = await StreamFailure(() => reader.MoveNextAsync().AsTask(), "fixture/stream");
+        Assert(error.Details!.Value.GetProperty("stage").GetString() == "source", "Terminal stream error lost its details.");
+    }
+    else
+    {
+        try { await reader.MoveNextAsync(); throw new InvalidOperationException("Expected a carrier failure."); }
+        catch (RemoteStreamCarrierException) { }
+    }
 }
 
 await Control("remove-source");
-await Failure(
+await StreamFailure(
     async () =>
     {
         while (await Next(resumed))
@@ -279,33 +286,26 @@ await Failure(
     },
     "gateway/service-unavailable");
 await Control("restore-source");
-using var restored = new NotificationsClient(http, new Uri(address, "/remote"));
-await using var restoredEvents = restored.WatchAsync().GetAsyncEnumerator();
+await using var restored = new NotificationsClient(connection);
+await using var restoredEvents = (await restored.WatchAsync()).GetAsyncEnumerator();
 Assert(
     await Next(restoredEvents) && restoredEvents.Current.Kind == "ready",
     "Removed source could not be independently remounted.");
 Assert(
-    (await manager.ListPluginsAsync()).Single(row => row.EntryId == "root:worker").Enabled,
+    ((await manager.ListPluginsAsync()).Value).Single(row => row.EntryId == "root:worker").Enabled,
     "Notification errors changed the managed plugin outcome.");
 var shutdownRequest = new PackageRequest("inspection-shutdown", "1.0.0", source);
-var shutdownFacts = await manager.InspectAsync(shutdownRequest);
+var shutdownFacts = (await manager.InspectAsync(shutdownRequest)).Value;
 await Control("hold", shutdownRequest.Name, shutdownRequest.Version, "inspect");
 var shutdownInstall = manager.InstallBundleAsync(shutdownRequest, new("request-shutdown", shutdownFacts.ContentHash));
 await Control("wait-preparing", shutdownRequest.Name, shutdownRequest.Version);
 using var beforeShutdown = await Probe();
 await Control("shutdown-session");
-try
-{
-    Assert(
-        (await shutdownInstall).Application == "cancelled",
-        "Session shutdown reported successful inspection install.");
-}
-catch (RemoteError error)
-{
-    Assert(
-        error.Code is "gateway/internal" or "gateway/cancelled",
-        "Retired installation observation lost its generation failure.");
-}
+var shutdownResult = await shutdownInstall;
+if (shutdownResult.Ok)
+    Assert(shutdownResult.Value.Application == "cancelled", "Session shutdown reported successful inspection install.");
+else
+    Assert(shutdownResult.Error.Code is "gateway/internal" or "gateway/cancelled", "Retired installation observation lost its generation failure.");
 
 using (var probe = await Probe())
 {
@@ -362,19 +362,26 @@ static async Task ReadUntilEnd(IAsyncEnumerator<TypertRemoteNotification> reader
     }
 }
 
-static async Task<RemoteError> Failure(Func<Task> call, string code)
+static async Task<RemoteError> Failure<T>(Func<Task<Cordis.Composition.RemoteResult<T>>> call, string code)
 {
-    try
-    {
-        await call().WaitAsync(TimeSpan.FromSeconds(20));
-    }
-    catch (RemoteError error)
-    {
-        Assert(error.Code == code, "Wrong Remote failure: " + error.Code + ", expected " + code);
-        return error;
-    }
+    var result = await call().WaitAsync(TimeSpan.FromSeconds(20));
+    Assert(!result.Ok, "Expected Remote failure: " + code);
+    Assert(result.Error.Code == code, "Wrong Remote failure: " + result.Error.Code + ", expected " + code);
+    return result.Error;
+}
 
-    throw new InvalidOperationException("Expected Remote failure: " + code);
+static async Task Cancelled(Task read)
+{
+    try { await read.WaitAsync(TimeSpan.FromSeconds(20)); }
+    catch (OperationCanceledException) { return; }
+    throw new InvalidOperationException("Expected stream cancellation.");
+}
+
+static async Task<RemoteError> StreamFailure(Func<Task> read, string code)
+{
+    try { await read().WaitAsync(TimeSpan.FromSeconds(20)); }
+    catch (RemoteError error) { Assert(error.Code == code, "Wrong stream failure: " + error.Code); return error; }
+    throw new InvalidOperationException("Expected remote stream failure: " + code);
 }
 
 static async Task IgnoreWithdrawal(Task<bool> pending)
@@ -384,10 +391,8 @@ static async Task IgnoreWithdrawal(Task<bool> pending)
     {
         await pending.WaitAsync(TimeSpan.FromSeconds(20));
     }
-    catch (RemoteError error)
-    {
-        Assert(error.Code == "gateway/internal", "Observer disposal lost its withdrawal failure.");
-    }
+    catch (OperationCanceledException) { }
+    catch (InvalidOperationException error) when (error.Message.Contains("withdrawn", StringComparison.Ordinal)) { }
 }
 
 static void Assert(bool value, string reason)

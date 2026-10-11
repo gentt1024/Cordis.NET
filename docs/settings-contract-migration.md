@@ -11,14 +11,17 @@ Mount the ordinary `SettingsForms` service over the running session's existing `
 ```csharp
 var registry = new TypertRegistry(session.Context);
 var contribution = SettingsControllerTypert.Contribution("Application.Settings");
+TypertHostConnection connection = null!;
 await session.Context.RunAsync(ctx =>
 {
     new SettingsForms(ctx, session.ConfigurationOperations);
     new SettingsController(ctx);
     registry.Register(ctx, contribution);
+    connection = new(ctx, new TypertGateway(ctx, registry));
     return Task.CompletedTask;
 });
-app.MapCordisRemote("/remote", new TypertGateway(session.Context, registry), authorize);
+app.UseWebSockets();
+app.MapCordisRemote("/remote", connection, authorize);
 var clientArtifact = TypertArtifacts.GenerateClient(contribution);
 ```
 
@@ -26,17 +29,20 @@ The host supplies `authorize` and delivers the generated module and declaration 
 
 ```csharp
 using var http = new HttpClient();
-using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
+await using var connection = new TypertConnection(http, new Uri("http://localhost:5000/remote"));
+await using var remote = new SettingsClient(connection);
 var describe = await remote.DescribeAsync();
-var form = describe.Namespaces.Single(row => row.Ns == "worker");
+if (!describe.Ok) throw describe.Error;
+var form = describe.Value.Namespaces.Single(row => row.Ns == "worker");
 using var document = JsonDocument.Parse("{\"limit\":30}");
 var updated = await remote.UpdateAsync(form.Ns, document.RootElement, form.Revision);
 ```
 
 ```ts
-import { createRemote } from './settings.mjs'
+import { createRemote, TypertConnection } from './settings.mjs'
 
-const remote = createRemote('/remote')
+const connection = new TypertConnection(new URL('/remote', location.href))
+const remote = createRemote(connection)
 const read = await remote['settings/describe']({})
 if (!read.ok) throw new Error(read.error.message)
 const form = read.value.namespaces.find(row => row.ns === 'worker')!
@@ -45,7 +51,8 @@ const write = await remote['settings/mutate']({
   ops: [{ op: 'set', path: ['limit'], value: 30 }],
   expectedRevision: form.revision,
 })
-remote.dispose()
+await remote.dispose()
+await connection.dispose()
 ```
 
 Normal editing submits the revision it read. All three Remote writes return a fresh redacted namespace. Native provider writes return Task; the controller then describes the same captured provider. An empty `ns` is refused as `gateway/bad-request` before provider lookup, whether or not the optional provider is present. `update` recursively merges objects and replaces arrays. `replace` resets the offered live fields against inheritance, then merges the submitted section while retaining ordinary configuration. A replace assembled from a redacted read can reset omitted secrets. Use `mutate` for incomplete views: ordered object unsets restore inheritance, and array unsets remove the element. Set requires a `value`, which may explicitly be JSON null; unset omits `value`.

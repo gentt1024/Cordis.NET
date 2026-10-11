@@ -5,8 +5,9 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const [base, directory, runtime] = process.argv.slice(2)
-const { createRemote, mountRemote } = await import(pathToFileURL(resolve(directory, 'remote.mjs')))
-const client = createRemote(base)
+const { createRemote, mountRemote, TypertConnection } = await import(pathToFileURL(resolve(directory, 'remote.mjs')))
+const connection = new TypertConnection(base)
+const client = createRemote(connection)
 assert.deepEqual(await client['sample/Tuple']({ value: ['tuple', 4] }), { ok: true, value: ['tuple', 4] })
 for (const value of [[4, 'tuple'], ['tuple'], ['tuple', 4, true]]) {
   assert.equal((await client['sample/Tuple']({ value })).error.code, 'gateway/input-invalid')
@@ -29,10 +30,10 @@ assert.equal(failure.error.isDSHRemoteError, true)
 assert.equal((await client['sample/Scoped']({ text: 'ts', contextId: 'scope-1' })).value, 'selected:ts')
 assert.equal((await client['sample/Lookup']({ documentId: 'doc-1' })).value, 'loaded')
 const stream = []
-for await (const item of client['sample/Count']({ count: 3 })) { assert.equal(item.ok, true); stream.push(item.value) }
+for await (const item of client['sample/Count']({ count: 3 })) { stream.push(item) }
 assert.deepEqual(stream, [0, 1, 2])
 const binary = await client['sample/Binary']({ text: 'binary' })
-assert.equal(Buffer.from(binary.value, 'base64').toString(), 'binary')
+assert.equal(Buffer.from(binary.value).toString(), 'binary')
 const cancellation = new AbortController()
 const cancelled = client['sample/Hold']({ text: 'cancel' }, cancellation.signal)
 cancellation.abort()
@@ -42,17 +43,17 @@ assert.equal((await cancelled).error.code, 'gateway/cancelled')
 const { Context } = await import(pathToFileURL(resolve(runtime, 'client.mjs')))
 const context = new Context()
 let mounted
-const fiber = context.plugin({ async apply(ctx) { mounted = await mountRemote(ctx, base) } })
+const fiber = context.plugin({ async apply(ctx) { mounted = await mountRemote(ctx, connection) } })
 await fiber
 const callback = context.get('remote.sample').Echo
 assert.equal((await callback({ request: { Text: 'mounted', Count: 1 } })).ok, true)
 const outstanding = mounted.remote['sample/Hold']({ text: 'old' })
 await mounted.dispose()
 assert.equal(context.get('remote.sample'), undefined)
-assert.equal((await outstanding).error.code, 'gateway/internal')
+assert.equal((await outstanding).error.code, 'gateway/cancelled')
 assert.equal((await callback({ request: { Text: 'stale', Count: 1 } })).error.code, 'gateway/internal')
 await fiber.dispose()
-const replacement = context.plugin({ async apply(ctx) { await mountRemote(ctx, base) } })
+const replacement = context.plugin({ async apply(ctx) { await mountRemote(ctx, connection) } })
 await replacement
 const newCallback = context.get('remote.sample').Echo
 assert.equal((await newCallback({ request: { Text: 'replacement', Count: 1 } })).ok, true)
@@ -63,14 +64,14 @@ assert.equal((await newCallback({ request: { Text: 'disposed', Count: 1 } })).er
 
 const echoPart = await import(pathToFileURL(resolve(directory, 'Echo.mjs')))
 const failurePart = await import(pathToFileURL(resolve(directory, 'Failure.mjs')))
-const echoFiber = context.plugin({ async apply(ctx) { await echoPart.mountRemote(ctx, base) } })
+const echoFiber = context.plugin({ async apply(ctx) { await echoPart.mountRemote(ctx, connection) } })
 await echoFiber
-const failureFiber = context.plugin({ async apply(ctx) { await failurePart.mountRemote(ctx, base) } })
+const failureFiber = context.plugin({ async apply(ctx) { await failurePart.mountRemote(ctx, connection) } })
 await failureFiber
 const sharedNamespace = context.get('remote.sample')
 assert.equal((await sharedNamespace.Echo({ request: { Text: 'shared', Count: 2 } })).ok, true)
 assert.equal((await sharedNamespace.Failure({ text: 'shared error' })).error.code, 'sample/refused')
-await assert.rejects(mountRemote(context, base), /already mounted/)
+await assert.rejects(mountRemote(context, connection), /already mounted/)
 assert.equal(context.get('remote.sample'), sharedNamespace)
 await echoFiber.dispose()
 assert.equal(sharedNamespace.Echo, undefined)
@@ -78,9 +79,9 @@ assert.equal((await sharedNamespace.Failure({ text: 'retained' })).error.code, '
 await failureFiber.dispose()
 assert.equal(context.get('remote.sample'), undefined)
 const dependentPart = await import(pathToFileURL(resolve(directory, 'dependent.mjs')))
-const parent = context.plugin({ async apply(ctx) { await echoPart.mountRemote(ctx, base) } })
+const parent = context.plugin({ async apply(ctx) { await echoPart.mountRemote(ctx, connection) } })
 await parent
-const dependent = context.plugin({ inject: ['remote.sample'], async apply(ctx) { await dependentPart.mountRemote(ctx, base) } })
+const dependent = context.plugin({ inject: ['remote.sample'], async apply(ctx) { await dependentPart.mountRemote(ctx, connection) } })
 await dependent
 assert.equal(typeof context.get('remote.dependent').Echo, 'function')
 let deadline
@@ -96,10 +97,10 @@ const publishedMethods = []
 context.on('internal/service', (name, value) => {
   if (name === 'remote.sample' && value && !secondary) {
     publishedMethods.push(Object.keys(value))
-    secondary = failurePart.mountRemote(context, base).then(mounted => { secondaryMounted = mounted })
+    secondary = failurePart.mountRemote(context, connection).then(mounted => { secondaryMounted = mounted })
   }
 })
-const primary = await echoPart.mountRemote(context, base)
+const primary = await echoPart.mountRemote(context, connection)
 await secondary
 assert.deepEqual(publishedMethods, [['Echo']])
 assert.deepEqual(Object.keys(context.get('remote.sample')).sort(), ['Echo', 'Failure'])
@@ -108,7 +109,7 @@ assert.deepEqual(Object.keys(context.get('remote.sample')), ['Failure'])
 await secondaryMounted.dispose()
 assert.equal(context.get('remote.sample'), undefined)
 let oldMount
-const oldOwner = context.plugin({ async apply(ctx) { oldMount = await echoPart.mountRemote(ctx, base) } })
+const oldOwner = context.plugin({ async apply(ctx) { oldMount = await echoPart.mountRemote(ctx, connection) } })
 await oldOwner
 let releaseRetirement
 let retirementStarted
@@ -121,8 +122,8 @@ const slowDependent = context.plugin({ inject: ['remote.sample'], apply(ctx) {
 await slowDependent
 const retiring = oldMount.dispose()
 await retirementEntered
-const replacementOwner = context.plugin({ async apply(ctx) { await echoPart.mountRemote(ctx, base) } })
-const disjoint = await dependentPart.mountRemote(context, base)
+const replacementOwner = context.plugin({ async apply(ctx) { await echoPart.mountRemote(ctx, connection) } })
+const disjoint = await dependentPart.mountRemote(context, connection)
 assert.equal(typeof context.get('remote.dependent').Echo, 'function')
 await disjoint.dispose()
 releaseRetirement()
@@ -140,34 +141,35 @@ await replacementOwner.dispose()
 await slowDependent.dispose()
 await oldOwner.dispose()
 await context.fiber.dispose()
-client.dispose()
+await client.dispose()
+await connection.dispose()
 
 // A carrier may ignore AbortSignal: generation and cancellation checks must still hold after awaits.
 let releaseResponse
-const ignoredAbort = createRemote(base, () => new Promise(resolve => { releaseResponse = resolve }))
+const ignoredConnection = new TypertConnection(base, () => new Promise(resolve => { releaseResponse = resolve }))
+const ignoredAbort = createRemote(ignoredConnection)
 const ignoredPending = ignoredAbort['sample/Echo']({ request: { Text: 'late', Count: 1 } })
-ignoredAbort.dispose()
+const ignoredRetirement = ignoredAbort.dispose()
 releaseResponse(new Response('', { status: 500 }))
-assert.equal((await ignoredPending).error.code, 'gateway/internal')
+assert.equal((await ignoredPending).error.code, 'gateway/cancelled')
+await ignoredRetirement
+await ignoredConnection.dispose()
 const ignoredCancellation = new AbortController()
-const ignoringCarrier = createRemote(base, () => new Promise(resolve => { releaseResponse = resolve }))
+let requestId
+const ignoringConnection = new TypertConnection(base, (_url, init) => {
+  requestId = JSON.parse(init.body).rpcId
+  return new Promise(resolve => { releaseResponse = resolve })
+})
+const ignoringCarrier = createRemote(ignoringConnection)
 const cancellingPending = ignoringCarrier['sample/Echo']({ request: { Text: 'cancel', Count: 1 } }, ignoredCancellation.signal)
 ignoredCancellation.abort()
-releaseResponse(Response.json({ ok: true, value: { Text: 'cancel', Count: 1 } }))
+releaseResponse(Response.json({ type: 'server-response', rpcId: requestId, result: { ok: true, value: { Text: 'cancel', Count: 1 } } }))
 assert.equal((await cancellingPending).error.code, 'gateway/cancelled')
-ignoringCarrier.dispose()
-let closeStream
-const ignoringStream = createRemote(base, async () => new Response(new ReadableStream({ start(controller) { closeStream = () => controller.close() } })))
-const iterator = ignoringStream['sample/Count']({ count: 0 })[Symbol.asyncIterator]()
-const waitingRead = iterator.next()
-await new Promise(resolve => setTimeout(resolve, 0))
-ignoringStream.dispose()
-closeStream()
-assert.equal((await waitingRead).value.error.code, 'gateway/internal')
-await iterator.return()
+await ignoringCarrier.dispose()
+await ignoringConnection.dispose()
 
-await writeFile(resolve(directory, 'consumer.mts'), `import { createRemote } from './remote.mjs'
-const remote = createRemote('http://localhost/remote')
+await writeFile(resolve(directory, 'consumer.mts'), `import { createRemote, TypertConnection } from './remote.mjs'
+const remote = createRemote(new TypertConnection('http://localhost/remote'))
 async function call() {
   const tuple = await remote['sample/Tuple']({value:['tuple',4]})
   if (tuple.ok) { const value: readonly [string, number] = tuple.value; void value }
@@ -198,28 +200,30 @@ async function call() {
 }
 void call
 `)
-await writeFile(resolve(directory, 'tuple-consumer.mts'), `import { createRemote as nested } from './tuple-nested.mjs'
+await writeFile(resolve(directory, 'tuple-consumer.mts'), `import { TypertConnection } from './remote.mjs'
+const connection = new TypertConnection('http://localhost/remote')
+import { createRemote as nested } from './tuple-nested.mjs'
 import { createRemote as optional } from './tuple-optional.mjs'
 import { createRemote as rest } from './tuple-rest.mjs'
 import { createRemote as open } from './tuple-open.mjs'
 async function call() {
-  const result = await nested('')['sample/Tuple']({value:['tuple',[4,true]]})
+  const result = await nested(connection)['sample/Tuple']({value:['tuple',[4,true]]})
   if (result.ok) { const value: readonly [string, readonly [number, boolean]] = result.value; void value }
   // @ts-expect-error Nested reference tuples retain positional types.
-  nested('')['sample/Tuple']({value:['tuple',[true,4]]})
-  optional('')['sample/Tuple']({value:['tuple']})
-  optional('')['sample/Tuple']({value:['tuple',4]})
+  nested(connection)['sample/Tuple']({value:['tuple',[true,4]]})
+  optional(connection)['sample/Tuple']({value:['tuple']})
+  optional(connection)['sample/Tuple']({value:['tuple',4]})
   // @ts-expect-error The required prefix remains required.
-  optional('')['sample/Tuple']({value:[]})
+  optional(connection)['sample/Tuple']({value:[]})
   // @ts-expect-error Optional means omitted, not any type or null.
-  optional('')['sample/Tuple']({value:['tuple',null]})
-  rest('')['sample/Tuple']({value:['tuple',true,false]})
+  optional(connection)['sample/Tuple']({value:['tuple',null]})
+  rest(connection)['sample/Tuple']({value:['tuple',true,false]})
   // @ts-expect-error Rest elements retain their declared type.
-  rest('')['sample/Tuple']({value:['tuple',4]})
-  open('')['sample/Tuple']({value:[]})
-  open('')['sample/Tuple']({value:['tuple',null,{}]})
+  rest(connection)['sample/Tuple']({value:['tuple',4]})
+  open(connection)['sample/Tuple']({value:[]})
+  open(connection)['sample/Tuple']({value:['tuple',null,{}]})
   // @ts-expect-error An omitted minItems does not erase prefix types when present.
-  open('')['sample/Tuple']({value:[4]})
+  open(connection)['sample/Tuple']({value:[4]})
 }
 void call
 `)

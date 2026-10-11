@@ -1,4 +1,4 @@
-import { createRemote, type RemoteClient } from 'settings-client'
+import { createRemote, TypertConnection, type RemoteClient } from 'settings-client'
 import { SettingsFormModel, settingsNumberField, type SettingsFormPathOp, type SettingsFormScopeSnapshot } from './vendor/form-model'
 
 type DescribeValue = Extract<Awaited<ReturnType<RemoteClient['settings/describe']>>, { ok: true }>['value']
@@ -16,7 +16,8 @@ export class LiveSettingsScope {
   }
   private readonly listeners = new Set<() => void>()
   private readonly remote: RemoteClient
-  constructor(origin: string) { this.remote = createRemote(origin + '/remote') }
+  private readonly connection: TypertConnection
+  constructor(origin: string) { this.connection = new TypertConnection(origin + '/remote'); this.remote = createRemote(this.connection) }
   getSnapshot = (): SettingsFormScopeSnapshot<Record<string, unknown>> => this.snapshot
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener)
@@ -40,7 +41,7 @@ export class LiveSettingsScope {
     await this.refresh()
     return result.ok
   }
-  dispose(): void { this.listeners.clear(); this.remote.dispose() }
+  async dispose(): Promise<void> { this.listeners.clear(); await this.remote.dispose(); await this.connection.dispose() }
 }
 
 function check(condition: boolean, contract: string): asserts condition {

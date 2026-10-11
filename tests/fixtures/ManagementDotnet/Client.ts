@@ -1,9 +1,9 @@
-import { createRemote as createManagementRemote, type RemoteResult } from './management.mjs'
+import { createRemote as createManagementRemote, TypertConnection, RemoteError, type RemoteResult } from './management.mjs'
 import { createRemote as createNotificationRemote } from './notifications.mjs'
 
 type NotificationClient = ReturnType<typeof createNotificationRemote>
 type NotificationResult = ReturnType<NotificationClient['remoteNotifications/watch']> extends AsyncIterable<infer Item> ? Item : never
-type Notification = Extract<NotificationResult, { readonly ok: true }>['value']
+type Notification = NotificationResult
 function assert(value: unknown, reason: string): asserts value { if (!value) throw new Error(reason) }
 function accepted<T>(result: RemoteResult<T>): T { if (!result.ok) throw result.error; return result.value }
 async function failure(call: Promise<RemoteResult<unknown>>, code: string) {
@@ -13,7 +13,7 @@ async function failure(call: Promise<RemoteResult<unknown>>, code: string) {
 async function next(reader: AsyncIterator<NotificationResult>): Promise<Notification> {
   const result = await reader.next()
   assert(!result.done, 'Notification subscription ended without its expected item')
-  return accepted(result.value)
+  return result.value
 }
 async function event(reader: AsyncIterator<NotificationResult>, match: (frame: Notification) => boolean) {
   while (true) { const frame = await next(reader); if (match(frame)) return frame }
@@ -26,8 +26,9 @@ export async function run(origin: string) {
     headers.set('Authorization', 'consumer-policy')
     return fetch(input, { ...init, headers })
   }
-  const manager = createManagementRemote(origin + '/remote', fetcher)
-  const notifications = createNotificationRemote(origin + '/remote', fetcher)
+  const connection = new TypertConnection(origin + '/remote', fetcher, url => { url.searchParams.set('consumer', 'consumer-policy'); return new WebSocket(url) })
+  const manager = createManagementRemote(connection)
+  const notifications = createNotificationRemote(connection)
   const observation = new AbortController()
   const reader = notifications['remoteNotifications/watch']({}, observation.signal)[Symbol.asyncIterator]()
   const remotes = [manager, notifications]
@@ -86,7 +87,7 @@ export async function run(origin: string) {
     response.abort()
     await failure(installing, 'gateway/cancelled')
     assert((await probe()).cancellations === 0, 'Request disconnect cancelled platform preparation')
-    const resumedRemote = createNotificationRemote(origin + '/remote', fetcher)
+    const resumedRemote = createNotificationRemote(connection)
     remotes.push(resumedRemote)
     const resumed = resumedRemote['remoteNotifications/watch']({})[Symbol.asyncIterator]()
     assert((await next(resumed)).kind === 'ready', 'Reconnect did not subscribe again')
@@ -103,13 +104,12 @@ export async function run(origin: string) {
     assert(object(object(JSON.parse((await probe()).manifest)).dependencies).existing === '2.0.0', 'Update did not persist the new profile version')
     assert(accepted(await manager['pluginManager/waitForInstall']({ requestId: 'disconnected-update' })) === null, 'Completed installation was retained as invented task history')
     await control('remove-source')
-    let terminal: NotificationResult | undefined
-    for await (const item of { [Symbol.asyncIterator]: () => resumed }) {
-      if (!item.ok) { terminal = item; break }
-    }
-    assert(terminal !== undefined && !terminal.ok && terminal.error.code === 'gateway/service-unavailable', 'Source removal did not terminate the typed observer')
+    let terminal: unknown
+    try { for await (const _ of { [Symbol.asyncIterator]: () => resumed }) { /* Drain queued business notifications. */ } }
+    catch (error) { terminal = error }
+    assert(terminal instanceof RemoteError && terminal.code === 'gateway/service-unavailable', 'Source removal did not terminate the typed observer')
     await control('restore-source')
-    const restoredRemote = createNotificationRemote(origin + '/remote', fetcher)
+    const restoredRemote = createNotificationRemote(connection)
     remotes.push(restoredRemote)
     const restored = restoredRemote['remoteNotifications/watch']({})[Symbol.asyncIterator]()
     assert((await next(restored)).kind === 'ready', 'Restored source did not admit a new observer')
@@ -117,7 +117,8 @@ export async function run(origin: string) {
     await restored.return?.()
   } finally {
     observation.abort()
-    for (const remote of remotes) remote.dispose()
+    await Promise.all(remotes.map(remote => remote.dispose()))
+    await connection.dispose()
     await reader.return?.()
   }
   async function control(name: string, target?: string, version?: string, mode?: string) {

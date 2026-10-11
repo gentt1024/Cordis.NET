@@ -22,10 +22,10 @@
 <pre id="result" role="status"></pre><pre id="client-diagnostics"></pre><pre id="slot-status"></pre><div id="contributions"></div>
 <script type="module">
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
-import { createRemote as createSettingsRemote } from '/client-runtime/settings.mjs'
+import { createRemote as createSettingsRemote, TypertConnection } from '/client-runtime/settings.mjs'
 import { createRemote as createPluginManagerRemote } from '/client-runtime/management.mjs'
 import { createRemote as createNotificationRemote } from '/client-runtime/notifications.mjs'
-let settingsRemote, pluginManager, notifications
+let settingsRemote, pluginManager, notifications, remoteConnection
 function accepted(result) { if (!result.ok) throw result.error; return result.value }
 const modules = await bootClientModules({graph:{rev:'initial',entries:[],batches:[]}})
 function showModules() {
@@ -42,30 +42,34 @@ async function closeOwner() {
   for (const unsubscribe of subscriptions.splice(0)) unsubscribe()
   const previous = client
   client = undefined
-  settingsRemote?.dispose()
+  await settingsRemote?.dispose()
   settingsRemote = undefined
-  pluginManager?.dispose()
+  await pluginManager?.dispose()
   pluginManager = undefined
   const previousNotifications = notifications
   notifications = undefined
   await previous?.close()
-  previousNotifications?.dispose()
+  await previousNotifications?.dispose()
+  await remoteConnection?.dispose()
+  remoteConnection = undefined
 }
 function connect() {
   ownerQueue = ownerQueue.then(async () => {
     await closeOwner()
     if (disposed) return
-    notifications = createNotificationRemote(location.origin + '/remote')
-    const owner = createManagementClient({baseUrl:'/cordis',modules,notifications})
-    client = owner
-    settingsRemote = createSettingsRemote(location.origin + '/remote')
-    pluginManager = createPluginManagerRemote(location.origin + '/remote', (url, init) => {
-      const connection = owner.connection.getSnapshot()
-      if (connection.phase !== 'connected') return Promise.reject(new Error('Wait for current host state before managing plugins'))
+    let owner
+    remoteConnection = new TypertConnection(location.origin + '/remote', (url, init) => {
+      const current = owner.connection.getSnapshot()
+      if (current.phase !== 'connected') return Promise.reject(new Error('Wait for current host state before calling Remote methods'))
       const headers = new Headers(init?.headers)
-      headers.set('If-Cordis-Generation', connection.state.generation)
+      headers.set('If-Cordis-Generation', current.state.generation)
       return fetch(url, {...init,headers,credentials:'same-origin'})
     })
+    notifications = createNotificationRemote(remoteConnection)
+    owner = createManagementClient({baseUrl:'/cordis',modules,notifications})
+    client = owner
+    settingsRemote = createSettingsRemote(remoteConnection)
+    pluginManager = createPluginManagerRemote(remoteConnection)
     const update = () => { document.querySelector('#connection').textContent = owner.connection.getSnapshot().phase }
     subscriptions.push(owner.connection.subscribe(update), owner.subscribe(event => {
       if (event.event === 'plugin-manager/install-state' || event.event === 'plugin-manager/install-log') show(event.args)

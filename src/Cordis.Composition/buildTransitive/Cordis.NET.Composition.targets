@@ -16,6 +16,7 @@
     <CordisTypertClientNamespace Condition="'$(CordisTypertClientNamespace)' == ''">$(RootNamespace).Remote</CordisTypertClientNamespace>
     <CordisTypertClientName Condition="'$(CordisTypertClientName)' == ''">RemoteClient</CordisTypertClientName>
     <CordisTypertClientSource>$(CordisTypertOutputDirectory)$(CordisTypertClientName).Generated.g.cs</CordisTypertClientSource>
+    <_CordisTypertClientFiles>$(CordisTypertClientSource);$(CordisTypertOutputDirectory)client-reference-models.rsp</_CordisTypertClientFiles>
     <_CordisTypertLanguageVersion Condition="'$(LangVersion)' != ''">$(LangVersion)</_CordisTypertLanguageVersion>
     <_CordisTypertLanguageVersion Condition="'$(_CordisTypertLanguageVersion)' == ''">default</_CordisTypertLanguageVersion>
     <_CordisTypertNullable Condition="'$(Nullable)' != ''">$(Nullable)</_CordisTypertNullable>
@@ -84,16 +85,19 @@
           Condition="'$(CordisTypertClientModel)' != '' and '$(DesignTimeBuild)' != 'true'">
     <MakeDir Directories="$(CordisTypertOutputDirectory)" />
     <ItemGroup>
-      <FileWrites Include="$(CordisTypertClientSource)" />
+      <CordisTypertClientReferenceModel Include="$(MSBuildThisFileDirectory)../cordis/typert/Cordis.Composition.cordis.model.json"
+                                      Condition="Exists('$(MSBuildThisFileDirectory)../cordis/typert/Cordis.Composition.cordis.model.json')" />
+      <FileWrites Include="$(_CordisTypertClientFiles)" />
     </ItemGroup>
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)client-reference-models.rsp" Lines="@(CordisTypertClientReferenceModel->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --namespace &quot;$(CordisTypertClientNamespace)&quot; --service &quot;$(CordisTypertService)&quot; --client &quot;$(CordisTypertClientName)&quot; --output &quot;$(CordisTypertClientSource)&quot;" />
+          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --reference-models &quot;$(CordisTypertOutputDirectory)client-reference-models.rsp&quot; --namespace &quot;$(CordisTypertClientNamespace)&quot; --service &quot;$(CordisTypertService)&quot; --client &quot;$(CordisTypertClientName)&quot; --output &quot;$(CordisTypertClientSource)&quot;" />
     <ItemGroup>
       <Compile Remove="$(CordisTypertClientSource)" />
       <Compile Include="$(CordisTypertClientSource)" />
     </ItemGroup>
   </Target>
   <Target Name="CordisTypertCleanDotnetClient" BeforeTargets="CoreClean">
-    <Delete Files="$(CordisTypertClientSource)" />
+    <Delete Files="$(_CordisTypertClientFiles)" />
   </Target>
 </Project>

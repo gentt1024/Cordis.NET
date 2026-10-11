@@ -122,7 +122,7 @@ def main():
             status = "requested-checks-passed"
             return
         if options.data_references_only:
-            verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project)
+            verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted)
             provider_referenced = False
             status = "requested-checks-passed"
             return
@@ -315,30 +315,27 @@ def main():
             '<CordisTypertService>helperCollision</CordisTypertService>'
             '<CordisTypertClientModel>helper-collision.model.json</CordisTypertClientModel>'
             '<CordisTypertClientNamespace>Caller.Edges</CordisTypertClientNamespace>'
-            '<CordisTypertClientName>DemoClient</CordisTypertClientName>', composition)
+            '<CordisTypertClientName>ClientCollision</CordisTypertClientName>', composition)
         shutil.copyfile(helper_model, helper_contracts / "helper-collision.model.json")
-        stale_helper = helper_contracts / "obj/Release/net10.0/cordis-typert/DemoClient.Generated.g.cs"
+        stale_helper = helper_contracts / "obj/Release/net10.0/cordis-typert/ClientCollision.Generated.g.cs"
         stale_helper.parent.mkdir(parents=True)
         stale_helper.write_text("stale generated output", encoding="utf-8")
         helper_rejection = run("helper-model-only-contracts-rejected",
             [dotnet, "pack", helper_contracts_project, "-c", "Release", "-o", feed], True)
         assert not stale_helper.exists(), "Rejected contract build retained a stale source"
-        named_diagnostic = b"Caller type names collide at 'DemoClientFailure'" in helper_rejection
+        named_diagnostic = b"Caller type names collide at 'ClientCollision'" in helper_rejection
         csharp_collision = b"CS0101" in helper_rejection
         assert named_diagnostic, helper_rejection
         assert not csharp_collision, "Collision reached C# compilation instead of projection refusal"
-        helper_rejections = [{"entryPoint": "pre-CoreCompile", "clientName": "DemoClient",
-            "collisionName": "DemoClientFailure", "exitCode": steps[-1]["exitCode"], "expectedFailure": True,
+        helper_rejections = [{"entryPoint": "pre-CoreCompile", "clientName": "ClientCollision",
+            "collisionName": "ClientCollision", "exitCode": steps[-1]["exitCode"], "expectedFailure": True,
             "staleOutputRemoved": not stale_helper.exists(), "namedDiagnosticObserved": named_diagnostic,
             "csharpCollisionDiagnosticObserved": csharp_collision}]
         for client_name, collision_name in (
-                ("ClientCollision", "ClientCollision"),
                 ("JsonCollision", "JsonCollisionJson"),
                 ("CarrierCollision", "CarrierCollisionCarrierJson"),
-                ("DemoClient", "DemoClientFailure"),
-                ("ArgsCollision", "ArgsCollisionValueArgs"),
-                ("RequestCollision", "RequestCollisionValueRequest"),
-                ("ResponseCollision", "ResponseCollisionValueResponse")):
+                ("ClientCollision", "ClientCollision"),
+                ("ArgsCollision", "ArgsCollisionValueArgs")):
             target = projection / (client_name + ".Generated.g.cs")
             target.write_text("stale generated output", encoding="utf-8")
             rejected = run("helper-" + client_name + "-rejected",

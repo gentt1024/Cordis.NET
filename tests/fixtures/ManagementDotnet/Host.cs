@@ -1,3 +1,5 @@
+using System.Net.WebSockets;
+using System.Text;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -110,10 +112,19 @@ var builder = WebApplication.CreateSlimBuilder();
 builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Logging.ClearProviders();
 await using var server = builder.Build();
+server.MapGet("/client-runtime/cordis-remote.mjs", () => Results.Text(TypertClientRuntime.Module, "text/javascript"));
+server.MapGet("/client-runtime/cordis-remote.d.mts", () => Results.Text(TypertClientRuntime.Declaration, "text/plain"));
+TypertHostConnection remoteConnection = null!;
+await session.Context.RunAsync(owner =>
+{
+    remoteConnection = new(owner, gateway);
+    return Task.CompletedTask;
+});
+server.UseWebSockets();
 server.MapCordisRemote(
     "/remote",
-    gateway,
-    (http, _) => Task.FromResult(http.Request.Headers.Authorization == "consumer-policy"));
+    remoteConnection,
+    (http, _) => Task.FromResult((http.Request.Headers.Authorization == "consumer-policy" || http.Request.Query["consumer"] == "consumer-policy")));
 foreach (var pair in new[]
          {
              (Name: "management", Contract: managerContracts),
@@ -238,21 +249,29 @@ server.MapPost(
         await session.DisposeAsync();
         return Results.Text("ok");
     });
-foreach (var pair in new[]
-         {
-             (Name: "terminal",
-                 Frame:
-                 "{\"ok\":false,\"error\":{\"code\":\"fixture/stream\",\"message\":\"notification source failed\",\"details\":{\"stage\":\"source\"}}}\n"),
-             (Name: "incomplete", Frame: "{\"ok\":true,\"value\":{\"kind\":\"ready\"}}"),
-             (Name: "malformed", Frame: "not-json\n")
-         })
-    server.MapPost(
-        "/" + pair.Name + "/remoteNotifications/watch/stream",
-        async (HttpContext http) =>
+foreach (var kind in new[] { "terminal", "incomplete", "malformed" })
+    server.MapGet("/" + kind + "/remote.mux", async (HttpContext http) =>
+    {
+        using var socket = await http.WebSockets.AcceptWebSocketAsync();
+        using var message = new MemoryStream();
+        var buffer = new byte[4096];
+        ValueWebSocketReceiveResult read;
+        do
         {
-            http.Response.ContentType = "application/x-ndjson";
-            await http.Response.WriteAsync(pair.Frame);
-        });
+            read = await socket.ReceiveAsync(buffer.AsMemory(), http.RequestAborted);
+            message.Write(buffer, 0, read.Count);
+        } while (!read.EndOfMessage);
+        using var open = JsonDocument.Parse(message.ToArray());
+        var id = open.RootElement.GetProperty("streamId").GetRawText();
+        var frame = kind switch
+        {
+            "terminal" => "{\"type\":\"error\",\"streamId\":" + id + ",\"error\":{\"code\":\"fixture/stream\",\"message\":\"notification source failed\",\"details\":{\"stage\":\"source\"}}}",
+            "incomplete" => "{\"type\":",
+            _ => "not-json"
+        };
+        await socket.SendAsync(Encoding.UTF8.GetBytes(frame).AsMemory(), WebSocketMessageType.Text, true, http.RequestAborted);
+        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "fixture complete", http.RequestAborted);
+    });
 await server.StartAsync();
 Console.WriteLine("READY " + server.Urls.Single());
 await server.WaitForShutdownAsync();

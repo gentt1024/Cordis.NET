@@ -146,10 +146,19 @@ await management.MountPluginManagerAsync(
     registry,
     app.Services.GetRequiredService<IHttpContextAccessor>(),
     managerContracts.Package);
+TypertHostConnection remoteConnection = null!;
+await session.Context.RunAsync(owner =>
+{
+    remoteConnection = new(owner, gateway);
+    return Task.CompletedTask;
+});
+app.UseWebSockets();
 app.MapCordisRemote(
     "/remote",
-    gateway,
+    remoteConnection,
     (http, _) => Task.FromResult(Authorized(http)));
+app.MapGet("/client-runtime/cordis-remote.mjs", () => Results.Text(TypertClientRuntime.Module, "text/javascript"));
+app.MapGet("/client-runtime/cordis-remote.d.mts", () => Results.Text(TypertClientRuntime.Declaration, "text/plain"));
 foreach (var (name, contracts) in new[]
          {
              ("settings", settingsContracts),

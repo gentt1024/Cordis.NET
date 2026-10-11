@@ -21,7 +21,7 @@ export interface ConfigurationChange {
 }
 export interface ConfigurationView { readonly entryId: string; readonly revision: string; readonly raw: unknown }
 type NotificationResult = ReturnType<NotificationClient['remoteNotifications/watch']> extends AsyncIterable<infer Item> ? Item : never
-export type ManagementEvent = Extract<NotificationResult, { readonly ok: true }>['value']
+export type ManagementEvent = NotificationResult
 
 /** A transport refusal has a known response; it is distinct from an unobserved mutation outcome. */
 export class ManagementHttpError extends Error {
@@ -155,10 +155,8 @@ export function createManagementClient(options: ManagementClientOptions): Manage
       await refresh
     }
     try {
-      for await (const result of options.notifications['remoteNotifications/watch']({}, signal)) {
+      for await (const event of options.notifications['remoteNotifications/watch']({}, signal)) {
         if (signal.aborted || closed) return
-        if (!result.ok) throw result.error
-        const event = result.value
         if (event.kind === 'ready') {
           if (subscribed) throw new Error('Notification subscription sent duplicate readiness')
           subscribed = true

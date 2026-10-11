@@ -7,25 +7,27 @@ namespace Cordis.Typert.Generator.Model;
 internal sealed class DeclarationRemoteProjection
 {
     private readonly DeclarationModelDocument model;
-    private readonly Dictionary<string, DeclarationType> declarations;
+    private readonly DeclarationModelComposition declarations;
     private readonly Dictionary<string, NativeTypeDeclaration> types = new(StringComparer.Ordinal);
     private readonly HashSet<string> visiting = new(StringComparer.Ordinal);
     private readonly List<NativeDiagnostic> diagnostics = [];
     private string namingPolicy = "0";
 
-    private DeclarationRemoteProjection(DeclarationModelDocument model)
+    private DeclarationRemoteProjection(DeclarationModelDocument model, DeclarationModelDocument[] references)
     {
         this.model = model;
-        declarations = model.Declarations.ToDictionary(value => value.Id, StringComparer.Ordinal);
+        declarations = new(model, references);
     }
 
-    internal static RemoteProjection Project(DeclarationModelDocument model, string? service) =>
-        new DeclarationRemoteProjection(model).ProjectServices(service);
+    internal static RemoteProjection Project(DeclarationModelDocument model, string? service, DeclarationModelDocument[]? references = null) =>
+        new DeclarationRemoteProjection(model, references ?? []).ProjectServices(service);
 
     private RemoteProjection ProjectServices(string? service)
     {
         var selected = DeclarationRemoteContract.Read(model, service);
         var services = selected.Select(Service).ToArray();
+        diagnostics.AddRange(declarations.Diagnostics.Where(diagnostic => diagnostic.Symbol is null ||
+            types.Keys.Any(id => diagnostic.Symbol == id || diagnostic.Symbol.StartsWith(id + ".", StringComparison.Ordinal))));
         foreach (var contract in selected)
         {
             diagnostics.AddRange(contract.Diagnostics);
@@ -136,7 +138,10 @@ internal sealed class DeclarationRemoteProjection
                         parameter.Facts.Documentation))
                 .ToArray(),
             method.Facts.Documentation,
-            method.Facts.Location);
+            method.Facts.Location)
+        {
+            Uplink = method.Uplink is { } uplink ? new(Reference(uplink.Type), uplink.Optional) : null
+        };
     }
 
     private NativeTypeReference Reference(DeclarationReference reference, int depth = 0)
@@ -179,15 +184,9 @@ internal sealed class DeclarationRemoteProjection
         if (DeclarationWireProjection.FrameworkReference(type, reference, value => Reference(value, depth + 1)) is
             { } framework)
             return framework;
-        if (type.Provenance == "metadata-reference")
-        {
-            Diagnose(
-                "ProjectionUnsupported",
-                "TYPM114",
-                "Opaque metadata references do not provide a complete DTO signature.",
-                type.Id);
-            return new("unsupported", type.Id, reference.Nullability, []);
-        }
+        if (type.Provenance != "source")
+            throw Refuse(type.Id,
+                "TYPM114: External data declarations require an explicit referenced source model; metadata signatures do not retain all authored DTO facts.");
 
         ValidateCachedWireNames(new("named", type.Id, reference.Nullability, []), new(StringComparer.Ordinal));
         if (!types.ContainsKey(type.Id) && visiting.Add(type.Id))
@@ -370,10 +369,7 @@ internal sealed class DeclarationRemoteProjection
         return symbol == service.SourceType || symbol.StartsWith(service.SourceType + ".", StringComparison.Ordinal);
     }
 
-    private DeclarationType Resolve(string id) => declarations.TryGetValue(id, out var type) &&
-        type.Id == type.Assembly + ":" + type.MetadataName
-            ? type
-            : throw Refuse(id, "Missing or inconsistent assembly-qualified declaration identity.");
+    private DeclarationType Resolve(string id) => declarations.Resolve(id);
 
     private void Diagnose(string category, string code, string message, string symbol) =>
         diagnostics.Add(new(category, code, message, symbol));

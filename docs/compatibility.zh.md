@@ -49,7 +49,7 @@ Cordis.NET 不执行任意服务端 TypeScript 插件。JavaScript 原型、抛�
 
 字段编辑复用固定 ConfigEditor 的职责：所属层定位、正常 hook/校验、完整 raw 用户覆盖、overlay 拒绝、持久写入和协作恢复。为保留无关注释，原生编辑可保留 YAML flow 根。revision 使用原生内容/激活哈希；不能无损往返的 `Undefined` SET 会被拒绝，不改变运行时 sentinel 语义。部署需重启时在保存前拒绝。Settings 选择已声明的 live 数据，包含嵌套对象和集合，并在提交时同样强制宿主选择／脱敏政策。用户来源 presence 纳入唯一的同源 inserted row，是明确的原生适配，不按 effective 值比较推断。有序 SET/reset 请求在写入前校验一个完整候选。显式元数据支持独立的 Schemastery 与 JSON Schema 投影；不能推断任意 validator 的变换，投影诊断仍是合同的一部分。Core 保存注解而不解释表单政策。独立审查与组合验证结果见[验证记录](validation.zh.md)。
 
-客户端制品通过部署包路由复用 `dsh.client.platform=web` 与 `exports['./client']`，真实路径检查覆盖目录链接。原 Probes 消费者保留自包含 ESM 与轮询；当前源码另提供 `ClientModuleCatalog` 及可选 TypeScript 包，复用固定 Cordis/Loader、module entries 和 SlotCore 机制。显式声明外部包的模块编译成 lazy factory 注册，不承诺任意 npm 解析。生成式管理使用原生 HTTP JSON/NDJSON carrier，具有宿主授权、代际约束及活动安装查询。该 carrier 不证明完整固定 Typert 线协议兼容。源码测试、浏览器交互、CLR 执行与包消费仍是分开的证据。这些新增能力不改变正式行为锁或已发布批次。
+客户端制品通过部署包路由复用 `dsh.client.platform=web` 与 `exports['./client']`，真实路径检查覆盖目录链接。原 Probes 消费者保留自包含 ESM 与轮询；当前源码另提供 `ClientModuleCatalog` 及可选 TypeScript 包，复用固定 Cordis/Loader、module entries 和 SlotCore 机制。显式声明外部包的模块编译成 lazy factory 注册，不承诺任意 npm 解析。生成式管理使用共享 Connection 的固定 unary 封套与文本 WebSocket mux carrier，具有宿主授权、代际约束及活动安装查询。该 carrier 不证明完整固定 Typert 线协议兼容。源码测试、浏览器交互、CLR 执行与包消费仍是分开的证据。这些新增能力不改变正式行为锁或已发布批次。
 
 部署解析代在既有包映射和本地映射之外接受显式外部链接根。每一代捕获链接的真实目标；撤下根只停止其调用者的路由，不卸载保留的模块。同名链接改指另一目标需要重启，即使中间曾撤下该根。链接的 peer 声明从当前祖先 manifest 读取；私有依赖查找仍由宿主提供，CLR 导出仍使用显式映射。这不安装 Node loader，也不模拟 Node exports、包自引用、CommonJS/ESM 差异或 worker 传播。
 
@@ -118,7 +118,7 @@ Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 P
 
 `IClrTypertModule` 从插件工厂所在的同一已加载 CLR bundle 导出贡献。Typert 导入按 owner Fiber 激活期缓存。在动态模块代际边界，候选准备完成后、退役 provider 前，暂停受影响的精确 Loader 请求；仅在路由提交或确认旧 provider 恢复后恢复。暂停撤销相应登记、失效制品缓存并脱离旧导入；其他贡献者保持登记身份和 owner。旧导入晚到也不能登记进恢复后的新代。这样释放 loader 对旧生成 delegate 与 CLR 序列化类型的引用；仅有类型名相同，不能让旧贡献适配替换后的新程序集。登记有效性同时阻止撤销后的旧调用。Registry 元数据不代替 Cordis 服务权威或产品政策。
 
-原生 Gateway 支持直接调用、显式登记的 Context 选择/对象 lookup、Remote 错误、协作取消、downlink 流及 JSON base64 字节结果。ASP.NET 传输使用 HTTP JSON/NDJSON，由宿主提供 endpoint 授权。生成 TypeScript `createRemote` 消费该传输；异步 `mountRemote` 等待 owner 登记，将互不重叠的方法装入共享 root `remote.<namespace>` 服务，并按贡献撤销。这些是显式平台适配，不承诺完整固定 Typert wire protocol。
+Gateway 支持直接调用、登记的 Context 选择/对象 lookup、Remote 错误、协作取消及下行流。ASP.NET 使用共享 Host Connection、固定 unary 封套、文本 WebSocket mux 和 unary multipart 结果。生成客户端借用共享 Connection；`mountRemote` 沿既有 owner 与共享 root namespace 登记互不重叠的方法。当前本地实现尚未闭环反向 Context、owned value 和完整事件语义。
 
 Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号已取消而被拒绝，已取消信号下的业务失败则成为 `gateway/cancelled`。Downlink 读取与信号竞争，完成清理后才暴露失败。原生枚举器必须先结束未完成的读取再释放；迟到读取错误会被观察，不替换取消结果，释放错误仍是清理失败。固定 Host 和此适配都不承诺强制终止始终不结束的业务或清理。提供者/定义撤销后的检查属于单独的原生代际适配，不是上游活动调用中止机制。
 
@@ -132,7 +132,7 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 
 Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provider 值。caller-bound view 是实际调用 receiver；`Service<TState>.CreateView` 每次新建视图不会使活跃 provider 失效。准入在 contextual tracing 前捕获注册及原始值。后续每次检查先执行正常 contextual 查询，再读取最终注册及原始值，因此同步重入不能掩盖 provider 变化。重新提供同一个对象，包括在同一个 Fiber 内重提供，都会形成不同注册，使此前准入失效。设置不同原始值也会使其失效，即使注册身份未变；同值 `Set`、普通 `Notify` 和无关隔离 realm 的变化保持准入。这些观察仅在 Core 与 Composition 内部使用，不新增公开 API、服务 registry 或持久代数。未完成调用可以保留其注册及 provider，直至结束，仍遵循既有 CLR 协作寿命边界。
 
-完整源类型分析、丰富 Context/owned-value 图、Peer/uplink/复用流、waterfall 事件及完整二进制 attachment 协议仍未实现。标准 Settings、PluginManager 和宿主选择的 emit 通知现已使用生成合同。原生 state、完整配置、制品路由及独立 `MapCordisService` 适配继续承担各自职责。这些受支持的原生路线不证明完整固定线协议互通。
+完整源类型分析、丰富 Context/owned-value 图、完整 Peer/waterfall 事件及其余丰富值语义仍未实现。当前文本 mux、typed uplink 和 unary multipart 的实施边界见下方共享 Connection 记录。标准 Settings、PluginManager 和宿主选择的 emit 通知现已使用生成合同。原生 state、完整配置、制品路由及独立 `MapCordisService` 适配继续承担各自职责。这些受支持的原生路线不证明完整固定线协议互通。
 
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
 
@@ -178,3 +178,11 @@ Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对�
 上游将标记为 secret 的整个 live 根脱敏为 JavaScript undefined。原生 JSON namespace 要求有值，因此省略该根并返回原生诊断，其他 namespace 仍可读取。hidden 根按宿主政策省略。这项有界 JSON 适配不公开 secret，也不伪造替代值。
 
 标准 Settings 直接纠正为数值 revision 和可省略的 expected revision。旧字符串 Settings 合同明确拒绝；没有版本化 Remote、双格式解析或转换服务。具有独立用途的完整配置 hash 编辑继续单独保留。新公共用法与退出路径见[Settings 合同迁移](settings-contract-migration.zh.md)。R02 已由其修复所有者经 PR #15 合入 main；本候选以该主线为基点复验调用链。
+
+### Remote Connection 修正，2026-10-11
+
+当前本地实现以固定 DSH unary 封套、响应关联、文本 WebSocket mux 和 unary multipart 响应附件替换简化 HTTP 封套及每方法 NDJSON。生成包装借用共享 Connection。C# 普通方法返回 `Task<RemoteResult<T>>`，作者返回 `Task` 时对应 `Task<RemoteResult>`；本地装配错误仍抛异常。无值成功省略 `value`，不与显式 null 合并。流产出业务项，区分 Remote 错误、载体失败与取消。异步释放排空本地拥有的工作，不增加远端确认。
+
+Host Connection 拥有默认 operator Peer，socket 在该作用域登记并借用它。客户端或逻辑流退出不关闭共享 Connection 和兄弟流。安装任务继续由管理服务拥有。STJ 元数据识别类型为 `byte[]` 的字段并提取 multipart 附件；其内部 base64 JSON 表示不发送到标准 unary 线上。附件路径保留对象键和数组索引，空数组仍是二进制分片。固定浏览器 Connection 代码在 Node 下执行，以及生成式 .NET/TS 包消费者，已通过这条有限路径。这些是本地实现结果，不是完整平台验收。
+
+Remote 客户端 CLI/MSBuild 已通过既有声明 composition 接收显式引用模型。独立生成 DTO 必须具有默认值等源事实，仅 metadata 会被拒绝。包消费者检查正常 build/pack、引用变化、缺失拒绝和 Clean。Typed uplink 使用带标记的作者参数、共同声明模型和类型化发送／半关闭句柄。根空性与受支持的嵌套集合空性保留；显式 optional 值区分缺失与 null。反向 Context/owned-value 处理及完整 Peer/事件语义仍未完成。当前下行实现和通过的夹具不能反过来定义这些目标或成为另造协议的依据。不保留旧试验客户端的兼容路线。

@@ -5,6 +5,7 @@
     <CordisTypertCompiler>$(MSBuildProjectDirectory)/../../tools/Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.dll</CordisTypertCompiler>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../Cordis.Core/Cordis.Core.csproj" /><PackageReference Include="YamlDotNet" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Client/cordis-remote.mjs;Client/cordis-remote.d.mts" /></ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../tools/Cordis.Typert.Compiler/Cordis.Typert.Compiler.csproj" ReferenceOutputAssembly="false" PrivateAssets="all"
                       GlobalPropertiesToRemove="PublishAot;PublishTrimmed;RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishSelfContained;PublishSingleFile;PublishReadyToRun;PublishReadyToRunComposite;IsAotCompatible;EnableAotAnalyzer;EnableTrimAnalyzer;TrimMode;UseAppHost" />

@@ -58,11 +58,12 @@ internal static class ManagementCommands
             };
             if (authorization is not null)
                 client.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(authorization);
+            await using var connection = new TypertConnection(client, new Uri(client.BaseAddress!, "../remote"));
             var settingsCommand = arguments[0] == "settings" ||
                 arguments[0] is "schema" or "edit" && Value(0) == "settings";
             if (settingsCommand)
             {
-                using var remote = new SettingsClient(client, new Uri(client.BaseAddress!, "../remote"));
+                await using var remote = new SettingsClient(connection);
                 var ns = Value(arguments[0] == "settings" ? 0 : 1);
                 Cordis.Cli.Settings.SettingsNamespaceView view;
                 if (arguments[0] == "edit")
@@ -73,7 +74,7 @@ internal static class ManagementCommands
                             SettingsClientJson.Default) ??
                         throw new ArgumentException("Settings operations must be an array.");
                     if (Value(2) == "-")
-                        view = await remote.MutateAsync(ns, operations);
+                        view = RequireSuccess(await remote.MutateAsync(ns, operations));
                     else
                     {
                         using var revision = JsonDocument.Parse(Value(2));
@@ -81,11 +82,11 @@ internal static class ManagementCommands
                             !revision.RootElement.TryGetDouble(out var expected) || !double.IsFinite(expected))
                             throw new ArgumentException(
                                 "Settings expectedRevision must be a JSON number; use - to omit it.");
-                        view = await remote.MutateAsync(ns, operations, expected);
+                        view = RequireSuccess(await remote.MutateAsync(ns, operations, expected));
                     }
                 }
                 else
-                    view = (await remote.DescribeAsync()).Namespaces.Single(row => row.Ns == ns);
+                    view = (RequireSuccess(await remote.DescribeAsync())).Namespaces.Single(row => row.Ns == ns);
 
                 Console.WriteLine(
                     arguments[0] == "schema"
@@ -97,37 +98,37 @@ internal static class ManagementCommands
             var state = (EntryOptions)(await GetAsync("state"))!;
             var generation = (string)state["generation"]!;
             client.DefaultRequestHeaders.Add("If-Cordis-Generation", generation);
-            using var manager = new PluginManagerClient(client, new Uri(client.BaseAddress!, "../remote"));
+            await using var manager = new PluginManagerClient(connection);
             object? result = arguments[0] switch
             {
                 "state" => state,
-                "plugins" => await manager.ListPluginsAsync(),
-                "bundles" => await manager.ListBundlesAsync(),
-                "sources" => await manager.SourcesAsync(),
-                "versions" => await manager.VersionsAsync(
+                "plugins" => RequireSuccess(await manager.ListPluginsAsync()),
+                "bundles" => RequireSuccess(await manager.ListBundlesAsync()),
+                "sources" => RequireSuccess(await manager.SourcesAsync()),
+                "versions" => RequireSuccess(await manager.VersionsAsync(
                     Value(0),
-                    source ?? throw new ArgumentException("--source is required.")),
+                    source ?? throw new ArgumentException("--source is required."))),
                 "configuration" => await GetAsync("configuration?entryId=" + Uri.EscapeDataString(Value(0))),
                 "schema" => Value(0) == "configuration"
                     ? await GetAsync("configuration/schema?entryId=" + Uri.EscapeDataString(Value(1)))
                     : throw new ArgumentException("Choose settings or configuration."),
                 "edit" => await EditAsync(),
-                "compatibility" => await manager.ListVersionExemptionsAsync(),
-                "grant" => await manager.SetVersionExemptionAsync(
+                "compatibility" => RequireSuccess(await manager.ListVersionExemptionsAsync()),
+                "grant" => RequireSuccess(await manager.SetVersionExemptionAsync(
                     Value(0),
                     Value(1),
                     bool.Parse(Value(2)),
-                    bool.Parse(Value(3))),
-                "wait" => await manager.WaitForInstallAsync(Value(0)),
-                "cancel" => await manager.CancelInstallAsync(Value(0)),
-                "remove" => await manager.RemoveBundleAsync(Value(0)),
+                    bool.Parse(Value(3)))),
+                "wait" => RequireSuccess(await manager.WaitForInstallAsync(Value(0))),
+                "cancel" => RequireSuccess(await manager.CancelInstallAsync(Value(0))),
+                "remove" => RequireSuccess(await manager.RemoveBundleAsync(Value(0))),
                 "enable" => Value(0) switch
                 {
-                    "plugin" => await manager.SetPluginEnabledAsync(Value(1), bool.Parse(Value(2))),
-                    "bundle" => await manager.SetBundleEnabledAsync(Value(1), bool.Parse(Value(2))),
+                    "plugin" => RequireSuccess(await manager.SetPluginEnabledAsync(Value(1), bool.Parse(Value(2)))),
+                    "bundle" => RequireSuccess(await manager.SetBundleEnabledAsync(Value(1), bool.Parse(Value(2)))),
                     _ => throw new ArgumentException("Choose plugin or bundle.")
                 },
-                "inspect" => await manager.InspectAsync(Package()),
+                "inspect" => RequireSuccess(await manager.InspectAsync(Package())),
                 "install" => await InstallAsync(),
                 _ => throw new ArgumentException("Unknown management command."),
             };
@@ -188,12 +189,12 @@ internal static class ManagementCommands
                     throw new ArgumentException(
                         "--approve-build acknowledges package code execution; the host must also authorize this package.");
                 var package = Package();
-                var inspection = await manager.InspectAsync(package);
+                var inspection = RequireSuccess(await manager.InspectAsync(package));
                 var id = requestId ?? Guid.NewGuid().ToString("N");
                 Console.Error.WriteLine("Installation request: " + id);
                 try
                 {
-                    return await manager.InstallBundleAsync(package, new(id, inspection.ContentHash));
+                    return RequireSuccess(await manager.InstallBundleAsync(package, new(id, inspection.ContentHash)));
                 }
                 catch (RemoteError error) when (error.Code == "gateway/internal" &&
                                                 error.InnerException is HttpRequestException { StatusCode: null })
@@ -209,7 +210,7 @@ internal static class ManagementCommands
                     {
                         if (!await IsOriginalHostAsync())
                             return unknown;
-                        var active = await manager.WaitForInstallAsync(id);
+                        var active = RequireSuccess(await manager.WaitForInstallAsync(id));
                         return await IsOriginalHostAsync() ? (object?)active ?? unknown : unknown;
                     }
                     catch (Exception recoveryError) when (recoveryError is HttpRequestException or RemoteError)
@@ -229,6 +230,9 @@ internal static class ManagementCommands
             return 1;
         }
     }
+
+    // The command boundary renders failures on stderr and returns exit status 1.
+    private static T RequireSuccess<T>(RemoteResult<T> result) => result.Ok ? result.Value : throw result.Error;
 
     private static async Task<object?> ReadAsync(HttpResponseMessage response)
     {

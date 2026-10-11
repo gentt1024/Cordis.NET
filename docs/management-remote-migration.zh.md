@@ -51,8 +51,9 @@ manifest 和 patch 仍要求成功读取其来源。
 浏览器 SDK 通过 `/management`、`/notifications`、`/settings` 包导出供应这些制品，不保留手写 PluginManager DTO 或方法解码器。
 
 ```js
-import { createRemote } from '@cordis-net/client-modules/management'
-const manager = createRemote(location.origin + '/remote', authorizedFetch)
+import { createRemote, TypertConnection } from '@cordis-net/client-modules/management'
+const connection = new TypertConnection(new URL('/remote', location.href), authorizedFetch)
+const manager = createRemote(connection)
 const inspected = await manager['pluginManager/inspect']({ request })
 if (!inspected.ok) throw inspected.error
 const installed = await manager['pluginManager/installBundle']({
@@ -62,8 +63,11 @@ const installed = await manager['pluginManager/installBundle']({
 ```
 
 `authorizedFetch` 提供当前宿主代际与应用请求身份。
-生成 TypeScript API 返回 Remote result；生成 .NET 客户端提供类型化抛错方法，例如
-`InspectAsync`、`InstallBundleAsync`、`WaitForInstallAsync`。
+生成 .NET 与 TypeScript API 都返回 Remote 结果。C# 的 `InspectAsync`、`InstallBundleAsync` 与
+`WaitForInstallAsync` 返回 `Task<RemoteResult<T>>`，先判断 `Ok`，再读取 `Value` 或 `Error`。
+装配失败仍抛异常；流句柄产出通知值，流失败通过异常呈现。等待客户端及 Connection 的异步释放，
+客户端仅借用 Connection。浏览器 WebSocket 使用应用的准入策略，必要时通过 Connection 的 socket factory 配置；
+fetch 请求头不会自动授权浏览器 socket。
 Composition 在 `cordis/typert/Cordis.Composition.cordis.model.json` 供应选定服务模型；
 既有 `emit-dotnet` 命令及 `CordisTypertClientModel` 构建属性消费该模型，不加载 provider。
 
@@ -94,6 +98,7 @@ Settings 保持唯一的[数值 revision 合同](settings-contract-migration.zh.
 Maker 适配属于其自己的会话：重新生成客户端、绑定当前宿主授权、订阅后读取快照、保留安装结果未知状态。
 本仓库不修改 Maker，也不为其旧生成代码增加永久兼容路径。
 
-原生 HTTP JSON/NDJSON carrier 仍是明确的平台适配。
-宿主选择的 emit 通知不闭环 Peer、uplink、waterfall、owned-value 图或 attachment 线协议互通。
+共享 Connection 使用固定 unary 封套、unary multipart 附件及文本 WebSocket mux。
+每方法 NDJSON 与生成器内嵌 carrier 已退出。宿主选择的 emit 通知尚未闭环 typed uplink、反向 Context 解析、
+waterfall 或 owned-value 图。
 原[范围账本](development.zh.md)与[验证记录](validation.zh.md)继续记录这些职责及精确平台证据。

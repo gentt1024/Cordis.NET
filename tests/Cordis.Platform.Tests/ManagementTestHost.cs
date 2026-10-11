@@ -45,7 +45,14 @@ internal static class ManagementTestHost
             return Task.CompletedTask;
         });
         management.Map(server);
-        server.MapCordisRemote("/remote", gateway, authorize ?? ((_, _) => Task.FromResult(true)));
+        TypertHostConnection remoteConnection = null!;
+        await session.Context.RunAsync(owner =>
+        {
+            remoteConnection = new(owner, gateway);
+            return Task.CompletedTask;
+        });
+        server.UseWebSockets();
+        server.MapCordisRemote("/remote", remoteConnection, authorize ?? ((_, _) => Task.FromResult(true)));
         return notifications;
     }
 }

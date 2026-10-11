@@ -263,6 +263,8 @@ await installedRoot.RunAsync(async context =>
     foreach (var name in new[] { "first", "second" })
     {
         var client = TypertArtifacts.GenerateClient(registry.GetPackage("multi-entry." + name)!);
+        await File.WriteAllTextAsync(Path.Combine(clientDirectory, "cordis-remote.mjs"), TypertClientRuntime.Module);
+        await File.WriteAllTextAsync(Path.Combine(clientDirectory, "cordis-remote.d.mts"), TypertClientRuntime.Declaration);
         await File.WriteAllTextAsync(Path.Combine(clientDirectory, name + ".client.mjs"), client.Module);
         await File.WriteAllTextAsync(Path.Combine(clientDirectory, name + ".client.d.mts"), client.Declaration);
     }
@@ -272,7 +274,14 @@ await installedRoot.RunAsync(async context =>
     builder.WebHost.UseKestrel();
     await using var app = builder.Build();
     app.Urls.Add("http://127.0.0.1:0");
-    app.MapCordisRemote("/remote", gateway, (_, _) => Task.FromResult(true));
+    TypertHostConnection remoteConnection = null!;
+    await context.RunAsync(owner =>
+    {
+        remoteConnection = new(owner, gateway);
+        return Task.CompletedTask;
+    });
+    app.UseWebSockets();
+    app.MapCordisRemote("/remote", remoteConnection, (_, _) => Task.FromResult(true));
     await app.StartAsync();
     try
     {

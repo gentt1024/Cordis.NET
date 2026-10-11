@@ -2,6 +2,7 @@
 import hashlib
 import json
 import shutil
+import subprocess
 from xml.sax.saxutils import escape
 import zipfile
 
@@ -270,7 +271,7 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
         "ordinaryModelRefusedByRemoteEmitter": True
     }, indent=2) + "\n", encoding="utf-8")
     verify_data_consumer(fixtures, source, feed, output, dotnet, composition, compiler, roslyn, run, project, hosted)
-    verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, external_setup)
+    verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, external_setup)
 
 
 def pack_external_data(fixtures, feed, dotnet, composition, run, project):
@@ -286,7 +287,7 @@ def pack_external_data(fixtures, feed, dotnet, composition, run, project):
     return external, external_project, model
 
 
-def verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, external_setup=None):
+def verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, external_setup=None):
     fixtures = root / "tests/fixtures/DeclarationModel"
     external, external_project, external_model = external_setup or pack_external_data(fixtures, feed, dotnet, composition, run, project)
     sdk = run("referenced-data-selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
@@ -294,12 +295,14 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     roslyn = dotnet.parent / "sdk" / sdk / "Roslyn/bincore"
     author, author_project = project("ReferencedDataAuthor",
         '<AssemblyName>IndependentReferenced.Provider</AssemblyName>'
-        '<PackageId>IndependentReferenced.Provider</PackageId><Version>1.0.0-alpha</Version>',
+        '<PackageId>IndependentReferenced.Provider</PackageId><Version>1.0.0-alpha</Version>'
+        '<CordisTypertService>referencedData</CordisTypertService>',
         composition + '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>',
         '<ItemGroup><CordisTypertModelRoot Include="IndependentDeclarations.ReferencedData"/>'
         '<CordisTypertModelRoot Include="IndependentDeclarations.ReferencedHiddenData"/>'
         '<CordisTypertModelRoot Include="IndependentDeclarations.DataExternal"/></ItemGroup>')
     shutil.copyfile(fixtures / "DataAuthor.cs", author / "DataAuthor.cs")
+    shutil.copyfile(fixtures / "ReferencedRemote.cs", author / "ReferencedRemote.cs")
     run("referenced-data-author-pack", [dotnet, "pack", author_project, "-c", "Release", "-o", feed])
     model = author / "obj/Release/net10.0/cordis-typert/IndependentReferenced.Provider.cordis.model.json"
     for package_id, artifact in (("IndependentDeclarations.External", external_model), ("IndependentReferenced.Provider", model)):
@@ -344,6 +347,40 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
             assert not list((caller / "bin").rglob(assembly)), "Caller acquired an author's implementation assembly"
     call("referenced-data-caller", 11)
 
+    remote, remote_project = project("ReferencedRemoteContracts",
+        '<PackageId>IndependentReferenced.Remote</PackageId><Version>1.0.0-alpha</Version>'
+        '<CordisTypertService>referencedData</CordisTypertService>'
+        '<CordisTypertClientModel>' + model.name + '</CordisTypertClientModel>'
+        '<CordisTypertClientNamespace>IndependentDeclarations.RemoteReference</CordisTypertClientNamespace>'
+        '<CordisTypertClientName>ReferencedClient</CordisTypertClientName>', composition,
+        '<ItemGroup><CordisTypertClientReferenceModel Include="' + external_model.name + '"/></ItemGroup>')
+    shutil.copyfile(model, remote / model.name)
+    shutil.copyfile(external_model, remote / external_model.name)
+    run("referenced-remote-contracts-pack", [dotnet, "pack", remote_project, "-c", "Release", "-o", feed])
+    remote_source = remote / "obj/Release/net10.0/cordis-typert/ReferencedClient.Generated.g.cs"
+    remote_first = remote_source.read_bytes()
+    assert reference_identity.encode() in remote_first
+    remote_time = remote_source.stat().st_mtime_ns
+    run("referenced-remote-incremental", [dotnet, "build", remote_project, "-c", "Release"])
+    assert remote_source.stat().st_mtime_ns == remote_time
+    remote_caller, remote_caller_project = project("ReferencedRemoteConsumer", '<OutputType>Exe</OutputType>',
+        '<PackageReference Include="IndependentReferenced.Remote" Version="1.0.0-alpha"/>')
+    shutil.copyfile(fixtures / "ReferencedRemoteConsumer.cs", remote_caller / "Program.cs")
+    run("referenced-remote-caller-build", [dotnet, "build", remote_caller_project, "-c", "Release"])
+    remote_host, remote_host_project = project("ReferencedRemoteHost", '<OutputType>Exe</OutputType>',
+        '<PackageReference Include="IndependentReferenced.Provider" Version="1.0.0-alpha"/>'
+        f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>'
+        '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
+    shutil.copyfile(fixtures / "ReferencedRemoteHost.cs", remote_host / "Program.cs")
+    run("referenced-remote-host-build", [dotnet, "build", remote_host_project, "-c", "Release"])
+    def remote_call(label, expected):
+        with hosted(label + "-host", [dotnet, remote_host / "bin/Release/net10.0/ReferencedRemoteHost.dll"]) as address:
+            result = run(label, [dotnet, remote_caller / "bin/Release/net10.0/ReferencedRemoteConsumer.dll", address, str(expected)])
+            assert ("referenced Remote package caller passed: " + str(expected)).encode() in result
+        for assembly in ("IndependentDeclarations.External.dll", "IndependentReferenced.Provider.dll"):
+            assert not list((remote_caller / "bin").rglob(assembly)), "Remote Caller acquired author implementation"
+    remote_call("referenced-remote-caller", 11)
+
     external_source = external / "External.cs"
     original_source = external_source.read_bytes()
     try:
@@ -355,6 +392,25 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     finally:
         external_source.write_bytes(original_source)
     changed_identity = json.loads(changed_reference)["contractIdentity"]
+    (remote / external_model.name).write_bytes(changed_reference)
+    remote_project.write_bytes(remote_project.read_bytes().replace(b'<Version>1.0.0-alpha</Version>', b'<Version>1.0.1-alpha</Version>'))
+    run("referenced-remote-changed-pack", [dotnet, "pack", remote_project, "-c", "Release", "-o", feed])
+    assert changed_identity.encode() in remote_source.read_bytes() and remote_source.read_bytes() != remote_first
+    remote_caller_project.write_bytes(remote_caller_project.read_bytes().replace(b'Version="1.0.0-alpha"', b'Version="1.0.1-alpha"'))
+    run("referenced-remote-changed-caller-build", [dotnet, "build", remote_caller_project, "-c", "Release"])
+    remote_call("referenced-remote-changed-caller", 12)
+    remote_project_bytes = remote_project.read_bytes()
+    try:
+        remote_project.write_bytes(remote_project_bytes.replace(
+            ('<CordisTypertClientReferenceModel Include="' + external_model.name + '"/>').encode(), b''))
+        rejected = run("referenced-remote-missing-model", [dotnet, "build", remote_project, "-c", "Release"], True)
+        assert b"TYPM114" in rejected and not remote_source.exists()
+    finally:
+        remote_project.write_bytes(remote_project_bytes)
+    run("referenced-remote-failed-clean", [dotnet, "clean", remote_project, "-c", "Release"])
+    assert not remote_source.exists() and not (remote_source.parent / "client-reference-models.rsp").exists()
+    run("referenced-remote-cold-build", [dotnet, "build", remote_project, "-c", "Release"])
+    assert changed_identity.encode() in remote_source.read_bytes()
     assert changed_identity != reference_identity
     reference_input.write_bytes(changed_reference)
     assert json.loads(primary_input.read_text(encoding="utf-8"))["contractIdentity"] == main_identity
@@ -408,11 +464,13 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     shutil.copyfile(primary_input, output / "referenced-data-main-model.json")
     shutil.copyfile(reference_input, output / "referenced-data-library-model.json")
     (output / "referenced-data-evidence.json").write_text(json.dumps({
-        "consumer": "reference-composed-ordinary-data-carrier-stj", "mainContractIdentity": main_identity,
+        "consumer": "reference-composed-data-and-remote", "mainContractIdentity": main_identity,
         "referenceContractIdentity": reference_identity, "changedReferenceContractIdentity": changed_identity,
         "packageReferencesOnly": True, "authorImplementationsReferenced": False,
         "namesRequiredNullDefaultsAndRecursion": True, "referenceRootsDoNotExpandMainRoots": True,
         "sourceAuthoredConflict": True, "referenceChangeRegeneratedAndConsumed": True,
+        "remoteBuildPackAndHttpInvocation": True, "remoteMissingReferenceRejected": True,
+        "remoteReferenceChangeConsumedThroughNewPackage": True,
         "cleanAndFailedBuildRemovedOwnedOutputs": True, "refusals": refusals
     }, indent=2) + "\n", encoding="utf-8")
 
@@ -649,6 +707,14 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
     shutil.copyfile(fixtures / "SharedHost.cs", host / "Program.cs")
     run("shared-declaration-host-build", [dotnet, "build", host_project, "-c", "Release"])
     with hosted("shared-declaration-host", [dotnet, host / "bin/Release/net10.0/SharedRemoteHost.dll"], expect_stop=True) as address:
+        node = shutil.which("node")
+        if node is None:
+            raise RuntimeError("The shared Remote TypeScript consumer requires the repository's Node runtime.")
+        ts_result = subprocess.run([node, str(fixtures.parents[2] / "scripts/typert-shared-client-consumer.mjs"),
+            address, str(output / "shared-typescript")], capture_output=True, timeout=90)
+        (output / "shared-typescript.log").write_bytes(ts_result.stdout + ts_result.stderr)
+        if ts_result.returncode:
+            raise RuntimeError("Shared TypeScript consumer failed: " + ts_result.stderr.decode("utf-8", "replace")[-5000:])
         result = run("shared-declaration-caller", [dotnet, shared_caller / "bin/Release/net10.0/SharedDeclarationConsumer.dll", address])
         assert b"saved Remote declaration HTTP consumer passed" in result
     shared_assets = json.loads((shared_caller / "obj/project.assets.json").read_text(encoding="utf-8"))

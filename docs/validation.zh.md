@@ -397,3 +397,11 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 第一次定向 HTTP 调用暴露了显式 null 身份导致的本地 STJ 序列化失败。修正只调整内部请求封套，没有放松 Host codec 或其他参数规则。该失败日志和后续使用混合探测 feed 的定向检查分别保留身份；只有上述冻结源码、新 feed 的完整门禁属于本批验收证据。
 
 本检查点未执行 Linux、Native AOT、原版 DSH 源测试／跨运行时差分、真实浏览器或具名 UI、托管 CI、Maker、源码归档构建及远端 SourceLink 获取。历史结果继续绑定原源码身份。浏览器 scoped 装配、owned Context／引用值、Peer、上行／双向流、完整事件及附件仍未完成。没有修改依赖、上游 pin、包版本，也没有合并、发布或部署。
+
+## 共享 Remote Connection 与 typed uplink，本地证据 2026-10-12
+
+[本地回执](../verification/remote-connection-local-2026-10-12/evidence.json)记录基于 `07d6fba` 的未提交候选及确切源码／包哈希。独立 Windows .NET 与严格 TS 调用者通过标准 unary/results、scoped、multipart 和文本 mux。Typed uplink 覆盖首读前发送、有序半关闭、optional/nullable 输入、嵌套集合空性、作者捕获后仍拒绝的 codec 失败、逻辑协议／溢出错误、兄弟流存活及非法 carrier 帧。独立 .NET 调用者也已在关闭反射回退的条件下编译并以 Windows x64 Native AOT 执行，Host 为托管程序。
+
+固定 DSH 的 unary/附件及 mux 实现在 Node 下对原生 Host 执行。固定 mux 上行保留缺失/null 和半关闭，并收到 Host codec 失败。这是有限的固定客户端互通，不代表整个浏览器 SDK、产品事件或 stdio。此前本地候选曾通过生产 mux 执行真实浏览器模块恢复；其源码身份与本次 uplink 候选独立。
+
+前一冻结包候选在修复包源引用后，通过完整独立声明／引用、Settings、管理和通知消费者脚本。当前共享调用者有自己的包回执，不借用此前完整门禁源码测试或旧 AOT 的结果。仓库级验收仍未完成：早先包门禁因 SourceLink 要求已提交源码而在未提交工作树上失败，未放宽门禁。生成空性、模型接线、错误详情和隔离缓存设置的失败证据分别保留。本条不宣称 Linux、完整当前浏览器验收、反向 Context/owned values 或完整事件已完成。

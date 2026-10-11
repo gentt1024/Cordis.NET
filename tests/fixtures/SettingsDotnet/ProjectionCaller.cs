@@ -1,3 +1,4 @@
+using TypertConnection = Cordis.Composition.TypertConnection;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -6,12 +7,13 @@ using Caller.Edges;
 
 if (JsonSerializer.IsReflectionEnabledByDefault) throw new Exception("Reflection fallback enabled.");
 using var http = new HttpClient(new Replies());
-using var client = new PrimitivesClient(http, new Uri("https://test.invalid/remote"));
-if (await client.CountAsync(null, 0, false, null, 0) != 0) throw new Exception("Primitive result wrong.");
-if (await client.TextAsync() is not null) throw new Exception("Nullable string result wrong.");
-if (!(await client.ValuesAsync()).SequenceEqual(new[] { 1, 2 })) throw new Exception("Collection result wrong.");
-using var optional = new OptionalClient(http, new Uri("https://test.invalid/remote"));
-if (await optional.CountAsync() != 7 || await optional.CountAsync(3) != 3)
+await using var connection = new TypertConnection(http, new Uri("https://test.invalid/remote"));
+await using var client = new PrimitivesClient(connection);
+if ((await client.CountAsync(null, 0, false, null, 0)).Value != 0) throw new Exception("Primitive result wrong.");
+if ((await client.TextAsync()).Value is not null) throw new Exception("Nullable string result wrong.");
+if (!((await client.ValuesAsync()).Value).SequenceEqual(new[] { 1, 2 })) throw new Exception("Collection result wrong.");
+await using var optional = new OptionalClient(connection);
+if ((await optional.CountAsync()).Value != 7 || (await optional.CountAsync(3)).Value != 3)
     throw new Exception("Optional constants changed in the generated client.");
 foreach (var type in new[] { typeof(int), typeof(string), typeof(int[]) })
     if (PrimitivesClientJson.Default.GetTypeInfo(type) is null)
@@ -40,28 +42,28 @@ catch (JsonException)
 
 if (JsonSerializer.Deserialize("{\"text\":\"yes\"}", metadata)!.Text != "yes")
     throw new Exception("Nullable DTO metadata decode failed.");
-using var numeric = new NumericDefaultsClient(http, new Uri("https://test.invalid/remote"));
-var defaults = await numeric.ValueAsync(new NumericDefaults());
+await using var numeric = new NumericDefaultsClient(connection);
+var defaults = (await numeric.ValueAsync(new NumericDefaults())).Value;
 if (defaults.Ratio != 1.25f || defaults.Amount != 0.1m ||
     defaults.EmptyRatio is not null || defaults.EmptyAmount is not null)
     throw new Exception("Absent numeric fields did not retain nullable initializers.");
-var cleared = await numeric.ValueAsync(
+var cleared = (await numeric.ValueAsync(
     new NumericDefaults
     {
         Ratio = null,
         Amount = null
-    });
+    })).Value;
 if (cleared.Ratio is not null || cleared.Amount is not null ||
     cleared.EmptyRatio is not null || cleared.EmptyAmount is not null)
     throw new Exception("Explicit null numeric fields did not override initializers.");
-var numbers = await numeric.ValueAsync(
+var numbers = (await numeric.ValueAsync(
     new NumericDefaults
     {
         Ratio = 2.5f,
         Amount = 12.75m,
         EmptyRatio = 3.5f,
         EmptyAmount = 4.25m
-    });
+    })).Value;
 if (numbers.Ratio != 2.5f || numbers.Amount != 12.75m ||
     numbers.EmptyRatio != 3.5f || numbers.EmptyAmount != 4.25m)
     throw new Exception("Explicit nullable numeric values changed in the generated client.");
@@ -74,7 +76,7 @@ sealed class Replies : HttpMessageHandler
     {
         var body = await request.Content!.ReadAsStringAsync(token);
         using var document = JsonDocument.Parse(body);
-        var args = document.RootElement.GetProperty("args");
+        var args = document.RootElement.GetProperty("payload").GetProperty("args");
         var value = request.RequestUri!.AbsolutePath.Split('/').Last() switch
         {
             "count" when request.RequestUri!.AbsolutePath.Contains("/optional/", StringComparison.Ordinal) =>
@@ -87,7 +89,7 @@ sealed class Replies : HttpMessageHandler
         };
         return new(HttpStatusCode.OK)
         {
-            Content = new StringContent("{\"ok\":true,\"value\":" + value + "}", Encoding.UTF8, "application/json")
+            Content = new StringContent("{\"type\":\"server-response\",\"rpcId\":" + document.RootElement.GetProperty("rpcId").GetRawText() + ",\"result\":{\"ok\":true,\"value\":" + value + "}}", Encoding.UTF8, "application/json")
         };
     }
 

@@ -4,6 +4,8 @@ if (args.Length != 2 || args[0] != "--output")
     throw new ArgumentException("Usage: Cordis.ClientAssets --output <directory>");
 var directory = Path.GetFullPath(args[1]);
 Directory.CreateDirectory(directory);
+Save("cordis-remote.mjs", TypertClientRuntime.Module);
+Save("cordis-remote.d.mts", TypertClientRuntime.Declaration);
 Write("management", PluginManagerTypert.Contribution("Cordis.NET.PluginManager"));
 Write("notifications", RemoteNotificationsTypert.Contribution("Cordis.NET.Notifications"));
 Write("settings", SettingsControllerTypert.Contribution("Cordis.NET.Settings"));

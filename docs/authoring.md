@@ -214,7 +214,7 @@ Root nullable reference annotations, such as a `string?` argument or `Task<strin
 
 `TypertCodec` prepares and checks its schema lazily when `Schema` or `Decode` is first used, including nullable input. Decode validates the supported native subset and then deserializes. Encode serializes with the supplied metadata without preparing or validating the result schema. Unsupported schema features fail explicitly. Client projection preserves `prefixItems` as readonly tuples, including bounded optional prefix elements, nested local references, and unbounded typed or unknown tails. A minimum beyond the prefix or a finite tail length limit is rejected. The [tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) supplies an explicit schema to a generated binding and distinguishes the real closed-tuple HTTP call from codec/projection-only variants. It does not demonstrate Roslyn inference of CLR tuple types or the complete source type graph.
 
-Remote methods support required ordinary parameters and optional parameters with supported constant defaults, returning `Task<T>` or, with explicit `RemoteMethod(Stream = true)`, `IAsyncEnumerable<T>`. Omitting an optional argument uses its authored default; explicit null remains a separate wire value subject to the parameter's null contract. A final `CancellationToken` parameter supplies cooperative cancellation and may declare `= default`; it is not a wire argument. See the [optional-parameter consumer](../tests/fixtures/TypertOptional/OptionalConsumer.cs) for omission, null and required-input cases. Explicit Context and object lookup declarations have host-owned registration APIs; the scoped/lookup example remains in the Typert fixture.
+Remote methods support required ordinary parameters and optional parameters with supported constant defaults, returning `Task`, `Task<T>` or, with explicit `RemoteMethod(Stream = true)`, `IAsyncEnumerable<T>`. Omitting an optional argument uses its authored default; explicit null remains a separate wire value subject to the parameter's null contract. A final `CancellationToken` parameter supplies cooperative cancellation and may declare `= default`; it is not a wire argument. See the [optional-parameter consumer](../tests/fixtures/TypertOptional/OptionalConsumer.cs) for omission, null and required-input cases. Explicit Context and object lookup declarations have host-owned registration APIs; the scoped/lookup example remains in the Typert fixture.
 
 ### Register, call and withdraw contracts
 
@@ -226,27 +226,28 @@ The native Gateway also checks provider generations after successful resolution 
 
 For dynamic bundle replacement, keep the Typert loader owner and call `SuspendAsync` with the affected exact Loader request names after candidate preparation and before switching provider Fibers. These names can differ from CLR resolver keys when deployment routing supplies aliases. After the resolver returns and commits, call `ResumeAsync` for those requests. On failure, resume only when `PluginReplacementFailure.Recovery` confirms `Succeeded`; otherwise keep that scope suspended. Resume propagates registration errors and withdraws its selected batch on failure. Same-request lifecycle reentry from registration or withdrawal observers is refused. Suspension detaches unfinished imports without forcibly stopping resolver code; retained tasks can still retain their old code until they settle. The independent multi-entry consumer verifies unchanged contribution identity and calls for an unrelated package, refreshed CLR codecs after replacement, recovery ordering and old invocation rejection. Retained contributions, clients, service objects or errors can still keep collectible code alive; release them when their ownership ends.
 
-`MapCordisRemote` maps a host-authorized `TypertGateway` to native unary JSON and downlink NDJSON routes. The host supplies the authorization callback. Request abort and generated-client `AbortSignal` convey cancellation; `byte[]` results use JSON base64. Host unary dispatch passes the signal to the binding and normalizes a business failure while cancelled; it does not preempt successful business execution. Downlink reads race cancellation, then cleanup waits for a pending native read before disposing the enumerator in its invocation Context. A body or cleanup that never settles can prevent termination, as in the pinned stream cleanup boundary. This carrier does not promise the complete pinned Typert wire protocol.
+`MapCordisRemote` maps a Host-owned `TypertHostConnection` to standard HTTP unary and text WebSocket mux routes. Create the Connection inside the existing Context execution domain, and register ASP.NET WebSocket middleware with `UseWebSockets()`. The Connection owns its operator Peer; requests and sockets borrow it. Authorization remains the Host's callback. Socket exit releases its Peer registration; it does not dispose the Peer.
 
-Dispose or drain active Gateway iterators before closing their Cordis root. Iterator cleanup re-enters that execution domain; a closed root cannot run it.
+Unary uses the fixed `client-request` / `server-response` envelope and correlated `rpcId`. Host authors return business values, `Task`, or their declared stream. The shared runtime owns framing and failures. A cancelled business failure is normalized by the Gateway; cancellation does not prove that a write never executed. Stream cleanup waits for pending native reads before disposing the iterator in its invocation Context. Drain active iterators before closing that Context.
 
-Generate `.mjs` and `.d.mts` artifacts with `TypertArtifacts.GenerateClient(contribution)`. The result uses the same descriptors and schemas as the host. Generated clients expose typed calls and the Remote result/error envelope:
+Generate `.mjs` and `.d.mts` artifacts with `TypertArtifacts.GenerateClient(contribution)`. Ship `TypertClientRuntime.Module` as `cordis-remote.mjs` and `TypertClientRuntime.Declaration` as `cordis-remote.d.mts` beside them. `Cordis.ClientAssets` writes these shared assets once for its standard modules.
 
 ```typescript
-import { createRemote, mountRemote } from "./remote.mjs";
+import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";
 
-const client = createRemote("/remote");
-const echo = client["sample/Echo"];
-const result = await echo({
-  request: { Text: "hello", Count: 1 },
-});
-client.dispose();
-
-const mounted = await mountRemote(ctx, "/remote");
+const connection = new TypertConnection(new URL("/remote", location.href));
+const client = createRemote(connection);
+const result = await client["sample/Echo"]({ request: { Text: "hello", Count: 1 } });
+if (!result.ok) console.error(result.error.code, result.error.message);
+await client.dispose();
+const mounted = await mountRemote(ctx, connection);
 await mounted.dispose();
+await connection.dispose();
 ```
 
-Here `ctx` is the client Cordis owner. Await `mountRemote`: it registers owner cleanup and contributes methods to the shared root `remote.<namespace>` service. Contributions with disjoint methods can share that namespace; duplicate methods or an unrelated existing service are refused. Withdrawal removes only that contribution's methods, and final withdrawal removes the namespace service. Disposing either client stops admission and aborts its active fetches.
+Await `mountRemote`: it registers owner cleanup and contributes methods to the shared root `remote.<namespace>` service. Disjoint contributions can share a namespace; duplicate methods or unrelated services are refused. Withdrawal removes only that contribution, then removes the namespace when its last contribution leaves. Client disposal drains its work without closing the borrowed Connection. The application owns Connection disposal. Optional fetch and WebSocket factories configure the application's carrier identity, without changing generated methods or Host authorization.
+
+The local continuation has exercised unary, downlink mux and unary multipart attachment recovery with generated .NET/TS clients and the fixed Connection under Node. Typed uplink, reverse Context/owned-value and complete event forwarding remain under implementation. The previous base64 wire and per-method NDJSON paths are removed.
 
 ### Consumer evidence and remaining scope
 
@@ -281,17 +282,30 @@ A separate contract package can consume a copy of that artifact without referenc
 </PropertyGroup>
 ```
 
+For external DTO declarations, add explicit reference models to the client project:
+
+```xml
+<ItemGroup>
+  <CordisTypertClientReferenceModel Include="Shared.cordis.model.json" />
+</ItemGroup>
+```
+
+The CLI equivalent is `emit-dotnet --reference-models references.rsp`, with one model path per line. Remote selection stays in the primary model. Referenced source definitions resolve by complete assembly-qualified identity through the same composition used by ordinary data emission. Metadata signatures alone do not preserve initializers and cannot replace the source model. Missing or conflicting definitions reject generation and remove stale client output. References are build inputs; their response file and generated source belong to `Clean`. The independent caller consumes the generated contract package without loading provider assemblies.
+
 The target writes ordinary DTO/client source before `CoreCompile`, so STJ sees it in the same compilation. Same-round source-generator output cannot serve as STJ input. Generated source is owned by `Clean`; identical incremental emission preserves its bytes and timestamp. This opt-in command-line build is the consumer gate's boundary; first-build IDE/design-time integration still needs separate evidence. The selected SDK must provide the matching Roslyn assemblies; the package does not redistribute them.
 
-Nullable float and decimal constant initializers retain their authored types and defaults. An absent JSON member keeps its initializer; explicit null replaces it. Caller DTOs share the selected target namespace with generated helper types. A conflicting name, such as `DemoClientFailure` when `CordisTypertClientName` is `DemoClient`, is rejected before compilation with both origins in the diagnostic. Choose a distinct DTO or client name; the emitter does not silently rename public types and removes its previous generated output when it refuses a projection.
+Nullable float and decimal constant initializers retain their authored types and defaults. An absent JSON member keeps its initializer; explicit null replaces it. Caller DTOs share the selected target namespace with generated helper types. A conflicting name, such as `DemoClient` when `CordisTypertClientName` is `DemoClient`, is rejected before compilation with both origins in the diagnostic. Choose a distinct DTO or client name; the emitter does not silently rename public types and removes its previous generated output when it refuses a projection.
 
 ```csharp
 using var http = new HttpClient();
-using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
-var view = await remote.DescribeAsync();
+await using var connection = new TypertConnection(http, new Uri("http://localhost:5000/remote"));
+await using var remote = new SettingsClient(connection);
+var reply = await remote.DescribeAsync();
+if (!reply.Ok) throw reply.Error;
+var view = reply.Value;
 ```
 
-The caller owns the supplied HttpClient. Direct unary calls return typed values or throw the existing `RemoteError`, preserving owner codes and detached JSON details. Generated downlink methods return `IAsyncEnumerable<T>` over NDJSON with `ResponseHeadersRead`; each enumerator owns its response and reader, while client disposal cancels active reads. Error items retain the same failure shape, and truncated items fail. This is a native adaptation of the existing result envelope. Client disposal stops admission, cancels its transport requests and rejects late successful completions; it does not dispose the borrowed HttpClient or promise forced Host termination.
+The caller owns the supplied HttpClient and shared `TypertConnection`. Ordinary calls return `Task<RemoteResult<T>>`; inspect `Ok` before reading `Value` or `Error`. No-value authors return `Task`, projected as `Task<RemoteResult>`; absent success and explicit null remain distinct. Missing adapters or an absent Connection are local assembly exceptions. Remote failures preserve arbitrary owner codes and detached details; carrier failure and cancellation become unary outcomes. Downlink calls asynchronously prepare an eagerly opened `RemoteStreamHandle<T>`. Iterate raw business items once and await disposal. Stream Remote errors, carrier failures, local misuse and external cancellation remain distinct exceptions. Client disposal awaits its own calls and cleanup without disposing borrowed resources.
 
 The production `SettingsController` resolves the optional ordinary `ISettingsProvider` named `settings` on every call. Mount `SettingsForms` over the session's existing `ConfigurationOperations`; it derives uniquely addressable active forms from the authors' live Config declarations. Its numeric revisions observe Fiber identity, complete schema and raw configuration. The same profile queue owns layered redacted reads, complete candidate validation and writes. Describe/update/replace/mutate use the one generated contract. See [Settings contract migration](settings-contract-migration.md) for public calls and removed hash-only Settings paths.
 
@@ -299,6 +313,40 @@ The [independent .NET Settings gate](../scripts/verify-typert-dotnet.py) packs a
 
 This path covers unary callers, supported downlink streams and the standard Settings, PluginManager and notification consumers. Native document integration, rich graphs, complete source-type analysis and TS generation from the ordinary declaration model remain open. Existing TS/Web output stays available and retains its separate gate.
 
+
+## Typed Remote uplink
+
+Declare the uplink on the author method, separately from ordinary wire arguments:
+
+```csharp
+[RemoteMethod("exchange", Stream = true)]
+public async IAsyncEnumerable<string> Exchange(
+    string prefix,
+    [RemoteUplink] IAsyncEnumerable<string?> input,
+    [EnumeratorCancellation] CancellationToken cancellationToken = default)
+{
+    await foreach (var item in input.WithCancellation(cancellationToken))
+        yield return prefix + (item ?? "null");
+    yield return "complete";
+}
+```
+
+Register the input value type in the author's STJ context, here `typeof(string)`. The ordinary parameter remains an argument; the input sequence is supplied by the Invocation. The common declaration model retains the input's root and supported collection element nullability. `typeof(T)` alone cannot express nullable reference inputs. For explicitly absent items use `IAsyncEnumerable<RemoteOptional<string?>>`: `HasValue` distinguishes an absent item from a present null. This value is not an extra wire object.
+
+```csharp
+await using var stream = await client.ExchangeAsync("prefix:", cancellationToken);
+stream.Send(null);       // Local validation and enqueue; no Host acknowledgement.
+stream.Send("first");   // Sending before the first read is supported.
+stream.End();            // Drain queued input and half-close; keep reading output.
+await foreach (var item in stream.WithCancellation(cancellationToken))
+    Console.WriteLine(item);
+```
+
+The generated return type is `Task<RemoteStreamHandle<string, string?>>`. Downlink-only methods retain `RemoteStreamHandle<T>` without send/end capabilities. Both have one output consumer. `End` is idempotent, including after termination. Sending after half-close or retirement fails locally. `DisposeAsync` cancels this logical call and awaits owned local work; it does not acknowledge remote business retirement. Host input codec failure terminates the logical stream even when the author catches the input exception. Sibling streams and the Connection remain active.
+
+Generated TypeScript returns `RemoteDuplexHandle<Output, Input>` with `send`, `end`, and awaited `dispose`; optional items use `undefined`, independently of `null`. Its send boundary checks lossless JSON, and the Host validates the declared codec. .NET also validates its generated input codec before enqueueing. Text mux uses ordinary item values and omits `value` for absence; it adds no binary frame or wrapper. Primitive, nullable value, supported collection/dictionary and existing bounded DTO codecs retain their actual backend limits. Owned objects and reverse Context/event delivery remain separate open work.
+
+Composition's package supplies its own declaration model to the MSBuild client reference set. Other source models remain explicit `CordisTypertClientReferenceModel` inputs. A direct compiler invocation must supply the corresponding models with `--reference-models`; it cannot recover authored defaults from assembly metadata.
 
 ## Ordinary declaration models
 
@@ -386,7 +434,8 @@ await callerContext.RunAsync(owner =>
         _ => null)); // Reverse lookup is unused by this outbound-only example.
     return Task.CompletedTask;
 });
-using var client = new DocumentClient(httpClient, remoteBase);
+await using var connection = new TypertConnection(httpClient, remoteBase);
+await using var client = new DocumentClient(connection);
 await client.ReadAsync("doc-1");
 var scoped = client.ForContext(callerContext, registry);
 await scoped.ReadAsync();

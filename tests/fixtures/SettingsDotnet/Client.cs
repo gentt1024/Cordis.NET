@@ -1,3 +1,4 @@
+using TypertConnection = Cordis.Composition.TypertConnection;
 using System.Text;
 using System.Text.Json;
 using IndependentSettings.Client;
@@ -12,7 +13,8 @@ using var http = new HttpClient
     Timeout = TimeSpan.FromSeconds(30)
 };
 var host = new Uri(args[0]);
-using var remote = new SettingsClient(http, new Uri(host, "/remote"));
+await using var connection = new TypertConnection(http, new Uri(host, "/remote"));
+await using var remote = new SettingsClient(connection);
 var mirror = new DescribeMirror(remote);
 await mirror.LoadAsync();
 var initial = mirror.View ?? throw new InvalidOperationException("Describe did not publish a complete view.");
@@ -37,13 +39,13 @@ var missingSecrets = serialized.Replace("\"secrets\":", "\"omittedSecrets\":", S
 ExpectJsonFailure(missingSecrets, "Missing required secrets was accepted.");
 var missingApplies = serialized.Replace("\"applies\":", "\"omittedApplies\":", StringComparison.Ordinal);
 ExpectJsonFailure(missingApplies, "Missing required applies was accepted.");
-using (var bad = new StringContent("""{"args":{"unexpected":1}}""", Encoding.UTF8, "application/json"))
+using (var bad = new StringContent("""{"type":"client-request","rpcId":"bad-argument","method":"settings/describe","payload":{"args":{"unexpected":1}}}""", Encoding.UTF8, "application/json"))
 using (var response = await http.PostAsync(new Uri(host, "/remote/settings/describe"), bad))
 using (var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync()))
 {
-    Assert(!document.RootElement.GetProperty("ok").GetBoolean(), "Unexpected Remote argument was accepted.");
+    Assert(!document.RootElement.GetProperty("result").GetProperty("ok").GetBoolean(), "Unexpected Remote argument was accepted.");
     Assert(
-        document.RootElement.GetProperty("error").GetProperty("code").GetString() == "gateway/arguments-invalid",
+        document.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString() == "gateway/arguments-invalid",
         "Argument rejection lost its contract code.");
 }
 
@@ -73,7 +75,7 @@ var accepted = remote.DescribeAsync();
 await Control("wait-held");
 await Control("withdraw");
 await Control("release");
-VerifyView(await accepted);
+VerifyView((await accepted).Value);
 await Control("reprovide");
 
 // Follow the pinned Settings mirror's held-view and invalidation oracle with the typed caller.
@@ -96,32 +98,33 @@ await Control("release");
 await Failure(() => oldDefinition, "gateway/definition-unavailable");
 await Control("reregister");
 await Control("reprovide");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 await Control("suspend");
 await Failure(() => remote.DescribeAsync(), "gateway/definition-unavailable");
 await Control("resume");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 
 await Control("logger-fail");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 await Control("logger-restore");
 
 await Control("hold");
-using var retiringClient = new SettingsClient(http, new Uri(host, "/remote"));
+await using var retiringClient = new SettingsClient(connection);
 var lateClientCall = retiringClient.DescribeAsync();
 await Control("wait-held");
-retiringClient.Dispose();
+var retiring = retiringClient.DisposeAsync().AsTask();
 await Control("release");
-await Failure(() => lateClientCall, "gateway/internal");
+await Failure(() => lateClientCall, "gateway/cancelled");
+await retiring;
 await Failure(() => retiringClient.DescribeAsync(), "gateway/internal");
 await Control("reprovide");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 using (var stillBorrowed = await http.PostAsync(new Uri(host, "/control/status"), null))
     Assert(stillBorrowed.IsSuccessStatusCode, "Disposing one client disposed its borrowed HttpClient.");
-var forms = await remote.DescribeAsync();
+var forms = (await remote.DescribeAsync()).Value;
 var one = forms.Namespaces.Single(row => row.Ns == "one");
 var two = forms.Namespaces.Single(row => row.Ns == "two");
-var changed = await remote.UpdateAsync("one", Json("""{"label":"edited"}"""), one.Revision);
+var changed = (await remote.UpdateAsync("one", Json("""{"label":"edited"}"""), one.Revision)).Value;
 Assert(
     changed.Revision == one.Revision + 1 && changed.Value.GetProperty("label").GetString() == "edited",
     "Numeric update did not publish the committed form revision.");
@@ -139,16 +142,16 @@ Assert(
     stale.Details.Value.GetProperty("actual").GetDouble() == changed.Revision,
     "Numeric conflict details changed.");
 Assert(await Source() == saved, "A stale form request was persisted.");
-forms = await remote.DescribeAsync();
+forms = (await remote.DescribeAsync()).Value;
 Assert(
     forms.Namespaces.Single(row => row.Ns == "two").Revision == two.Revision,
     "Editing one entry advanced another entry.");
-changed = await remote.UpdateAsync("one", Json("""{"nested":{"visible":"without-prior-check"}}"""));
+changed = (await remote.UpdateAsync("one", Json("""{"nested":{"visible":"without-prior-check"}}"""))).Value;
 Assert(
     changed.Value.GetProperty("nested").GetProperty("visible").GetString() == "without-prior-check" &&
     changed.Secrets.All(secret => secret.Set),
     "Omitted expectedRevision bypassed or damaged form editing.");
-changed = await remote.MutateAsync(
+changed = (await remote.MutateAsync(
     "one",
     new[]
     {
@@ -157,13 +160,13 @@ changed = await remote.MutateAsync(
             Value = Json("\"written-secret\"")
         }
     },
-    changed.Revision);
+    changed.Revision)).Value;
 Assert(
     !changed.Value.TryGetProperty("rootSecret", out _) && changed.Secrets.All(secret => secret.Set),
     "A writable secret was returned by the form.");
 saved = await Source();
 Assert(saved.Contains("written-secret", StringComparison.Ordinal), "Secret write did not persist.");
-changed = await remote.MutateAsync(
+changed = (await remote.MutateAsync(
     "one",
     new[]
     {
@@ -176,7 +179,7 @@ changed = await remote.MutateAsync(
             Value = Json("null")
         }
     },
-    changed.Revision);
+    changed.Revision)).Value;
 Assert(
     changed.Value.GetProperty("nested").GetProperty("visible").GetString() == "path-edit" &&
     changed.Value.GetProperty("genuineNull").ValueKind == JsonValueKind.Null,
@@ -207,10 +210,10 @@ await RawFailure(
     "settings/rejected");
 await RawFailure("mutate", """{"ns":"one","ops":[{"op":"set","path":[],"value":null}]}""", "settings/rejected");
 Assert(await Source() == beforeRefusal, "Invalid wire input changed the profile document.");
-changed = await remote.MutateAsync(
+changed = (await remote.MutateAsync(
     "one",
     new[] { new SettingsPathOp("unset", new[] { "rootSecret" }) },
-    changed.Revision);
+    changed.Revision)).Value;
 Assert(
     changed.Secrets.Single(secret => secret.Path.SequenceEqual(new[] { "rootSecret" })).Set &&
     !(await Source()).Contains("written-secret", StringComparison.Ordinal),
@@ -223,31 +226,31 @@ Assert(
     (await Source()).Contains("committed-before-result-failure", StringComparison.Ordinal),
     "A post-commit describe failure was mistaken for a rejected write.");
 await Control("reprovide");
-changed = (await remote.DescribeAsync()).Namespaces.Single(row => row.Ns == "one");
-changed = await remote.ReplaceAsync("one", Json("{}"), changed.Revision);
+changed = ((await remote.DescribeAsync()).Value).Namespaces.Single(row => row.Ns == "one");
+changed = (await remote.ReplaceAsync("one", Json("{}"), changed.Revision)).Value;
 Assert(
     changed.Value.GetProperty("label").GetString() == "default-label" &&
     changed.Value.GetProperty("nested").GetProperty("visible").GetString() == "nested-visible",
     "Replace did not restore inherited live fields.");
 await Control("two-disable");
 Assert(
-    (await remote.DescribeAsync()).Namespaces.All(row => row.Ns != "two"),
+    ((await remote.DescribeAsync()).Value).Namespaces.All(row => row.Ns != "two"),
     "A disappeared namespace remained available.");
 await Control("two-enable");
-var reentered = (await remote.DescribeAsync()).Namespaces.Single(row => row.Ns == "two");
+var reentered = ((await remote.DescribeAsync()).Value).Namespaces.Single(row => row.Ns == "two");
 Assert(
     reentered.Revision > two.Revision && !reentered.AutoGenerate,
     "Entry reentry lost its owner revision or presentation policy.");
 await Control("settings-restart");
 Assert(
-    (await remote.DescribeAsync()).Namespaces.All(row => row.Revision == 0),
+    ((await remote.DescribeAsync()).Value).Namespaces.All(row => row.Revision == 0),
     "Form revisions persisted across Settings owner restart.");
 await Control("readonly");
 saved = await Source();
 await Failure(() => remote.UpdateAsync("one", Json("""{"label":"read-only-refused"}""")), "settings/rejected");
 Assert(await Source() == saved, "Omitted expectedRevision bypassed the read-only owner.");
 await Control("settings-restart");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 Console.WriteLine(
     "Typed Settings passed: numeric update/replace/mutate; stale/omitted revision; null/string refusal; layered redaction; ordered secret/null edits; independent entries and owner lifecycle; static metadata and provider/definition/client retirement.");
 
@@ -261,13 +264,13 @@ async Task<string> Source()
 
 async Task RawFailure(string method, string arguments, string code)
 {
-    using var body = new StringContent("{\"args\":" + arguments + "}", Encoding.UTF8, "application/json");
+    using var body = new StringContent("{\"type\":\"client-request\",\"rpcId\":\"raw-check\",\"method\":\"settings/" + method + "\",\"payload\":{\"args\":" + arguments + "}}", Encoding.UTF8, "application/json");
     using var response = await http.PostAsync(new Uri(host, "/remote/settings/" + method), body);
     response.EnsureSuccessStatusCode();
     using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
     Assert(
-        !document.RootElement.GetProperty("ok").GetBoolean() &&
-        document.RootElement.GetProperty("error").GetProperty("code").GetString() == code,
+        !document.RootElement.GetProperty("result").GetProperty("ok").GetBoolean() &&
+        document.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString() == code,
         "Invalid standard Settings input changed its refusal: " + method + " " + arguments);
 }
 
@@ -300,19 +303,12 @@ async Task Control(string command)
             "Fixture control " + command + " failed: " + await response.Content.ReadAsStringAsync());
 }
 
-static async Task<RemoteError> Failure<T>(Func<Task<T>> call, string code)
+static async Task<RemoteError> Failure<T>(Func<Task<Cordis.Composition.RemoteResult<T>>> call, string code)
 {
-    try
-    {
-        await call().WaitAsync(TimeSpan.FromSeconds(15));
-    }
-    catch (RemoteError failure)
-    {
-        Assert(failure.Code == code, "Expected " + code + ", got " + failure.Code + ": " + failure.Message);
-        return failure;
-    }
-
-    throw new InvalidOperationException("Expected Remote failure " + code + ".");
+    var result = await call().WaitAsync(TimeSpan.FromSeconds(15));
+    Assert(!result.Ok, "Expected Remote failure " + code);
+    Assert(result.Error.Code == code, "Expected " + code + ", got " + result.Error.Code);
+    return result.Error;
 }
 
 static void VerifyView(SettingsDescribeValue value)
@@ -433,14 +429,9 @@ internal sealed class DescribeMirror(SettingsClient remote)
                 Reads++;
                 SettingsDescribeValue? result = null;
                 string? error = null;
-                try
-                {
-                    result = await remote.DescribeAsync();
-                }
-                catch (RemoteError failure)
-                {
-                    error = failure.Message;
-                }
+                var response = await remote.DescribeAsync();
+                if (response.Ok) result = response.Value;
+                else error = response.Error.Message;
 
                 if (readGeneration != generation)
                     continue;

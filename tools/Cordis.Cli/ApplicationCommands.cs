@@ -156,9 +156,16 @@ internal static class ApplicationCommands
                                 ]));
                         return Task.CompletedTask;
                     });
+                    TypertHostConnection remoteConnection = null!;
+                    await session.Context.RunAsync(owner =>
+                    {
+                        remoteConnection = new(owner, gateway);
+                        return Task.CompletedTask;
+                    });
+                    ((WebApplication)host).UseWebSockets();
                     ((WebApplication)host).MapCordisRemote(
                         "/remote",
-                        gateway,
+                        remoteConnection,
                         (http, _) => Task.FromResult(http.Request.Headers.Authorization == authorization));
                     var management = new CordisManagement(
                         session,

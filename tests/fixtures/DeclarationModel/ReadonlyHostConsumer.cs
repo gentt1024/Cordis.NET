@@ -10,12 +10,12 @@ using var http = new HttpClient
     Timeout = TimeSpan.FromSeconds(20)
 };
 http.DefaultRequestHeaders.Authorization = new("consumer-policy");
-using var body = new StringContent("""{"args":{}}""", Encoding.UTF8, "application/json");
+using var body = new StringContent("""{"type":"client-request","rpcId":"readonly-check","method":"readonly/value","payload":{"args":{}}}""", Encoding.UTF8, "application/json");
 using var response = await http.PostAsync("/remote/readonly/value", body);
 response.EnsureSuccessStatusCode();
 using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-if (!result.RootElement.GetProperty("ok").GetBoolean() ||
-    result.RootElement.GetProperty("value").GetProperty("applies").GetString() != "live")
+if (!result.RootElement.GetProperty("result").GetProperty("ok").GetBoolean() ||
+    result.RootElement.GetProperty("result").GetProperty("value").GetProperty("applies").GetString() != "live")
     throw new Exception("Generated Host binding did not call the authored getter and STJ metadata.");
 using (var stopped = await http.PostAsync("/control/stop", null))
     stopped.EnsureSuccessStatusCode();

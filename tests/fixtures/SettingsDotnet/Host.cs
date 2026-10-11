@@ -82,7 +82,14 @@ builder.Logging.ClearProviders();
 builder.WebHost.UseKestrel();
 await using var app = builder.Build();
 app.Urls.Add("http://127.0.0.1:0");
-app.MapCordisRemote("/remote", gateway, (_, _) => Task.FromResult(true));
+TypertHostConnection remoteConnection = null!;
+await session.Context.RunAsync(owner =>
+{
+    remoteConnection = new(owner, gateway);
+    return Task.CompletedTask;
+});
+app.UseWebSockets();
+app.MapCordisRemote("/remote", remoteConnection, (_, _) => Task.FromResult(true));
 app.MapPost("/control/{command}", (string command) => controls.ExecuteAsync(command));
 app.MapPost(
     "/control/stop",

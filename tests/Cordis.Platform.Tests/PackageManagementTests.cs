@@ -20,6 +20,15 @@ namespace Cordis.Platform.Tests;
 [Collection("Collectible CLR")]
 public sealed partial class PackageManagementTests : IAsyncLifetime
 {
+    private static Task<HttpResponseMessage> PostRemoteAsync(HttpClient client, string path, object payload) =>
+        client.PostAsJsonAsync(path, new
+        {
+            type = "client-request",
+            rpcId = Guid.NewGuid().ToString(),
+            method = path["/remote/".Length..],
+            payload
+        });
+
     private readonly string directory = Directory.CreateTempSubdirectory("cordis-package-consumer-").FullName;
     private string Feed => Path.Combine(directory, "feed");
 
@@ -158,7 +167,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             client.DefaultRequestHeaders.Add(
                 "If-Cordis-Generation",
                 state.RootElement.GetProperty("generation").GetString());
-            using var grant = await client.PostAsJsonAsync(
+            using var grant = await PostRemoteAsync(client,
                 "/remote/pluginManager/setVersionExemption",
                 new
                 {
@@ -172,8 +181,8 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                 });
             Assert.Equal(HttpStatusCode.OK, grant.StatusCode);
             using var saved = JsonDocument.Parse(await grant.Content.ReadAsStringAsync());
-            Assert.True(saved.RootElement.GetProperty("ok").GetBoolean(), saved.RootElement.ToString());
-            var grantResult = saved.RootElement.GetProperty("value");
+            Assert.True(saved.RootElement.GetProperty("result").GetProperty("ok").GetBoolean(), saved.RootElement.ToString());
+            var grantResult = saved.RootElement.GetProperty("result").GetProperty("value");
             Assert.True(grantResult.GetProperty("changed").GetBoolean(), grantResult.ToString());
             Assert.Equal("applied", grantResult.GetProperty("application").GetString());
             Assert.False(
@@ -601,7 +610,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             "If-Cordis-Generation",
             state.RootElement.GetProperty("generation").GetString());
         var request = new PackageRequest("IndependentPlugin", "1.0.0", Feed);
-        using var inspectResponse = await client.PostAsJsonAsync(
+        using var inspectResponse = await PostRemoteAsync(client,
             "/remote/pluginManager/inspect",
             new
             {
@@ -612,10 +621,10 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             });
         inspectResponse.EnsureSuccessStatusCode();
         using var inspection = JsonDocument.Parse(await inspectResponse.Content.ReadAsStringAsync());
-        Assert.True(inspection.RootElement.GetProperty("ok").GetBoolean());
-        var hash = inspection.RootElement.GetProperty("value").GetProperty("contentHash").GetString()!;
+        Assert.True(inspection.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+        var hash = inspection.RootElement.GetProperty("result").GetProperty("value").GetProperty("contentHash").GetString()!;
 
-        using var response = await client.PostAsJsonAsync(
+        using var response = await PostRemoteAsync(client,
             "/remote/pluginManager/installBundle",
             new
             {
@@ -628,8 +637,8 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
 
         response.EnsureSuccessStatusCode();
         using var denied = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.True(denied.RootElement.GetProperty("ok").GetBoolean());
-        var result = denied.RootElement.GetProperty("value");
+        Assert.True(denied.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+        var result = denied.RootElement.GetProperty("result").GetProperty("value");
         Assert.Equal("build-not-approved", result.GetProperty("error").GetString());
         Assert.Equal("inspect", result.GetProperty("stage").GetString());
         Assert.False(result.GetProperty("installed").GetBoolean());

@@ -214,7 +214,7 @@ public partial class EchoService
 
 `TypertCodec` 在首次使用 `Schema` 或 `Decode` 时延迟准备并检查 Schema，可空输入也会执行检查。Decode 校验已支持的原生子集，再反序列化；Encode 使用所提供元数据序列化，不准备或校验结果 Schema。不受支持的 Schema 特性明确失败。客户端投影将 `prefixItems` 保留为 readonly tuple，支持有界可选前缀、嵌套局部引用及无界的类型化或 unknown 尾部。超出前缀的最小长度、有限的尾部长度上限会被拒绝。[tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) 向生成 binding 提供显式 Schema，区分真实闭合 tuple HTTP 调用与仅 codec/投影的变体证据；它不证明 Roslyn 推断 CLR tuple 类型或完整源类型图。
 
-Remote 方法支持必需普通参数，以及带受支持常量默认值的可选参数；返回 `Task<T>`，或通过显式 `RemoteMethod(Stream = true)` 返回 `IAsyncEnumerable<T>`。省略可选参数时使用作者默认值；显式 null 仍是独立的 wire 输入，受参数的 null 合同约束。末尾 `CancellationToken` 参数提供协作取消，可以声明 `= default`，不属于 wire 参数。[可选参数消费者](../tests/fixtures/TypertOptional/OptionalConsumer.cs)覆盖省略、null 与必填输入。显式 Context 和对象 lookup 声明具有宿主拥有的登记 API；Typert fixture 保留完整作用域与 lookup 示例。
+Remote 方法支持必需普通参数，以及带受支持常量默认值的可选参数；返回 `Task`、`Task<T>`，或通过显式 `RemoteMethod(Stream = true)` 返回 `IAsyncEnumerable<T>`。省略可选参数时使用作者默认值；显式 null 仍是独立的 wire 输入，受参数的 null 合同约束。末尾 `CancellationToken` 参数提供协作取消，可以声明 `= default`，不属于 wire 参数。[可选参数消费者](../tests/fixtures/TypertOptional/OptionalConsumer.cs)覆盖省略、null 与必填输入。显式 Context 和对象 lookup 声明具有宿主拥有的登记 API；Typert fixture 保留完整作用域与 lookup 示例。
 
 ### 登记、调用与撤销合同
 
@@ -226,27 +226,28 @@ Typert loader 的 owner Fiber 拥有登记及其激活期导入缓存。同一�
 
 动态 bundle 替换时保留 Typert loader owner，在候选准备完成后、切换 provider Fiber 前，向 `SuspendAsync` 传入受影响的精确 Loader 请求名称。Deployment 路由提供别名时，这些名称可能与 CLR resolver 键不同。Resolver 返回并提交后，对这些请求调用 `ResumeAsync`。失败时，仅当 `PluginReplacementFailure.Recovery` 确认为 `Succeeded` 才恢复，否则保持该作用域暂停。恢复传播登记异常，并在失败时撤销所选批次。登记或撤销观察者对同一请求重入生命周期操作会被拒绝。暂停脱离未完成导入，不强制停止 resolver 代码；保留的任务在结束前仍可能保留旧代码。独立多入口消费者验证无关包的贡献身份和调用保持不变、替换后 CLR codec 更新、恢复顺序及旧调用失效。保留的贡献、客户端、服务对象或错误仍可能保留可收集代码；所有权结束后应释放这些引用。
 
-`MapCordisRemote` 将宿主授权的 `TypertGateway` 映射为原生 unary JSON 与 downlink NDJSON 路由。宿主提供授权回调。请求中断与生成客户端的 `AbortSignal` 传递取消信号；`byte[]` 结果通过 JSON base64 表达。Host unary 将信号传给绑定，只在已取消时归一业务失败，不强制中止成功的业务执行。Downlink 读取与取消竞争，之后的清理先等待未完成的原生读取，再在其调用 Context 中释放枚举器。业务或清理始终不结束时，调用可能无法终止，与固定流清理边界一致。此传输不承诺完整固定 Typert wire protocol。
+`MapCordisRemote` 将 Host 持有的 `TypertHostConnection` 接到标准 HTTP unary 与文本 WebSocket mux 路由。在已有 Context 执行域内创建 Connection，并通过 `UseWebSockets()` 注册 ASP.NET WebSocket 中间件。Connection 拥有 operator Peer；请求与 socket 借用它。授权仍由 Host 回调决定。socket 退出释放 Peer 上的登记，不销毁 Peer。
 
-关闭 Cordis root 前，应先释放或排空活动 Gateway 枚举器。枚举器清理需要重新进入该执行域，已关闭的 root 无法执行清理。
+unary 使用固定的 `client-request`／`server-response` 封套及关联 `rpcId`。Host 作者返回业务值、`Task` 或声明的流，共享运行代码负责帧和失败。Gateway 将取消期间的业务失败规范化；取消不能证明写入从未执行。流清理先等待尚未完成的 native read，再在 Invocation Context 中释放迭代器。关闭 Context 前须排空活动迭代器。
 
-使用 `TypertArtifacts.GenerateClient(contribution)` 生成 `.mjs` 和 `.d.mts` 制品，与宿主使用同一 descriptor 和 Schema。生成客户端提供类型化调用及 Remote 结果/错误 envelope：
+通过 `TypertArtifacts.GenerateClient(contribution)` 生成 `.mjs` 与 `.d.mts`，同时将 `TypertClientRuntime.Module` 保存为同目录的 `cordis-remote.mjs`，将 `TypertClientRuntime.Declaration` 保存为 `cordis-remote.d.mts`。`Cordis.ClientAssets` 为标准模块统一输出这些共享资源。
 
 ```typescript
-import { createRemote, mountRemote } from "./remote.mjs";
+import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";
 
-const client = createRemote("/remote");
-const echo = client["sample/Echo"];
-const result = await echo({
-  request: { Text: "hello", Count: 1 },
-});
-client.dispose();
-
-const mounted = await mountRemote(ctx, "/remote");
+const connection = new TypertConnection(new URL("/remote", location.href));
+const client = createRemote(connection);
+const result = await client["sample/Echo"]({ request: { Text: "hello", Count: 1 } });
+if (!result.ok) console.error(result.error.code, result.error.message);
+await client.dispose();
+const mounted = await mountRemote(ctx, connection);
 await mounted.dispose();
+await connection.dispose();
 ```
 
-这里的 `ctx` 是客户端 Cordis owner。必须 await `mountRemote`：它登记 owner 清理，并向共享 root `remote.<namespace>` 服务贡献方法。方法互不重叠的贡献可以共享该 namespace；重复方法或无关既有服务会被拒绝。撤销只移除该贡献的方法，最终撤销才移除 namespace 服务。任何一种客户端的 Dispose 都停止新调用并中断其活跃 fetch。
+必须等待 `mountRemote`，它在所有者上登记清理，并向共享的根 `remote.<namespace>` Service 贡献方法。不同贡献可以共享命名空间，重复方法或无关 Service 会被拒绝。撤销只移除本贡献，最后一个贡献退出才撤销命名空间。客户端释放等待自身工作，不关闭借用的 Connection；应用负责释放 Connection。可选的 fetch 与 WebSocket 工厂配置应用的传输身份，不改变生成方法或 Host 授权。
+
+本地续建已通过生成式 .NET/TS 客户端与 Node 下的固定 Connection 执行 unary、下行 mux 及 unary multipart 附件恢复。Typed uplink、反向 Context／owned-value 和完整事件转发仍在实施。原 base64 线格式与每方法 NDJSON 路径已退出。
 
 ### 消费者证据与剩余范围
 
@@ -281,17 +282,30 @@ await mounted.dispose();
 </PropertyGroup>
 ```
 
+外部 DTO 声明通过客户端项目的显式引用模型提供：
+
+```xml
+<ItemGroup>
+  <CordisTypertClientReferenceModel Include="Shared.cordis.model.json" />
+</ItemGroup>
+```
+
+CLI 对应 `emit-dotnet --reference-models references.rsp`，响应文件每行一个模型路径。Remote 选择仍限于主模型；外部源声明按完整 assembly-qualified 身份解析，复用普通数据发射的 composition。metadata 签名不保留初始化值，不能替代源模型。定义缺失或冲突时拒绝生成并删除旧客户端输出。引用是构建输入，响应文件和生成源码均归 `Clean` 管理。独立调用者消费生成的合同包，不加载 Provider 程序集。
+
 target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。生成源码由 `Clean` 管理；相同输入的增量输出保持字节和时间戳。消费者门禁以这条显式启用的命令行构建路径为边界；IDE/design-time 首次构建仍需单独证据。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
 
-可空 float/decimal 常量初始化值保留作者类型与默认值。缺少 JSON 成员时保留初始化值，显式 null 则替换它。调用者 DTO 与生成的辅助类型共享所选目标 namespace。名称冲突会在编译前被拒绝，诊断标明双方来源，例如 `CordisTypertClientName` 为 `DemoClient` 时的 `DemoClientFailure`。应选择不同的 DTO 或 client 名称；emitter 不会静默重命名公开类型，拒绝投影时会删除其此前生成的输出。
+可空 float/decimal 常量初始化值保留作者类型与默认值。缺少 JSON 成员时保留初始化值，显式 null 则替换它。调用者 DTO 与生成的辅助类型共享所选目标 namespace。名称冲突会在编译前被拒绝，诊断标明双方来源，例如 `CordisTypertClientName` 为 `DemoClient` 时的 `DemoClient`。应选择不同的 DTO 或 client 名称；emitter 不会静默重命名公开类型，拒绝投影时会删除其此前生成的输出。
 
 ```csharp
 using var http = new HttpClient();
-using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
-var view = await remote.DescribeAsync();
+await using var connection = new TypertConnection(http, new Uri("http://localhost:5000/remote"));
+await using var remote = new SettingsClient(connection);
+var reply = await remote.DescribeAsync();
+if (!reply.Ok) throw reply.Error;
+var view = reply.Value;
 ```
 
-HttpClient 由调用者拥有。直接 unary 调用返回类型化值或抛出既有 `RemoteError`，保留 owner 错误码及独立 JSON details。生成 downlink 方法通过带 `ResponseHeadersRead` 的 NDJSON 返回 `IAsyncEnumerable<T>`；每个枚举器拥有自己的 response 与 reader，客户端 Dispose 取消活动读取。错误项保留相同失败形状，截断项明确失败。这是对现有结果信封的原生适配。客户端 Dispose 停止新调用、取消自己的传输请求并拒绝迟到成功结果，不 Dispose 借用的 HttpClient，也不承诺强制终止 Host。
+调用者拥有 HttpClient 与共享的 `TypertConnection`。普通调用返回 `Task<RemoteResult<T>>`，先检查 `Ok`，再读取 `Value` 或 `Error`。无值作者返回 `Task`，投影为 `Task<RemoteResult>`，无值成功与显式 null 保持区分。缺失 adapter 或 Connection 是本地装配异常。远端失败保留任意所有者 code 与独立 JSON details；传输失败和取消成为 unary 结果。下行调用在异步准备后返回立即开始打开的 `RemoteStreamHandle<T>`，单次枚举直接读取业务项，并等待释放。流的远端错误、carrier 故障、本地误用和外部取消分别以对应异常表达。客户端释放等待自身调用与清理，不释放借用资源。
 
 生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsProvider`。将 `SettingsForms` 挂在会话已有 `ConfigurationOperations` 之上；它根据作者的 live Config 声明推导 active、唯一可寻址的表单。数值 revision 观察 Fiber 身份、完整 schema 和原始配置。层级脱敏读取、完整候选校验和写入都归同一个 profile 队列。describe/update/replace/mutate 使用唯一生成合同。公开调用与退出的 Settings hash 路径见[Settings 合同迁移](settings-contract-migration.zh.md)。
 
@@ -299,6 +313,40 @@ HttpClient 由调用者拥有。直接 unary 调用返回类型化值或抛出�
 
 该路径覆盖 unary 客户端、受支持的 downlink 流，以及标准 Settings、PluginManager 和通知消费。原生文档集成、富图、完整源类型分析及从普通模型生成 TS 仍开放。已有 TS/Web 输出继续可用并单独验收。
 
+
+## 类型化 Remote 上行
+
+在作者方法中声明上行，普通 wire 参数仍独立存在：
+
+```csharp
+[RemoteMethod("exchange", Stream = true)]
+public async IAsyncEnumerable<string> Exchange(
+    string prefix,
+    [RemoteUplink] IAsyncEnumerable<string?> input,
+    [EnumeratorCancellation] CancellationToken cancellationToken = default)
+{
+    await foreach (var item in input.WithCancellation(cancellationToken))
+        yield return prefix + (item ?? "null");
+    yield return "complete";
+}
+```
+
+在作者 STJ context 中登记输入值类型，此例为 `typeof(string)`。普通参数继续进入 args，输入序列由 Invocation 提供。共同声明模型保留输入的根空性和受支持集合的元素空性；单独的 `typeof(T)` 无法表达可空引用输入。需要允许缺值的 item 时使用 `IAsyncEnumerable<RemoteOptional<string?>>`，通过 `HasValue` 区分缺失与存在的 null，不增加 wire 对象包装。
+
+```csharp
+await using var stream = await client.ExchangeAsync("prefix:", cancellationToken);
+stream.Send(null);       // 本地校验与入队，不代表 Host 已确认。
+stream.Send("first");   // 首次读取前即可发送。
+stream.End();            // 发完队列并半关闭上行，下行仍可继续读取。
+await foreach (var item in stream.WithCancellation(cancellationToken))
+    Console.WriteLine(item);
+```
+
+生成返回类型为 `Task<RemoteStreamHandle<string, string?>>`。只有下行的方法保留不具备 send/end 能力的 `RemoteStreamHandle<T>`；两者都只有一个下行消费者。`End` 幂等，终止后也不报错；半关闭或退休后的发送在本地拒绝。`DisposeAsync` 取消本逻辑调用并等待自己拥有的本地工作，不确认远端业务退休。Host 输入 codec 失败会终止逻辑流，即使作者捕获输入异常；同连接的其他流仍可继续。
+
+生成的 TypeScript 返回带 `send`、`end` 和可等待 `dispose` 的 `RemoteDuplexHandle<Output, Input>`，可缺失项使用 `undefined`，与 `null` 独立。其发送边界校验无损 JSON，Host 校验声明 codec；.NET 在入队前还会校验生成的输入 codec。文本 mux 传原始 item 值，缺失时省略 `value`，不增加 binary 帧或对象包装。原始类型、可空值类型、受支持集合／字典及既有有界 DTO codec 仍受各后端实际限制。owned 对象、反向 Context 和事件投递继续属于独立的未完成工作。
+
+Composition 包会把自身声明模型接入 MSBuild 客户端引用集合。其他源模型继续显式使用 `CordisTypertClientReferenceModel`；直接调用编译器时须通过 `--reference-models` 提供对应模型，不能从程序集元数据恢复作者默认值。
 
 ## 普通声明模型
 
@@ -386,7 +434,8 @@ await callerContext.RunAsync(owner =>
         _ => null)); // Reverse lookup is unused by this outbound-only example.
     return Task.CompletedTask;
 });
-using var client = new DocumentClient(httpClient, remoteBase);
+await using var connection = new TypertConnection(httpClient, remoteBase);
+await using var client = new DocumentClient(connection);
 await client.ReadAsync("doc-1");
 var scoped = client.ForContext(callerContext, registry);
 await scoped.ReadAsync();

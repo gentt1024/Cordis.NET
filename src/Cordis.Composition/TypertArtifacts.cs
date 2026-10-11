@@ -45,7 +45,7 @@ public static class TypertArtifacts
         return new(package, "host", schemas, new(services, [], []), descriptors);
     }
 
-    /// <summary>Emit typed Client methods and an HTTP carrier factory. Unsupported schema constructs fail generation.</summary>
+    /// <summary>Emit typed Client methods borrowing the shared Connection runtime. Unsupported schema constructs fail generation.</summary>
     public static TypertClientArtifact GenerateClient(TypertContribution contribution)
     {
         ArgumentNullException.ThrowIfNull(contribution);
@@ -56,11 +56,14 @@ public static class TypertArtifacts
                 "A Client contribution cannot contain duplicate Remote endpoints.",
                 nameof(contribution));
         var definitions = new StringBuilder(
-            "export declare class RemoteError extends Error { readonly isDSHRemoteError: true; readonly code: string; readonly details: unknown; constructor(code: string, message: string, details?: unknown); }\n" +
-            "export type RemoteResult<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: RemoteError };\n");
-        var methods = new StringBuilder("export interface RemoteClient {\n  dispose(): void;\n");
+            "import type { TypertConnection, RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner } from './cordis-remote.mjs';\n" +
+            "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
+            "export type { RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner } from './cordis-remote.mjs';\n");
+        var methods = new StringBuilder("export interface RemoteClient {\n  dispose(): Promise<void>;\n");
         var runtime = new StringBuilder(
-            "export function createRemote(base, fetcher = fetch) { const state = {active:true, controllers:new Set()}; return {\n  dispose() { state.active = false; for (const controller of state.controllers) controller.abort(); },\n");
+            "import { createClient, mountClient } from './cordis-remote.mjs';\n" +
+            "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
+            "export function createRemote(connection) { return createClient(connection, [\n");
         var index = 0;
         foreach (var descriptor in contribution.Invocations)
         {
@@ -80,29 +83,34 @@ public static class TypertArtifacts
             }
 
             var result = "Boundary" + index++;
-            AppendType(definitions, result, descriptor.Result.Schema);
+            if (ReferenceEquals(descriptor.Result, TypertCodec.Void))
+                definitions.Append("export type ").Append(result).Append(" = undefined;\n");
+            else
+                AppendType(definitions, result, descriptor.Result.Schema, binaryResult: !descriptor.IsStream);
+            string? input = null;
+            if (descriptor.Uplink is { } uplink)
+            {
+                input = "Boundary" + index++;
+                AppendType(definitions, input, uplink.Schema);
+                if (uplink.AcceptsUndefined)
+                    input += " | undefined";
+            }
             methods
                 .Append("  ")
                 .Append(Quote(descriptor.Endpoint))
                 .Append("(args: { ")
                 .Append(string.Join("; ", fields))
                 .Append(" }, signal?: AbortSignal): ")
-                .Append(descriptor.IsStream ? "AsyncIterable<RemoteResult<" : "Promise<RemoteResult<")
+                .Append(descriptor.IsStream ? input is null ? "RemoteStreamHandle<" : "RemoteDuplexHandle<" : "Promise<RemoteResult<")
                 .Append(result)
-                .Append(">>;\n");
-            runtime
-                .Append("  [")
-                .Append(Quote(descriptor.Endpoint))
-                .Append("]: (args, signal) => ")
-                .Append(descriptor.IsStream ? "stream" : "unary")
-                .Append("(fetcher, base, ")
-                .Append(Quote(descriptor.Endpoint))
-                .Append(", args, signal, state),\n");
+                .Append(input is null ? "" : ", " + input)
+                .Append(descriptor.IsStream ? ">;\n" : ">>;\n");
+            runtime.Append("  [").Append(Quote(descriptor.Endpoint)).Append(", ")
+                .Append(descriptor.IsStream ? "true" : "false").Append(", ").Append(input is null ? "false" : "true").Append("],\n");
         }
 
-        methods.Append(
-            "}\nexport declare function createRemote(base: string, fetcher?: typeof fetch): RemoteClient;\n");
-        runtime.Append("}; }\n");
+        methods.Append("}\nexport declare function createRemote(connection: TypertConnection): RemoteClient;\n");
+        runtime.Append("]); }\n");
         runtime.Append("const namespaceSpecs = [\n");
         foreach (var group in contribution.Invocations.GroupBy(descriptor => descriptor.Namespace))
             runtime
@@ -115,16 +123,14 @@ public static class TypertArtifacts
                         group.Select(descriptor =>
                             "[" + Quote(descriptor.Method) + ", " + Quote(descriptor.Endpoint) + "]")))
                 .Append("]],\n");
-        runtime.Append("];\n").Append(Carrier);
-        methods.Append(
-            "export interface RemoteOwner { readonly root: {get(name: string): unknown; provide(name: string, value: object): () => void | Promise<void>}; effect(setup: () => Promise<() => Promise<void>>): PromiseLike<unknown> & (() => Promise<void>); }\n" +
-            "export declare function mountRemote(ctx: RemoteOwner, base: string, fetcher?: typeof fetch): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
+        runtime.Append("];\nexport function mountRemote(ctx, connection) { return mountClient(ctx, createRemote(connection), namespaceSpecs); }\n");
+        methods.Append("export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
         return new(runtime.ToString(), definitions.Append(methods).ToString());
     }
 
     private static string Quote(string value) => JsonSerializer.Serialize(value, TypertJson.Default.String);
 
-    private static void AppendType(StringBuilder output, string name, JsonElement schema)
+    private static void AppendType(StringBuilder output, string name, JsonElement schema, bool binaryResult = false)
     {
         var refs = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -167,6 +173,9 @@ public static class TypertArtifacts
                 return alias;
             }
 
+            if (binaryResult && node.TryGetProperty("contentEncoding", out var encoding) && encoding.GetString() == "base64")
+                return node.TryGetProperty("type", out var binaryKind) && binaryKind.ValueKind == JsonValueKind.Array &&
+                    binaryKind.EnumerateArray().Any(value => value.GetString() == "null") ? "Uint8Array | null" : "Uint8Array";
             if (node.TryGetProperty("enum", out var values))
                 return string.Join(" | ", values.EnumerateArray().Select(value => value.GetRawText()));
             if (node.TryGetProperty("const", out var constant))
@@ -247,131 +256,4 @@ public static class TypertArtifacts
         }
     }
 
-    private const string Carrier = """
-                                   function url(base, endpoint, stream = false) {
-                                     return base.replace(/\/$/, '') + '/' + endpoint.split('/').map(encodeURIComponent).join('/') + (stream ? '/stream' : '');
-                                   }
-                                   export class RemoteError extends Error {
-                                     constructor(code, message, details = {}) { super(message); this.name = 'RemoteError'; this.isDSHRemoteError = true; this.code = code; this.details = details; }
-                                   }
-                                   const failure = (code, message, details) => ({ok:false, error:new RemoteError(code, message, details)});
-                                   const rebuild = result => result.ok ? result : failure(result.error.code, result.error.message, result.error.details);
-                                   const withdrawn = () => failure('gateway/internal', 'The Remote contribution was withdrawn.');
-                                   export async function mountRemote(ctx, base, fetcher = fetch) {
-                                     const remote = createRemote(base, fetcher);
-                                     const tableKey = Symbol.for('cordis.net.typert.remoteNamespaces');
-                                     const registry = ctx.root[tableKey] ??= {groups:new Map(), retiring:new Map(), tail:Promise.resolve()};
-                                     const table = registry.groups;
-                                     const enqueue = operation => { const result = registry.tail.then(operation); registry.tail = result.catch(() => {}); return result; };
-                                     const dispose = ctx.effect(async () => {
-                                       let outcome;
-                                       do {
-                                       outcome = await enqueue(() => {
-                                       const retirements = namespaceSpecs.map(([key]) => registry.retiring.get(key)).filter(Boolean);
-                                       if (retirements.length) return {wait:Promise.all(retirements)};
-                                       const installed = [];
-                                       const cleanup = async () => {
-                                         remote.dispose();
-                                         const settlements = [];
-                                         for (const [key, group, names] of installed.reverse()) {
-                                           for (const name of names) delete group.service[name];
-                                           if (!Object.keys(group.service).length && table.get(key) === group) {
-                                             table.delete(key);
-                                             const settlement = Promise.resolve().then(() => group.dispose());
-                                             registry.retiring.set(key, settlement);
-                                             const release = () => { if (registry.retiring.get(key) === settlement) registry.retiring.delete(key); };
-                                             settlement.then(release, release);
-                                             settlements.push(settlement);
-                                           }
-                                         }
-                                         await Promise.all(settlements);
-                                       };
-                                       try {
-                                         for (const [key, methods] of namespaceSpecs) {
-                                           const group = table.get(key);
-                                           if (!group && ctx.root.get(key) !== undefined) throw new Error('Remote namespace is already provided: ' + key);
-                                           for (const [name] of methods) if (group && Object.hasOwn(group.service, name)) throw new Error('Remote method is already mounted: ' + key + '.' + name);
-                                         }
-                                         for (const [key, methods] of namespaceSpecs) {
-                                           let group = table.get(key);
-                                           if (!group) {
-                                             const service = Object.create(null);
-                                             for (const [name, endpoint] of methods) service[name] = remote[endpoint];
-                                             group = {service, dispose:ctx.root.provide(key, service)};
-                                             table.set(key, group);
-                                           }
-                                           const names = [];
-                                           installed.push([key, group, names]);
-                                           for (const [name, endpoint] of methods) { group.service[name] = remote[endpoint]; names.push(name); }
-                                         }
-                                         return {cleanup};
-                                       } catch (error) { return {error, settlement:cleanup()}; }
-                                       });
-                                       if (outcome.wait) await outcome.wait;
-                                       } while (outcome.wait);
-                                       if (outcome.error) { await outcome.settlement; throw outcome.error; }
-                                       return outcome.cleanup;
-                                     });
-                                     await dispose;
-                                     return {remote, dispose};
-                                   }
-                                   async function unary(fetcher, base, endpoint, args, signal, state) {
-                                     if (!state.active) return withdrawn();
-                                     const lifetime = new AbortController();
-                                     state.controllers.add(lifetime);
-                                     const abort = () => lifetime.abort();
-                                     signal?.addEventListener('abort', abort, {once:true});
-                                     if (signal?.aborted) abort();
-                                     try {
-                                       const response = await fetcher(url(base, endpoint), { method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({args}), signal:lifetime.signal });
-                                       if (!state.active) return withdrawn();
-                                       lifetime.signal.throwIfAborted();
-                                       if (!response.ok) return failure('gateway/protocol', 'HTTP ' + response.status);
-                                       const result = await response.json();
-                                       if (!state.active) return withdrawn();
-                                       lifetime.signal.throwIfAborted();
-                                       return rebuild(result);
-                                     } catch (error) {
-                                       if (!state.active) return withdrawn();
-                                       return failure(signal?.aborted ? 'gateway/cancelled' : 'gateway/internal', String(error));
-                                     } finally {
-                                       state.controllers.delete(lifetime); signal?.removeEventListener('abort', abort);
-                                     }
-                                   }
-                                   async function* stream(fetcher, base, endpoint, args, signal, state) {
-                                     if (!state.active) { yield withdrawn(); return; }
-                                     const lifetime = new AbortController();
-                                     state.controllers.add(lifetime);
-                                     const abort = () => lifetime.abort();
-                                     signal?.addEventListener('abort', abort, {once:true});
-                                     if (signal?.aborted) abort();
-                                     let reader;
-                                     try {
-                                       const response = await fetcher(url(base, endpoint, true), { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({args}), signal:lifetime.signal });
-                                       if (!state.active) { yield withdrawn(); return; }
-                                       lifetime.signal.throwIfAborted();
-                                       if (!response.ok || !response.body) throw new Error('HTTP ' + response.status);
-                                       reader = response.body.getReader();
-                                       const decoder = new TextDecoder();
-                                       let pending = '';
-                                       while (true) {
-                                         const chunk = await reader.read();
-                                         if (!state.active) { yield withdrawn(); return; }
-                                         lifetime.signal.throwIfAborted();
-                                         pending += decoder.decode(chunk.value, {stream:!chunk.done});
-                                         let end;
-                                         while ((end = pending.indexOf('\n')) >= 0) {
-                                           const line = pending.slice(0, end); pending = pending.slice(end + 1);
-                                           if (line) { const item = rebuild(JSON.parse(line)); if (!state.active) {yield withdrawn(); return;} lifetime.signal.throwIfAborted(); yield item; if (!item.ok) return; }
-                                         }
-                                         if (chunk.done) { if (pending) throw new Error('Incomplete Remote stream frame'); return; }
-                                       }
-                                     } catch (error) {
-                                       if (!state.active) {yield withdrawn(); return;}
-                                       yield failure(lifetime.signal.aborted ? 'gateway/cancelled' : 'gateway/internal', String(error));
-                                     } finally {
-                                       lifetime.abort(); state.controllers.delete(lifetime); signal?.removeEventListener('abort', abort); await reader?.cancel().catch(() => {});
-                                     }
-                                   }
-                                   """;
 }

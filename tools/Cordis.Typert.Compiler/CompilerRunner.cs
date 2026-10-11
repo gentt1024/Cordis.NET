@@ -44,7 +44,7 @@ internal static class CompilerRunner
                     "platform",
                     "optimize"
                 },
-                "emit-dotnet" => new[] { "model", "namespace", "service", "client", "output" },
+                "emit-dotnet" => new[] { "model", "namespace", "service", "client", "reference-models", "output" },
                 "emit-dotnet-data" => new[] { "model", "roots", "namespace", "context", "reference-models", "output" },
                 "inspect-model" => new[] { "model", "output" },
                 _ => throw new InvalidDataException("Unknown native compiler command " + args[0])
@@ -101,11 +101,17 @@ internal static class CompilerRunner
     {
         var service = Required(options, "service");
         var model = DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model")));
+        var references = options.TryGetValue("reference-models", out var referenceModels)
+            ? ResponseFile(referenceModels, Path.GetDirectoryName(Path.GetFullPath(referenceModels))!)
+                .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path))).ToArray()
+            : [];
         return DotnetProjectionEmitter.Emit(
-            DeclarationRemoteProjection.Project(model, service),
+            DeclarationRemoteProjection.Project(model, service, references),
             Required(options, "namespace"),
             service,
-            Required(options, "client"));
+            Required(options, "client")) + string.Concat(references.Select(reference => reference.ContractIdentity)
+                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
+                .Select(identity => "// Referenced declaration model " + identity + "\n"));
     }
 
     private static string Extract(Dictionary<string, string> options)

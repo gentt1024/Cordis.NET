@@ -22,17 +22,18 @@ await root.RunAsync(owner =>
 var gateway = new TypertGateway(root, registry);
 using var transport = new GatewayTransport(gateway);
 using var http = new HttpClient(transport);
-using var client = new OptionalClient(http, new Uri("https://test.invalid/remote"));
+await using var connection = new TypertConnection(http, new Uri("https://test.invalid/remote"));
+await using var client = new OptionalClient(connection);
 
-if (await client.EditAsync(Json("{\"value\":\"first\"}")) != "first:absent")
+if ((await client.EditAsync(Json("{\"value\":\"first\"}"))).Value != "first:absent")
     throw new Exception("Omitted optional revision was not mapped to the C# default.");
 if (transport.LastArguments.TryGetProperty("expectedRevision", out _))
     throw new Exception("The optional non-null wire parameter was serialized as null.");
-if (await client.EditAsync(Json("{\"value\":\"second\"}"), 2.5) != "second:2.5" ||
+if ((await client.EditAsync(Json("{\"value\":\"second\"}"), 2.5)).Value != "second:2.5" ||
     transport.LastArguments.GetProperty("expectedRevision").GetDouble() != 2.5)
     throw new Exception("A supplied numeric revision changed in transit.");
 
-if (await client.DefaultsAsync() != "7:null:False:1.25:0.1")
+if ((await client.DefaultsAsync()).Value != "7:null:False:1.25:0.1")
     throw new Exception("Generated .NET methods lost ordinary constant defaults.");
 if (transport.LastArguments.EnumerateObject().Count() != 5 ||
     transport.LastArguments.GetProperty("limit").GetInt32() != 7 ||
@@ -50,10 +51,10 @@ var nonfinite = await gateway.InvokeAsync("nonfinite/isNaN", Json("{}"));
 if (!nonfinite.Ok || !nonfinite.Value!.Value.GetBoolean())
     throw new Exception("The Host binding lost its authored nonfinite default when the argument was omitted.");
 
-if (await client.NullableAsync() is not null ||
+if ((await client.NullableAsync()).Value is not null ||
     transport.LastArguments.GetProperty("revision").ValueKind != JsonValueKind.Null)
     throw new Exception("A nullable parameter's explicit null was silently omitted.");
-if (await client.NullableAsync(4) != 4 ||
+if ((await client.NullableAsync(4)).Value != 4 ||
     transport.LastArguments.GetProperty("revision").GetDouble() != 4)
     throw new Exception("The nullable parameter's supplied value changed.");
 
@@ -85,7 +86,7 @@ foreach (var (arguments, code) in new[]
 
 if (service.Calls != acceptedCalls)
     throw new Exception("A refused input reached the authored method.");
-if (await client.RequiredAsync(9) != 9)
+if ((await client.RequiredAsync(9)).Value != 9)
     throw new Exception("A required numeric input failed.");
 
 Console.WriteLine(
@@ -108,12 +109,13 @@ sealed class GatewayTransport(TypertGateway gateway) : HttpMessageHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
         using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
-        LastArguments = body.RootElement.GetProperty("args").Clone();
+        LastArguments = body.RootElement.GetProperty("payload").GetProperty("args").Clone();
         var endpoint = string.Join('/', request.RequestUri!.Segments.TakeLast(2).Select(value => value.Trim('/')));
         var result = await gateway.InvokeAsync(endpoint, LastArguments);
         var json = result.Ok
             ? "{\"ok\":true,\"value\":" + result.Value!.Value.GetRawText() + "}"
-            : "{\"ok\":false,\"error\":{\"code\":\"" + result.Error!.Code + "\",\"message\":\"fixture refusal\"}}";
+            : "{\"ok\":false,\"error\":{\"code\":\"" + result.Error!.Code + "\",\"message\":\"fixture refusal\",\"details\":{}}}";
+        json = "{\"type\":\"server-response\",\"rpcId\":" + body.RootElement.GetProperty("rpcId").GetRawText() + ",\"result\":" + json + "}";
         return new(HttpStatusCode.OK)
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")

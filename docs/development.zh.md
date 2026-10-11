@@ -331,7 +331,7 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 |---|---|---|
 | D-REV | 标准 Settings 统一采用数值合同。`double` 对应 JavaScript number；观察版本从 0 开始，由 Settings owner 持有。省略 expected revision 只跳过先前视图比较。 | 已批准直接纠正：消费者重新生成与构建；拒绝 string/null expected revision；不新增版本化 Remote 或转换路径。仅保留具有独立职责的完整配置／文件 hash 机制。 |
 | D-MODEL | `CordisTypertModelRoot` 选择精确 CLR metadata name；`CordisTypertService` 选择作者 service。两者进入同一声明模型，保留结构化 attribute、来源与 JSON context 事实。普通选择不要求 Remote attribute、`partial`、serializer context 或注册。 | Host 绑定作者实际代码及显式 STJ metadata；独立 caller 对同一事实应用自己的可重建限制。内部投影是派生结果，不是独立公开制品。不完整／旧输入须重新提取，不保留历史兼容路线。 |
-| D-WIRE | Registry/Gateway 继续拥有分发和生命周期。既有原生 HTTP/NDJSON 是 unary、显式 Context/lookup、downlink/base64 的当前 .NET/TS 互通边界。Context/owned references、Peer/uplink/events/attachments 的合同落实后在同一所有者扩展。 | 不承诺整个 DSH 产品 wire，也未选入新 carrier。直接固定客户端互通必须逐边界说明帧、codec、所有权、错误和取消，并通过真实跨端调用。产品 Remote 选择表留在库外。 |
+| D-WIRE | 保留既有 Registry/Gateway/operations，实现固定 unary 封套／结果、文本 mux、unary multipart 和共享 Client/Connection。当前生成包装消费该路线，typed uplink 保留作者事实。 | 按 carrier、codec 和寿命边界验证固定 Client 互通。反向 Context/owned values 和完整事件仍是必需职责，不承诺全部产品或 SDK stdio。 |
 
 迁移见[Settings 合同迁移](settings-contract-migration.zh.md)。持久 YAML/JSON 格式及 Git 历史不变。标准 Settings 消费者需要重建；未来发布必须使用新的包版本身份。本地源码版本不变。
 
@@ -382,3 +382,19 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 scoped 调用者源码检查点 `9bb56ac801a62faeabd09a93d256e3bdf2e0481d` 已完成[本地包门禁](validation.zh.md#生成式-scoped-调用者2026-10-11)。这关闭了生成式 .NET receiver／lookup-scoped 路径及当前 adapter／传输边界，不关闭剩余丰富 Context 工作组。已重新核对最新 main 为 `3342a967f4e57206bec272684a40a437fc051b77`，没有需要纳入的新主线增量。
 
 下一交付组通过正常 build／pack 接通标准制品和真实消费者。首先补齐一个具体缺口：普通 DTO 发射已接受显式引用模型，Remote 调用者投影仍只读取主模型。复用现有声明组合、完整类型身份、根选择及后端诊断，将引用输入接入 CLI／MSBuild，打包所选输出，并验证不引用 Provider 程序集的独立调用者。随后沿已有所有者接通所选 TS／浏览器制品生成及标准模块交付。选择普通声明不自动注册 Service 或暴露 Remote 成员。冷构建／增量／Clean、失败输出清理及 CoreCompile／STJ 前可见性继续作为要求。这些工作沿用现有范围表、操作权威和平台义务，不另建账本、模型代际或兼容路线。
+
+### 共享 Remote Connection 本地续建，2026-10-11
+
+工作承接 `07d6fba`，`9bb56ac` 继续保留为上一批 scoped 验证身份。当前未提交实现将关联 unary/结果、unary multipart 和文本 mux 放入共享 Connection。生成式 .NET/TS 方法保留类型化包装与贡献所有权。Host 默认 operator Peer 与 socket、逻辑调用分开。每方法 NDJSON、生成器 carrier 副本和 base64 unary 线格式已退出，不增加 fallback 客户端。
+
+有限包验证已执行 Node 下的固定 DSH Connection、独立 .NET/TS 调用、无值/null、multipart 根/嵌套/空附件、scoped 身份及流独立释放。真实浏览器恢复验证也已通过生产 ASP.NET mux，确认断线保留插件/草稿，实际撤销才释放。`verify-typert.py`、`verify-typert-dotnet.py`、`verify-client-lifecycle.mjs` 与浏览器恢复夹具分别承接生成、传输和生命周期证据。初次 MIME 头不兼容及旧夹具失败保留在本地验证记录中。本源码的仓库门禁尚未完成。
+
+Remote 引用输入现通过 `CordisTypertClientReferenceModel` 和 `emit-dotnet --reference-models` 进入独立客户端，复用既有 composition。包门禁覆盖正常 build/pack、引用默认值变化后重建并消费合同、缺少引用拒绝与 Clean。继续 typed uplink 作者表达及共同 codec/客户端投影、真实 Host 上行队列和反向 Context/owned-value/事件。`typeof(T)` 与当前下行返回类型不能替代 G01 裁决。这些职责仍属于本次实现和原范围表，不能发布为一代不完整的新合同。本续建未改变包身份、依赖、上游 pin 或远端分支。
+
+### Typed uplink 检查点，2026-10-12
+
+G01 在既有共同声明中采用 `[RemoteUplink] IAsyncEnumerable<T>`。生成的 `RemoteStreamHandle<TOutput,TInput>` 与 TS `RemoteDuplexHandle<Output,Input>` 只为声明上行的方法提供发送与半关闭。`RemoteOptional<T>` 独立保留根缺失与 null。即使作者捕获输入异常，Host codec 失败仍终止该逻辑流；物理连接和其他流不随逻辑输入违规退出。包自身的源模型现已接入独立客户端引用组合，修复 Settings 投影，不接受缺少事实的 metadata。
+
+主要维护入口为 `SharedAuthor.cs`、`SharedConsumer.cs`、`SharedClient.ts` 及 `verify-typert-dotnet.py` 中的共享包消费者。TS 夹具检查自身生成／传输和非法帧边界，包括缓冲溢出与协议关闭，不重复普通 DTO 后端套件。固定 DSH mux 代码也已在 Node 下对原生 Host 执行原始输入、缺失/null、半关闭及 codec 拒绝。生成空性、引用模型接线和错误详情的失败记录保留在本地证据中。这些结果不代表 Linux、完整浏览器或仓库级验收。
+
+接下来沿已批准的固定工作流完成反向 Context/owned-value/事件处理，保持同步 resolver/release，在 handler 和回复结算后释放 owned Context，保留 borrowed Context。既有选定通知源不证明这些职责完成。最终源码／包验证须使用自己的候选身份；早先因未提交源码而触发的 SourceLink 拒绝仍是失败门禁，不作豁免。

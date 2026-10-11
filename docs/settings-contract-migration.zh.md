@@ -11,14 +11,17 @@
 ```csharp
 var registry = new TypertRegistry(session.Context);
 var contribution = SettingsControllerTypert.Contribution("Application.Settings");
+TypertHostConnection connection = null!;
 await session.Context.RunAsync(ctx =>
 {
     new SettingsForms(ctx, session.ConfigurationOperations);
     new SettingsController(ctx);
     registry.Register(ctx, contribution);
+    connection = new(ctx, new TypertGateway(ctx, registry));
     return Task.CompletedTask;
 });
-app.MapCordisRemote("/remote", new TypertGateway(session.Context, registry), authorize);
+app.UseWebSockets();
+app.MapCordisRemote("/remote", connection, authorize);
 var clientArtifact = TypertArtifacts.GenerateClient(contribution);
 ```
 
@@ -26,17 +29,20 @@ var clientArtifact = TypertArtifacts.GenerateClient(contribution);
 
 ```csharp
 using var http = new HttpClient();
-using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
+await using var connection = new TypertConnection(http, new Uri("http://localhost:5000/remote"));
+await using var remote = new SettingsClient(connection);
 var describe = await remote.DescribeAsync();
-var form = describe.Namespaces.Single(row => row.Ns == "worker");
+if (!describe.Ok) throw describe.Error;
+var form = describe.Value.Namespaces.Single(row => row.Ns == "worker");
 using var document = JsonDocument.Parse("{\"limit\":30}");
 var updated = await remote.UpdateAsync(form.Ns, document.RootElement, form.Revision);
 ```
 
 ```ts
-import { createRemote } from './settings.mjs'
+import { createRemote, TypertConnection } from './settings.mjs'
 
-const remote = createRemote('/remote')
+const connection = new TypertConnection(new URL('/remote', location.href))
+const remote = createRemote(connection)
 const read = await remote['settings/describe']({})
 if (!read.ok) throw new Error(read.error.message)
 const form = read.value.namespaces.find(row => row.ns === 'worker')!
@@ -45,7 +51,8 @@ const write = await remote['settings/mutate']({
   ops: [{ op: 'set', path: ['limit'], value: 30 }],
   expectedRevision: form.revision,
 })
-remote.dispose()
+await remote.dispose()
+await connection.dispose()
 ```
 
 正常编辑提交先前读到的 revision。三种 Remote 写操作均返回新的脱敏 namespace。原生 provider 写入返回 Task；controller 随后 describe 同一个已捕获的 provider。空 `ns` 在查找 provider 前以 `gateway/bad-request` 拒绝，不受可选 provider 是否存在影响。`update` 递归合并对象，数组整体替换。`replace` 将开放的 live 字段重置到继承值，再合并所提交 section，保留普通配置。由脱敏读取拼成的 replace 可能重置省略的 secret。持有不完整视图时使用 `mutate`：按序执行的对象 unset 恢复继承，数组 unset 删除该元素。set 必须提供 `value`，允许显式 JSON null；unset 省略 `value`。

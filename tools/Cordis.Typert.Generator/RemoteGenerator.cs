@@ -194,6 +194,8 @@ public sealed class RemoteGenerator : IIncrementalGenerator
 
             string Codec(DeclarationReference reference, bool disallowNull = false)
             {
+                if (reference.Kind == "primitive" && reference.Name == "System_Void")
+                    return "global::Cordis.Composition.TypertCodec.Void";
                 var symbol = Resolve(reference, compilation, model);
                 if (disallowNull)
                     symbol = symbol is INamedTypeSymbol named &&
@@ -207,6 +209,25 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                     "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" + TypeName(symbol) + ">)" +
                     TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
                     Literal(symbol.ToDisplayString()) + ")";
+            }
+
+            string UplinkCodec(DeclarationReference reference)
+            {
+                var symbol = Resolve(reference, compilation, model);
+                var collection = reference.Kind == "array" || symbol is INamedTypeSymbol named &&
+                    named.ContainingNamespace.ToDisplayString() == "System.Collections.Generic" &&
+                    named.Name is "List" or "IReadOnlyList" or "IList" or "IEnumerable" or "ICollection" or "IReadOnlyCollection" or
+                        "Dictionary" or "IReadOnlyDictionary" or "IDictionary";
+                if (!collection || symbol is IArrayTypeSymbol { ElementType.SpecialType: SpecialType.System_Byte })
+                    return Codec(reference);
+                var dictionary = reference.Arguments.Length == 2;
+                if (dictionary && reference.Arguments[0].Name != "System_String")
+                    throw new InvalidDataException("Remote uplink dictionaries require string keys.");
+                return "global::Cordis.Composition.TypertCodec." + (dictionary ? "CreateDictionary" : "CreateSequence") +
+                    "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" + TypeName(symbol) + ">)" +
+                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
+                    UplinkCodec(reference.Arguments[dictionary ? 1 : 0]) + ", nullable: " +
+                    (reference.Nullability == "Annotated" ? "true" : "false") + ")";
             }
 
             definitions
@@ -253,6 +274,13 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                 .Append(cancellation ? "true" : "false")
                 .Append(", IsStream = ")
                 .Append(stream ? "true" : "false");
+            if (invocation.Uplink is { } uplink)
+            {
+                var codec = UplinkCodec(uplink.Type);
+                if (uplink.Optional)
+                    codec = "global::Cordis.Composition.TypertCodec.CreateOptional<" + TypeName(Resolve(uplink.Type, compilation, model)) + ">(" + codec + ")";
+                definitions.Append(", Uplink = ").Append(codec);
+            }
             if (name != method.Name)
                 definitions.Append(", Implementation = ").Append(Literal(method.Name));
             if (invocation.Scope is { } scope)
@@ -274,18 +302,25 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                             invocation.ContextWireType ?? throw new InvalidDataException("Missing Context wire type.")))
                     .Append(")");
             definitions.Append(" },");
-            var call = "((" + TypeName(type) + ")service).@" + method.Name + "(" +
-                string.Join(
-                    ", ",
-                    parameters.Select((parameter, index) => parameter.Facts.Default is not null
+            var callArguments = parameters.Select((parameter, index) => parameter.Facts.Default is not null
                         ? "(global::System.Object.ReferenceEquals(args[" + index +
                         "], global::Cordis.Undefined.Value) ? " + DefaultValue(
                             parameter.Facts,
                             Resolve(parameter.Facts.Type, compilation, model)) + "! : (" +
                         TypeName(Resolve(parameter.Facts.Type, compilation, model)) + ")args[" + index + "]!)"
                         : "(" + TypeName(Resolve(parameter.Facts.Type, compilation, model)) + ")args[" + index +
-                        "]!")) +
-                (cancellation ? (parameters.Length == 0 ? "" : ", ") + "token" : "") + ")";
+                        "]!").ToList();
+            if (invocation.Uplink is { } input)
+            {
+                var parameter = method.Parameters.Single(value => value.Name == input.Parameter);
+                var inputType = ((INamedTypeSymbol)parameter.Type).TypeArguments[0];
+                callArguments.Insert(parameter.Ordinal, "global::Cordis.Composition.TypertInvocation.Current!.ReadUplink<" +
+                    inputType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                        SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier)) + ">()");
+            }
+            if (cancellation)
+                callArguments.Add("token");
+            var call = "((" + TypeName(type) + ")service).@" + method.Name + "(" + string.Join(", ", callArguments) + ")";
             if (stream)
             {
                 var helper = "Stream" + streams.Length;
@@ -298,6 +333,9 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                     .Append(call)
                     .Append(".WithCancellation(token)) yield return item; }");
             }
+            else if (invocation.ReturnWrapper == "System.Threading.Tasks.Task")
+                unary.Append("[").Append(Literal(name)).Append("] = async (service, args, token) => { await ")
+                    .Append(call).Append("; return global::Cordis.Undefined.Value; },");
             else
                 unary
                     .Append("[")

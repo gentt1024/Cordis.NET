@@ -15,6 +15,11 @@ for (const name of ['management', 'notifications']) {
     await writeFile(resolve(output, name + (extension === 'd.ts' ? '.d.mts' : '.mjs')), await response.text())
   }
 }
+for (const extension of ['mjs', 'd.mts']) {
+  const response = await fetch(origin + '/client-runtime/cordis-remote.' + extension)
+  assert.equal(response.status, 200, 'Host must publish the shared Connection runtime')
+  await writeFile(resolve(output, 'cordis-remote.' + extension), await response.text())
+}
 await writeFile(resolve(output, 'package.json'), '{"private":true,"type":"module"}\n')
 await writeFile(resolve(output, 'Client.ts'), await readFile(resolve(root, 'tests/fixtures/ManagementDotnet/Client.ts'), 'utf8'))
 const requireTools = createRequire(resolve(root, 'clients/modules/package.json'))
@@ -30,7 +35,7 @@ if (diagnostics.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(
 }))
 const emitted = program.emit()
 assert.equal(emitted.emitSkipped, false, 'Independent strict TypeScript caller was not emitted')
-for (const name of ['management', 'notifications']) {
+for (const name of ['management', 'notifications', 'cordis-remote']) {
   await writeFile(resolve(output, 'compiled', name + '.mjs'), await readFile(resolve(output, name + '.mjs')))
 }
 const { run } = await import(pathToFileURL(resolve(output, 'compiled/Client.js')).href)

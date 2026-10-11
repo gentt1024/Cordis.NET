@@ -62,8 +62,9 @@ ships them through `/management`, `/notifications` and `/settings` package expor
 keep handwritten PluginManager DTOs or method decoders.
 
 ```js
-import { createRemote } from '@cordis-net/client-modules/management'
-const manager = createRemote(location.origin + '/remote', authorizedFetch)
+import { createRemote, TypertConnection } from '@cordis-net/client-modules/management'
+const connection = new TypertConnection(new URL('/remote', location.href), authorizedFetch)
+const manager = createRemote(connection)
 const inspected = await manager['pluginManager/inspect']({ request })
 if (!inspected.ok) throw inspected.error
 const installed = await manager['pluginManager/installBundle']({
@@ -73,8 +74,12 @@ const installed = await manager['pluginManager/installBundle']({
 ```
 
 `authorizedFetch` supplies the current host generation and the application's request identity.
-The generated TypeScript API returns a Remote result. The generated .NET client has typed
-throwing methods such as `InspectAsync`, `InstallBundleAsync` and `WaitForInstallAsync`.
+Both generated clients return Remote results. C# uses `Task<RemoteResult<T>>` for `InspectAsync`,
+`InstallBundleAsync` and `WaitForInstallAsync`; check `Ok` before reading `Value` or `Error`.
+Assembly failures remain exceptions. Stream handles yield notification values and throw on
+stream failure. Await client and Connection disposal; a client borrows its Connection.
+Browser WebSocket authentication follows the application's admission policy, supplied through
+the Connection socket factory when needed; fetch headers do not authenticate a browser socket.
 Composition ships the selected service model at
 `cordis/typert/Cordis.Composition.cordis.model.json`; the existing `emit-dotnet` command and
 `CordisTypertClientModel` build property consume that model without loading a provider.
@@ -111,7 +116,7 @@ Maker adaptation belongs to its own session: regenerate clients, bind current ho
 subscribe before snapshot reads, and preserve unknown installation outcomes. This repository
 does not modify Maker or add a permanent compatibility path for its old generated code.
 
-The native HTTP JSON/NDJSON carrier remains a documented platform adaptation. Host-selected
-emit notifications do not complete Peer, uplink, waterfalls, owned-value graphs or attachment
-wire interoperability. The original [scope ledger](development.md) and [validation record](validation.md)
+The shared Connection uses the fixed unary envelope, unary multipart attachments and text WebSocket mux.
+Per-method NDJSON and generator-embedded carrier code are removed. Host-selected emit notifications
+do not complete typed uplink, reverse Context resolution, waterfalls or owned-value graphs. The original [scope ledger](development.md) and [validation record](validation.md)
 retain those responsibilities and the exact platform evidence.
