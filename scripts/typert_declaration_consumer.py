@@ -6,7 +6,7 @@ from xml.sax.saxutils import escape
 import zipfile
 
 
-def verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project):
+def verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted):
     fixtures = root / "tests/fixtures/DeclarationModel"
     external_setup = pack_external_data(fixtures, feed, dotnet, composition, run, project)
 
@@ -30,7 +30,7 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
     model = response / "IndependentDeclarations.Provider.cordis.model.json"
     owned = [model] + [response / name for name in ("model-roots.rsp", "model-sources.rsp", "model-references.rsp")]
     authored = json.loads(model.read_text(encoding="utf-8"))
-    assert authored["formatVersion"] == 2
+    assert authored["declarations"], "Author produced no declaration facts"
     assert not list(response.glob("*.cordis.typert.json")), "Ordinary author unexpectedly selected the remote pipeline"
     shutil.copyfile(model, output / "ordinary-declaration-model.json")
     with zipfile.ZipFile(feed / "IndependentDeclarations.Provider.1.0.0-alpha.nupkg") as archive:
@@ -216,7 +216,7 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
     rejected = run("declaration-remote-emission-rejected", [dotnet, compiler, "--roslyn-directory", roslyn,
         "emit-dotnet", "--model", packaged_model, "--namespace", "Caller.Ordinary", "--service", "ordinary",
         "--client", "OrdinaryRemoteClient", "--output", refused_source], True)
-    assert b"roots" in rejected or b"Unsupported native model format 2" in rejected, rejected
+    assert b"Exactly one explicitly selected authored Remote service must match" in rejected, rejected
     assert not refused_source.exists(), "Remote emission refusal retained a stale source"
     (output / "ordinary-declaration-evidence.json").write_text(json.dumps({
         "consumer": "ordinary-declaration-catalog",
@@ -236,7 +236,7 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
         "refusedRoots": refusals,
         "ordinaryModelRefusedByRemoteEmitter": True
     }, indent=2) + "\n", encoding="utf-8")
-    verify_data_consumer(fixtures, source, feed, output, dotnet, composition, compiler, roslyn, run, project)
+    verify_data_consumer(fixtures, source, feed, output, dotnet, composition, compiler, roslyn, run, project, hosted)
     verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, external_setup)
 
 
@@ -384,117 +384,212 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     }, indent=2) + "\n", encoding="utf-8")
 
 
-def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, compiler, roslyn, run, project):
+def verify_saved_remote_refusals(author, model, composition, compiler, roslyn, dotnet, run, project, output):
+    baseline = json.loads(model.read_text(encoding="utf-8"))
+    compilation = baseline["compilation"]
+    response = model.parent
+    source_file = author / "SharedAuthor.cs"
+    original = source_file.read_text(encoding="utf-8")
+    model_input = author / "refused-remote.cordis.model.json"
+    refused_source = author / "RefusedClient.Generated.g.cs"
+    output_kind = {"DynamicallyLinkedLibrary": "Library", "ConsoleApplication": "Exe", "WindowsApplication": "WinExe"}
+
+    def extract(label, destination):
+        return run("saved-remote-extract-" + label,
+            [dotnet, compiler, "--roslyn-directory", roslyn, "extract-model",
+             "--project-directory", author, "--sources", response / "model-sources.rsp",
+             "--references", response / "model-references.rsp", "--assembly-name", compilation["assemblyName"],
+             "--language-version", "14.0", "--nullable", compilation["nullable"],
+             "--defines", ";".join(compilation["defines"]), "--allow-unsafe", str(compilation["allowUnsafe"]).lower(),
+             "--check-overflow", str(compilation["checkOverflow"]).lower(), "--output-kind", output_kind[compilation["outputKind"]],
+             "--platform", compilation["platform"], "--optimize", str(compilation["optimization"] == "Release").lower(),
+             "--roots", response / "model-roots.rsp", "--output", destination])
+
+    def emit_refusal(label, diagnostic):
+        refused_source.write_text("stale client source", encoding="utf-8")
+        rejected = run("saved-remote-refuse-" + label,
+            [dotnet, compiler, "--roslyn-directory", roslyn, "emit-dotnet", "--model", model_input,
+             "--namespace", "IndependentDeclarations.Refused", "--service", "sharedData", "--client", "RefusedClient",
+             "--output", refused_source], True)
+        assert diagnostic.encode() in rejected, rejected
+        assert not refused_source.exists(), "Refused Remote projection retained a stale client: " + label
+
+    def add_method(method):
+        anchor = "\n}\n\n[JsonSourceGenerationOptions"
+        assert anchor in original
+        return original.replace(anchor, "\n" + method + anchor, 1)
+
+    cases = (
+        ("private-marked-method", add_method(
+            '    [RemoteMethod("hidden")]\n    private Task<SharedData> HiddenAsync(SharedData value) => Task.FromResult(value);'), "TYPM003"),
+        ("abstract-marked-method", add_method(
+            '    [RemoteMethod("missing")]\n    public abstract Task<SharedData> MissingAsync(SharedData value);').replace(
+                "public partial class SharedRemote", "public abstract partial class SharedRemote"), "TYPM007"),
+        ("extern-marked-method", add_method(
+            '    [RemoteMethod("missing")]\n    public extern Task<SharedData> MissingAsync(SharedData value);'), "TYPM007"),
+        ("bodyless-marked-method", add_method(
+            '    [RemoteMethod("missing")]\n    public partial Task<SharedData> MissingAsync(SharedData value);'), "TYPM007"),
+        ("empty-json-context", original.replace("typeof(SharedRemoteJson)", "typeof(EmptyJson)", 1) +
+            "\ninternal partial class EmptyJson : JsonSerializerContext;\n", "TYPM115"),
+        ("authored-json-metadata", original.replace(
+            "internal partial class SharedRemoteJson : JsonSerializerContext;",
+            "internal partial class SharedRemoteJson : JsonSerializerContext\n{\n"
+            "    public static SharedRemoteJson Default => throw new NotSupportedException();\n}\n"), "TYPM103"))
+    refusals = []
+    private_model = author / "private-marked-method.cordis.model.json"
+    for label, changed, diagnostic in cases:
+        assert changed != original, "Source control did not change the author: " + label
+        try:
+            source_file.write_text(changed, encoding="utf-8")
+            extract(label, model_input)
+        finally:
+            source_file.write_text(original, encoding="utf-8")
+        emit_refusal(label, diagnostic)
+        if label == "private-marked-method":
+            shutil.copyfile(model_input, private_model)
+        refusals.append({"case": label, "diagnostic": diagnostic, "staleOutputRemoved": True})
+
+    try:
+        source_file.write_text(original.replace("public partial class SharedRemote", "internal partial class SharedRemote"), encoding="utf-8")
+        internal_model = author / "internal-service.cordis.model.json"
+        extract("internal-service", internal_model)
+    finally:
+        source_file.write_text(original, encoding="utf-8")
+    internal_facts = json.loads(internal_model.read_text(encoding="utf-8"))
+    internal_service = next(value for value in internal_facts["declarations"]
+        if value["metadataName"] == "IndependentDeclarations.SharedRemote")
+    assert internal_service["accessibility"] == "Internal" and internal_service["id"] in internal_facts["roots"], \
+        "A non-public marked service was excluded from declaration analysis"
+
+    invalid_facts = []
+    missing_body_fact = json.loads(model.read_text(encoding="utf-8"))
+    service = next(value for value in missing_body_fact["declarations"]
+        if value["metadataName"] == "IndependentDeclarations.SharedRemote")
+    next(value for value in service["members"] if value["name"] == "EchoAsync").pop("implementation")
+    invalid_facts.append(("missing-implementation", missing_body_fact))
+    unknown = dict(baseline, unrecognizedDeclarationRepresentation=True)
+    invalid_facts.append(("unknown-property", unknown))
+    for label, invalid in invalid_facts:
+        model_input.write_text(json.dumps(invalid), encoding="utf-8")
+        emit_refusal(label, "Declaration model lacks valid required facts. Re-extract with the current tool.")
+        refusals.append({"case": label, "invalidInputShape": True, "staleOutputRemoved": True})
+
+    cold, cold_project = project("SavedRemoteColdRefusal",
+        '<CordisTypertClientModel>private-marked-method.cordis.model.json</CordisTypertClientModel>'
+        '<CordisTypertService>sharedData</CordisTypertService>'
+        '<CordisTypertClientNamespace>IndependentDeclarations.Refused</CordisTypertClientNamespace>'
+        '<CordisTypertClientName>RefusedClient</CordisTypertClientName>', composition)
+    shutil.copyfile(private_model, cold / private_model.name)
+    cold_source = cold / "obj/Release/net10.0/cordis-typert/RefusedClient.Generated.g.cs"
+    cold_source.parent.mkdir(parents=True)
+    cold_source.write_text("stale client source", encoding="utf-8")
+    rejected = run("saved-remote-first-refused-build", [dotnet, "build", cold_project, "-c", "Release"], True)
+    assert b"TYPM003" in rejected, rejected
+    assert not cold_source.exists(), "First refused build retained a generated client"
+    cold_source.write_text("owned residual after failed generation", encoding="utf-8")
+    run("saved-remote-first-refused-clean", [dotnet, "clean", cold_project, "-c", "Release"])
+    assert not cold_source.exists(), "Clean did not own client output after the first refused build"
+    (output / "saved-remote-evidence.json").write_text(json.dumps({
+        "consumer": "saved-declaration-remote-http", "contractIdentity": baseline["contractIdentity"],
+        "sameModelForDataAndRemote": True, "providerImplementationReferenced": False,
+        "reflectionFallbackEnabled": False, "realHttpInvocation": True,
+        "serializerNamesAndRecursion": True, "optionalDefaultsAndExplicitNullBoundary": True,
+        "terminalCancellationToken": True, "internalServiceAnalysisAccepted": True,
+        "incrementalAndColdRebuild": True, "firstRefusedBuildAndCleanRemovedClient": True,
+        "refusals": refusals
+    }, indent=2) + "\n", encoding="utf-8")
+
+
+def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, compiler, roslyn, run, project, hosted, saved_remote_only=False):
     roots = ("DataOptions", "DataExpression", "DataExternal", "DataReadOnly", "DataWireCollision",
-             "PluginAuthor", "CatalogService", "SharedData")
+             "PluginAuthor", "CatalogService", "SharedData", "SharedRemote")
+    if saved_remote_only:
+        roots = ("SharedData", "SharedRemote")
     root_items = '<ItemGroup>' + ''.join('<CordisTypertModelRoot Include="IndependentDeclarations.' + name + '"/>'
         for name in roots) + '</ItemGroup>'
     author, author_project = project("OrdinaryDataAuthor",
         '<AssemblyName>IndependentData.Provider</AssemblyName>'
-        '<PackageId>IndependentData.Provider</PackageId><Version>1.0.0-alpha</Version><LangVersion>14.0</LangVersion>'
-        '<CordisTypertService>sharedData</CordisTypertService>',
-        composition + '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>', root_items)
-    shutil.copyfile(fixtures / "Author.cs", author / "Author.cs")
-    shutil.copyfile(fixtures / "DataAuthor.cs", author / "DataAuthor.cs")
+        '<PackageId>IndependentData.Provider</PackageId><Version>1.0.0-alpha</Version><LangVersion>14.0</LangVersion>',
+        composition + ('' if saved_remote_only else '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>'), root_items)
+    if not saved_remote_only:
+        shutil.copyfile(fixtures / "Author.cs", author / "Author.cs")
+        shutil.copyfile(fixtures / "DataAuthor.cs", author / "DataAuthor.cs")
     shutil.copyfile(fixtures / "SharedAuthor.cs", author / "SharedAuthor.cs")
     run("ordinary-data-author-pack", [dotnet, "pack", author_project, "-c", "Release", "-o", feed])
     model = author / "obj/Release/net10.0/cordis-typert/IndependentData.Provider.cordis.model.json"
     with zipfile.ZipFile(feed / "IndependentData.Provider.1.0.0-alpha.nupkg") as archive:
         assert archive.read("cordis/typert/" + model.name) == model.read_bytes()
     shutil.copyfile(model, output / "ordinary-data-model.json")
-    remote_model = model.parent / "sharedData.cordis.typert.json"
     declaration = json.loads(model.read_text(encoding="utf-8"))
-    wire_model = json.loads(remote_model.read_text(encoding="utf-8"))
+    assert declaration["declarations"], "Author produced no declaration facts"
+    assert not list(model.parent.glob("*.cordis.typert.json")), "Author persisted a separate wire model"
     shared = next(value for value in declaration["declarations"] if value["metadataName"] == "IndependentDeclarations.SharedData")
-    shared_wire = next(value for value in wire_model["types"] if value["name"] == "SharedData")
     facts = {value["name"]: value for value in shared["members"] if value["kind"] == "property"}
-    projected = {value["name"]: value for value in shared_wire["members"]}
-    assert facts["Name"]["required"] and projected["Name"]["required"]
-    assert facts["Note"]["type"]["nullability"] == projected["Note"]["type"]["nullability"] == "Annotated"
-    assert facts["Count"]["initializer"]["json"] == projected["Count"]["initializer"]["json"] == "7"
-    assert facts["Note"]["initializer"]["json"] == projected["Note"]["initializer"]["json"] == '"initial"'
-    assert facts["Child"]["type"]["name"] == shared["id"]
-    assert projected["Child"]["type"]["name"] == shared_wire["id"]
-    assert projected["Name"]["wireName"] == "display_name" and projected["Count"]["wireName"] == "count"
     assert facts["Count"]["name"] == "Count", "Serializer naming policy leaked into declaration facts"
 
-    contract_items = '<ItemGroup><CordisTypertDataRoot Include="IndependentDeclarations.DataOptions"/>' \
+    contract_items = '<ItemGroup>' + ('' if saved_remote_only else '<CordisTypertDataRoot Include="IndependentDeclarations.DataOptions"/>') + \
         '<CordisTypertDataRoot Include="IndependentDeclarations.SharedData"/>' \
-        '<None Include="' + remote_model.name + '" Pack="true" PackagePath="cordis/typert/"/>' \
         '<None Include="' + model.name + '" Pack="true" PackagePath="cordis/typert/"/></ItemGroup>'
     contracts, contracts_project = project("OrdinaryDataContracts",
         '<PackageId>IndependentData.Contracts</PackageId><Version>1.0.0-alpha</Version>'
         '<CordisTypertDataModel>' + model.name + '</CordisTypertDataModel>'
         '<CordisTypertDataNamespace>IndependentDeclarations.Data</CordisTypertDataNamespace>'
         '<CordisTypertDataJsonContext>OrdinaryDataJson</CordisTypertDataJsonContext>'
-        '<CordisTypertClientModel>' + remote_model.name + '</CordisTypertClientModel>'
+        '<CordisTypertClientModel>' + model.name + '</CordisTypertClientModel>'
         '<CordisTypertService>sharedData</CordisTypertService>'
         '<CordisTypertClientNamespace>IndependentDeclarations.Wire</CordisTypertClientNamespace>'
         '<CordisTypertClientName>SharedClient</CordisTypertClientName>', composition, contract_items)
     shutil.copyfile(model, contracts / model.name)
-    shutil.copyfile(remote_model, contracts / remote_model.name)
     run("ordinary-data-contracts-pack", [dotnet, "pack", contracts_project, "-c", "Release", "-o", feed])
     generated = contracts / "obj/Release/net10.0/cordis-typert/OrdinaryDataJson.Data.g.cs"
     response = generated.parent / "data-roots.rsp"
-    generated_hash = hashlib.sha256(generated.read_bytes()).hexdigest()
-    generated_stamp = generated.stat().st_mtime_ns
+    client_source = generated.parent / "SharedClient.Generated.g.cs"
+    owned_sources = [generated, client_source]
+    hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in owned_sources}
+    stamps = {path.name: path.stat().st_mtime_ns for path in owned_sources}
     run("ordinary-data-contracts-incremental", [dotnet, "build", contracts_project, "-c", "Release"])
-    assert generated.stat().st_mtime_ns == generated_stamp
-    assert hashlib.sha256(generated.read_bytes()).hexdigest() == generated_hash
+    for path in owned_sources:
+        assert path.stat().st_mtime_ns == stamps[path.name]
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == hashes[path.name]
     run("ordinary-data-contracts-clean", [dotnet, "clean", contracts_project, "-c", "Release"])
-    assert not generated.exists() and not response.exists(), "Clean retained generated data input/output"
+    assert not any(path.exists() for path in owned_sources + [response]), "Clean retained generated data/client input/output"
     run("ordinary-data-contracts-cold-rebuild", [dotnet, "build", contracts_project, "-c", "Release"])
-    assert hashlib.sha256(generated.read_bytes()).hexdigest() == generated_hash
+    for path in owned_sources:
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == hashes[path.name]
 
-    caller, caller_project = project("OrdinaryDataConsumer", '<OutputType>Exe</OutputType>',
-        '<PackageReference Include="IndependentData.Contracts" Version="1.0.0-alpha"/>')
-    shutil.copyfile(fixtures / "DataConsumer.cs", caller / "Program.cs")
-    run("ordinary-data-caller-build", [dotnet, "build", caller_project, "-c", "Release"])
-    result = run("ordinary-data-caller", [dotnet, caller / "bin/Release/net10.0/OrdinaryDataConsumer.dll"])
-    assert b"ordinary data carrier consumer passed" in result
-    assets = json.loads((caller / "obj/project.assets.json").read_text(encoding="utf-8"))
-    assert not any(name.startswith(("IndependentData.Provider/", "IndependentDeclarations.External/"))
-        for name in assets["libraries"]), "Data caller acquired the author or external implementation package"
-    assert not list((caller / "bin").rglob("IndependentData.Provider.dll"))
-    assert not list((caller / "bin").rglob("IndependentDeclarations.External.dll"))
+    if not saved_remote_only:
+        caller, caller_project = project("OrdinaryDataConsumer", '<OutputType>Exe</OutputType>',
+            '<PackageReference Include="IndependentData.Contracts" Version="1.0.0-alpha"/>')
+        shutil.copyfile(fixtures / "DataConsumer.cs", caller / "Program.cs")
+        run("ordinary-data-caller-build", [dotnet, "build", caller_project, "-c", "Release"])
+        result = run("ordinary-data-caller", [dotnet, caller / "bin/Release/net10.0/OrdinaryDataConsumer.dll"])
+        assert b"ordinary data carrier consumer passed" in result
+        assets = json.loads((caller / "obj/project.assets.json").read_text(encoding="utf-8"))
+        assert not any(name.startswith(("IndependentData.Provider/", "IndependentDeclarations.External/"))
+            for name in assets["libraries"]), "Data caller acquired the author or external implementation package"
+        assert not list((caller / "bin").rglob("IndependentData.Provider.dll"))
+        assert not list((caller / "bin").rglob("IndependentDeclarations.External.dll"))
     shared_caller, shared_project = project("SharedDeclarationConsumer", '<OutputType>Exe</OutputType>',
         '<PackageReference Include="IndependentData.Contracts" Version="1.0.0-alpha"/>')
     shutil.copyfile(fixtures / "SharedConsumer.cs", shared_caller / "Program.cs")
     run("shared-declaration-caller-build", [dotnet, "build", shared_project, "-c", "Release"])
-    result = run("shared-declaration-caller", [dotnet, shared_caller / "bin/Release/net10.0/SharedDeclarationConsumer.dll"])
-    assert b"shared ordinary and Remote declaration consumer passed" in result
+    host, host_project = project("SharedRemoteHost", '<OutputType>Exe</OutputType>',
+        composition.replace('Cordis.NET.Composition', 'Cordis.NET.AspNetCore') +
+        '<PackageReference Include="IndependentData.Provider" Version="1.0.0-alpha"/>'
+        '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
+    shutil.copyfile(fixtures / "SharedHost.cs", host / "Program.cs")
+    run("shared-declaration-host-build", [dotnet, "build", host_project, "-c", "Release"])
+    with hosted("shared-declaration-host", [dotnet, host / "bin/Release/net10.0/SharedRemoteHost.dll"], expect_stop=True) as address:
+        result = run("shared-declaration-caller", [dotnet, shared_caller / "bin/Release/net10.0/SharedDeclarationConsumer.dll", address])
+        assert b"saved Remote declaration HTTP consumer passed" in result
     shared_assets = json.loads((shared_caller / "obj/project.assets.json").read_text(encoding="utf-8"))
     assert not any(name.startswith(("IndependentData.Provider/", "IndependentDeclarations.External/"))
         for name in shared_assets["libraries"]), "Shared consumer acquired the author's implementation"
-    original_shared = (author / "SharedAuthor.cs").read_bytes()
-    conflicting = author / "conflicting.cordis.typert.json"
-    refused_shared = contracts / "Refused.Shared.g.cs"
-    try:
-        (author / "SharedAuthor.cs").write_bytes(original_shared.replace(
-            b'Task<SharedData> EchoAsync(SharedData value)', b'Task<SharedEnvelope> EchoAsync(SharedEnvelope value)').replace(
-            b'JsonSerializable(typeof(SharedData))', b'JsonSerializable(typeof(SharedEnvelope))'))
-        with (author / "SharedAuthor.cs").open("a", encoding="utf-8") as file:
-            file.write('\n[RemoteService("otherShared", typeof(OtherSharedJson))]\n'
-                'public partial class OtherSharedRemote { [RemoteMethod("echo")] '
-                'public Task<SharedEnvelope> EchoAsync(SharedEnvelope value) => Task.FromResult(value); }\n'
-                '[JsonSerializable(typeof(SharedEnvelope))] public partial class OtherSharedJson : JsonSerializerContext;\n')
-        run("shared-declaration-conflicting-projection-extract", [dotnet, compiler, "--roslyn-directory", roslyn,
-            "extract", "--project-directory", author, "--sources", model.parent / "sources.rsp",
-            "--references", model.parent / "references.rsp", "--assembly-name", "IndependentData.Provider",
-            "--language-version", "14.0", "--nullable", "enable", "--defines", "TRACE",
-            "--service", "*", "--output", conflicting])
-        conflicts = [value for value in json.loads(conflicting.read_text(encoding="utf-8"))["diagnostics"]
-            if value["code"] == "TYPM113"]
-        assert conflicts and all(value["symbol"].endswith(":IndependentDeclarations.SharedData") for value in conflicts), \
-            "Cached outer member's explicit name hid a nested serializer contradiction"
-        refused_shared.write_text("stale shared projection", encoding="utf-8")
-        rejected = run("shared-declaration-conflicting-projection-refused", [dotnet, compiler,
-            "--roslyn-directory", roslyn, "emit-dotnet", "--model", conflicting,
-            "--namespace", "IndependentDeclarations.Wire", "--service", "sharedData", "--client", "SharedClient",
-            "--output", refused_shared], True)
-        assert b"TYPM113" in rejected and not refused_shared.exists()
-    finally:
-        (author / "SharedAuthor.cs").write_bytes(original_shared)
+    assert not list((shared_caller / "bin").rglob("IndependentData.Provider.dll"))
+    assert not list((shared_caller / "bin").rglob("IndependentDeclarations.External.dll"))
+    verify_saved_remote_refusals(author, model, composition, compiler, roslyn, dotnet, run, project, output)
+    if saved_remote_only:
+        return
 
     refused_roots = contracts / "refused-data-roots.rsp"
     refused_source = contracts / "Refused.Data.g.cs"
@@ -538,8 +633,6 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
         "authoredConstructorAndAccessorNotReplayed": True,
         "sameAuthoredDtoOrdinaryRootAndRemoteBoundary": True,
         "serializerNamesAppliedOnlyByProjection": True,
-        "conflictingRemoteSerializerNamesRefused": True,
-        "nestedSerializerConflictThroughExplicitOuterNameAndRecursiveDtoRefused": True,
         "incrementalTimestampAndColdRebuild": True,
         "cleanAndRefusalRemovedOwnedSource": True,
         "refusals": refusals

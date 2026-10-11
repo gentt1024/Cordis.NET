@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Cordis.Composition;
 
@@ -46,7 +47,21 @@ public sealed class SharedEnvelope
 public partial class SharedRemote
 {
     [RemoteMethod("echo")]
-    public Task<SharedData> EchoAsync(SharedData value) => Task.FromResult(value);
+    public Task<SharedData> EchoAsync(
+        SharedData value,
+        int adjustment = 3,
+        [DisallowNull] int? replacementCount = null!,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new SharedData
+        {
+            Name = value.Name,
+            Note = value.Note,
+            Count = (replacementCount ?? value.Count) + adjustment,
+            Child = value.Child
+        });
+    }
 }
 
 [JsonSourceGenerationOptions(
@@ -54,4 +69,5 @@ public partial class SharedRemote
     RespectNullableAnnotations = true,
     RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(SharedData))]
-public partial class SharedRemoteJson : JsonSerializerContext;
+[JsonSerializable(typeof(int?))]
+internal partial class SharedRemoteJson : JsonSerializerContext;

@@ -113,8 +113,7 @@ internal sealed record NativeService(
     string Documentation,
     NativeLocation? Location);
 
-internal sealed record NativeModelDocument(
-    int FormatVersion,
+internal sealed record RemoteProjection(
     string ContractIdentity,
     NativeCompilation Compilation,
     NativeService[] Services,

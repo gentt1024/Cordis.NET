@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using Cordis.Typert.Generator.Model;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -71,11 +72,7 @@ internal static class CompilerRunner
                             .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
                             .ToArray()
                         : []),
-                "emit-dotnet" => DotnetProjectionEmitter.Emit(
-                    NativeModelJson.Deserialize(File.ReadAllText(Required(options, "model"))),
-                    Required(options, "namespace"),
-                    Required(options, "service"),
-                    Required(options, "client")),
+                "emit-dotnet" => EmitDotnet(options),
                 _ => throw new InvalidDataException("Unknown native compiler command " + args[0])
             };
             WriteAtomic(output, content);
@@ -99,6 +96,27 @@ internal static class CompilerRunner
             Console.Error.WriteLine("CORDISTYPERT: " + error.Message);
             return 1;
         }
+    }
+
+    private static string EmitDotnet(Dictionary<string, string> options)
+    {
+        var service = Required(options, "service");
+        var (model, declarationIdentity) = RemoteModel(File.ReadAllText(Required(options, "model")), service);
+        var source = DotnetProjectionEmitter.Emit(
+            model,
+            Required(options, "namespace"),
+            service,
+            Required(options, "client"));
+        return declarationIdentity is null ? source : source + "// Declaration model " + declarationIdentity + "\n";
+    }
+
+    private static (NativeModelDocument Model, string? DeclarationIdentity) RemoteModel(string json, string service)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (document.RootElement.GetProperty("formatVersion").GetInt32() == NativeModelJson.CurrentVersion)
+            return (NativeModelJson.Deserialize(json), null);
+        var model = DeclarationModelJson.Deserialize(json);
+        return (DeclarationRemoteProjection.Project(model, service), model.ContractIdentity);
     }
 
     private static string Extract(Dictionary<string, string> options, bool declarations)

@@ -13,14 +13,19 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
     package = next(feed.glob("Cordis.NET.Composition.*.nupkg"), None)
     if package is None:
         raise RuntimeError("The validated Composition package was not supplied.")
+    model_name = "Cordis.Composition.cordis.model.json"
     with zipfile.ZipFile(package) as archive:
-        models = [name for name in archive.namelist() if name.startswith("cordis/typert/") and name.endswith(".cordis.typert.json")]
-        selected = [(name, json.loads(archive.read(name))) for name in models]
-        matches = [(name, model) for name, model in selected if {"pluginManager", "remoteNotifications"}.issubset(
-            {service["key"] for service in model["services"]})]
-        if len(matches) != 1:
+        model_bytes = archive.read("cordis/typert/" + model_name)
+        model = json.loads(model_bytes)
+        declarations = {declaration["id"]: declaration for declaration in model["declarations"]}
+        service_keys = [json.loads(attribute["arguments"][0]["json"])
+            for root_id in model["roots"]
+            for declaration in [declarations[root_id]]
+            if declaration["accessibility"] == "Public"
+            for attribute in declaration["attributes"]
+            if attribute["name"] == "Cordis.Composition.RemoteServiceAttribute"]
+        if any(service_keys.count(key) != 1 for key in ("pluginManager", "remoteNotifications")):
             raise RuntimeError("The package must contain the actual standard PluginManager and RemoteNotifications model.")
-        model_bytes = archive.read(matches[0][0])
     contracts = []
     contract_feed = source / "author-feed"
     for service, name, namespace in (
@@ -31,11 +36,11 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
         folder, path = project("ManagementContracts" if service == "pluginManager" else "NotificationContracts",
             f'<PackageId>{package_id}</PackageId><Version>1.0.0-alpha</Version><GenerateDocumentationFile>true</GenerateDocumentationFile>'
             f'<CordisTypertService>{service}</CordisTypertService>'
-            '<CordisTypertClientModel>standard.cordis.typert.json</CordisTypertClientModel>'
+            f'<CordisTypertClientModel>{model_name}</CordisTypertClientModel>'
             f'<CordisTypertClientNamespace>{namespace}</CordisTypertClientNamespace>'
             f'<CordisTypertClientName>{name}</CordisTypertClientName>', composition,
-            '<ItemGroup><None Include="standard.cordis.typert.json" Pack="true" PackagePath="cordis/typert/"/></ItemGroup>')
-        (folder / "standard.cordis.typert.json").write_bytes(model_bytes)
+            f'<ItemGroup><None Include="{model_name}" Pack="true" PackagePath="cordis/typert/"/></ItemGroup>')
+        (folder / model_name).write_bytes(model_bytes)
         run("standard-" + service + "-client-pack", [dotnet, "pack", path, "-c", "Release", "-o", contract_feed])
         contracts.append(f'<PackageReference Include="{package_id}" Version="1.0.0-alpha"/>')
     host, host_project = project("ManagementHost", '<OutputType>Exe</OutputType>', composition +

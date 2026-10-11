@@ -81,12 +81,21 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
                 assert "buildTransitive/Cordis.NET.Composition.targets" in entries, identity
                 for asset in ("Cordis.Typert.Compiler.dll", "Cordis.Typert.Compiler.deps.json", "Cordis.Typert.Compiler.runtimeconfig.json"):
                     assert "tools/net10.0/typert/" + asset in entries, (identity, asset)
-                model_path = "cordis/typert/Cordis.Composition.cordis.typert.json"
-                assert model_path in entries, identity
+                model_path = "cordis/typert/Cordis.Composition.cordis.model.json"
+                model_entries = [name for name in archive.namelist()
+                                 if name.startswith("cordis/typert/") and not name.endswith("/")]
+                assert model_entries == [model_path], (identity, model_entries)
                 model = json.loads(archive.read(model_path))
-                assert {service["key"] for service in model["services"]} == {
+                declarations = {declaration["id"]: declaration for declaration in model["declarations"]}
+                service_keys = [json.loads(attribute["arguments"][0]["json"])
+                                for root_id in model["roots"]
+                                for declaration in [declarations[root_id]]
+                                if declaration["accessibility"] == "Public"
+                                for attribute in declaration["attributes"]
+                                if attribute["name"] == "Cordis.Composition.RemoteServiceAttribute"]
+                assert len(service_keys) == 3 and set(service_keys) == {
                     "settingsController", "pluginManager", "remoteNotifications"
-                }, identity
+                }, (identity, service_keys)
                 assert not any(PurePosixPath(name).name.startswith("Microsoft.CodeAnalysis") for name in entries), identity
 
             assert any(name.startswith("LICENSES/") for name in entries), package

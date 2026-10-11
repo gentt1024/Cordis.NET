@@ -10,14 +10,15 @@ internal sealed partial class SourceContractReader
 {
     private readonly Dictionary<string, DeclarationType> declarations = new(StringComparer.Ordinal);
     private readonly HashSet<string> declarationVisiting = new(StringComparer.Ordinal);
-    private readonly Dictionary<DeclarationReference, ITypeSymbol> referenceSymbols = new();
+    private readonly Dictionary<string, INamedTypeSymbol> declarationSymbols = new(StringComparer.Ordinal);
     private readonly Dictionary<ISymbol, DeclarationMember> memberFacts = new(SymbolEqualityComparer.Default);
     private readonly List<NativeDiagnostic> declarationDiagnostics = [];
 
     internal static DeclarationModelDocument ReadDeclarations(
         CSharpCompilation compilation,
         string projectDirectory,
-        IEnumerable<string> metadataNames)
+        IEnumerable<string> metadataNames,
+        bool allowEmpty = false)
     {
         var parseErrors = compilation
             .GetParseDiagnostics()
@@ -49,19 +50,20 @@ internal sealed partial class SourceContractReader
                     throw new InvalidDataException(
                         $"Model root '{name}' must identify one authored declaration by CLR metadata name.");
                 for (var current = type;current is not null;current = current.ContainingType)
-                    if (current.DeclaredAccessibility != Accessibility.Public)
+                    if (current.DeclaredAccessibility != Accessibility.Public &&
+                        Attribute(type, "Cordis.Composition.RemoteServiceAttribute") is null)
                         throw new InvalidDataException(
                             $"Model root '{name}' must be publicly accessible through its containing types.");
                 reader.DeclarationReference(type);
                 return DeclarationId(type);
             })
             .ToArray();
-        if (roots.Length == 0)
+        if (roots.Length == 0 && !allowEmpty)
             throw new InvalidDataException("At least one ordinary declaration model root is required.");
+        reader.CompleteMetadataSignatures();
         var parse = compilation.SyntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions ??
             CSharpParseOptions.Default;
         var document = new DeclarationModelDocument(
-            DeclarationModelJson.CurrentVersion,
             "",
             new(
                 compilation.AssemblyName ?? "",
@@ -91,11 +93,7 @@ internal sealed partial class SourceContractReader
     }
 
     private DeclarationReference DeclarationReference(ITypeSymbol type, int depth = 0)
-    {
-        var reference = ReadDeclarationReference(type, depth);
-        referenceSymbols[reference] = type;
-        return reference;
-    }
+        => ReadDeclarationReference(type, depth);
 
     private DeclarationReference ReadDeclarationReference(ITypeSymbol type, int depth)
     {
@@ -131,6 +129,7 @@ internal sealed partial class SourceContractReader
 
         var definition = named.OriginalDefinition;
         var id = DeclarationId(definition);
+        declarationSymbols[id] = definition;
         if (!declarations.ContainsKey(id) && declarationVisiting.Add(id))
         {
             if (declarations.Count + declarationVisiting.Count > 256)
@@ -148,7 +147,7 @@ internal sealed partial class SourceContractReader
             ElementNames: named.IsTupleType ? named.TupleElements.Select(element => element.Name).ToArray() : null);
     }
 
-    private void ReadDeclaration(INamedTypeSymbol type, string id, int depth)
+    private void ReadDeclaration(INamedTypeSymbol type, string id, int depth, bool metadataSignatures = false)
     {
         var source = SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly);
         if (source && type
@@ -163,17 +162,18 @@ internal sealed partial class SourceContractReader
                     "TYPM202",
                     "Non-public explicitly included JSON data requires a separately supported declaration projection.",
                     id));
-        var parent = source && type.ContainingType is not null
+        var signatures = source || metadataSignatures;
+        var parent = signatures && type.ContainingType is not null
             ? DeclarationReference(type.ContainingType, depth + 1).Name
             : null;
         var parameters = TypeParameters(type.TypeParameters, depth + 1);
-        var baseType = source && type.BaseType is not null ? DeclarationReference(type.BaseType, depth + 1) : null;
+        var baseType = signatures && type.BaseType is not null ? DeclarationReference(type.BaseType, depth + 1) : null;
         var interfaces =
-            source ? type.Interfaces.Select(value => DeclarationReference(value, depth + 1)).ToArray() : [];
-        var members = source
+            signatures ? type.Interfaces.Select(value => DeclarationReference(value, depth + 1)).ToArray() : [];
+        var members = signatures
             ? type
                 .GetMembers()
-                .Where(PublicDeclarationMember)
+                .Where(member => source ? RetainedDeclarationMember(member) : MetadataDataMember(member))
                 .OrderBy(SymbolId, StringComparer.Ordinal)
                 .Select(value => ReadDeclarationMember(value, depth + 1))
                 .ToArray()
@@ -187,7 +187,7 @@ internal sealed partial class SourceContractReader
                 ? type.TypeKind == TypeKind.Class ? "record" : "recordStruct"
                 : type.TypeKind.ToString().ToLowerInvariant(),
             type.DeclaredAccessibility.ToString(),
-            source ? "source" : "metadata-reference",
+            source ? "source" : metadataSignatures ? "metadata-signature" : "metadata-reference",
             parent,
             Modifiers(type),
             parameters,
@@ -229,6 +229,9 @@ internal sealed partial class SourceContractReader
             symbol.Name,
             kind,
             symbol.DeclaredAccessibility.ToString(),
+            symbol.IsImplicitlyDeclared,
+            symbol.DeclaringSyntaxReferences.Length > 0,
+            Implementation(symbol),
             Modifiers(symbol),
             valueType is null ? null : DeclarationReference(valueType, depth),
             method?.ReturnsByRefReadonly == true || property?.ReturnsByRefReadonly == true ? "refReadonly" :
@@ -249,7 +252,8 @@ internal sealed partial class SourceContractReader
                     parameter.IsOptional,
                     parameter.HasExplicitDefaultValue ? Constant(parameter.Type, parameter.ExplicitDefaultValue) : null,
                     parameter.IsParams,
-                    DeclarationAttributes(parameter)))
+                    DeclarationAttributes(parameter),
+                    Docs(parameter)))
                 .ToArray(),
             method is null ? [] : TypeParameters(method.TypeParameters, depth),
             DeclarationInitializer(symbol),
@@ -335,23 +339,90 @@ internal sealed partial class SourceContractReader
             : null;
     }
 
-    private static NativeAttribute[] DeclarationAttributes(ISymbol? symbol) =>
+    private DeclarationAttribute[] DeclarationAttributes(ISymbol? symbol) =>
         DeclarationAttributes(symbol?.GetAttributes() ?? []);
 
-    private static NativeAttribute[] DeclarationAttributes(IEnumerable<AttributeData> attributes) => attributes
+    private DeclarationAttribute[] DeclarationAttributes(IEnumerable<AttributeData> attributes) => attributes
         .Select(attribute =>
-            new NativeAttribute(
+            new DeclarationAttribute(
                 attribute.AttributeClass?.ToDisplayString() ?? "",
-                attribute.ConstructorArguments.Select(Constant).ToArray(),
+                attribute.AttributeClass is { } attributeType ? DeclarationReference(attributeType) :
+                    new("unsupported", "unresolved attribute", "None", []),
+                attribute.ConstructorArguments.Select(DeclarationConstant).ToArray(),
                 attribute
                     .NamedArguments.OrderBy(pair => pair.Key, StringComparer.Ordinal)
-                    .Select(pair => new NativeNamedConstant(pair.Key, Constant(pair.Value)))
+                    .Select(pair => new DeclarationNamedConstant(pair.Key, DeclarationConstant(pair.Value)))
                     .ToArray()))
         .ToArray();
+
+    private DeclarationConstant DeclarationConstant(TypedConstant value)
+    {
+        var constant = Constant(value);
+        return new(constant.Kind, constant.Type, constant.Json,
+            value.Kind == TypedConstantKind.Type && value.Value is ITypeSymbol type ? DeclarationReference(type) : null,
+            value.Kind == TypedConstantKind.Array && !value.IsNull ? value.Values.Select(DeclarationConstant).ToArray() : []);
+    }
+
+    private static bool RetainedDeclarationMember(ISymbol member) => PublicDeclarationMember(member) ||
+        member is IMethodSymbol { MethodKind: MethodKind.Constructor } ||
+        member is IMethodSymbol && Attribute(member, "Cordis.Composition.RemoteMethodAttribute") is not null ||
+        member is IPropertySymbol or IFieldSymbol && Attribute(member, JsonPrefix + "JsonIncludeAttribute") is not null ||
+        member.DeclaringSyntaxReferences.Length > 0 &&
+        member.Name is "Default" or "GetTypeInfo" or "GeneratedSerializerOptions" && IsJsonContext(member.ContainingType);
+
+    private static string Implementation(ISymbol symbol)
+    {
+        if (symbol.IsImplicitlyDeclared)
+            return "implicit";
+        if (symbol.DeclaringSyntaxReferences.Length == 0)
+            return "metadata";
+        if (symbol is not IMethodSymbol method)
+            return "declaration";
+        var implementation = method.PartialImplementationPart ?? method;
+        return implementation.DeclaringSyntaxReferences.Any(reference => reference.GetSyntax() is BaseMethodDeclarationSyntax
+        { Body: not null } or BaseMethodDeclarationSyntax { ExpressionBody: not null }) ? "body" : "declaration";
+    }
+
+    private static bool IsJsonContext(INamedTypeSymbol? type) =>
+        type?.BaseType?.ToDisplayString() == "System.Text.Json.Serialization.JsonSerializerContext";
+
+    private static bool MetadataDataMember(ISymbol member) =>
+        member is IMethodSymbol { MethodKind: MethodKind.Constructor } ||
+        !member.IsStatic && (member.DeclaredAccessibility == Accessibility.Public ||
+            Attribute(member, JsonPrefix + "JsonIncludeAttribute") is not null) &&
+        member is IPropertySymbol { IsIndexer: false } or IFieldSymbol { IsImplicitlyDeclared: false };
+
+    // Every retained non-framework reference receives the same signature view, irrespective of
+    // which selected root reached it first. Metadata never supplies source initializer/body facts.
+    private void CompleteMetadataSignatures()
+    {
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        while (true)
+        {
+            var pending = declarations.Values.Where(type => type.Provenance == "metadata-reference" &&
+                !visited.Contains(type.Id)).OrderBy(type => type.Id, StringComparer.Ordinal).ToArray();
+            if (pending.Length == 0)
+                return;
+            foreach (var type in pending)
+            {
+                visited.Add(type.Id);
+                var symbol = declarationSymbols[type.Id];
+                var token = symbol.ContainingAssembly.Identity.PublicKeyToken;
+                if (symbol.ContainingAssembly.Name is "mscorlib" or "netstandard" ||
+                    symbol.ContainingAssembly.Name.StartsWith("System", StringComparison.Ordinal) && !token.IsEmpty)
+                    continue;
+                ReadDeclaration(symbol, type.Id, 0, true);
+            }
+        }
+    }
 
     private static string[] Modifiers(ISymbol symbol)
     {
         var values = new List<string>();
+        if (symbol is INamedTypeSymbol && symbol.DeclaringSyntaxReferences.Length > 0 &&
+            symbol.DeclaringSyntaxReferences.All(reference => reference.GetSyntax() is TypeDeclarationSyntax declaration &&
+                declaration.Modifiers.Any(SyntaxKind.PartialKeyword)))
+            values.Add("partial");
         if (symbol.IsStatic)
             values.Add("static");
         if (symbol is IMethodSymbol { IsExtensionMethod: true })

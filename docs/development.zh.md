@@ -309,7 +309,7 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 | 方向 | 合同落点与推荐 | 兼容和剩余决策 |
 |---|---|---|
 | D-REV | 标准 Settings 统一采用数值合同。`double` 对应 JavaScript number；观察版本从 0 开始，由 Settings owner 持有。省略 expected revision 只跳过先前视图比较。 | 已批准直接纠正：消费者重新生成与构建；拒绝 string/null expected revision；不新增版本化 Remote 或转换路径。仅保留具有独立职责的完整配置／文件 hash 机制。 |
-| D-MODEL | `CordisTypertModelRoot` item 选择精确公开 CLR metadata name。`extract-model` 写出普通 v2 事实；`inspect-model` 将其作为目录消费。选择不要求额外 attribute、`partial`、serializer context 或 provider 注册。 | v1 继续承担受支持的 Remote wire 投影，扩展名为 `.cordis.typert.json`；它消费共享声明事实，不以历史字节兼容为职责。optional/default 事实驱动受支持的绑定和客户端。普通 `.cordis.model.json` 不会被误当作 v1 generator 输入。v2 分析不使普通方法成为可远程调用方法。 |
+| D-MODEL | `CordisTypertModelRoot` 选择精确 CLR metadata name：普通公开根，或为分析保留的显式标记 Remote 根。v3 保存结构化 attribute 引用、partial／成员来源和 JSON context 事实，旧声明须重提取。普通选择不要求 Remote attribute、`partial`、serializer context 或注册。 | v1 保留运行 conformance 及受支持 wire 投影职责。源 Remote 和保存 direct unary 投影使用同一声明解释器；optional/default 事实驱动受支持 binding 和客户端。普通模型不自动成为 v1 generator 输入，分析不使方法成为 RPC。 |
 | D-WIRE | Registry/Gateway 继续拥有分发和生命周期。既有原生 HTTP/NDJSON 是 unary、显式 Context/lookup、downlink/base64 的当前 .NET/TS 互通边界。Context/owned references、Peer/uplink/events/attachments 的合同落实后在同一所有者扩展。 | 不承诺整个 DSH 产品 wire，也未选入新 carrier。直接固定客户端互通必须逐边界说明帧、codec、所有权、错误和取消，并通过真实跨端调用。产品 Remote 选择表留在库外。 |
 
 迁移见[Settings 合同迁移](settings-contract-migration.zh.md)。持久 YAML/JSON 格式及 Git 历史不变。标准 Settings 消费者需要重建；未来发布必须使用新的包版本身份。本地源码版本不变。
@@ -321,8 +321,8 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 | 选择的普通 Plugin/Service/Config/object 声明 | 公开源根、可达定义、字段/属性/indexer、重载/泛型方法、事件及 delegate | 已实现且有有界包／目录证据。成员存在不推导执行或 RPC。 |
 | 泛型、继承和引用事实 | 程序集加 metadata 身份，type parameter owner/ordinal/constraints、应用实参、containing type、直接 base/interfaces、tuple 名称及 enum 底层类型 | 有界分析已实现；包 fixture 检查字面事实。不展开外部实现。 |
 | required、nullable、默认值及来源 | 分开的 required/accessor/nullability 标志，类型化常量或未执行 initializer 表达式，XML/源码位置及 provenance | 有界分析已实现，不执行源码体。metadata-reference 的源码体仍不可得。 |
-| 普通独立目录 | 打包 v2 制品，不引用 provider 实现地消费、验证身份及投影声明成员 | 已实现，独立包／目录证据进入 `verify-typert-dotnet.py`，没有另建平行门禁。 |
-| Remote/.NET DTO/STJ/TS 投影 | 既有 v1 支持路线及 pre-`CoreCompile` 时序 | 可选原生绑定及生成 Settings .NET／TS 消费在新检查点通过。选定 v2 普通 .NET DTO/STJ 发射及共享作者事实解释已实现；显式引用 v2 源模型现可补全受支持的普通 DTO/STJ 图；保存的 v2 重建 Remote、泛型 DTO 发射及其他引用模型后端继续开放。 |
+| 普通独立目录 | 打包当前声明制品，不引用 provider 实现地消费、验证身份及投影声明成员 | 已实现，独立包／目录证据进入 `verify-typert-dotnet.py`，没有另建平行门禁。格式升级须重新提取并取得新包证据。 |
+| Remote/.NET DTO/STJ/TS 投影 | 既有 v1 支持路线及 pre-`CoreCompile` 时序，保存 direct unary 使用共享 v3 声明解释器 | 生成 Settings、管理／通知及显式普通 DTO/STJ 引用模型已在各自绑定的检查点通过。新 v3 保存 unary 路径已有最小 compiler 探针，实际包／HTTP 消费及最终冻结门禁仍在进行。泛型 DTO 发射及更广的 Remote／引用模型后端继续开放。 |
 | 完整 events/reference-object 运行及跨包源组合 | 声明引用保留身份，当前运行时沿用既有显式注册 | 普通 DTO/STJ 源模型组合已通过显式输入实现。更广的 Remote/Schema/TS 组合、owned graph 调用及富协议各行仍开放。 |
 | IDE、UI 及整体交付 | 既有 TFM/analyzer/build/carrier 路线 | design-time IDE、WPF/Avalonia/Godot/Blazor、浏览器管理、跨平台/AOT 和最终冻结范围验收需要具名证据。控制台/目录通过不将这些关项。 |
 

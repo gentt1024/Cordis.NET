@@ -86,12 +86,17 @@
           DependsOnTargets="ResolveReferences"
           Condition="'$(CordisTypertClientModel)' != '' and '$(DesignTimeBuild)' != 'true'">
     <MakeDir Directories="$(CordisTypertOutputDirectory)" />
+    <ItemGroup>
+      <FileWrites Include="$(CordisTypertClientSource)" />
+    </ItemGroup>
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
           Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --namespace &quot;$(CordisTypertClientNamespace)&quot; --service &quot;$(CordisTypertService)&quot; --client &quot;$(CordisTypertClientName)&quot; --output &quot;$(CordisTypertClientSource)&quot;" />
     <ItemGroup>
       <Compile Remove="$(CordisTypertClientSource)" />
       <Compile Include="$(CordisTypertClientSource)" />
-      <FileWrites Include="$(CordisTypertClientSource)" />
     </ItemGroup>
+  </Target>
+  <Target Name="CordisTypertCleanDotnetClient" BeforeTargets="CoreClean">
+    <Delete Files="$(CordisTypertClientSource)" />
   </Target>
 </Project>

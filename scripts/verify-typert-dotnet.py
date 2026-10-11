@@ -1,5 +1,6 @@
 """Exercise ordinary declaration catalogs and a model-only Settings caller using shipped .NET packages."""
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -12,7 +13,7 @@ import threading
 import xml.etree.ElementTree as ET
 import zipfile
 
-from typert_declaration_consumer import verify_declaration_consumer, verify_referenced_data_consumer
+from typert_declaration_consumer import verify_declaration_consumer, verify_referenced_data_consumer, verify_data_consumer
 from typert_management_consumer import verify_management_consumer
 
 
@@ -28,6 +29,8 @@ def main():
         help="Run only standard generated management and notification package consumers.")
     parser.add_argument("--data-references-only", action="store_true",
         help="Run only ordinary DTO projections composed from explicit referenced models.")
+    parser.add_argument("--saved-remote-only", action="store_true",
+        help="Run only the saved declaration model and real unary Remote package consumer.")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = options.output.resolve()
@@ -74,16 +77,57 @@ def main():
             '</PropertyGroup><ItemGroup>' + references + '</ItemGroup>' + extra + '</Project>', encoding="utf-8")
         return folder, path
 
+    @contextmanager
+    def hosted(name, command, expect_stop=False):
+        ready = queue.Queue()
+        lines = []
+        with (output / (name + ".log")).open("w", encoding="utf-8") as log:
+            process = subprocess.Popen([str(item) for item in command], cwd=source, env=env,
+                stdout=subprocess.PIPE, stderr=log, text=True, encoding="utf-8")
+            def wait_ready():
+                announced = False
+                for line in process.stdout:
+                    lines.append(line)
+                    if not announced and line.startswith("READY "):
+                        ready.put(line.strip()[6:])
+                        announced = True
+                if not announced:
+                    ready.put(None)
+            reader = threading.Thread(target=wait_ready, daemon=True)
+            reader.start()
+            try:
+                address = ready.get(timeout=60)
+                assert address and address.startswith("http://127.0.0.1:"), address
+                yield address
+                if expect_stop:
+                    assert process.wait(timeout=30) == 0, "Host failed during shutdown."
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=30)
+                reader.join(timeout=30)
+                assert not reader.is_alive(), "Host output reader did not retire."
+                log.write("".join(lines))
+
     try:
         composition = f'<PackageReference Include="Cordis.NET.Composition" Version="{version}"/>'
         clr = f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>'
+        if options.saved_remote_only:
+            sdk = run("saved-remote-selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
+            compiler = source / "cache/cordis.net.composition" / version / "tools/net10.0/typert/Cordis.Typert.Compiler.dll"
+            roslyn = dotnet.parent / "sdk" / sdk / "Roslyn/bincore"
+            verify_data_consumer(root / "tests/fixtures/DeclarationModel", source, feed, output,
+                dotnet, composition, compiler, roslyn, run, project, hosted, saved_remote_only=True)
+            provider_referenced = False
+            status = "requested-checks-passed"
+            return
         if options.data_references_only:
             verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project)
             provider_referenced = False
             status = "requested-checks-passed"
             return
         if not options.management_only:
-            verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project)
+            verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted)
         if options.declarations_only:
             provider_referenced = False
             status = "requested-checks-passed"
@@ -320,40 +364,17 @@ def main():
         if options.aot:
             run("caller-aot-publish", [dotnet, "publish", caller_project, "-c", "Release", "-p:PublishAot=true", "-o", source / "native"])
         for mode in ("jit", "aot") if options.aot else ("jit",):
-            ready = queue.Queue()
-            stdout_lines = []
-            with (output / ("host-" + mode + ".log")).open("w", encoding="utf-8") as host_log:
-                process = subprocess.Popen([str(dotnet), str(host / "bin/Release/net10.0/Host.dll"), str(source / ("profile-" + mode)), str(bundle)],
-                    cwd=source, env=env, stdout=subprocess.PIPE, stderr=host_log, text=True, encoding="utf-8")
-                def wait_ready():
-                    announced = False
-                    for line in process.stdout:
-                        stdout_lines.append(line)
-                        if not announced and line.startswith("READY "):
-                            ready.put(line.strip()[6:])
-                            announced = True
-                    if not announced:
-                        ready.put(None)
-                reader = threading.Thread(target=wait_ready, daemon=True)
-                reader.start()
-                try:
-                    address = ready.get(timeout=60)
-                    assert address and address.startswith("http://127.0.0.1:"), address
-                    command = [dotnet, caller / "bin/Release/net10.0/Caller.dll", address] if mode == "jit" else [source / "native" / ("Caller.exe" if os.name == "nt" else "Caller"), address]
-                    run("typed-settings-" + mode, command)
-                finally:
-                    process.kill()
-                    process.wait(timeout=30)
-                    reader.join(timeout=30)
-                    assert not reader.is_alive(), "Host output reader did not retire."
-                    host_log.write("".join(stdout_lines))
+            with hosted("host-" + mode, [dotnet, host / "bin/Release/net10.0/Host.dll", source / ("profile-" + mode), bundle]) as address:
+                command = [dotnet, caller / "bin/Release/net10.0/Caller.dll", address] if mode == "jit" else [source / "native" / ("Caller.exe" if os.name == "nt" else "Caller"), address]
+                run("typed-settings-" + mode, command)
         status = "requested-checks-passed"
     finally:
         (output / "results.json").write_text(json.dumps({"status": status, "steps": steps, "independentSourceDirectory": str(source),
             "providerImplementationReferencedByCaller": provider_referenced, "packageReferencesOnly": True,
             "nodeCommands": [], "managementTypeScriptCommands": management_node_commands,
             "aotRequested": options.aot, "declarationsOnly": options.declarations_only,
-            "managementOnly": options.management_only, "dataReferencesOnly": options.data_references_only}, indent=2) + "\n", encoding="utf-8")
+            "managementOnly": options.management_only, "dataReferencesOnly": options.data_references_only,
+            "savedRemoteOnly": options.saved_remote_only}, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

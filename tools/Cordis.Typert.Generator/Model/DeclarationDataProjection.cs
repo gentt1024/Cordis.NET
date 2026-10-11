@@ -76,39 +76,11 @@ internal sealed class DeclarationDataProjection
         if (reference.Kind != "named" || reference.ContainingType is not null)
             throw Refuse(reference.Name, "Unsupported or unresolved data reference.");
         var type = declarations.Resolve(reference.Name);
-        if (type.Provenance == "metadata-reference")
+        if (type.Provenance != "source")
         {
-            if (type.MetadataName == "System.Nullable`1" &&
-                FrameworkAssembly(type, "System.Runtime", "b03f5f7f11d50a3a") &&
-                reference.Arguments.Length == 1)
-                return new(
-                    "nullable",
-                    "System.Nullable<T>",
-                    reference.Nullability,
-                    [Reference(reference.Arguments[0], depth + 1)]);
-            if (type.MetadataName == "System.Text.Json.JsonElement" &&
-                FrameworkAssembly(type, "System.Text.Json", "cc7b13ffcd2ddd51") && reference.Arguments.Length == 0)
-                return new("json", "System.Text.Json.JsonElement", reference.Nullability, []);
-            var collection = type.MetadataName switch
-            {
-                "System.Collections.Generic.List`1" when FrameworkAssembly(
-                        type,
-                        "System.Collections",
-                        "b03f5f7f11d50a3a") =>
-                    "System.Collections.Generic.List<T>",
-                "System.Collections.Generic.IReadOnlyList`1" when FrameworkAssembly(
-                        type,
-                        "System.Runtime",
-                        "b03f5f7f11d50a3a") =>
-                    "System.Collections.Generic.IReadOnlyList<T>",
-                _ => null
-            };
-            if (collection is not null && reference.Arguments.Length == 1)
-                return new(
-                    "collection",
-                    collection,
-                    reference.Nullability,
-                    [Reference(reference.Arguments[0], depth + 1)]);
+            if (DeclarationWireProjection.FrameworkReference(type, reference, value => Reference(value, depth + 1)) is { } framework &&
+                (framework.Kind != "collection" || framework.Name is "System.Collections.Generic.List<T>" or "System.Collections.Generic.IReadOnlyList<T>"))
+                return framework;
             throw Refuse(
                 type.Id,
                 "External data declarations require referenced-model composition; only the declared framework data types are supported.");
@@ -131,13 +103,13 @@ internal sealed class DeclarationDataProjection
     {
         if (type.Provenance != "source" || type.Kind != "class" || type.Accessibility != "Public" ||
             type.ContainingType is not null || type.TypeParameters.Length != 0 || type.Interfaces.Length != 0 ||
-            type.Modifiers.Any(value => value != "sealed") ||
+            type.Modifiers.Any(value => value is not ("sealed" or "partial")) ||
             type.BaseType is not { Kind: "primitive", Name: "System_Object" })
             throw Refuse(
                 type.Id,
                 "Data projection requires a public top-level non-generic class without inheritance or interfaces.");
         var members = new List<NativeMember>();
-        foreach (var member in type.Members)
+        foreach (var member in type.Members.Where(member => member.Accessibility is "Public" or "Protected" or "ProtectedOrInternal"))
         {
             if (member.Kind == "Constructor" && member.Accessibility == "Public" &&
                 member.Parameters.Length == 0 && member.Attributes.Length == 0)
@@ -151,36 +123,21 @@ internal sealed class DeclarationDataProjection
             if (member.ReturnAttributes.Length != 0 || member.GetterAttributes.Length != 0 ||
                 member.SetterAttributes.Length != 0 || member.SetterValueAttributes.Length != 0)
                 throw Refuse(member.Id, "Accessor-targeted attributes require a separately supported data projection.");
-            ValidateAttributes(member.Attributes, false, member.Id);
+            var attributes = DeclarationAttributeProjection.Native(member.Attributes);
+            ValidateAttributes(attributes, false, member.Id);
             if (member.Initializer is { Kind: not "value" })
                 throw Refuse(
                     member.Id,
                     "Only constant data initializers are supported; source expressions are not executed or copied.");
             if (member.Initializer is { Json: not "null" } initializer && !ConstantType(initializer.Type))
                 throw Refuse(member.Id, "Unsupported data initializer type " + initializer.Type + ".");
-            var wire = DeclarationWireProjection.MemberName(member.Name, member.Attributes);
-            members.Add(
-                new(
-                    member.Name,
-                    wire,
-                    "property",
-                    Reference(member.Type, depth),
-                    member.Required,
-                    member.Attributes.Any(attribute =>
-                        attribute.Name == "System.Text.Json.Serialization.JsonRequiredAttribute"),
-                    true,
-                    member.InitOnly ? "init" : "set",
-                    "Public",
-                    member.Attributes,
-                    member.Initializer,
-                    null,
-                    member.Documentation,
-                    member.Location));
+            members.Add(DeclarationWireProjection.Member(member, value => Reference(value, depth), attributes, "0", member.Initializer, null));
         }
 
         if (members.Select(member => member.WireName).Distinct(StringComparer.Ordinal).Count() != members.Count)
             throw Refuse(type.Id, "JSON property names collide.");
-        ValidateAttributes(type.Attributes, true, type.Id);
+        var typeAttributes = DeclarationAttributeProjection.Native(type.Attributes);
+        ValidateAttributes(typeAttributes, true, type.Id);
         projected.Add(
             type.Id,
             new(
@@ -193,7 +150,7 @@ internal sealed class DeclarationDataProjection
                 [],
                 members.ToArray(),
                 [],
-                type.Attributes,
+                typeAttributes,
                 type.Documentation,
                 type.Location));
     }
@@ -204,10 +161,6 @@ internal sealed class DeclarationDataProjection
         "System.Boolean" or "System.Byte" or "System.SByte" or "System.Int16" or "System.UInt16" or
         "System.Int32" or "System.UInt32" or "System.Int64" or "System.UInt64" or "System.Single" or
         "System.Double" or "System.Decimal" or "System.Char" or "System.String";
-
-    private static bool FrameworkAssembly(DeclarationType type, string name, string token) =>
-        type.Assembly.StartsWith(name + ", ", StringComparison.Ordinal) &&
-        type.Assembly.EndsWith(", Culture=neutral, PublicKeyToken=" + token, StringComparison.Ordinal);
 
     private static void ValidateAttributes(NativeAttribute[] attributes, bool type, string origin)
     {

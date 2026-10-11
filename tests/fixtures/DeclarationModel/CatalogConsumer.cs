@@ -7,7 +7,7 @@ using var modelDocument = JsonDocument.Parse(File.ReadAllText(args[0]));
 using var catalogDocument = JsonDocument.Parse(File.ReadAllText(args[1]));
 var model = modelDocument.RootElement;
 var catalog = catalogDocument.RootElement;
-Check(model.GetProperty("formatVersion").GetInt32() == 2, "ordinary model format");
+Check(model.GetProperty("declarations").GetArrayLength() > 0, "ordinary declaration facts");
 Check(!model.TryGetProperty("services", out _), "ordinary declarations remain separate from remote services");
 Check(model.GetProperty("diagnostics").GetArrayLength() == 0, "ordinary declarations need no unsupported projection");
 Check(

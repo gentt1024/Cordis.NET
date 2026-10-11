@@ -29,6 +29,21 @@ internal sealed record DeclarationTypeParameter(
     bool AllowsRefLikeType,
     DeclarationReference[] Constraints);
 
+internal sealed record DeclarationConstant(
+    string Kind,
+    string Type,
+    string Json,
+    DeclarationReference? Reference,
+    DeclarationConstant[] Elements);
+
+internal sealed record DeclarationNamedConstant(string Name, DeclarationConstant Value);
+
+internal sealed record DeclarationAttribute(
+    string Name,
+    DeclarationReference Type,
+    DeclarationConstant[] Arguments,
+    DeclarationNamedConstant[] NamedArguments);
+
 internal sealed record DeclarationParameter(
     string Name,
     DeclarationReference Type,
@@ -38,13 +53,17 @@ internal sealed record DeclarationParameter(
     bool Optional,
     NativeConstant? Default,
     bool Params,
-    NativeAttribute[] Attributes);
+    DeclarationAttribute[] Attributes,
+    string Documentation);
 
 internal sealed record DeclarationMember(
     string Id,
     string Name,
     string Kind,
     string Accessibility,
+    bool Implicit,
+    bool Source,
+    string Implementation,
     string[] Modifiers,
     DeclarationReference? Type,
     string ReturnRefKind,
@@ -56,11 +75,11 @@ internal sealed record DeclarationMember(
     DeclarationTypeParameter[] TypeParameters,
     NativeConstant? Initializer,
     NativeConstant? GetterConstant,
-    NativeAttribute[] Attributes,
-    NativeAttribute[] ReturnAttributes,
-    NativeAttribute[] GetterAttributes,
-    NativeAttribute[] SetterAttributes,
-    NativeAttribute[] SetterValueAttributes,
+    DeclarationAttribute[] Attributes,
+    DeclarationAttribute[] ReturnAttributes,
+    DeclarationAttribute[] GetterAttributes,
+    DeclarationAttribute[] SetterAttributes,
+    DeclarationAttribute[] SetterValueAttributes,
     string Documentation,
     NativeLocation? Location);
 
@@ -79,12 +98,11 @@ internal sealed record DeclarationType(
     DeclarationReference? EnumUnderlyingType,
     DeclarationReference[] Interfaces,
     DeclarationMember[] Members,
-    NativeAttribute[] Attributes,
+    DeclarationAttribute[] Attributes,
     string Documentation,
     NativeLocation? Location);
 
 internal sealed record DeclarationModelDocument(
-    int FormatVersion,
     string ContractIdentity,
     NativeCompilation Compilation,
     string[] Roots,
@@ -93,12 +111,12 @@ internal sealed record DeclarationModelDocument(
 
 internal static class DeclarationModelJson
 {
-    internal const int CurrentVersion = 2;
-
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
+        RespectRequiredConstructorParameters = true,
+        RespectNullableAnnotations = true,
         UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow
     };
 
@@ -115,10 +133,16 @@ internal static class DeclarationModelJson
 
     internal static DeclarationModelDocument Deserialize(string json)
     {
-        var model = JsonSerializer.Deserialize<DeclarationModelDocument>(json, Options) ??
-            throw new InvalidDataException("Declaration model is null.");
-        if (model.FormatVersion != CurrentVersion)
-            throw new InvalidDataException($"Unsupported declaration model format {model.FormatVersion}.");
+        DeclarationModelDocument model;
+        try
+        {
+            model = JsonSerializer.Deserialize<DeclarationModelDocument>(json, Options) ??
+                throw new InvalidDataException("Declaration model is null.");
+        }
+        catch (JsonException error)
+        {
+            throw new InvalidDataException("Declaration model lacks valid required facts. Re-extract with the current tool. " + error.Message, error);
+        }
         ValidateStructure(model);
         if (model.ContractIdentity != Identity(model))
             throw new InvalidDataException("Declaration model identity does not match its authored facts.");
@@ -136,12 +160,73 @@ internal static class DeclarationModelJson
             throw new InvalidDataException("Declaration model identities or roots are invalid.");
         foreach (var declaration in model.Declarations)
         {
+            if (declaration.Id != declaration.Assembly + ":" + declaration.MetadataName ||
+                declaration.Provenance is not ("source" or "metadata-reference" or "metadata-signature"))
+                throw new InvalidDataException("Declaration identity or provenance is invalid: " + declaration.Id);
             if (declaration.Members is null)
                 throw new InvalidDataException($"Declaration '{declaration.MetadataName}' members are required.");
             if (declaration.Members.Select(member => member.Id).Distinct(StringComparer.Ordinal).Count() !=
                 declaration.Members.Length)
                 throw new InvalidDataException(
                     $"Declaration '{declaration.MetadataName}' contains duplicate member identities.");
+            Reference(declaration.BaseType);
+            Reference(declaration.EnumUnderlyingType);
+            foreach (var reference in declaration.Interfaces)
+                Reference(reference);
+            Parameters(declaration.TypeParameters);
+            Attributes(declaration.Attributes);
+            foreach (var member in declaration.Members)
+            {
+                Reference(member.Type);
+                Parameters(member.TypeParameters);
+                Attributes(member.Attributes);
+                Attributes(member.ReturnAttributes);
+                Attributes(member.GetterAttributes);
+                Attributes(member.SetterAttributes);
+                Attributes(member.SetterValueAttributes);
+                foreach (var parameter in member.Parameters)
+                {
+                    Reference(parameter.Type);
+                    Attributes(parameter.Attributes);
+                }
+            }
+        }
+
+        void Reference(DeclarationReference? reference)
+        {
+            if (reference is null)
+                return;
+            if (reference.Kind is "named" or "tuple" && !ids.Contains(reference.Name))
+                throw new InvalidDataException("Declaration reference has no exact definition: " + reference.Name);
+            foreach (var argument in reference.Arguments)
+                Reference(argument);
+            Reference(reference.ContainingType);
+        }
+
+        void Parameters(DeclarationTypeParameter[] parameters)
+        {
+            foreach (var parameter in parameters)
+                foreach (var constraint in parameter.Constraints)
+                    Reference(constraint);
+        }
+
+        void Attributes(DeclarationAttribute[] attributes)
+        {
+            foreach (var attribute in attributes)
+            {
+                Reference(attribute.Type);
+                foreach (var value in attribute.Arguments.Concat(attribute.NamedArguments.Select(value => value.Value)))
+                    Constant(value);
+            }
+        }
+
+        void Constant(DeclarationConstant value)
+        {
+            if (value.Kind == "type" && value.Json != "null" && value.Reference is null)
+                throw new InvalidDataException("A typeof attribute value lacks its structured declaration reference. Re-extract with the current tool.");
+            Reference(value.Reference);
+            foreach (var element in value.Elements)
+                Constant(element);
         }
     }
 
@@ -172,14 +257,16 @@ internal static class DeclarationModelJson
             Options) + "\n";
     }
 
-    private static string Identity(DeclarationModelDocument model)
+    internal static JsonNode ContractFacts(DeclarationModelDocument model)
     {
         var node = JsonSerializer.SerializeToNode(model, Options)!.AsObject();
         node.Remove("contractIdentity");
         RemoveLocations(node);
-        return "sha256:" +
-            Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(node.ToJsonString(Options))));
+        return node;
     }
+
+    private static string Identity(DeclarationModelDocument model) => "sha256:" +
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(ContractFacts(model).ToJsonString(Options))));
 
     private static void RemoveLocations(JsonNode? node)
     {

@@ -309,9 +309,9 @@ Select ordinary Plugin, Service, Config and object declarations by exact CLR met
 </ItemGroup>
 ```
 
-Generic arity uses the CLR backtick form; nested names use `+`. Roots must be authored in the project and publicly accessible through their containers. Selection requires no Remote attribute, partial declaration, serializer context or registration. Analysis executes no constructor, initializer or method.
+Generic arity uses the CLR backtick form; nested names use `+`. Ordinary roots must be authored in the project and publicly accessible through their containers. An explicitly selected source type marked `RemoteService` may also be non-public, so analysis can retain its complete contract and diagnostics. Selection does not register a capability. Runtime service generation still requires a public top-level non-generic partial class. Ordinary analysis requires no Remote attribute, partial declaration or serializer context, and executes no constructor, initializer or method.
 
-Normal build/pack writes a v2 `<AssemblyName>.cordis.model.json` under `cordis/typert/` in the package. `CordisTypertDeclarationModelPath` can select its output path. Definitions and applied references are distinct. Generic parameter owners/ordinals/constraints, direct bases/interfaces, member signatures, overloads, events/delegates, required/accessor/nullability/default facts, initializers and documentation are retained. Attributes include return, getter/setter and setter-value targets; parameter facts include extension `this` and `scoped`. External declarations carry assembly/metadata identity and `metadata-reference` provenance; their implementation members and source initializer bodies are not reconstructed.
+Normal build/pack writes v3 `<AssemblyName>.cordis.model.json` under `cordis/typert/` in the package. `CordisTypertDeclarationModelPath` can select its output path. Definitions and applied references are distinct. Generic parameter owners/ordinals/constraints, direct bases/interfaces, member signatures, overloads, events/delegates, required/accessor/nullability/default facts, initializers and documentation are retained. Attributes include return, getter/setter and setter-value targets; parameter facts include extension `this` and `scoped`. Attribute types and `typeof` values retain complete declaration references, including array values, and enter the referenced graph. Source partial declarations, implicit/member provenance, instance constructors, explicitly marked non-public Remote methods and authored JSON metadata signatures remain facts rather than copied method bodies. External declarations keep complete assembly/metadata identity and their recorded signature provenance; absent source initializers and implementations are not reconstructed.
 
 The packaged compiler validates and projects an artifact-only declaration catalog without loading or referencing the provider implementation:
 
@@ -321,9 +321,9 @@ dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-mod
 
 The catalog retains analysis diagnostics and generates no binding, Remote registration, DTO serializer or executable Service. Syntax errors and duplicate declaration identities refuse extraction and remove owned stale output. Other pre-generator compilation errors are recorded explicitly because a valid build can depend on neighboring generator output. Source graph limits are 256 named definitions and 64 nested references; unresolved/function-pointer signatures are diagnosed as analysis gaps. This is not complete C# compiler or reflection coverage. The existing .NET Typert gate verifies package-only consumption, incremental timestamps, Clean including a failed first extraction, cold rebuild, reference identities and refused inputs.
 
-V1 `.cordis.typert.json` remains the bounded Remote wire projection. Its extraction and the v2 declaration model share authored member, reference, initializer and attribute facts; historical v1 bytes are not a separate compatibility authority. `CordisTypertService=*` selects all supported authored services into one assembly-named artifact. A selected service's complete reachable graph is retained. Conflicting JSON naming policies for a shared DTO, including nested and recursive references, fail with `TYPM113`.
+V1 `.cordis.typert.json` remains the bounded Remote wire projection used for runtime conformance and its existing client subset. Its source entry point and saved declaration projection share service, method, DTO, constructor, naming and default-value interpretation. Historical v1 bytes are not a separate compatibility authority. `CordisTypertService=*` selects all supported authored services into one assembly-named wire artifact. A selected service's complete reachable graph is retained. Conflicting JSON naming policies for a shared DTO, including nested and recursive references, fail with `TYPM113`.
 
-Selected ordinary classes can generate DTOs and a static STJ context from the saved v2 artifact without a Remote declaration or provider assembly:
+Selected ordinary classes can generate DTOs and a static STJ context from the saved v3 artifact without a Remote declaration or provider assembly:
 
 ```xml
 <PropertyGroup>
@@ -337,12 +337,35 @@ Selected ordinary classes can generate DTOs and a static STJ context from the sa
 </ItemGroup>
 ```
 
-The optional `CordisTypertDataReferenceModel` items supply saved v2 models for external data definitions reached from the selected roots. Each input is checked with its existing model identity. Resolution requires an exact assembly-qualified declaration identity, including the assembly version and public-key token; names alone do not match. A referenced model supplies source facts for its own declarations. A metadata placeholder by itself remains insufficient. References do not add public roots: `CordisTypertDataRoot` still selects only roots published by the primary model.
+The optional `CordisTypertDataReferenceModel` items supply saved v3 models for external data definitions reached from the selected roots. Each input is checked with its model identity. Resolution requires an exact assembly-qualified declaration identity, including the assembly version and public-key token; names alone do not match. A referenced model supplies source facts for its own declarations. A metadata placeholder by itself remains insufficient. References do not add public roots: `CordisTypertDataRoot` still selects only roots published by the primary model.
 
 The equivalent CLI accepts `emit-dotnet-data ... --reference-models reference-models.rsp`. The response file lists one model path per line; relative paths are resolved from the response file's directory. Omit this option when no reference models are needed. Every explicitly supplied reference identity is recorded in the generated source, in deterministic order. Conflicting source definitions for the same identity are refused; identical definitions may occur in several inputs, and different source locations alone do not conflict. Missing definitions, incompatible declaration shapes and generated type-name collisions are also refused. This validates declared identities and artifact contents, not correspondence to an arbitrary implementation DLL; publish each model with the source build that produced it.
 
 The target invokes `emit-dotnet-data` before `CoreCompile`, using the same supported JSON projection as the Remote caller. Each build reads the primary and reference model contents; unchanged generated output retains its bytes and timestamp. Generation failure removes stale source, and `Clean` removes generated source and owned response files. Missing members retain supported constant defaults; explicit null remains distinct. These generated data carriers do not replay authored constructor or accessor behavior. Referenced DTOs use the same bounded public class/property subset as local DTOs; composition does not enable generic DTOs, inheritance, custom converters or other refused shapes. Extraction records `TYPM202` on a source type whose non-public instance data member has explicit `JsonInclude` but falls outside the public analysis surface. Projection rejects that type, including through a reference model, rather than silently dropping the JSON member; unrelated declarations remain usable.
 
-Re-extract such models with the current compiler after upgrading. A saved artifact's hash validates its saved facts; it cannot recover members omitted by an older extractor or prove every authored JSON configuration. The compiler does not infer those missing facts from a DLL or an old artifact. The model JSON shape is unchanged; this correction requires source re-extraction, and package verification must use models produced by the current tool.
+Re-extract declaration models with the current compiler after upgrading. V3 requires the structured references and provenance needed to interpret a saved contract; v2 and inputs missing these facts are rejected with a re-extraction diagnostic. A saved artifact's hash validates its saved facts; it cannot recover older omissions or prove every authored JSON configuration. The compiler does not infer missing facts from a DLL, convert old artifacts or retain a second projection for them.
 
-The independent consumer uses the same authored DTO as an ordinary root and a Remote argument/result. `emit-dotnet` still accepts only the Remote artifact. Saved-v2 Remote reconstruction, generic DTO projection, broader referenced-model backends, design-time IDE and named UI validation remain open.
+To generate a direct unary client from the same declaration artifact, select both the DTO and its marked service in the author project:
+
+```xml
+<ItemGroup>
+  <CordisTypertModelRoot Include="Example.SharedData" />
+  <CordisTypertModelRoot Include="Example.SharedRemote" />
+</ItemGroup>
+```
+
+The service's `typeof` JSON context and its registered data enter the closure, including an internal source context. In the independent contract project, use that one model for the ordinary data properties above and the client:
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>sharedData</CordisTypertService>
+  <CordisTypertClientModel>Example.cordis.model.json</CordisTypertClientModel>
+  <CordisTypertClientNamespace>Example.Consumer.Remote</CordisTypertClientNamespace>
+  <CordisTypertClientName>SharedClient</CordisTypertClientName>
+  <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+</PropertyGroup>
+```
+
+The equivalent command is `emit-dotnet --model Example.cordis.model.json --service sharedData --namespace Example.Consumer.Remote --client SharedClient --output SharedClient.g.cs`. It consumes the saved facts without the author's implementation assembly. The first saved-declaration Remote backend supports direct `Task<T>` unary methods, supported data and constants, and an optional trailing CancellationToken. Lookup, Context, streams, custom JSON metadata/converters and metadata-only DTOs are refused by this backend; the existing wire backend retains its separate supported duties. An explicitly marked non-public method is retained and refused, never silently removed. Only a selected, valid annotation-only partial STJ context may defer its pre-generator abstract-member obligations; other declaration errors still fail projection. Successful projection does not prove the author build or register a live service.
+
+The independent consumer uses one authored DTO as an ordinary root and a Remote argument/result, with a real HTTP author host and a package-only generated caller. DTO behavior belongs to the existing data consumers; this route verifies saved-model mapping and transport. Generic DTO projection, broader Remote/reference-model backends, design-time IDE and named UI validation remain open. Completed platform evidence remains bound in [validation](validation.md).

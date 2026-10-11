@@ -84,7 +84,7 @@ def main():
                 raise RuntimeError("Baseline failed for a reason other than optional Remote refusal.")
             status = "baseline-refusal-observed"
             return
-        model = author / "obj/Release/net10.0/cordis-typert/optional.cordis.typert.json"
+        model = author / "obj/Release/net10.0/cordis-typert/OptionalAuthor.cordis.model.json"
         shutil.copyfile(model, output / "authored-model.json")
         consumer, consumer_project = project("OptionalConsumer", model)
         shutil.copyfile(root / "tests/fixtures/TypertOptional/OptionalConsumer.cs", consumer / "Program.cs")
