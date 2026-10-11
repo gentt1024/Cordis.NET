@@ -330,4 +330,12 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 没有新增配置、安装或 Remote 权威。有限的 v1 源事实一致性桥在生产 emitter 消费对应模型事实时检测过期源事实，
 其保留依据是这项验证职责。原生文档集成、完整生成产品 UI/Client assembly、富协议及其他原基础设施义务仍在原范围内开放；标准 PluginManager 与选定通知合同已实现，不新增操作所有者。
 
-上述有界检查在 `8d4838af3a500b84c6c5d7b5eca93d92d813c45c` 通过；[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11)和[绑定回执](../verification/settings-model-continuation-2026-10-11/evidence.json)保留包身份及早先失败。标准 Settings 文档打开及通知交付仍需各自整合证据。其余原职责不变。
+上述有界检查在 `8d4838af3a500b84c6c5d7b5eca93d92d813c45c` 通过；[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11)和[绑定回执](../verification/settings-model-continuation-2026-10-11/evidence.json)保留包身份及早先失败。生成通知交付单独绑定下面的管理检查点；标准 Settings 文档打开及其余原职责继续开放。
+
+### 生成式管理／模型检查点2026-10-11
+
+已完成的本地源码检查点为 `6ad9d7f1aac2b4546e23ea5e16ff290d4be312c8`；[验证记录](validation.zh.md#生成式管理与普通模型消费2026-10-11)及其回执绑定实际包消费者。生成 PluginManager 复用既有 operations、活跃安装所有权及宿主授权；一个选定通知 source 属于同一 Gateway。CLI、ManagedApplication 和独立 .NET／TS 调用者采用这些合同，手写管理 HTTP／SSE 及相应浏览器 decoder 已退出。空 Settings namespace 在可选 provider 查找前失败。
+
+选定普通 v2 DTO/STJ 发射、受支持默认值和 .NET downlink 客户端现有真实包消费证据。v1／v2 解释共享源事实，各自制品职责仍明确；嵌套 JSON 策略冲突会被拒绝。既有 Extensions 回归承担不可读兼容数据／数据保护行为，Composition 承担通知清理；包客户端覆盖生成／传输及任务寿命边界。早先失败检查点及原断言继续保留为证据。
+
+从原范围表的开放行继续：引用模型组合、保存的 v2 重建 Remote、其余丰富 Remote／owned-value 协议、原生文档及不依赖产品的 UI／Client assembly。本批不推导它们完成。重大公开合同／平台取舍及新增依赖仍需讨论，Maker 适配仍属其自己的会话。本批 Windows JIT 验收不将早先 Linux／AOT 证据延伸到新源码；合并和发布是另行且未授权的行动。

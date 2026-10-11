@@ -326,3 +326,24 @@ R02 从已合入 main `424cfb98823e9867de5198118b26f3973b9b397d` 续行。运行
 保留两次早先失败作为私有本地证据。未提交实现通过原生测试，但其包 SourceLink 仍绑定旧 main 而失败；提交实现后纠正了源码身份。冻结的 `3753a5a` 门禁随后因 Settings 包夹具把用户 patch 同时作为基础文件、写入后重复应用 override 并使 Entry 不可寻址而失败。夹具现在遵循既有宿主方式，挂载独立空 `cordis.yml`。原客户端断言在定向包复验和最终完整门禁中均通过；两次早先失败均不重分类为验收。
 
 本候选关闭上述标准 Settings 读写、可选 Remote 参数及有界普通声明／目录检查。标准文档打开、生成 PluginManager／通知整合、完整模型／后端及丰富协议职责继续保留在[原范围](development.zh.md)，未从本轮工作移除。本检查点未执行 Linux、Native AOT、hosted CI、远端 SourceLink 获取、浏览器渲染、具名 UI Host 或 Maker。依赖、pin 和源码版本未改；未推送、远端合并、打 tag、发布或部署。本地使用 alpha.4 版本号的包只是隔离验证输入，不替换已发布 alpha.4。后续文档／回执提交另有身份，不替代本运行时检查点。
+
+## 生成式管理与普通模型消费2026-10-11
+
+运行／包检查点 `6ad9d7f1aac2b4546e23ea5e16ff290d4be312c8` 包含空 Settings namespace 修正（`7d408ef`）、生成式管理／通知／模型实现（`57a3df8`）、不可读兼容文件的安全拒绝修复及规范排版。它基于 main `3342a967f4e57206bec272684a40a437fc051b77` 继续；上一批 Settings 检查点保留自己的身份。固定 DSH pin、源码包版本及持久 profile 格式不变。
+
+| 执行合同 | 可观察证据 |
+|---|---|
+| 生成式 PluginManager | CLI 和维护中的 Host 将实际生成合同挂到既有 operations。真实纯包 .NET 与严格 TypeScript 调用覆盖资源授权、generation、检查／hash 准入、启用、安装／更新／移除、豁免及原任务等待／取消。已接纳的检查和异步构建批准继续被所有者持有并排空；断线调用者不重放修改。 |
+| 通知所有权 | 一个 Gateway source 转发选定 Cordis emit。生成订阅先收到 ready 再收事件；断线移除单个 observer，source 撤回先关闭全部 observer 再等待 source，重连先重订阅再读新快照。Composition 主要用例覆盖 iterator 读取／处置失败和所有者清理；真实客户端覆盖 NDJSON 解码、abort 和恢复。 |
+| 普通模型与共享数据 | 独立保存的 v2 制品无需 provider 或 Remote 声明即可生成 DTO/STJ。同一作者 DTO 也作为 Remote 参数／结果。禁用反射回退的包调用者检查名称、nullable／required、受支持常量默认值和递归，并执行真实 HTTP echo。嵌套可达类型的冲突命名策略以 `TYPM113` 拒绝，失败生成移除过期输出。v1 和 v2 复用共享源事实。 |
+| 既有边界 | 全部 43 项 ConfigurationEditTests 通过。并发、脱敏、生命周期、撤回和失败回归继续保留。空 Settings namespace 在 provider 查找前拒绝，无 provider 时也如此。兼容文件变化进入原 Changed 结果；不可读数据继续不授权、不可覆写，并返回失败的授权结果。 |
+
+提交后的 Release 重建零警告、零错误。随后 `python scripts/verify.py --package` 在本地 Windows x64 JIT、SDK 10.0.111 下通过：847 项测试通过，零失败／跳过，47 个外层门禁步骤，542 个源码 hash 在执行中保持 `sourceUnchanged=true`。门禁包括原生 JIT trace 重复比较、客户端模块／类型／生命周期、隔离 tool／runtime／HTTP／CLR／Remote 消费、严格包符号及离线调试栈帧。全部 18 个新包／符号包属于此检查点。四个规范 formatter 阶段在 232 个 C# 文件上达成一致；21 个仅排版文件的 token 类型和值保持相同。既有 38 项 verifier 自检使用固定 SDK 通过，14 对文档和九个包 README 检查通过；没有仅因方法补充重复执行检查。
+
+[绑定回执](../verification/management-model-continuation-2026-10-11/evidence.json)记录精确报告、TRX、源码及包 hash。实际完成执行的作者／调用者输入、生成合同输入和已还原 Cordis 包／metadata 在私有副本中保留，并核对捕获 hash 与本批 feed。没有重建缺失源码。Settings／普通 .NET 检查不执行 Node；管理 TypeScript 执行单独记录。其显式 fixture toolchain 验证生成工作流，实际 SDK preparation 仍由 Platform 测试覆盖。
+
+冻结报告对工作树字节取 hash。七个非 C# 文件按仓库文本规范化规则与 Git blob 仅有 CRLF／LF 表示差异，回执单独记录其 Git hash；每个 C# 源码字节都与 Git 一致。首个私有收集器拒绝了此表示差异，失败日志保留；收集修正没有修改源码、包或门禁结果。
+
+首个冻结 `57a3df8` 完整运行在 847 项中失败一项：预读不可读兼容数据绕过了原安全授权拒绝。其 846 项通过不算验收。修复将未知字节与不存在区分，继续由原权威裁决；既有主要回归保留断言，并新增失败 application／未变化状态检查。原失败报告保留。独立规范格式检查发现 21 个排版差异，经 token 不变的修正后四阶段通过。早先试验消费者暴露必需 nullable 字段被省略、CLI 未挂载 PluginManager，两项均在此门禁前修复。另一次脚本自检启动使用了错误 SDK 搜索路径，固定 SDK 下未改动的测试通过。以上尝试均不改记为最终批次通过。
+
+[管理迁移](management-remote-migration.zh.md)记录唯一生成式公共用法，以及退出的手写 PluginManager HTTP／SSE 路由、浏览器方法和 decoder。原始配置／状态／制品职责保留既有所有者与授权。选定通知不将 Peer／uplink／waterfalls、owned-value／引用图或完整附件／wire 互通关项。保存的 v2 重建 Remote、泛型 DTO 发射、引用模型组合、原生文档／UI 集成及其余[原范围](development.zh.md)继续开放。本检查点未执行原始 DSH 源测试／跨运行时 differential、Linux、Native AOT、托管 CI、远程 SourceLink 取回、浏览器渲染、无 Git 源码归档构建或 Maker；早先上游执行保留自己的证据身份。没有新增依赖、合并、tag、发布或部署；本地 alpha.4 版本包是隔离验证输入。后续文档／回执提交与这些二进制分别绑定身份。
