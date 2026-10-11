@@ -102,9 +102,12 @@ internal sealed record DeclarationType(
     string Documentation,
     NativeLocation? Location);
 
+internal sealed record DeclarationContext(string Assembly, string Key, DeclarationReference WireType);
+
 internal sealed record DeclarationModelDocument(
     string ContractIdentity,
     NativeCompilation Compilation,
+    DeclarationContext[] Contexts,
     string[] Roots,
     DeclarationType[] Declarations,
     NativeDiagnostic[] Diagnostics);
@@ -154,13 +157,16 @@ internal static class DeclarationModelJson
 
     private static void ValidateStructure(DeclarationModelDocument model)
     {
-        if (model.Compilation is null || model.Roots is null || model.Declarations is null || model.Diagnostics is null)
+        if (model.Compilation is null || model.Contexts is null || model.Roots is null || model.Declarations is null ||
+            model.Diagnostics is null)
             throw new InvalidDataException("Declaration model settings, roots and collections are required.");
         var ids = model.Declarations.Select(type => type.Id).ToHashSet(StringComparer.Ordinal);
         if (ids.Count != model.Declarations.Length ||
             model.Roots.Distinct(StringComparer.Ordinal).Count() != model.Roots.Length ||
             model.Roots.Any(root => !ids.Contains(root)))
             throw new InvalidDataException("Declaration model identities or roots are invalid.");
+        foreach (var context in model.Contexts)
+            Reference(context.WireType);
         foreach (var declaration in model.Declarations)
         {
             if (declaration.Id != declaration.Assembly + ":" + declaration.MetadataName ||

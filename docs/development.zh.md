@@ -372,3 +372,9 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 冻结源码检查点为 `2cf481c0e14315aec79ee92f8b0c00421331f1f3`。完整包验证通过 847 项测试及 109 个生成消费者步骤，包括不含任一作者 DLL 的引用模型调用、引用变化后的重生成、六类拒绝及 Clean。[验证记录](validation.zh.md#显式引用模型消费2026-10-11)及其回执将结果绑定到源码和包。下一项仍是用于重建 Remote 的完整保存声明事实及原范围的其他后端／协议行。
 
 另一次 Windows 静态管理客户端 Native AOT 检查已在先前冻结的 `6ad9d7f` 包上通过。[回执](../verification/management-model-continuation-2026-10-11/static-management-aot.json) 将该源码身份与本次新模型工作分开。宿主仍为 JIT；不推导 Linux、托管 CI 或动态 CLR AOT 通过。
+
+### scoped caller 续建，2026-10-11
+
+独立静态审查已关闭 `bc18038` 的 F01 和 D01，其 runtime／package 源码仍为 `54ae030`。该审查读取固定源码、差异、断言和回执身份，未重跑 .NET 或对原始包重新计算哈希，不覆盖本次续建。
+
+当前工作接通保存的 Context 声明、自动推导的 lookup scope、Host descriptor 和生成的 .NET Context 视图。程序集属性表达固定 `TypertContextMap`，已有 registry 拥有活跃 adapter。接收方选择与 lookup 参数投影保持区别。[作者用法](authoring.zh.md)和[兼容说明](compatibility.zh.md#scoped-net-caller-适配2026-10-11)记录公开用法与显式视图适配。主要验证入口为 `verify-typert-dotnet.py --saved-remote-only`，随后执行仓库包门禁；[验证记录](validation.zh.md)将完成结果绑定到源码。更广引用模型后端、浏览器 scoped assembly、owned values、Peer／uplink、丰富事件及原范围其余平台职责继续开放。

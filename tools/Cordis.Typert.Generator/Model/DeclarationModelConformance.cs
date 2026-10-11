@@ -35,6 +35,8 @@ internal static class DeclarationModelConformance
         var reachable = new HashSet<string>(StringComparer.Ordinal);
         var symbols = new HashSet<string>(StringComparer.Ordinal);
         Visit(selected[0].Id);
+        foreach (var context in model.Contexts)
+            Reference(context.WireType);
         return model with
         {
             Roots = [selected[0].Id],

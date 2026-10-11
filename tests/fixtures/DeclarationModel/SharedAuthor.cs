@@ -1,6 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Cordis.Composition;
+
+[assembly: TypertContext("shared:receiver", typeof(int))]
+[assembly: TypertContext("shared:document", typeof(string))]
 
 namespace IndependentDeclarations;
 
@@ -49,6 +53,29 @@ public sealed class SharedEnvelope
 [ArrayLabels("values", new[] { "label" }, Types = new[] { typeof(string) })]
 public partial class SharedRemote
 {
+    [RemoteMethod("scopedRead", Context = "shared:receiver", Wire = "receiverId")]
+    public Task<string> ScopedReadAsync(string text = "default") =>
+        Task.FromResult(TypertInvocation.Current!.Context.Metadata["prefix"] + ":" + text);
+
+    [RemoteMethod("read")]
+    public Task<string> ReadAsync(
+        [RemoteLookup("shared:document", "documentId", typeof(string))]
+        SharedDocument document,
+        string suffix = "!") => Task.FromResult(
+        TypertInvocation.Current!.Context.Metadata["prefix"] + ":" + document.ReadTitle() + suffix);
+
+    [RemoteMethod("watch", Stream = true)]
+    public async IAsyncEnumerable<string> WatchAsync(
+        [RemoteLookup("shared:document", "documentId", typeof(string))]
+        SharedDocument document,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await Task.Yield();
+        cancellationToken.ThrowIfCancellationRequested();
+        yield return TypertInvocation.Current!.Context.Metadata["prefix"] + ":" + document.ReadTitle();
+        yield return "complete";
+    }
+
     [RemoteMethod("echo")]
     public Task<SharedData> EchoAsync(
         SharedData value,
@@ -74,4 +101,12 @@ public partial class SharedRemote
     RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(SharedData))]
 [JsonSerializable(typeof(int?))]
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(string))]
 internal partial class SharedRemoteJson : JsonSerializerContext;
+
+// This is a live Host object, not a client DTO or a JSON registration.
+public sealed class SharedDocument(string title)
+{
+    public string ReadTitle() => title;
+}

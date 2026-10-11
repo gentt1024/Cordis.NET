@@ -94,6 +94,8 @@ internal sealed record NativeMethod(
     bool Cancellation,
     string? Context,
     string ContextWire,
+    NativeTypeReference? ContextWireType,
+    RemoteScopeContract? Scope,
     NativeParameter[] Parameters,
     string Documentation,
     NativeLocation? Location);

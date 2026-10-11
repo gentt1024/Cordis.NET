@@ -368,7 +368,33 @@ service 的 `typeof` JSON context 及其注册数据进入闭包，包括 intern
 </PropertyGroup>
 ```
 
-对应命令为 `emit-dotnet --model Example.cordis.model.json --service sharedData --namespace Example.Consumer.Remote --client SharedClient --output SharedClient.g.cs`，它直接消费保存事实，不要求作者实现程序集。.NET caller 后端覆盖受支持 unary、downlink stream、数据／常量及末尾 CancellationToken 参数。lookup、Context 和更丰富 caller 形状保留明确的后端限制与开放义务。独立 caller 必须拒绝无法重建的 serializer 行为，包括自定义 metadata／converter 或不足的 DTO 事实；这不删除分析事实，也不自动拒绝使用作者实际实现及显式 STJ metadata 的 Host。Host 与 caller 共享事实，不取双方限制的交集。显式标记的非公开方法保留在分析中，由 Remote binding 拒绝。只有被选中且有效、仅使用注解的 partial STJ context 可以延后 pre-generator 抽象成员义务，不抑制无关错误。投影成功不证明作者构建成功，也不注册活跃服务。
+对应命令为 `emit-dotnet --model Example.cordis.model.json --service sharedData --namespace Example.Consumer.Remote --client SharedClient --output SharedClient.g.cs`，它直接消费保存事实，不要求作者实现程序集。.NET caller 后端覆盖受支持 unary、downlink stream、lookup wire 参数、scoped Context 视图、数据／常量及末尾 CancellationToken 参数。独立 caller 必须拒绝无法重建的 serializer 行为，包括自定义 metadata／converter 或不足的 DTO 事实；这不删除分析事实，也不自动拒绝使用作者实际实现及显式 STJ metadata 的 Host。Host 与 caller 共享事实，不取双方限制的交集。显式标记的非公开方法保留在分析中，由 Remote binding 拒绝。只有被选中且有效、仅使用注解的 partial STJ context 可以延后 pre-generator 抽象成员义务，不抑制无关错误。投影成功不证明作者构建成功，也不注册活跃服务。
+
+通过程序集属性声明 Context key 及 wire 身份类型，对应固定上游的 `TypertContextMap`：
+
+```csharp
+[assembly: TypertContext("document", typeof(string))]
+```
+
+作者程序集及其编译引用中的声明进入同一保存模型。缺少接收方声明、同 key 的类型冲突会被拒绝。声明不注册活跃 adapter。Host 继续注册 `TypertHostContextAdapter` 和 `TypertLookupProvider`；Client 在已有 `TypertRegistry` 中注册由 Fiber effect 持有的 `TypertClientContextAdapter`。
+
+```csharp
+await callerContext.RunAsync(owner =>
+{
+    registry.RegisterClientContext(owner, "document", new(
+        ctx => ctx.Metadata.TryGetValue("documentId", out var id) ? id : Undefined.Value,
+        _ => null)); // Reverse lookup is unused by this outbound-only example.
+    return Task.CompletedTask;
+});
+using var client = new DocumentClient(httpClient, remoteBase);
+await client.ReadAsync("doc-1");
+var scoped = client.ForContext(callerContext, registry);
+await scoped.ReadAsync();
+```
+
+两种 scoped 合同保持区别。带 `RemoteMethod(Context = "...")` 的方法出现在 scoped 视图中，adapter 身份选择 Host 接收方。direct 方法只有恰好一个 lookup 参数，且其 key 有 wire 类型一致的 Context 声明时，才获得 scoped 投影。普通客户端方法仍接收 lookup 身份；scoped 方法省去该参数，Host 接收方仍为 direct。多个 lookup 的方法保留显式 wire 参数。不会为了传递身份，把 lookup 的 Host 对象重建为客户端 DTO。
+
+`ForContext` 借用 Context 和 registry，两者必须共享 Cordis 执行域。每次调用都在 `Context.RunAsync` 中读取当前 adapter 和身份。`Undefined.Value` 表示该 Context 不提供身份；引用类型身份的显式 null 仍作为 wire 字段值交由 Host codec 校验。值类型身份要求匹配声明的 CLR 类型。缺少 adapter 或身份时，在发送前拒绝；替换 adapter 会影响已有视图。视图不拥有 Context、adapter 或 HttpClient；释放父客户端会取消请求并使已有视图失效。结束 scoped 下行流沿用现有流清理路径。显式视图以 C# 签名表达上游动态 direct／scoped 选择；显式 direct 调用使用父客户端。两种合同和撤销见[共享包消费者](../tests/fixtures/DeclarationModel/SharedConsumer.cs)。
 
 对独立 caller，仅有程序集 metadata 的 JSON context 缺少重建 serializer 所需的源码事实，以 `TYPM115` 拒绝；Host 仍可绑定该实际 context。非有限数值的可选默认值保留为作者事实，Host 在参数省略时可使用它。若所选 JSON number handling 无法传输该值，独立 .NET caller 生成以 `TYPM116` 拒绝，不生成默认调用会在序列化时失败的方法。
 

@@ -2,6 +2,16 @@
 
 [English](compatibility.md)
 
+## scoped .NET caller 适配，2026-10-11
+
+固定生成器仅在 direct 方法恰好一个 lookup 参数，且存在同 key、同 wire 类型的 `TypertContextMap` 条目时推导可选 scope（[analyzer](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/analyzer.ts#L1177)）。接收方 Context 调用是另一种语义：身份在 Service 准入及 lookup 解析之前选择 Host Context。[Client Gateway](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts#L390) 经当前 Client adapter 取得 scoped 身份。
+
+.NET 作者使用程序集级 `TypertContext(key, typeof(Wire))` 声明代替 TypeScript 声明合并。提取器把编译及其程序集引用中的声明保存在唯一当前模型内；Host binding 与 caller 发射消费同一事实。接收方 Context 生成使用声明的 wire 类型，替换此前硬编码的 string。adapter 仍拥有实际身份及 Context 解析职责，属性不注册运行对象。缺少这些声明事实的旧制品须重新提取，不保留并行 reader 或新增格式代际。
+
+生成的 `ForContext(callerContext, registry)` 视图对应上下文关联的 Service 访问。它显式选择 scoped 签名；父客户端提供 direct 签名，不复刻 JavaScript 在参数列表之间的动态回退。接收方 scoped 方法不暴露公开的原始身份参数入口。direct lookup-scoped 方法保留普通身份参数，并获得省去该参数的视图方法。没有匹配 Context 声明或含多个 lookup 参数时仍为 direct。scoped 调用每次进入已有 Cordis 执行域读取当前 adapter 和身份，不缓存两者，不制造 Context，也不拥有借入的 Context／registry／HttpClient。父客户端释放及现有流取消继续沿用当前所有者。
+
+上游缺失哨兵对应 `Undefined.Value`。引用类型身份的显式 null 保留在内部请求封套中，由 Host codec 校验，不合并为缺失，也不提前变成 STJ 序列化失败。值类型身份在进入强类型调用之前须匹配声明的 CLR 类型。Host lookup 对象类型仍保留在声明分析中；独立 caller 只投影其 wire 身份类型。本扩展不实现 owned Context 值、Peer／uplink、完整事件语义或等价浏览器 scoped facade。[作者用法](authoring.zh.md)说明当前消费方式；[验证记录](validation.zh.md)区分包执行证据与这些未完成职责。
+
 Cordis.NET 以[上游文档](upstream.zh.md)所述、DeepSeek Harness 锁定的 vendored Cordis 行为为目标。兼容性按可观察契约评估，不能只看包名或测试数量。
 
 ## 上游忠实性要求

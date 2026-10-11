@@ -2,6 +2,16 @@
 
 [中文](compatibility.zh.md)
 
+## Scoped .NET caller adaptation, 2026-10-11
+
+The fixed generator derives a direct method's optional scope only from its single lookup parameter and a matching `TypertContextMap` entry with the same wire type ([analyzer](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/analyzer.ts#L1177)). Receiver Context invocation is separate: its identity chooses the Host Context before Service admission and lookup resolution. The [Client Gateway](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts#L390) obtains scoped identities through the current Client adapter.
+
+The .NET author uses assembly-level `TypertContext(key, typeof(Wire))` declarations instead of TypeScript declaration merging. Extraction retains those declarations from the compilation and its assembly references in the one current model; Host binding and caller emission read the same facts. Receiver Context generation uses the declared wire type, replacing its earlier hard-coded string. The adapter still owns actual identity and Context resolution; the attribute adds no runtime registration. Old artifacts lacking these declaration facts must be re-extracted, without a parallel reader or format generation.
+
+The generated `ForContext(callerContext, registry)` view supplies the C# equivalent of contextual Service access. It explicitly selects the scoped signature; the parent client supplies direct signatures, rather than reproducing JavaScript's dynamic fallback between argument lists. Receiver-scoped methods do not expose a public raw-identity method. Direct lookup-scoped methods retain their ordinary identity argument and gain a view method without that argument. Lookups without a matching Context declaration, or with multiple lookup parameters, remain direct. A scoped call enters the existing Cordis execution domain to read the current adapter and identity each time. It does not cache either, manufacture Contexts or own the caller's Context/registry/HttpClient. Parent-client disposal and existing stream cancellation retain their current owners.
+
+The upstream absence sentinel maps to `Undefined.Value`. For reference identities, explicit null stays present in the internal request envelope and is validated by the Host codec, rather than becoming absence or an STJ serialization failure. Value identities must have the declared CLR type before a typed invocation can be made. Host lookup object types stay in declaration analysis; standalone callers project only their wire identity types. This extension does not implement owned Context values, Peer/uplink, complete event semantics or the equivalent browser scoped facade. [Authoring](authoring.md) gives the current usage; [validation](validation.md) distinguishes package execution from those remaining obligations.
+
 Cordis.NET targets the pinned DeepSeek Harness vendored Cordis behavior described in [upstream](upstream.md). Compatibility is assessed per observable contract, not by package name or test count alone.
 
 ## Upstream fidelity requirement

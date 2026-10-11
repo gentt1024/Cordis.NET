@@ -453,6 +453,12 @@ def verify_saved_remote_refusals(author, model, composition, compiler, roslyn, d
         return original.replace(anchor, "\n" + method + anchor, 1)
 
     cases = (
+        ("context-declaration-missing", original.replace(
+            '[assembly: TypertContext("shared:receiver", typeof(int))]', ''), "TYPM009"),
+        ("context-lookup-type-mismatch", original.replace(
+            '[assembly: TypertContext("shared:document", typeof(string))]',
+            '[assembly: TypertContext("shared:document", typeof(int))]'), "TYPM010"),
+        ("context-wire-collision", original.replace('Wire = "receiverId"', 'Wire = "text"'), "TYPM011"),
         ("private-marked-method", add_method(
             '    [RemoteMethod("hidden")]\n    private Task<SharedData> HiddenAsync(SharedData value) => Task.FromResult(value);'), "TYPM003"),
         ("abstract-marked-method", add_method(
@@ -552,6 +558,8 @@ def verify_saved_remote_refusals(author, model, composition, compiler, roslyn, d
         "consumer": "saved-declaration-remote-http", "contractIdentity": baseline["contractIdentity"],
         "sameModelForDataAndRemote": True, "providerImplementationReferenced": False,
         "reflectionFallbackEnabled": False, "realHttpInvocation": True,
+        "scopedReceiverAndLookup": True, "scopedDownlink": True,
+        "contextIdentityRereadAndAdapterWithdrawal": True, "undefinedAndNullIdentityDistinct": True,
         "serializerNamesAndRecursion": True, "optionalDefaultsAndExplicitNullBoundary": True,
         "terminalCancellationToken": True, "internalServiceAnalysisAccepted": True,
         "incrementalAndColdRebuild": True, "firstRefusedBuildAndCleanRemovedClient": True,

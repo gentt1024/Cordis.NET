@@ -14,12 +14,33 @@ using Microsoft.Extensions.Logging;
 
 await using var context = new Context();
 var registry = new TypertRegistry(context);
+#if !CORDIS_READONLY_HOST
+EffectHandle documentLookup = null!;
+EffectHandle receiverAdapter = null!;
+#endif
 await context.RunAsync(owner =>
 {
 #if CORDIS_READONLY_HOST
     owner.Provide("readonly", new ReadonlyService());
     registry.Register(owner, ReadonlyServiceTypert.Contribution("IndependentProjection.Provider"));
 #else
+    owner.Metadata["prefix"] = "root";
+    var receiver = owner.Extend();
+    receiver.Metadata["prefix"] = "selected";
+    documentLookup = registry.RegisterLookup(
+        owner,
+        "shared:document",
+        new(
+            "document",
+            "documentId",
+            "IndependentDeclarations.SharedDocument",
+            "string",
+            value => ValueTask.FromResult<object?>(
+                value is "doc-1" or "doc-2" ? new SharedDocument((string)value) : null)));
+    receiverAdapter = registry.RegisterHostContext(
+        owner,
+        "shared:receiver",
+        new("receiverId", "int", value => ValueTask.FromResult<Context?>(value is 7 ? receiver : null)));
     owner.Provide("sharedData", new SharedRemote());
     registry.Register(owner, SharedRemoteTypert.Contribution("IndependentData.Provider"));
 #endif
@@ -29,6 +50,22 @@ var builder = WebApplication.CreateSlimBuilder();
 builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Logging.ClearProviders();
 await using var server = builder.Build();
+#if !CORDIS_READONLY_HOST
+server.MapPost(
+    "/control/withdraw-lookup",
+    async () =>
+    {
+        await context.RunAsync(async _ => await documentLookup.DisposeAsync());
+        return Results.Ok();
+    });
+server.MapPost(
+    "/control/withdraw-context",
+    async () =>
+    {
+        await context.RunAsync(async _ => await receiverAdapter.DisposeAsync());
+        return Results.Ok();
+    });
+#endif
 server.MapCordisRemote(
     "/remote",
     new TypertGateway(context, registry),

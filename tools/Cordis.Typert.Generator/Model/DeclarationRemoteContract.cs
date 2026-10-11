@@ -2,6 +2,8 @@ using static Cordis.Typert.Generator.Model.DeclarationAttributeProjection;
 
 namespace Cordis.Typert.Generator.Model;
 
+internal sealed record RemoteScopeContract(string Context, string Wire);
+
 internal sealed record RemoteParameterContract(
     DeclarationParameter Facts,
     string Wire,
@@ -18,6 +20,8 @@ internal sealed record RemoteMethodContract(
     bool Cancellation,
     string? Context,
     string ContextWire,
+    DeclarationReference? ContextWireType,
+    RemoteScopeContract? Scope,
     RemoteParameterContract[] Parameters);
 
 internal sealed record RemoteServiceContract(
@@ -37,6 +41,16 @@ internal static class DeclarationRemoteContract
     internal static RemoteServiceContract[] Read(DeclarationModelDocument model, string? service)
     {
         var declarations = model.Declarations.ToDictionary(value => value.Id, StringComparer.Ordinal);
+        var contexts = new Dictionary<string, DeclarationReference>(StringComparer.Ordinal);
+        foreach (var context in model.Contexts)
+        {
+            var wire = WireReference(context.WireType);
+            if (string.IsNullOrWhiteSpace(context.Key) || contexts.TryGetValue(context.Key, out var previous) &&
+                System.Text.Json.JsonSerializer.Serialize(previous) != System.Text.Json.JsonSerializer.Serialize(wire))
+                throw new InvalidDataException("Conflicting or empty Typert Context declaration: " + context.Key);
+            contexts[context.Key] = wire;
+        }
+
         var selected = model
             .Roots.Select(id => declarations[id])
             .Where(type => Attribute(type.Attributes, "Cordis.Composition.RemoteServiceAttribute") is not null)
@@ -109,6 +123,48 @@ internal static class DeclarationRemoteContract
                 var result = method.Type is { Arguments.Length: 1 }
                     ? method.Type.Arguments[0]
                     : method.Type ?? new("unsupported", "missing return", "None", []);
+                var contextKey = String(Named(annotation, "Context"));
+                var contextWire = String(Named(annotation, "Wire")) ?? "contextId";
+                var input = parameters
+                    .Select(parameter =>
+                    {
+                        var lookup = Attribute(parameter.Attributes, "Cordis.Composition.RemoteLookupAttribute");
+                        return new RemoteParameterContract(
+                            parameter,
+                            String(lookup?.Arguments.ElementAtOrDefault(1)) ?? parameter.Name,
+                            String(lookup?.Arguments.FirstOrDefault()),
+                            lookup?.Arguments.ElementAtOrDefault(2)?.Reference is { } wire ? WireReference(wire) : null,
+                            Attribute(
+                                parameter.Attributes,
+                                "System.Diagnostics.CodeAnalysis.DisallowNullAttribute") is not null);
+                    })
+                    .ToArray();
+                DeclarationReference? contextType = null;
+                RemoteScopeContract? scope = null;
+                if (contextKey is not null && !contexts.TryGetValue(contextKey, out contextType))
+                    Diagnose("TYPM009", "Remote Context requires a TypertContext assembly declaration.", method.Id);
+                var lookups = input.Where(parameter => parameter.Lookup is not null).ToArray();
+                if (contextKey is null && lookups.Length == 1 &&
+                    contexts.TryGetValue(lookups[0].Lookup!, out var scopeType))
+                {
+                    if (System.Text.Json.JsonSerializer.Serialize(scopeType) !=
+                        System.Text.Json.JsonSerializer.Serialize(lookups[0].LookupWireType))
+                        Diagnose(
+                            "TYPM010",
+                            "Context and lookup wire types must agree for scoped projection.",
+                            method.Id);
+                    scope = new(lookups[0].Lookup!, lookups[0].Wire);
+                }
+
+                var wires = input.Select(parameter => parameter.Wire).ToList();
+                if (contextKey is not null)
+                    wires.Add(contextWire);
+                if (wires.Any(string.IsNullOrWhiteSpace) ||
+                    wires.Distinct(StringComparer.Ordinal).Count() != wires.Count)
+                    Diagnose(
+                        "TYPM011",
+                        "Remote wire fields must be non-empty and unique, including Context identity.",
+                        method.Id);
                 return new(
                     method,
                     String(Named(annotation, "Name")) ?? String(annotation.Arguments.FirstOrDefault()) ?? method.Name,
@@ -116,28 +172,23 @@ internal static class DeclarationRemoteContract
                     result,
                     stream,
                     cancellation,
-                    String(Named(annotation, "Context")),
-                    String(Named(annotation, "Wire")) ?? "contextId",
-                    parameters
-                        .Select(parameter =>
-                        {
-                            var lookup = Attribute(parameter.Attributes, "Cordis.Composition.RemoteLookupAttribute");
-                            return new RemoteParameterContract(
-                                parameter,
-                                String(lookup?.Arguments.ElementAtOrDefault(1)) ?? parameter.Name,
-                                String(lookup?.Arguments.FirstOrDefault()),
-                                lookup?.Arguments.ElementAtOrDefault(2)?.Reference,
-                                Attribute(
-                                    parameter.Attributes,
-                                    "System.Diagnostics.CodeAnalysis.DisallowNullAttribute") is not null);
-                        })
-                        .ToArray());
+                    contextKey,
+                    contextWire,
+                    contextType,
+                    scope,
+                    input);
             }
 
             void Diagnose(string code, string message, string symbol) =>
                 diagnostics.Add(new("AnalysisUnsupported", code, message, symbol));
         }
     }
+
+    private static DeclarationReference WireReference(DeclarationReference reference) => reference with
+    {
+        Nullability = reference.Nullability == "None" ? "NotAnnotated" : reference.Nullability,
+        Arguments = reference.Arguments.Select(WireReference).ToArray()
+    };
 
     internal static bool Matches(DeclarationType type, string service) =>
         type.MetadataName.Replace('+', '.') == service ||

@@ -4,6 +4,23 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Cordis.Composition;
 
+/// <summary>Declare a Context key and its wire identity type, corresponding to the upstream TypertContextMap.</summary>
+[AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
+public sealed class TypertContextAttribute(string key, Type wireType) : Attribute
+{
+    /// <summary>Gets the Context adapter key.</summary>
+    public string Key
+    {
+        get;
+    } = key;
+
+    /// <summary>Gets the identity type used by Host and Client adapters.</summary>
+    public Type WireType
+    {
+        get;
+    } = wireType;
+}
+
 /// <summary>Declare the Cordis service key, namespace and source-generated serialization context of a Remote service.</summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class RemoteServiceAttribute(string service, Type? jsonContext = null) : Attribute

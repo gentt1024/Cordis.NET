@@ -61,6 +61,27 @@ internal sealed partial class SourceContractReader
             .ToArray();
         if (roots.Length == 0 && !allowEmpty)
             throw new InvalidDataException("At least one ordinary declaration model root is required.");
+        var contexts = compilation
+            .SourceModule.ReferencedAssemblySymbols.Prepend(compilation.Assembly)
+            .SelectMany(assembly => assembly
+                .GetAttributes()
+                .Where(attribute =>
+                    attribute.AttributeClass?.ToDisplayString() == "Cordis.Composition.TypertContextAttribute")
+                .Select(attribute =>
+                {
+                    if (attribute.ConstructorArguments.Length != 2 ||
+                        attribute.ConstructorArguments[0].Value is not string key || string.IsNullOrWhiteSpace(key) ||
+                        attribute.ConstructorArguments[1].Value is not ITypeSymbol wireType)
+                        throw new InvalidDataException(
+                            "TypertContext requires a non-empty key and an explicit wire type.");
+                    return new DeclarationContext(
+                        assembly.Identity.ToString(),
+                        key,
+                        reader.DeclarationReference(wireType));
+                }))
+            .OrderBy(context => context.Key, StringComparer.Ordinal)
+            .ThenBy(context => context.Assembly, StringComparer.Ordinal)
+            .ToArray();
         reader.CompleteMetadataSignatures();
         var parse = compilation.SyntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions ??
             CSharpParseOptions.Default;
@@ -76,6 +97,7 @@ internal sealed partial class SourceContractReader
                 compilation.Options.OutputKind.ToString(),
                 compilation.Options.Platform.ToString(),
                 compilation.Options.OptimizationLevel.ToString()),
+            contexts,
             roots,
             reader.declarations.Values.OrderBy(type => type.Id, StringComparer.Ordinal).ToArray(),
             reader

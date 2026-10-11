@@ -118,12 +118,14 @@ internal sealed class DeclarationRemoteProjection
             method.Cancellation,
             method.Context,
             method.ContextWire,
+            method.ContextWireType is { } contextType ? Reference(contextType) : null,
+            method.Scope,
             method
                 .Parameters.Select(parameter =>
                     new NativeParameter(
                         parameter.Facts.Name,
                         parameter.Wire,
-                        Reference(parameter.Facts.Type),
+                        Reference(parameter.LookupWireType ?? parameter.Facts.Type),
                         parameter.Lookup,
                         parameter.LookupWireType is { } wire ? Reference(wire) : null,
                         parameter.Facts.RefKind,

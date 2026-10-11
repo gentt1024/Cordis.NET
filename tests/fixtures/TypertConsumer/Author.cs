@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 using Cordis;
 using Cordis.Composition;
 
+[assembly: TypertContext("@scope/example", typeof(string))]
+
 namespace IndependentRemote;
 
 public sealed record EchoRequest(string Text, int Count);

@@ -77,6 +77,10 @@ internal sealed class DotnetProjectionEmitter
             throw new InvalidDataException($"No unique native service '{service}'.");
         if (selected.Serializer is null)
             throw new InvalidDataException("Native caller projection requires an explicit source JSON context.");
+        selected = selected with
+        {
+            Methods = selected.Methods.Select(WithContextArgument).ToArray()
+        };
         if (selected.Methods.Length == 0)
             throw new InvalidDataException("Selected service contains no authored Remote methods.");
         if (selected.Methods.Any(method => string.IsNullOrEmpty(method.Name)))
@@ -88,15 +92,13 @@ internal sealed class DotnetProjectionEmitter
             throw new InvalidDataException("Remote names collide after normalization to caller Async method names.");
         foreach (var method in selected.Methods)
         {
-            if (method.Context is not null ||
-                method.Parameters.Any(parameter => parameter.Lookup is not null) ||
-                method.ReturnWrapper != (method.Stream
+            if (method.ReturnWrapper != (method.Stream
                     ? "System.Collections.Generic.IAsyncEnumerable<T>"
                     : "System.Threading.Tasks.Task<TResult>") ||
                 method.Parameters.Any(parameter =>
                     parameter.RefKind != "None" || parameter.Params))
                 throw new InvalidDataException(
-                    $"{method.Name}: caller projection supports only direct unary and downlink methods.");
+                    $"{method.Name}: caller projection supports unary and downlink methods with ordinary wire parameters.");
             Visit(method.Result);
             foreach (var parameter in method.Parameters)
             {
@@ -166,6 +168,8 @@ internal sealed class DotnetProjectionEmitter
         ReserveName(names, client + "Json", "generated data JSON context");
         ReserveName(names, client + "CarrierJson", "generated carrier JSON context");
         ReserveName(names, client + "Failure", "generated failure envelope");
+        if (service.Methods.Any(method => method.Context is not null || method.Scope is not null))
+            ReserveName(names, client + "Scope", "generated scoped client view");
         foreach (var method in service.Methods)
         {
             var prefix = EnvelopePrefix(method);
@@ -192,6 +196,23 @@ internal sealed class DotnetProjectionEmitter
     }
 
     private string EnvelopePrefix(NativeMethod method) => client + Identifier(method.Name).TrimStart('@');
+
+    private static NativeMethod WithContextArgument(NativeMethod method)
+    {
+        if (method.Context is null || method.ContextWireType is null)
+            return method;
+        var name = "__cordisContext";
+        while (method.Parameters.Any(parameter => parameter.Name == name))
+            name += "_";
+        return method with
+        {
+            Parameters =
+            [
+                new(name, method.ContextWire, method.ContextWireType, null, null, "None", false, null, false, [], ""),
+                .. method.Parameters
+            ]
+        };
+    }
 
     private void Visit(NativeTypeReference type)
     {
@@ -360,13 +381,21 @@ internal sealed class DotnetProjectionEmitter
         output.AppendLine("internal sealed class " + prefix + "Args").AppendLine("{");
         foreach (var parameter in method.Parameters)
         {
+            // Identity null is a present wire value; the Host codec decides whether it is valid.
+            var envelopeType = parameter.Lookup is not null ||
+                method.Context is not null && parameter.Wire == method.ContextWire
+                    ? parameter.Type with
+                    {
+                        Nullability = "Annotated"
+                    }
+                    : parameter.Type;
             foreach (var attribute in parameter.Attributes)
                 EmitAttribute(attribute, "    ");
             output.AppendLine(
                 "    [JsonPropertyName(" + Literal(parameter.Wire) +
                 "), JsonIgnore(Condition = JsonIgnoreCondition." +
                 (OmitNullDefault(parameter) ? "WhenWritingNull" : "Never") +
-                ")] public " + TypeName(parameter.Type) + " " +
+                ")] public " + TypeName(envelopeType) + " " +
                 Identifier(parameter.Name) + " { get; set; } = default!;");
         }
 
@@ -490,7 +519,7 @@ internal sealed class DotnetProjectionEmitter
             }
 
             output
-                .Append("    public async Task<")
+                .Append(method.Context is null ? "    public async Task<" : "    private async Task<")
                 .Append(TypeName(method.Result))
                 .Append("> ")
                 .Append(apiName)
@@ -597,7 +626,111 @@ internal sealed class DotnetProjectionEmitter
 
         if (service.Methods.Any(method => method.Stream))
             EmitStreamReader();
+        if (service.Methods.Any(method => method.Context is not null || method.Scope is not null))
+            EmitScopedClient(service);
         output.AppendLine("}");
+    }
+
+    private void EmitScopedClient(NativeService service)
+    {
+        output.AppendLine(
+            $$"""
+                  /// <summary>Borrow a caller Context and its registry for scoped calls. Identity is read for each invocation.</summary>
+                  public {{client}}Scope ForContext(global::Cordis.Context callerContext, global::Cordis.Composition.TypertRegistry registry)
+                  {
+                      global::System.ArgumentNullException.ThrowIfNull(callerContext);
+                      global::System.ArgumentNullException.ThrowIfNull(registry);
+                      CheckActive();
+                      return new(this, callerContext, registry);
+                  }
+                  private async Task<T> ReadIdentityAsync<T>(global::Cordis.Context callerContext, global::Cordis.Composition.TypertRegistry registry, string key, CancellationToken token)
+                  {
+                      CheckActive();
+                      token.ThrowIfCancellationRequested();
+                      object? value = global::Cordis.Undefined.Value;
+                      await callerContext.RunAsync(_ =>
+                      {
+                          token.ThrowIfCancellationRequested();
+                          var adapter = registry.GetClientContext(key) ?? throw new global::System.InvalidOperationException("No Client Context adapter for " + key);
+                          value = adapter.Identity(callerContext);
+                          return Task.CompletedTask;
+                      }).ConfigureAwait(false);
+                      CheckActive();
+                      token.ThrowIfCancellationRequested();
+                      if (global::System.Object.ReferenceEquals(value, global::Cordis.Undefined.Value))
+                          throw new global::System.InvalidOperationException("The caller does not represent Context " + key);
+                      if (value is T identity) return identity;
+                      if (value is null && default(T) is null) return default!;
+                      throw new global::System.InvalidOperationException("Client Context identity has the wrong wire type for " + key);
+                  }
+                  /// <summary>A borrowed Context view. Disposing the parent client withdraws all its views.</summary>
+                  public sealed class {{client}}Scope
+                  {
+                      private readonly {{client}} owner;
+                      private readonly global::Cordis.Context callerContext;
+                      private readonly global::Cordis.Composition.TypertRegistry registry;
+                      internal {{client}}Scope({{client}} owner, global::Cordis.Context callerContext, global::Cordis.Composition.TypertRegistry registry)
+                      {
+                          this.owner = owner;
+                          this.callerContext = callerContext;
+                          this.registry = registry;
+                      }
+              """);
+        foreach (var method in service.Methods)
+        {
+            var key = method.Context ?? method.Scope?.Context;
+            var wire = method.Context is not null ? method.ContextWire : method.Scope?.Wire;
+            var bound = key is null ? null : method.Parameters.Single(parameter => parameter.Wire == wire);
+            var parameters = method.Parameters.Where(parameter => !ReferenceEquals(parameter, bound)).ToArray();
+            var local = "__cordis";
+            while (parameters.Any(parameter => parameter.Name.StartsWith(local, StringComparison.Ordinal)))
+                local += "_";
+            var token = parameters.Any(parameter => parameter.Name == "cancellationToken")
+                ? local + "CancellationToken"
+                : "cancellationToken";
+            var signature = string.Join(
+                ", ",
+                parameters.Select(parameter =>
+                    ParameterAttributes(parameter.Attributes) + TypeName(parameter.Type) + " " +
+                    Identifier(parameter.Name) +
+                    (parameter.Optional
+                        ? " = " + Constant(parameter.Default!) + (OmitNullDefault(parameter) ? "!" : "")
+                        : "")));
+            if (signature.Length > 0)
+                signature += ", ";
+            signature += (method.Stream ? "[global::System.Runtime.CompilerServices.EnumeratorCancellation] " : "") +
+                "CancellationToken " + token + " = default";
+            var name = Identifier(char.ToUpperInvariant(method.Name[0]) + method.Name[1..] + "Async");
+            var result = TypeName(method.Result);
+            Docs(method.Documentation, "        ");
+            output
+                .AppendLine(
+                    "        public async " +
+                    (method.Stream ? "global::System.Collections.Generic.IAsyncEnumerable<" : "Task<") + result + "> " +
+                    name + "(" + signature + ")")
+                .AppendLine("        {");
+            if (bound is not null)
+                output.AppendLine(
+                    "            var " + local + "Identity = await this.owner.ReadIdentityAsync<" +
+                    TypeName(bound.Type) + ">(this.callerContext, this.registry, " + Literal(key!) + ", " + token +
+                    ").ConfigureAwait(false);");
+            var args = string.Join(
+                ", ",
+                method
+                    .Parameters.Select(parameter =>
+                        ReferenceEquals(parameter, bound) ? local + "Identity" : Identifier(parameter.Name))
+                    .Append(token));
+            var call = "this.owner." + name + "(" + args + ").ConfigureAwait(false)";
+            if (method.Stream)
+                output.AppendLine(
+                    "            await foreach (var " + local + "Item in " + call + ") yield return " + local +
+                    "Item;");
+            else
+                output.AppendLine("            return await " + call + ";");
+            output.AppendLine("        }");
+        }
+
+        output.AppendLine("    }");
     }
 
     private void EmitStreamMethod(
@@ -631,7 +764,7 @@ internal sealed class DotnetProjectionEmitter
         output.AppendLine(
             $$"""
                   /// <remarks>Enumeration owns its HTTP response. Ending it cancels observation, not an installation or other server operation.</remarks>
-                  public async global::System.Collections.Generic.IAsyncEnumerable<{{TypeName(method.Result)}}> {{apiName}}({{parameters}}[global::System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken {{token}} = default)
+                  {{(method.Context is null ? "public" : "private")}} async global::System.Collections.Generic.IAsyncEnumerable<{{TypeName(method.Result)}}> {{apiName}}({{parameters}}[global::System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken {{token}} = default)
                   {
                       this.CheckActive();
                       using var {{scope}}Lifetime = CancellationTokenSource.CreateLinkedTokenSource({{token}}, this.lifetime.Token);

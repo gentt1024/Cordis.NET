@@ -1565,6 +1565,10 @@ Cordis.Composition: Cordis.Composition.TypertCodec : System.Object [] flags=Publ
   Property System.String TypeSymbol attrs= NotNull/Unknown get=True set=False init=False
   Method System.Text.Json.JsonElement Encode(System.Object) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
   Property System.Text.Json.JsonElement Schema attrs= NotNull/Unknown get=True set=False init=False
+Cordis.Composition: Cordis.Composition.TypertContextAttribute : System.Attribute [] flags=Public, Sealed, BeforeFieldInit attrs=[System.AttributeUsageAttribute((System.AttributeTargets)1, AllowMultiple = True)]
+  Property System.String Key attrs= NotNull/Unknown get=True set=False init=False
+  Property System.Type WireType attrs= NotNull/Unknown get=True set=False init=False
+  Constructor Void .ctor(System.String, System.Type) attrs= params=key:NotNull/NotNull ;wireType:NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertContextInvocation : System.Object [System.IEquatable`1[Cordis.Composition.TypertContextInvocation]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.TypertContextInvocation) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull

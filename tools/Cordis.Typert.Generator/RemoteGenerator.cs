@@ -255,6 +255,13 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                 .Append(stream ? "true" : "false");
             if (name != method.Name)
                 definitions.Append(", Implementation = ").Append(Literal(method.Name));
+            if (invocation.Scope is { } scope)
+                definitions
+                    .Append(", Scope = new global::Cordis.Composition.TypertScopeProjection(")
+                    .Append(Literal(scope.Context))
+                    .Append(", ")
+                    .Append(Literal(scope.Wire))
+                    .Append(")");
             if (receiver is not null)
                 definitions
                     .Append(", Invocation = new global::Cordis.Composition.TypertContextInvocation(")
@@ -263,9 +270,8 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                     .Append(Literal(wire))
                     .Append(", ")
                     .Append(
-                        "global::Cordis.Composition.TypertCodec.Create((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>)")
-                    .Append(TypeName(metadata))
-                    .Append(".Default.GetTypeInfo(typeof(string))!, \"string\")")
+                        Codec(
+                            invocation.ContextWireType ?? throw new InvalidDataException("Missing Context wire type.")))
                     .Append(")");
             definitions.Append(" },");
             var call = "((" + TypeName(type) + ")service).@" + method.Name + "(" +

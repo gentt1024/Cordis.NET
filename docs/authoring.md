@@ -368,7 +368,33 @@ The service's `typeof` JSON context and its registered data enter the closure, i
 </PropertyGroup>
 ```
 
-The equivalent command is `emit-dotnet --model Example.cordis.model.json --service sharedData --namespace Example.Consumer.Remote --client SharedClient --output SharedClient.g.cs`. It consumes the saved facts without the author's implementation assembly. The .NET caller backend covers supported unary methods, downlink streams, data/constants and trailing CancellationToken parameters. Lookup, Context and richer caller shapes retain their explicit backend limits and open obligations. Independent callers must refuse serializer behavior they cannot reproduce, including custom metadata/converters or insufficient DTO facts; this does not remove analysis facts or automatically reject a Host using the author's actual implementation and explicit STJ metadata. The Host and caller share facts, not the intersection of their restrictions. An explicitly marked non-public method remains visible to analysis and is refused by Remote binding. Only a selected, valid annotation-only partial STJ context may defer its pre-generator abstract-member obligations; unrelated errors are not suppressed. Successful projection does not prove the author build or register a live service.
+The equivalent command is `emit-dotnet --model Example.cordis.model.json --service sharedData --namespace Example.Consumer.Remote --client SharedClient --output SharedClient.g.cs`. It consumes the saved facts without the author's implementation assembly. The .NET caller backend covers supported unary methods, downlink streams, lookup wire parameters, scoped Context views, data/constants and trailing CancellationToken parameters. Independent callers must refuse serializer behavior they cannot reproduce, including custom metadata/converters or insufficient DTO facts; this does not remove analysis facts or automatically reject a Host using the author's actual implementation and explicit STJ metadata. The Host and caller share facts, not the intersection of their restrictions. An explicitly marked non-public method remains visible to analysis and is refused by Remote binding. Only a selected, valid annotation-only partial STJ context may defer its pre-generator abstract-member obligations; unrelated errors are not suppressed. Successful projection does not prove the author build or register a live service.
+
+Declare Context keys and wire identity types with assembly attributes, the .NET equivalent of the fixed upstream `TypertContextMap`:
+
+```csharp
+[assembly: TypertContext("document", typeof(string))]
+```
+
+Declarations in the author assembly and its compiler references enter the same saved model. Missing receiver declarations and conflicting key/type declarations are refused. These declarations do not register live adapters. The Host continues to register `TypertHostContextAdapter` and `TypertLookupProvider`; the Client registers `TypertClientContextAdapter` in its existing `TypertRegistry`, owned by a Fiber effect.
+
+```csharp
+await callerContext.RunAsync(owner =>
+{
+    registry.RegisterClientContext(owner, "document", new(
+        ctx => ctx.Metadata.TryGetValue("documentId", out var id) ? id : Undefined.Value,
+        _ => null)); // Reverse lookup is unused by this outbound-only example.
+    return Task.CompletedTask;
+});
+using var client = new DocumentClient(httpClient, remoteBase);
+await client.ReadAsync("doc-1");
+var scoped = client.ForContext(callerContext, registry);
+await scoped.ReadAsync();
+```
+
+Two scoped contracts remain distinct. A method with `RemoteMethod(Context = "...")` appears on the scoped view: the adapter identity selects the Host receiver. A direct method gains a scoped projection only when it has exactly one lookup parameter whose key has a Context declaration with the same wire type. Its ordinary client method still accepts the lookup identity; the scoped method omits that argument, while the Host receiver remains direct. Methods with multiple lookups retain their explicit wire arguments. A lookup's Host object is never reconstructed as a client DTO merely to pass its identity.
+
+`ForContext` borrows the Context and registry, which must share a Cordis execution domain. It reads the current adapter and identity on each invocation inside `Context.RunAsync`. `Undefined.Value` means the Context does not supply an identity; explicit null remains a present wire value for reference-type identities and is subject to Host codec validation. Value-type identities require the declared CLR type. Missing adapters or identities refuse the call before transmission. Replacing an adapter affects existing views. The view owns neither its Context, adapters nor HttpClient; disposing the parent client cancels its requests and invalidates its views. Ending a scoped downlink uses the existing stream cleanup path. Explicit views provide C# signatures instead of upstream's dynamic direct/scoped selection; use the parent client for an explicit direct call. See the [shared package consumer](../tests/fixtures/DeclarationModel/SharedConsumer.cs) for both contracts and withdrawal.
 
 For independent callers, a JSON context available only as assembly metadata lacks the source facts needed to reproduce its serializer and is refused with `TYPM115`. The Host may still bind that actual context. A non-finite optional numeric default is retained as an author fact and works for omitted Host arguments. If the selected JSON number handling cannot transmit it, standalone .NET caller generation refuses with `TYPM116`; it does not emit a method whose default call fails during serialization.
 
