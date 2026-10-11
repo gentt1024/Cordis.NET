@@ -287,3 +287,13 @@ Windows x64 的 810 项原生测试通过，无失败/跳过；WSL2 Ubuntu 24.04
 私有输入收集器起初在 Windows 存储上合并了两个仅大小写不同的 Linux 投影文件。恢复时，两份原文件可读取，且匹配首次捕获哈希。仅复制恢复将全部 70 份输入存入保留大小写的归档，并保留首次失败日志和捕获记录。稍后独立复核逐份确认保留输入匹配首次捕获，但原 Linux 临时目录已不可访问，未声称此时重读原目录。Windows 和无 Git 的原源码、缓存及元数据已独立重读。这次收集修复没有重跑或改变任一平台门禁。
 
 详见[源码绑定回执](../verification/config-watch-2026-10-10/evidence.json)。本条关闭该检查点的本地 Windows 全量门禁项。完整 Typert 类型图/后端/协议、剩余 Settings 及生产消费者仍未完成。hosted CI、远端 SourceLink 获取、具名 UI Host、Maker 执行、新依赖选型和发布仍未验证或未授权。
+
+## Remote 准备阶段修复验证，2026-10-11
+
+R02 从已合入 main `424cfb98823e9867de5198118b26f3973b9b397d` 续行。运行时／包检查点 `679f57fb1be671c9f47ebc5a61f041b9d7215a3b` 在解码或 lookup 之前检查实际 Service／绑定，启动全部参数解析，保留成功参数顺序，并在首个观测失败时返回，同时观察已开始工作的迟到失败。既有 caller-view、注册、定义、lookup 和 Context 屏障保留；取消不替代准备错误。公开签名、依赖、版本及 DSH pin 均未改变。
+
+八个新增聚焦用例在合入后的原运行时失败；修复后与九个既有 Registry 用例一起通过。有效的生成作者包对旧 feed 复现缺失 Service 缺陷：lookup 先于 Service 检查启动，触发有界超时。修正后的包消费者在 JIT 和静态 Native AOT 中证明准入、同时启动 lookup、提前返回失败及迟到工作。既有 caller-view、取消、撤销和替换用例保持通过；严格 TS／HTTP 消费单独通过。
+
+两个冻结候选的本地 `verify.py --aot --package` 门禁均通过，源码未变，SDK 为 10.0.111。Windows x64 为 820 通过、零失败／跳过；WSL2 Ubuntu 24.04 x64 为 817 通过、零失败，三个具名 Windows 专用用例未执行。CLR 多 Entry、符号／离线调试、HTTP 客户端和无需 Node 的 Settings 回归也通过。既有原始源码参考门禁通过；其中 Composition 选择覆盖 profile／user-patches，没有执行上游 Gateway spec。独立包批次及保留报告／输入哈希见[源码绑定回执](../verification/remote-preparation-2026-10-11/evidence.json)。
+
+初始 fixture 使用了错误的生成 string 身份；最终检查点仅修正 fixture，没有扩大运行时匹配规则。此前一次门禁选择了现有测试配置未包含的上游文件，另一次启动未正确解析 SDK。这些尝试和中断运行作为私有证据保留，不计入验收。源码 ZIP 已保留；本轮未执行新的无 Git 归档构建、远端 SourceLink 获取、hosted CI 或独立审查。这里关闭本地 R02 修复，仍待审查／合入 main。维护者已将后续模型、Settings、PluginManager 和丰富 Remote 基础设施工作转交新会话，既有职责仍未完成。未推送、创建新 PR、合并或发布。

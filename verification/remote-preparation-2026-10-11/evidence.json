@@ -1,0 +1,1519 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "679f57fb1be671c9f47ebc5a61f041b9d7215a3b",
+  "baseMain": "424cfb98823e9867de5198118b26f3973b9b397d",
+  "dshCommit": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "scope": "R02 Remote preparation ordering and already-started resolver lifetime",
+  "platforms": {
+    "windows": {
+      "rid": "win-x64",
+      "sdk": "10.0.111",
+      "status": "requested-checks-passed",
+      "verificationReportSha256": "48165ba090422dcccf8a1304d8b9c5fb33db8592bc4776c3307393404b4935d1",
+      "sourceUnchanged": true,
+      "sourceInventoryFiles": 504,
+      "tests": {
+        "total": 820,
+        "passed": 820,
+        "failed": 0
+      },
+      "skippedTests": [],
+      "steps": [
+        {
+          "name": "sdk",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "sdk-version",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test-map",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-1",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-2",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-2",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-3",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-3",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-jit",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "example",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-types",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-lifecycle",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-shared-modules",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-author-watch",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-validate",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-preview",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-invocation",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-usage",
+          "exitCode": 2,
+          "expectedExitCode": 2
+        },
+        {
+          "name": "cli-invalid-option",
+          "exitCode": 1,
+          "expectedExitCode": 1
+        },
+        {
+          "name": "api",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-core",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-core-differential",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-upgrade",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-upgrade-differential",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "original-composition",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "original-core-loader",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-aot-differential",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-jit-aot-differential",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "pack",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-symbols-and-debug-consumer",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-content-boundaries",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-install",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-package-preview",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-retained-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republished-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-retained-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republished-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "independent-consumer-location",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "clr-deployment",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "clr-multi-entry",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-package-consumer",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-dotnet-settings",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "whitespace",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        }
+      ],
+      "packageSha256": {
+        "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "69d29939937dee0117674ea23606446a1681d7c6c819a11911a165a852d6b65f",
+        "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "5355c24e12369788d41ac1aeff33501adbd69799bd270a6f336965fef110a414",
+        "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "81313b5c8d501493480965fd73f20d154a1da2000d49cf2ec36f2f130cc395c4",
+        "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "e433890c7228ab0eb48c604eb8075d95f514f3a0c42873121dd2f0d9612d023d",
+        "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "c2116ba54c677f0235de9da064db899d5560364c6be027fc848409180852a229",
+        "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "22405e8e5b9e8bad4d2637d59dcdeaf1ac4fb25711b28677122b251d0f1ecda6",
+        "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "412751434941f0bf24840dc35250de71d22820715363fde32b63e16861a2f4b5",
+        "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "299f3e1ed8f8f875ba0be93c2c3ca160d2a1a4e7dbb6cc960b0169ec6debb66b",
+        "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "82a211c6bf5837485363ae97c916b0fbfe035058107d7a66c770ed3f0761ec0b"
+      },
+      "symbolSha256": {
+        "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "45540859adcea4faa75ff5a52459c0882b10c6aca909be5e2fd8980eb9a4031c",
+        "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "94a798cb80730097563f98b709a85a072a53940b7aec87b81727cc7d274780a4",
+        "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "6a12e3843e2665c1121846b5be80d486f23068c9ba93fd504fd01bc86dca2b9d",
+        "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "857670371f972737d5128127b8cbaec81d1bff5769b3e1b122c6a5543db56cc6",
+        "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "8893628fb291eaf0a5e58bb8b98ab23cb1f27f45afd563689bc7c61bb126588e",
+        "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "3c6ba4b3fd65d602c96ac0cb7f7ee806e8b7f8719b92e5ffcc9dcc9a7805c21c",
+        "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "b186b721b98260d8ed3273fd5d0ece1380cafff070c12da102da4eacd69f4298",
+        "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "2806976eaf2056e51e77971acb42b05627e658f1bec20222e245b34d435bd9cf",
+        "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "d0c625b3d6de48dfd744509bafb30e8075f945dbd9ba2ccc6f07888d0ff6097f"
+      },
+      "consumers": {
+        "typert-consumer": {
+          "reportSha256": "581533ad5a2233eb5682996f1b96208c0d33ba59deba3e979eca5c33b0215a76",
+          "steps": [
+            {
+              "name": "author-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "invalid-author-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "consumer-jit",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "client-runtime-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "typescript-and-http-client",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "consumer-aot-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "consumer-aot-run",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            }
+          ],
+          "inputsArchiveSha256": "a0ce1279a7f0ab1023e2a4f14ec395d5bf4936b8d449d6516115cba1be29af71",
+          "restoredCordisPackageSha256": {
+            "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "e433890c7228ab0eb48c604eb8075d95f514f3a0c42873121dd2f0d9612d023d",
+            "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "c2116ba54c677f0235de9da064db899d5560364c6be027fc848409180852a229",
+            "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "5355c24e12369788d41ac1aeff33501adbd69799bd270a6f336965fef110a414",
+            "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "22405e8e5b9e8bad4d2637d59dcdeaf1ac4fb25711b28677122b251d0f1ecda6"
+          },
+          "packageReferencesOnly": true,
+          "retainedInputsComparedToOriginal": true
+        },
+        "typert-dotnet-settings": {
+          "reportSha256": "59e056d77baeb8b4b8ed19261c5d10b3772854cb3a04154bbfc2935489ddf09d",
+          "steps": [
+            {
+              "name": "author-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-incremental",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "valid-stale-model-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "model-only-contracts-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "contracts-incremental",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "contracts-clean",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "contracts-cold-rebuild",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "projection-author-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "selected-sdk",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "numeric-model-only-contracts-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "primitives-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "primitives-model-project",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "nullable-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "nullable-model-project",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "readonly-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "readonly-model-project",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "collision-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "collision-model-project",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "recordStruct-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "recordStruct-model-project",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "optional-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "optional-model-project",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helperCollision-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "helper-model-only-contracts-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-ClientCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-JsonCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-CarrierCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-DemoClient-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-ArgsCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-RequestCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-ResponseCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "optional-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "nullable-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "projection-caller-jit",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "projection-caller-aot-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "projection-caller-aot",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-package-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "host-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "caller-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "caller-aot-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "typed-settings-jit",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "typed-settings-aot",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            }
+          ],
+          "inputsArchiveSha256": "08a09ea32f91b15ef4de3dbb132e9871f66d689e181f32f31750799122a0ebe3",
+          "restoredCordisPackageSha256": {
+            "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "81313b5c8d501493480965fd73f20d154a1da2000d49cf2ec36f2f130cc395c4",
+            "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "e433890c7228ab0eb48c604eb8075d95f514f3a0c42873121dd2f0d9612d023d",
+            "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "c2116ba54c677f0235de9da064db899d5560364c6be027fc848409180852a229",
+            "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "5355c24e12369788d41ac1aeff33501adbd69799bd270a6f336965fef110a414",
+            "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "22405e8e5b9e8bad4d2637d59dcdeaf1ac4fb25711b28677122b251d0f1ecda6"
+          },
+          "packageReferencesOnly": true,
+          "retainedInputsComparedToOriginal": true
+        },
+        "clr-multi-entry": {
+          "reportSha256": "5e5bf978c6df5cb8b7c377d7b5731287cb6a7607131ad6b50d6925331972680f",
+          "steps": [
+            {
+              "name": "multi-assembly-PlainA-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-PrivateA-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-FirstB-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-SecondB-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-DelayedA-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-BridgeB-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-NativeFirst-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-NativeSecond-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-NativeDelayed-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-consumer-run",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-1-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-1-package-restore",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-1-package-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-2-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-2-package-restore",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-2-package-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-3-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-3-package-restore",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-3-package-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "consumer-run",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            }
+          ]
+        }
+      },
+      "rawVerificationArchiveSha256": "80f79cf612b373fe364034aa60e802f8dad204910322d2ad7137fae205ea8d7c"
+    },
+    "linux": {
+      "rid": "linux-x64",
+      "sdk": "10.0.111",
+      "status": "requested-checks-passed",
+      "verificationReportSha256": "8936e0cbece4c5ecf88ab5d75fc6bf1311b7e7bc7495824a479c21a7324a4964",
+      "sourceUnchanged": true,
+      "sourceInventoryFiles": 504,
+      "tests": {
+        "total": 820,
+        "passed": 817,
+        "failed": 0
+      },
+      "skippedTests": [
+        "Cordis.Platform.Tests.PackageProcessTests.Cancelled_preparation_stops_child_with_independent_output_pipes_before_returning",
+        "Cordis.Platform.Tests.PackageProcessTests.Host_exit_terminates_owned_package_children_without_waiting_for_sdk_exit",
+        "Cordis.Platform.Tests.PackageProcessTests.Exited_sdk_cannot_report_prepared_output_while_its_child_still_writes"
+      ],
+      "steps": [
+        {
+          "name": "sdk",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "sdk-version",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test-map",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-1",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-2",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-2",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-3",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-3",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-jit",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "example",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-types",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-lifecycle",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-shared-modules",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-author-watch",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-validate",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-preview",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-invocation",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-usage",
+          "exitCode": 2,
+          "expectedExitCode": 2
+        },
+        {
+          "name": "cli-invalid-option",
+          "exitCode": 1,
+          "expectedExitCode": 1
+        },
+        {
+          "name": "api",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-core",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-core-differential",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-upgrade",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-upgrade-differential",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "original-composition",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "original-core-loader",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-aot-differential",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-jit-aot-differential",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "pack",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-symbols-and-debug-consumer",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-content-boundaries",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-install",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-package-preview",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-retained-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republished-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-retained-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republished-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "independent-consumer-location",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "clr-deployment",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "clr-multi-entry",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-package-consumer",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-dotnet-settings",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "whitespace",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        }
+      ],
+      "packageSha256": {
+        "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "3a716ccbb513e2f976bb39b064695e733e506b265d64f0d5d2b024201840006f",
+        "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "0a5db65fd9402b05919f56ee842ade8746f0a851a4efb0d572eaf55b9417367b",
+        "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "ffc2838d9b0052cbead8c6fe4ec05fda0aeac03ab607af2545fcf38570b01ef5",
+        "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "cbfe847228ac966a5caa7876bfc8856743a27fa5f62a0e87afc7e2d3a2e636d9",
+        "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "0e622c38778ae5e4fa92f68351864ddcc0865c6689d47a42b46252c80cca98c6",
+        "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "ae50c91ca2eee9ebb0ddadfc96cefa06b302feea9d4fa1081ee55847772ce31c",
+        "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "a435f5eb63ecc523fc4899367d9cdf82e1d7089bd75a4aeabb72e364490035fa",
+        "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "49818f4ef3abfae27483e44e464e14971ad46cc9aaef94c03bdc072133b4a412",
+        "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "557f940652a96d1e63fab7f8386649d6cce1f622c3014bb0a2995cf4c2ce8624"
+      },
+      "symbolSha256": {
+        "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "2843af47e2758e910f9669fd1a4c52635b3eafeee06a1e8efd857e9f32629f87",
+        "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "ed7a324ca4445335905bdd1a311a9b4e49ed3225ec64732ae866f72dc422440a",
+        "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "74e9c3fffc4c49de48885edd7cfe1bb5d660fcf0088673070d3f8899a4f9518b",
+        "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "09f1149553e753dbae2cf573880352b99c38951033401df3e7ed37a6ede12bd5",
+        "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "f52aaeef4d290626e685bb74e7a85715b746d38b4690efc688a5eb24eaa3039e",
+        "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "212d0073d27b8c423344ee8825d4db8060230eb1185a24fb79d04f8095df4ea3",
+        "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "3a48454d8c027219bd6f0e3385a06254217c606eccb5c54b78f6b5ffc48e9271",
+        "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "e16397f2c41c9bfcc8d04b7982bfdcb21e544fb4808b1e9b598790746f498db8",
+        "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "3724af2891cc05401a56cf8ff67799241a1e93c245266264fc75d6bf1b29a753"
+      },
+      "consumers": {
+        "typert-consumer": {
+          "reportSha256": "a46eedb05f0cef8e75ac0a00605a29fbccf33367484d7fbb29060f2e7f44e62f",
+          "steps": [
+            {
+              "name": "author-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "invalid-author-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "consumer-jit",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "client-runtime-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "typescript-and-http-client",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "consumer-aot-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "consumer-aot-run",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            }
+          ],
+          "inputsArchiveSha256": "1c62a814b0f5d9b291f8956d9f5d9f1f309891e736820c9a7dc13f765de544e0",
+          "restoredCordisPackageSha256": {
+            "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "cbfe847228ac966a5caa7876bfc8856743a27fa5f62a0e87afc7e2d3a2e636d9",
+            "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "0e622c38778ae5e4fa92f68351864ddcc0865c6689d47a42b46252c80cca98c6",
+            "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "0a5db65fd9402b05919f56ee842ade8746f0a851a4efb0d572eaf55b9417367b",
+            "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "ae50c91ca2eee9ebb0ddadfc96cefa06b302feea9d4fa1081ee55847772ce31c"
+          },
+          "packageReferencesOnly": true,
+          "retainedInputsComparedToOriginal": true
+        },
+        "typert-dotnet-settings": {
+          "reportSha256": "6c6f809a7a6a1b4d74f58cbb972148cde2f2628e61f6947b424e6eea2a3cec7c",
+          "steps": [
+            {
+              "name": "author-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-incremental",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "valid-stale-model-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "model-only-contracts-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "contracts-incremental",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "contracts-clean",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "contracts-cold-rebuild",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "projection-author-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "selected-sdk",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "numeric-model-only-contracts-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "caseParts-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "primitives-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "primitives-model-project",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "nullable-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "nullable-model-project",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "readonly-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "readonly-model-project",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "collision-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "collision-model-project",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "recordStruct-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "recordStruct-model-project",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "optional-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "optional-model-project",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helperCollision-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "helper-model-only-contracts-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-ClientCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-JsonCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-CarrierCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-DemoClient-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-ArgsCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-RequestCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "helper-ResponseCollision-rejected",
+              "exitCode": 1,
+              "expectedExitCode": 1
+            },
+            {
+              "name": "optional-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "nullable-source-extract",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "projection-caller-jit",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "projection-caller-aot-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "projection-caller-aot",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-package-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "host-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "caller-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "caller-aot-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "typed-settings-jit",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "typed-settings-aot",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            }
+          ],
+          "inputsArchiveSha256": "9d40dbe937314186ec2a2193fe742d6aed5af477b74c07a62d0ad4b1362041ae",
+          "restoredCordisPackageSha256": {
+            "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "ffc2838d9b0052cbead8c6fe4ec05fda0aeac03ab607af2545fcf38570b01ef5",
+            "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "cbfe847228ac966a5caa7876bfc8856743a27fa5f62a0e87afc7e2d3a2e636d9",
+            "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "0e622c38778ae5e4fa92f68351864ddcc0865c6689d47a42b46252c80cca98c6",
+            "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "0a5db65fd9402b05919f56ee842ade8746f0a851a4efb0d572eaf55b9417367b",
+            "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "ae50c91ca2eee9ebb0ddadfc96cefa06b302feea9d4fa1081ee55847772ce31c"
+          },
+          "packageReferencesOnly": true,
+          "retainedInputsComparedToOriginal": true
+        },
+        "clr-multi-entry": {
+          "reportSha256": "44f880504310ec78448fc8543312713a75eec43860ea52d040a5cc0da8349dd2",
+          "steps": [
+            {
+              "name": "multi-assembly-PlainA-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-PrivateA-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-FirstB-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-SecondB-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-DelayedA-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-BridgeB-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-NativeFirst-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-NativeSecond-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-NativeDelayed-build",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "multi-assembly-consumer-run",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-1-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-1-package-restore",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-1-package-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-2-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-2-package-restore",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-2-package-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-3-pack",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-3-package-restore",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "author-3-package-publish",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            },
+            {
+              "name": "consumer-run",
+              "exitCode": 0,
+              "expectedExitCode": 0
+            }
+          ]
+        }
+      },
+      "rawVerificationArchiveSha256": "fce0cffd0bbf2246875cbfffbe7b94e97b28b5cce43b003e27cc76786c4ef31f"
+    }
+  },
+  "sourceArchive": {
+    "name": "Cordis.NET-679f57fb1be6-source.zip",
+    "sha256": "ac3be0fe18d44f4208b44bd291d37f0d8ae4b80f3809e65c352f1ef94d5d3b92",
+    "noGitBuildThisRun": false
+  },
+  "counterexamples": {
+    "focusedMergedRuntime": "8 failed before repair; 17 passed after repair including existing Registry regressions",
+    "oldPackageReportSha256": "38bab68e6f52ee5ac1c03f03c61ab9691ad2303a143c7223e652048045e224e3",
+    "oldPackageOutcome": "Valid generated lookup types; bounded timeout because absent Service started lookup before admission",
+    "correctedPreflightReportSha256": "860110063de4631192b882e06e13c486147308dbe23dd0fa8475d581f72fb630"
+  },
+  "limits": [
+    "Local Windows and WSL2 Ubuntu gates; no new hosted CI, remote push, PR, merge, release or publication.",
+    "Original composition reference gate selects existing profile/user-patches coverage, not Gateway original specs.",
+    "Initial fixture type-symbol mistake, invalid upstream-test selection, launcher failure and interrupted runs are retained privately and excluded from acceptance.",
+    "No complete Typert, rich protocol, numeric Settings migration, PluginManager migration, new model scope, named UI host or Maker execution is accepted.",
+    "Dynamic CLR remains JIT-only; static Native AOT applies only to supported consumers.",
+    "Source archive is retained; no new no-Git archive build or remote SourceLink retrieval was performed.",
+    "Independent review and main integration remain pending."
+  ],
+  "evidenceCollection": "Raw verification and source-input archives preserve case; retained inputs were compared with the live originals. Initial broad cache traversal was stopped and partial copies retained; gates were not rerun."
+}

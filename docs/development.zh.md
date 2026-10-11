@@ -293,3 +293,9 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 固定 Gateway prepareInvocation 先检查参数名和 receiver Context，再检查 Service／binding，之后用 Promise.all 启动所有参数 resolver。R02 将原生 Service 准入移到参数解码／lookup 之前，在现有 Cordis 执行域中启动所有独立解析，按首先观察到的失败返回，捕获晚到解析失败，不取消已开始工作。成功时保持声明参数顺序及既有 definition、lookup、Context、原始 Service 注册检查。调用取消仍不覆盖准备阶段错误，也不强制终止 resolver。
 
 聚焦反例在合入后的原运行时失败，修复后通过：缺失／错误 Service、同时启动屏障、成功参数顺序、其他工作未结束时先返回错误、立即解码失败后仍启动后续解析，以及分发前撤销。独立包生成作者证明和仓库／平台正式门禁仍是本修复验收边界；聚焦通过不单独关闭 R02。此独立修正之后继续推进上述模型、Settings 和协议职责。
+
+### R02 本地收口及续行归属
+
+[2026-10-11 验证记录](validation.zh.md#remote-准备阶段修复验证2026-10-11) 记录源码检查点 `679f57fb1be671c9f47ebc5a61f041b9d7215a3b` 已完成的本地 Windows／Linux 包门禁。审查／合入 main 仍待完成。后续回执／文档改动不替代该运行时／包身份。
+
+维护者将本会话缩限为已开工 R02 的修正、验证和交接。其余仓库基础设施，包括上述已认可的 D-REV／D-MODEL／D-WIRE 职责，由从最新 main 起步的新会话继续；未合入的 R02 先走既有审查流程。这项交接不关闭或缩减这些职责。本会话不启动新的模型、完整 Settings、PluginManager 或丰富协议实现。
