@@ -76,6 +76,8 @@ public partial class SettingsController
 
     private async Task<SettingsNamespaceView> WriteAsync(string ns, Func<ISettingsProvider, Task> write)
     {
+        if (string.IsNullOrEmpty(ns))
+            throw new RemoteError("gateway/bad-request", "Settings namespace must be a non-empty string.");
         var provider = Provider();
         try
         {

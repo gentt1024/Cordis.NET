@@ -48,7 +48,7 @@ const write = await remote['settings/mutate']({
 remote.dispose()
 ```
 
-正常编辑提交先前读到的 revision。三种 Remote 写操作均返回新的脱敏 namespace。原生 provider 写入返回 Task；controller 随后 describe 同一个已捕获的 provider。`update` 递归合并对象，数组整体替换。`replace` 将开放的 live 字段重置到继承值，再合并所提交 section，保留普通配置。由脱敏读取拼成的 replace 可能重置省略的 secret。持有不完整视图时使用 `mutate`：按序执行的对象 unset 恢复继承，数组 unset 删除该元素。set 必须提供 `value`，允许显式 JSON null；unset 省略 `value`。
+正常编辑提交先前读到的 revision。三种 Remote 写操作均返回新的脱敏 namespace。原生 provider 写入返回 Task；controller 随后 describe 同一个已捕获的 provider。空 `ns` 在查找 provider 前以 `gateway/bad-request` 拒绝，不受可选 provider 是否存在影响。`update` 递归合并对象，数组整体替换。`replace` 将开放的 live 字段重置到继承值，再合并所提交 section，保留普通配置。由脱敏读取拼成的 replace 可能重置省略的 secret。持有不完整视图时使用 `mutate`：按序执行的对象 unset 恢复继承，数组 unset 删除该元素。set 必须提供 `value`，允许显式 JSON null；unset 省略 `value`。
 
 表单 Schema 保留脱敏后的公开默认值，移除 secret 默认值和 required 标记，省略宿主 hidden 字段。非 live 对象路径使用默认值为空对象的新包装；进入 live 边界后保留作者元数据。
 

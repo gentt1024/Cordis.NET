@@ -48,7 +48,7 @@ const write = await remote['settings/mutate']({
 remote.dispose()
 ```
 
-Normal editing submits the revision it read. All three Remote writes return a fresh redacted namespace. Native provider writes return Task; the controller then describes the same captured provider. `update` recursively merges objects and replaces arrays. `replace` resets the offered live fields against inheritance, then merges the submitted section while retaining ordinary configuration. A replace assembled from a redacted read can reset omitted secrets. Use `mutate` for incomplete views: ordered object unsets restore inheritance, and array unsets remove the element. Set requires a `value`, which may explicitly be JSON null; unset omits `value`.
+Normal editing submits the revision it read. All three Remote writes return a fresh redacted namespace. Native provider writes return Task; the controller then describes the same captured provider. An empty `ns` is refused as `gateway/bad-request` before provider lookup, whether or not the optional provider is present. `update` recursively merges objects and replaces arrays. `replace` resets the offered live fields against inheritance, then merges the submitted section while retaining ordinary configuration. A replace assembled from a redacted read can reset omitted secrets. Use `mutate` for incomplete views: ordered object unsets restore inheritance, and array unsets remove the element. Set requires a `value`, which may explicitly be JSON null; unset omits `value`.
 
 The form schema preserves redacted public defaults. Secret defaults and required flags are removed, and host-hidden fields are omitted. Non-live object paths use fresh empty-object wrappers; metadata at a live boundary is retained.
 
