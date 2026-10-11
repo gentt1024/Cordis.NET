@@ -297,3 +297,11 @@ R02 从已合入 main `424cfb98823e9867de5198118b26f3973b9b397d` 续行。运行
 两个冻结候选的本地 `verify.py --aot --package` 门禁均通过，源码未变，SDK 为 10.0.111。Windows x64 为 820 通过、零失败／跳过；WSL2 Ubuntu 24.04 x64 为 817 通过、零失败，三个具名 Windows 专用用例未执行。CLR 多 Entry、符号／离线调试、HTTP 客户端和无需 Node 的 Settings 回归也通过。既有原始源码参考门禁通过；其中 Composition 选择覆盖 profile／user-patches，没有执行上游 Gateway spec。独立包批次及保留报告／输入哈希见[源码绑定回执](../verification/remote-preparation-2026-10-11/evidence.json)。
 
 初始 fixture 使用了错误的生成 string 身份；最终检查点仅修正 fixture，没有扩大运行时匹配规则。此前一次门禁选择了现有测试配置未包含的上游文件，另一次启动未正确解析 SDK。这些尝试和中断运行作为私有证据保留，不计入验收。源码 ZIP 已保留；本轮未执行新的无 Git 归档构建、远端 SourceLink 获取、hosted CI 或独立审查。这里关闭本地 R02 修复，仍待审查／合入 main。维护者已将后续模型、Settings、PluginManager 和丰富 Remote 基础设施工作转交新会话，既有职责仍未完成。未推送、创建新 PR、合并或发布。
+
+### 随后的 R02 独立审查
+
+两个独立 agent 审查检查了 `424cfb98823e9867de5198118b26f3973b9b397d...f4d1605f02df6c36eb613153f8dee7328583b605`，没有发现阻断问题。生产合同审查核对固定 prepareInvocation、原生执行上下文串行化、Service／绑定准入、全部解析启动、成功顺序、首个观测失败、迟到失败处理、caller-view、撤销与取消。规范／测试／证据审查核对可观察回归边界、双语文档和来源，独立匹配两个保留报告的哈希，并逐平台将全部 504 个源码库存哈希与 `679f57f` Git blobs 比较，零不匹配。
+
+这两次审查没有重跑运行时门禁，也未独立复验每份消费归档／包。解析器完成屏障本身不证明垃圾收集或未观察异常行为；迟到失败结论还依据各解析器的 catch 路径。合作式保留边界仍有明确记录。审查无需修改运行时或 fixture。
+
+维护者随后仅授权 R02 分支推送、PR／CI，以及审查和必需检查通过后的合入。其余基础设施职责仍由新会话承担。托管检查和 main 合入以 PR 及 workflow run 的实际 checkout 提交记录，不替代原 `679f57f` 本地证据身份。仓库要求线性历史及双平台 verify 检查，因此依既有 squash 惯例合入，不绕过门禁。
