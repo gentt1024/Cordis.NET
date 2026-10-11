@@ -516,7 +516,7 @@ public sealed partial class PluginConfigurationOperations(
         }
     }
 
-    private async Task<string> DiskStateAsync()
+    private async Task<(string Manifest, string Patch, string? Compatibility)> DiskStateAsync()
     {
         async Task<string> Read(string file)
         {
@@ -530,8 +530,18 @@ public sealed partial class PluginConfigurationOperations(
             }
         }
 
-        return await Read(ManifestPath) + "\0" + await Read(PatchPath) + "\0" +
-            await Read(Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename));
+        string? compatibility;
+        try
+        {
+            compatibility = await Read(Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // Unknown bytes are distinct from absence. The compatibility authority still refuses unsafe rewrites.
+            compatibility = null;
+        }
+
+        return (await Read(ManifestPath), await Read(PatchPath), compatibility);
     }
 
     private async Task<ProfileCandidate> WriteManifestAsync(

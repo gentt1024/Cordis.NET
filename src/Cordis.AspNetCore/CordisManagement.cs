@@ -39,7 +39,10 @@ public sealed class CordisManagement(
     /// <remarks>The request accessor supplies identity only during the physical HTTP call. The manager still
     /// authorizes the parsed operation target and inspected build separately, using the same operations and toolchain.</remarks>
     public Task MountPluginManagerAsync(
-        Context owner, TypertRegistry registry, IHttpContextAccessor requests, string package = "Cordis.NET.PluginManager")
+        Context owner,
+        TypertRegistry registry,
+        IHttpContextAccessor requests,
+        string package = "Cordis.NET.PluginManager")
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(registry);
@@ -48,7 +51,11 @@ public sealed class CordisManagement(
             throw new ArgumentException("The manager must share the profile's Cordis root.", nameof(owner));
         return owner.RunAsync(context =>
         {
-            new PluginManager(context, Operations, (_, permission) => AuthorizeRemoteAsync(requests.HttpContext, permission), packages);
+            new PluginManager(
+                context,
+                Operations,
+                (_, permission) => AuthorizeRemoteAsync(requests.HttpContext, permission),
+                packages);
             registry.Register(context, PluginManagerTypert.Contribution(package));
             return Task.CompletedTask;
         });
@@ -60,7 +67,9 @@ public sealed class CordisManagement(
             return false;
         var expected = http.Request.Headers["If-Cordis-Generation"];
         if ((permission.Mutation || expected.Count != 0) && expected != generation)
-            throw new RemoteError("plugin-manager/generation-changed", "Read current host state before starting another management request.");
+            throw new RemoteError(
+                "plugin-manager/generation-changed",
+                "Read current host state before starting another management request.");
         return true;
     }
 

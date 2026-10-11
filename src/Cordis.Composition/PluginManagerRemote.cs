@@ -4,7 +4,10 @@ namespace Cordis.Composition;
 
 /// <summary>A parsed management decision. Build execution and exact-version exemptions are separate permissions.</summary>
 public sealed record PluginManagementPermission(
-    string Operation, string? Target = null, PackageInspection? Package = null, bool Mutation = false);
+    string Operation,
+    string? Target = null,
+    PackageInspection? Package = null,
+    bool Mutation = false);
 
 /// <summary>One profile plugin's address, patch availability and observed runtime state.</summary>
 /// <param name="EntryId">The mounted entry address.</param>
@@ -47,7 +50,13 @@ public sealed record PluginManagerChange(
 /// <param name="Required">Whether activation requires the entry.</param>
 /// <param name="Phase">The phase associated with this diagnostic.</param>
 public sealed record PluginManagerDiagnostic(
-    string Id, string Module, string? State, string? Error, IReadOnlyList<string> Missing, bool Required, string? Phase);
+    string Id,
+    string Module,
+    string? State,
+    string? Error,
+    IReadOnlyList<string> Missing,
+    bool Required,
+    string? Phase);
 
 /// <summary>An installation attempt identified by the caller, with approval bound to its inspected archive.</summary>
 /// <param name="RequestId">A caller-selected identifier unique among active installations.</param>
@@ -55,7 +64,11 @@ public sealed record PluginManagerDiagnostic(
 public sealed record PluginInstallOptions(string RequestId, string InspectedHash)
 {
     /// <summary>Whether the installed bundle is selected. Installation does not imply successful activation.</summary>
-    public bool Enabled { get; init; } = true;
+    public bool Enabled
+    {
+        get;
+        init;
+    } = true;
 }
 
 /// <summary>The result of an explicit cancellation. Failed cleanup is reported as failed, never cancelled.</summary>
@@ -91,17 +104,19 @@ public partial class PluginManager : Service
         this.operations = operations;
         this.authorize = authorize;
         this.packages = packages;
-        context.Effect(() =>
-        {
-            operations.Changed += Changed;
-            operations.PackageProgressed += Progress;
-            return () =>
+        context.Effect(
+            () =>
             {
-                closed = true;
-                operations.Changed -= Changed;
-                operations.PackageProgressed -= Progress;
-            };
-        }, "plugin-manager notifications");
+                operations.Changed += Changed;
+                operations.PackageProgressed += Progress;
+                return () =>
+                {
+                    closed = true;
+                    operations.Changed -= Changed;
+                    operations.PackageProgressed -= Progress;
+                };
+            },
+            "plugin-manager notifications");
     }
 
     private PluginManager(PluginManager provider, Context caller) : base(provider, caller)
@@ -117,7 +132,10 @@ public partial class PluginManager : Service
     private Context Caller => TypertInvocation.Current?.Context ?? Context;
 
     private async Task PermitAsync(
-        string operation, string? target = null, PackageInspection? package = null, bool mutation = false)
+        string operation,
+        string? target = null,
+        PackageInspection? package = null,
+        bool mutation = false)
     {
         if (!await authorize(Caller, new(operation, target, package, mutation)))
             throw new RemoteError("plugin-manager/forbidden", "The host refused this management operation.");
@@ -128,9 +146,15 @@ public partial class PluginManager : Service
     public async Task<IReadOnlyList<PluginManagerPlugin>> ListPluginsAsync()
     {
         await PermitAsync("read");
-        return (await operations.ListPluginsAsync()).Select(row => new PluginManagerPlugin(
-            row.EntryId, row.ModuleName, row.Enabled, row.PatchId, row.ReadOnlyReason,
-            row.State?.ToString().ToLowerInvariant())).ToArray();
+        return (await operations.ListPluginsAsync())
+            .Select(row => new PluginManagerPlugin(
+                row.EntryId,
+                row.ModuleName,
+                row.Enabled,
+                row.PatchId,
+                row.ReadOnlyReason,
+                row.State?.ToString().ToLowerInvariant()))
+            .ToArray();
     }
 
     /// <summary>Read installed, selected and installation-provided bundles through the profile owner.</summary>
@@ -151,7 +175,10 @@ public partial class PluginManager : Service
 
     /// <summary>Query exact versions at one host-selected source. Cancellation ends this lookup.</summary>
     [RemoteMethod("versions")]
-    public async Task<IReadOnlyList<string>> VersionsAsync(string name, string source, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> VersionsAsync(
+        string name,
+        string source,
+        CancellationToken cancellationToken = default)
     {
         await PermitAsync("inspect", name);
         return await RequirePackages().VersionsAsync(name, source, cancellationToken);
@@ -159,7 +186,9 @@ public partial class PluginManager : Service
 
     /// <summary>Inspect an exact platform package without executing its build targets.</summary>
     [RemoteMethod("inspect")]
-    public async Task<PackageInspection> InspectAsync(PackageRequest request, CancellationToken cancellationToken = default)
+    public async Task<PackageInspection> InspectAsync(
+        PackageRequest request,
+        CancellationToken cancellationToken = default)
     {
         await PermitAsync("inspect", request.Name);
         return await RequirePackages().InspectAsync(request, cancellationToken);
@@ -192,10 +221,12 @@ public partial class PluginManager : Service
         var toolchain = RequirePackages();
         var caller = Caller;
         return await operations.InstallPackageAsync(
-            toolchain, request with
+            toolchain,
+            request with
             {
                 ExpectedHash = options.InspectedHash
-            }, options.RequestId,
+            },
+            options.RequestId,
             async (inspection, token) =>
             {
                 token.ThrowIfCancellationRequested();
@@ -239,7 +270,10 @@ public partial class PluginManager : Service
     /// <summary>Authorize the canonical package identity before granting or revoking one exact runtime pair.</summary>
     [RemoteMethod("setVersionExemption")]
     public async Task<PluginManagerChange> SetVersionExemptionAsync(
-        string packageVersion, string runtimeVersion, bool enabled, bool acceptRisk = false)
+        string packageVersion,
+        string runtimeVersion,
+        bool enabled,
+        bool acceptRisk = false)
     {
         var identity = operations.ResolveVersionExemptionIdentity(packageVersion);
         await PermitAsync("compatibility-grant", identity, mutation: true);
@@ -247,21 +281,36 @@ public partial class PluginManager : Service
     }
 
     private IProfilePackageToolchain RequirePackages() => packages ?? throw new RemoteError(
-        "plugin-manager/toolchain-absent", "This host has no dynamic package toolchain; static code changes require republishing.");
+        "plugin-manager/toolchain-absent",
+        "This host has no dynamic package toolchain; static code changes require republishing.");
 
     private static PluginManagerChange Project(ConfigurationChange change) => new(
-        change.Changed, change.Application, change.Target, change.Enabled, change.Error, change.Diagnostic,
-        change.Warnings?.Select(diagnostic =>
-        {
-            var snapshot = diagnostic.ToSnapshot();
-            return new PluginManagerDiagnostic(snapshot.Id, snapshot.Module,
-                snapshot.State?.ToString().ToLowerInvariant(), snapshot.Error,
-                snapshot.Missing.ToArray(), snapshot.Required, snapshot.Phase);
-        }).ToArray() ?? []);
+        change.Changed,
+        change.Application,
+        change.Target,
+        change.Enabled,
+        change.Error,
+        change.Diagnostic,
+        change
+            .Warnings?.Select(diagnostic =>
+            {
+                var snapshot = diagnostic.ToSnapshot();
+                return new PluginManagerDiagnostic(
+                    snapshot.Id,
+                    snapshot.Module,
+                    snapshot.State?.ToString().ToLowerInvariant(),
+                    snapshot.Error,
+                    snapshot.Missing.ToArray(),
+                    snapshot.Required,
+                    snapshot.Phase);
+            })
+            .ToArray() ?? []);
 
     private void Changed(string reason) => _ = PublishAsync("plugin-manager/changed", new PluginManagerChanged(reason));
+
     private void Progress(PackageProgress progress) => _ = PublishAsync(
-        progress.Output is null ? "plugin-manager/install-state" : "plugin-manager/install-log", progress);
+        progress.Output is null ? "plugin-manager/install-state" : "plugin-manager/install-log",
+        progress);
 
     private async Task PublishAsync(string name, object value)
     {
@@ -280,7 +329,10 @@ public partial class PluginManager : Service
             {
                 Provider.Logger.Warn(error.Message);
             }
-            catch { /* A notification observer cannot alter an operation's result. */ }
+            catch
+            {
+                /* A notification observer cannot alter an operation's result. */
+            }
         }
     }
 }

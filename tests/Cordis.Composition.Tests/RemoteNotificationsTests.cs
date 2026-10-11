@@ -36,19 +36,26 @@ public sealed class RemoteNotificationsTests
     {
         await using var root = new Context();
         var opened = 0;
-        var (gateway, owner) = await StartAsync(root, host =>
-        {
-            var source = TypertRemoteEvents.FromCordis(host,
-            [
-                new("selected", [TypertCodec.Create(NotificationTestsJson.Default.JsonElement),
-                    TypertCodec.Create(NotificationTestsJson.Default.Int32)])
-            ]);
-            return token =>
+        var (gateway, owner) = await StartAsync(
+            root,
+            host =>
             {
-                opened++;
-                return source(token);
-            };
-        });
+                var source = TypertRemoteEvents.FromCordis(
+                    host,
+                    [
+                        new(
+                            "selected",
+                            [
+                                TypertCodec.Create(NotificationTestsJson.Default.JsonElement),
+                                TypertCodec.Create(NotificationTestsJson.Default.Int32)
+                            ])
+                    ]);
+                return token =>
+                {
+                    opened++;
+                    return source(token);
+                };
+            });
         await using var first = Open(gateway);
         await using var second = Open(gateway);
         await ReadyAsync(first);
@@ -275,10 +282,13 @@ public sealed class RemoteNotificationsTests
     public async Task Typed_event_encoding_failure_ends_delivery_without_failing_the_triggering_emit()
     {
         await using var root = new Context();
-        var (gateway, owner) = await StartAsync(root, host => TypertRemoteEvents.FromCordis(host,
-        [
-            new("selected", [TypertCodec.Create(NotificationTestsJson.Default.Int32)])
-        ]));
+        var (gateway, owner) = await StartAsync(
+            root,
+            host => TypertRemoteEvents.FromCordis(
+                host,
+                [
+                    new("selected", [TypertCodec.Create(NotificationTestsJson.Default.Int32)])
+                ]));
         await using var client = Open(gateway);
         await ReadyAsync(client);
         var completed = false;
@@ -362,10 +372,11 @@ public sealed class RemoteNotificationsTests
         Fiber owner = null!;
         await root.RunAsync(ctx =>
         {
-            owner = ctx.Plugin(new Plugin<object?>
-            {
-                Apply = (host, _) => gateway.RegisterRemoteEvents(host, select(host)),
-            });
+            owner = ctx.Plugin(
+                new Plugin<object?>
+                {
+                    Apply = (host, _) => gateway.RegisterRemoteEvents(host, select(host)),
+                });
             return Task.CompletedTask;
         });
         await owner.WaitAsync();
@@ -375,7 +386,9 @@ public sealed class RemoteNotificationsTests
     private static IAsyncEnumerator<TypertRemoteResult> Open(
         TypertGateway gateway,
         CancellationToken cancellationToken = default) =>
-        gateway.StreamAsync("remoteNotifications/watch", Json("{}"), cancellationToken).GetAsyncEnumerator(cancellationToken);
+        gateway
+            .StreamAsync("remoteNotifications/watch", Json("{}"), cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
 
     private static async Task ReadyAsync(IAsyncEnumerator<TypertRemoteResult> client)
     {
@@ -408,16 +421,21 @@ public sealed class RemoteNotificationsTests
         private CancellationToken lifetime;
         private readonly TaskCompletionSource naturalEnd = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public TaskCompletionSource ReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ReadStarted
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public int DisposeCalls
         {
-            get; private set;
+            get;
+            private set;
         }
 
         public bool CancelledAtCleanup
         {
-            get; private set;
+            get;
+            private set;
         }
 
         public TypertRemoteEventFrame Current => throw new InvalidOperationException("The source has no ready event.");
@@ -428,7 +446,8 @@ public sealed class RemoteNotificationsTests
             return cleanupMode == "dispose" ? this : Iterate(cancellationToken);
         }
 
-        public IAsyncEnumerator<TypertRemoteEventFrame> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
+        public IAsyncEnumerator<TypertRemoteEventFrame> GetAsyncEnumerator(
+            CancellationToken cancellationToken = default) => this;
 
         public async ValueTask<bool> MoveNextAsync()
         {
@@ -480,12 +499,19 @@ public sealed class RemoteNotificationsTests
 
         public int Opened
         {
-            get; private set;
+            get;
+            private set;
         }
 
-        public TaskCompletionSource Ended { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Ended
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public TaskCompletionSource CleanupEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource CleanupEntered
+        {
+            get;
+        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public IAsyncEnumerable<TypertRemoteEventFrame> Open(CancellationToken cancellationToken)
         {

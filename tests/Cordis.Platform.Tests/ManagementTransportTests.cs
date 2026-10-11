@@ -301,7 +301,8 @@ public sealed class ManagementTransportTests
             client.DefaultRequestHeaders.Remove("If-Cordis-Generation");
             client.DefaultRequestHeaders.Add("If-Cordis-Generation", "retired-host");
             using var retired = await client.PostAsJsonAsync(
-                "/remote/pluginManager/waitForInstall", new
+                "/remote/pluginManager/waitForInstall",
+                new
                 {
                     args = new
                     {
@@ -311,11 +312,19 @@ public sealed class ManagementTransportTests
             retired.EnsureSuccessStatusCode();
             using var refused = JsonDocument.Parse(await retired.Content.ReadAsStringAsync());
             Assert.False(refused.RootElement.GetProperty("ok").GetBoolean());
-            Assert.Equal("plugin-manager/generation-changed", refused.RootElement.GetProperty("error").GetProperty("code").GetString());
+            Assert.Equal(
+                "plugin-manager/generation-changed",
+                refused.RootElement.GetProperty("error").GetProperty("code").GetString());
             client.DefaultRequestHeaders.Remove("If-Cordis-Generation");
             using var subscribe = new HttpRequestMessage(HttpMethod.Post, "/remote/remoteNotifications/watch/stream")
             {
-                Content = JsonContent.Create(new { args = new { } })
+                Content = JsonContent.Create(
+                    new
+                    {
+                        args = new
+                        {
+                        }
+                    })
             };
             using var events = await client.SendAsync(subscribe, HttpCompletionOption.ResponseHeadersRead);
             Assert.Equal(HttpStatusCode.OK, events.StatusCode);
@@ -325,9 +334,12 @@ public sealed class ManagementTransportTests
             Assert.Equal("ready", ready.RootElement.GetProperty("value").GetProperty("kind").GetString());
             await session.Context.DisposeAsync();
             Assert.Equal(HttpStatusCode.Gone, (await client.GetAsync("/cordis/state")).StatusCode);
-            using var withdrawn = JsonDocument.Parse((await stream.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3)))!);
+            using var withdrawn =
+                JsonDocument.Parse((await stream.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3)))!);
             Assert.False(withdrawn.RootElement.GetProperty("ok").GetBoolean());
-            Assert.Equal("gateway/service-unavailable", withdrawn.RootElement.GetProperty("error").GetProperty("code").GetString());
+            Assert.Equal(
+                "gateway/service-unavailable",
+                withdrawn.RootElement.GetProperty("error").GetProperty("code").GetString());
             Assert.Null(await stream.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3)));
         }
         finally
@@ -418,6 +430,7 @@ public sealed class ManagementTransportTests
                 arguments["runtimeVersion"] = "0.2.0-rc.2";
                 arguments["acceptRisk"] = true;
             }
+
             if (endpoint == "versions")
                 arguments["source"] = "selected-source";
             if (endpoint == "installBundle")
@@ -441,7 +454,9 @@ public sealed class ManagementTransportTests
             response.EnsureSuccessStatusCode();
             using var refused = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             Assert.False(refused.RootElement.GetProperty("ok").GetBoolean());
-            Assert.Equal("plugin-manager/forbidden", refused.RootElement.GetProperty("error").GetProperty("code").GetString());
+            Assert.Equal(
+                "plugin-manager/forbidden",
+                refused.RootElement.GetProperty("error").GetProperty("code").GetString());
             Assert.Equal(blocked, permissions.Last().Target);
             if (endpoint == "setPluginEnabled")
             {
@@ -477,9 +492,11 @@ public sealed class ManagementTransportTests
         await using var server = CreateServer();
         var waits = 0;
         server.MapGet("/cordis/state", () => Results.Text("{\"generation\":\"original\"}", "application/json"));
-        server.MapPost("/remote/pluginManager/inspect", () => RemoteValue(
-            new PackageInspection(new("new-package", "1.0.0", "explicit-feed"), "inspected", "test package", true),
-            PluginManagerJson.Default.PackageInspection));
+        server.MapPost(
+            "/remote/pluginManager/inspect",
+            () => RemoteValue(
+                new PackageInspection(new("new-package", "1.0.0", "explicit-feed"), "inspected", "test package", true),
+                PluginManagerJson.Default.PackageInspection));
         server.MapPost("/remote/pluginManager/installBundle", () => Results.StatusCode(status));
         server.MapPost(
             "/remote/pluginManager/waitForInstall",
@@ -519,9 +536,11 @@ public sealed class ManagementTransportTests
         server.MapGet(
             "/cordis/state",
             () => Results.Text("{\"generation\":\"" + generation + "\"}", "application/json"));
-        server.MapPost("/remote/pluginManager/inspect", () => RemoteValue(
-            new PackageInspection(new("package", "1.0.0", "explicit-feed"), "inspected", "test package", true),
-            PluginManagerJson.Default.PackageInspection));
+        server.MapPost(
+            "/remote/pluginManager/inspect",
+            () => RemoteValue(
+                new PackageInspection(new("package", "1.0.0", "explicit-feed"), "inspected", "test package", true),
+                PluginManagerJson.Default.PackageInspection));
         server.MapPost(
             "/remote/pluginManager/installBundle",
             (HttpContext http) =>

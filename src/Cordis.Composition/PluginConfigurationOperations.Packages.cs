@@ -78,7 +78,12 @@ public sealed partial class PluginConfigurationOperations
         bool buildApproved,
         bool enabled = true,
         CancellationToken cancellationToken = default) =>
-        InstallPackageAsync(toolchain, request, requestId, (_, _) => Task.FromResult(buildApproved), enabled,
+        InstallPackageAsync(
+            toolchain,
+            request,
+            requestId,
+            (_, _) => Task.FromResult(buildApproved),
+            enabled,
             cancellationToken);
 
     /// <summary>Register an installation before inspection, then authorize the inspected archive within its task lifetime.</summary>
@@ -235,7 +240,9 @@ public sealed partial class PluginConfigurationOperations
             var buildApproved = await authorizeBuildAsync(inspection, token);
             token.ThrowIfCancellationRequested();
             if (!buildApproved && inspection.RequiresBuildApproval)
-                throw new Refusal("build-not-approved", "The host refused build-execution approval for this inspected package.");
+                throw new Refusal(
+                    "build-not-approved",
+                    "The host refused build-execution approval for this inspected package.");
 
             stage = "prepare";
             ReportPackageProgress(requestId, stage);

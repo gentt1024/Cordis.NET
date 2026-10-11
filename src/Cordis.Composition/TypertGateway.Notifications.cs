@@ -38,7 +38,9 @@ public sealed partial class TypertGateway
     internal void EnsureNotificationContext(Context context, string parameterName)
     {
         if (!ReferenceEquals(context.Root, caller.Root))
-            throw new ArgumentException("Notification services and sources must share the Gateway's Cordis root.", parameterName);
+            throw new ArgumentException(
+                "Notification services and sources must share the Gateway's Cordis root.",
+                parameterName);
     }
 
     internal async IAsyncEnumerable<TypertRemoteNotification> WatchRemoteEventsAsync(
@@ -93,7 +95,8 @@ public sealed partial class TypertGateway
             this.gateway = gateway;
             try
             {
-                source = factory(lifetime.Token) ?? throw new ArgumentException("The event source returned no iterable.");
+                source = factory(lifetime.Token) ??
+                    throw new ArgumentException("The event source returned no iterable.");
             }
             catch
             {
@@ -107,12 +110,13 @@ public sealed partial class TypertGateway
         public Channel<TypertRemoteNotification> Subscribe()
         {
             Check();
-            var client = Channel.CreateUnbounded<TypertRemoteNotification>(new()
-            {
-                SingleReader = true,
-                SingleWriter = true,
-                AllowSynchronousContinuations = false,
-            });
+            var client = Channel.CreateUnbounded<TypertRemoteNotification>(
+                new()
+                {
+                    SingleReader = true,
+                    SingleWriter = true,
+                    AllowSynchronousContinuations = false,
+                });
             clients.Add(client);
             return client;
         }
@@ -145,29 +149,35 @@ public sealed partial class TypertGateway
                     ArgumentNullException.ThrowIfNull(frame);
                     ArgumentException.ThrowIfNullOrWhiteSpace(frame.Event);
                     ArgumentNullException.ThrowIfNull(frame.Args);
-                    var arguments = frame.Args.Select(argument =>
-                    {
-                        if (argument.ValueKind == System.Text.Json.JsonValueKind.Undefined)
-                            throw new System.Text.Json.JsonException("Remote event arguments must be JSON values.");
-                        return argument.Clone();
-                    }).ToArray();
+                    var arguments = frame
+                        .Args.Select(argument =>
+                        {
+                            if (argument.ValueKind == System.Text.Json.JsonValueKind.Undefined)
+                                throw new System.Text.Json.JsonException("Remote event arguments must be JSON values.");
+                            return argument.Clone();
+                        })
+                        .ToArray();
                     var notification = new TypertRemoteNotification("event", frame.Event, Array.AsReadOnly(arguments));
                     foreach (var client in clients)
                         client.Writer.TryWrite(notification);
                 }
 
                 if (!lifetime.IsCancellationRequested)
-                    failure = NotificationFault("gateway/internal", "The selected Remote event source ended unexpectedly.");
+                    failure = NotificationFault(
+                        "gateway/internal",
+                        "The selected Remote event source ended unexpectedly.");
             }
             catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
             {
             }
             catch (Exception error)
             {
-                failure = error is RemoteError ? error : NotificationFault(
-                    "gateway/internal",
-                    "The selected Remote event source failed: " + error.Message,
-                    error);
+                failure = error is RemoteError
+                    ? error
+                    : NotificationFault(
+                        "gateway/internal",
+                        "The selected Remote event source failed: " + error.Message,
+                        error);
                 // An async iterator's finally can fail inside MoveNextAsync before cancellation.
                 // Preserve every unexpected source error for its owner; read and cleanup failures
                 // are indistinguishable here, even if the later DisposeAsync succeeds.
@@ -177,7 +187,10 @@ public sealed partial class TypertGateway
             {
                 if (ReferenceEquals(gateway.remoteEvents, this))
                     gateway.remoteEvents = null;
-                End(failure ?? NotificationFault("gateway/service-unavailable", "The selected Remote event source was removed."));
+                End(
+                    failure ?? NotificationFault(
+                        "gateway/service-unavailable",
+                        "The selected Remote event source was removed."));
                 if (iterator is not null)
                 {
                     try

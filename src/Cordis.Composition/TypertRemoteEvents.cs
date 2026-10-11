@@ -23,21 +23,23 @@ public static class TypertRemoteEvents
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(events);
         var names = new HashSet<string>(StringComparer.Ordinal);
-        var definitions = events.Select(definition =>
-        {
-            ArgumentNullException.ThrowIfNull(definition);
-            ArgumentException.ThrowIfNullOrWhiteSpace(definition.Event);
-            ArgumentNullException.ThrowIfNull(definition.Args);
-            if (!names.Add(definition.Event))
-                throw new ArgumentException("The selected event list contains a duplicate name.", nameof(events));
-            var codecs = definition.Args.ToArray();
-            foreach (var codec in codecs)
-                ArgumentNullException.ThrowIfNull(codec);
-            return definition with
+        var definitions = events
+            .Select(definition =>
             {
-                Args = Array.AsReadOnly(codecs)
-            };
-        }).ToArray();
+                ArgumentNullException.ThrowIfNull(definition);
+                ArgumentException.ThrowIfNullOrWhiteSpace(definition.Event);
+                ArgumentNullException.ThrowIfNull(definition.Args);
+                if (!names.Add(definition.Event))
+                    throw new ArgumentException("The selected event list contains a duplicate name.", nameof(events));
+                var codecs = definition.Args.ToArray();
+                foreach (var codec in codecs)
+                    ArgumentNullException.ThrowIfNull(codec);
+                return definition with
+                {
+                    Args = Array.AsReadOnly(codecs)
+                };
+            })
+            .ToArray();
         return cancellationToken => Open(owner, definitions, cancellationToken);
     }
 
@@ -46,49 +48,56 @@ public static class TypertRemoteEvents
         IReadOnlyList<TypertRemoteEventDefinition> definitions,
         CancellationToken cancellationToken)
     {
-        var queue = Channel.CreateUnbounded<TypertRemoteEventFrame>(new()
-        {
-            SingleReader = true,
-            SingleWriter = true,
-            AllowSynchronousContinuations = false,
-        });
+        var queue = Channel.CreateUnbounded<TypertRemoteEventFrame>(
+            new()
+            {
+                SingleReader = true,
+                SingleWriter = true,
+                AllowSynchronousContinuations = false,
+            });
         var listeners = new List<EffectHandle>();
         var ended = false;
         try
         {
             foreach (var definition in definitions)
-                listeners.Add(owner.On(definition.Event, (_, arguments) =>
-                {
-                    if (ended)
-                        return Undefined.Value;
-                    try
-                    {
-                        if (arguments.Length != definition.Args.Count)
-                            throw new JsonException("The event argument count differs from the host-selected contract.");
-                        var values = new JsonElement[arguments.Length];
-                        for (var index = 0;index < arguments.Length;index++)
+                listeners.Add(
+                    owner.On(
+                        definition.Event,
+                        (_, arguments) =>
                         {
-                            if (arguments[index] is Undefined)
-                                throw new JsonException("Remote event arguments must be JSON values.");
-                            var value = definition.Args[index].Encode(arguments[index]);
-                            if (value.ValueKind == JsonValueKind.Undefined)
-                                throw new JsonException("Remote event arguments must be JSON values.");
-                            values[index] = value.Clone();
-                        }
+                            if (ended)
+                                return Undefined.Value;
+                            try
+                            {
+                                if (arguments.Length != definition.Args.Count)
+                                    throw new JsonException(
+                                        "The event argument count differs from the host-selected contract.");
+                                var values = new JsonElement[arguments.Length];
+                                for (var index = 0;index < arguments.Length;index++)
+                                {
+                                    if (arguments[index] is Undefined)
+                                        throw new JsonException("Remote event arguments must be JSON values.");
+                                    var value = definition.Args[index].Encode(arguments[index]);
+                                    if (value.ValueKind == JsonValueKind.Undefined)
+                                        throw new JsonException("Remote event arguments must be JSON values.");
+                                    values[index] = value.Clone();
+                                }
 
-                        queue.Writer.TryWrite(new(definition.Event, Array.AsReadOnly(values)));
-                    }
-                    catch (Exception error)
-                    {
-                        ended = true;
-                        queue.Writer.TryComplete(new RemoteError(
-                            "gateway/event-invalid",
-                            "The selected Cordis event '" + definition.Event + "' could not be encoded: " + error.Message,
-                            innerException: error));
-                    }
+                                queue.Writer.TryWrite(new(definition.Event, Array.AsReadOnly(values)));
+                            }
+                            catch (Exception error)
+                            {
+                                ended = true;
+                                queue.Writer.TryComplete(
+                                    new RemoteError(
+                                        "gateway/event-invalid",
+                                        "The selected Cordis event '" + definition.Event + "' could not be encoded: " +
+                                        error.Message,
+                                        innerException: error));
+                            }
 
-                    return Undefined.Value;
-                }));
+                            return Undefined.Value;
+                        }));
         }
         catch (Exception error)
         {

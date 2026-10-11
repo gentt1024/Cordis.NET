@@ -144,6 +144,8 @@ public sealed class ProfileSessionTests
         var result =
             await session.ConfigurationOperations.SetVersionExemptionAsync("test@1.0.0", "0.2.0-rc.2", true, true);
         Assert.NotNull(result.Error);
+        Assert.Equal("failed", result.Application);
+        Assert.False(result.Changed);
         Assert.True(System.IO.Directory.Exists(path));
         await session.RefreshAsync();
     }

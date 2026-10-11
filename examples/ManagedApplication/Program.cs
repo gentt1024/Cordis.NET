@@ -125,24 +125,37 @@ await session.Context.RunAsync(context =>
     registry.Register(context, settingsContracts);
     new RemoteNotifications(context, gateway);
     registry.Register(context, notificationContracts);
-    gateway.RegisterRemoteEvents(context, TypertRemoteEvents.FromCordis(context,
-    [
-        new("plugin-manager/changed", [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
-        new("plugin-manager/install-state", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-        new("plugin-manager/install-log", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-        new("settings/document-updated", [TypertCodec.Create(SettingsJson.Default.String), TypertCodec.Create(SettingsJson.Default.Double)]),
-        new("app-boot/config-reload", []),
-        new("client-modules/changed", []),
-    ]));
+    gateway.RegisterRemoteEvents(
+        context,
+        TypertRemoteEvents.FromCordis(
+            context,
+            [
+                new("plugin-manager/changed", [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
+                new("plugin-manager/install-state", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
+                new("plugin-manager/install-log", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
+                new(
+                    "settings/document-updated",
+                    [TypertCodec.Create(SettingsJson.Default.String), TypertCodec.Create(SettingsJson.Default.Double)]),
+                new("app-boot/config-reload", []),
+                new("client-modules/changed", []),
+            ]));
     return Task.CompletedTask;
 });
 await management.MountPluginManagerAsync(
-    session.Context, registry, app.Services.GetRequiredService<IHttpContextAccessor>(), managerContracts.Package);
+    session.Context,
+    registry,
+    app.Services.GetRequiredService<IHttpContextAccessor>(),
+    managerContracts.Package);
 app.MapCordisRemote(
     "/remote",
     gateway,
     (http, _) => Task.FromResult(Authorized(http)));
-foreach (var (name, contracts) in new[] { ("settings", settingsContracts), ("management", managerContracts), ("notifications", notificationContracts) })
+foreach (var (name, contracts) in new[]
+         {
+             ("settings", settingsContracts),
+             ("management", managerContracts),
+             ("notifications", notificationContracts)
+         })
 {
     var client = TypertArtifacts.GenerateClient(contracts);
     app.MapGet("/client-runtime/" + name + ".mjs", () => Results.Text(client.Module, "text/javascript"));

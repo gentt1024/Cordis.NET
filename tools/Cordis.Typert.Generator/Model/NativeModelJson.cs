@@ -85,6 +85,7 @@ internal static class NativeModelConformance
             throw new InvalidDataException($"Native model must contain exactly one selected service '{service}'.");
         var declarations = model.Types.ToDictionary(type => type.Id, StringComparer.Ordinal);
         var reachable = new HashSet<string>(StringComparer.Ordinal);
+
         void Visit(NativeTypeReference reference)
         {
             foreach (var argument in reference.Arguments)
@@ -100,6 +101,7 @@ internal static class NativeModelConformance
             foreach (var parameter in declaration.Constructors.SelectMany(constructor => constructor.Parameters))
                 Visit(parameter.Type);
         }
+
         foreach (var method in selected[0].Methods)
         {
             Visit(method.Result);
@@ -110,6 +112,7 @@ internal static class NativeModelConformance
                     Visit(wire);
             }
         }
+
         if (selected[0].Serializer is { } serializer)
             foreach (var type in serializer.RegisteredTypes)
                 Visit(type);
@@ -119,10 +122,12 @@ internal static class NativeModelConformance
         {
             Services = selected,
             Types = model.Types.Where(type => reachable.Contains(type.Id)).ToArray(),
-            Diagnostics = model.Diagnostics.Where(diagnostic => diagnostic.Symbol is null ||
-                reachable.Contains(diagnostic.Symbol) || diagnostic.Symbol == sourceId ||
-                diagnostic.Symbol == selected[0].Serializer?.Id ||
-                diagnostic.Symbol.StartsWith(sourceType + ".", StringComparison.Ordinal)).ToArray()
+            Diagnostics = model
+                .Diagnostics.Where(diagnostic => diagnostic.Symbol is null ||
+                    reachable.Contains(diagnostic.Symbol) || diagnostic.Symbol == sourceId ||
+                    diagnostic.Symbol == selected[0].Serializer?.Id ||
+                    diagnostic.Symbol.StartsWith(sourceType + ".", StringComparison.Ordinal))
+                .ToArray()
         };
     }
 

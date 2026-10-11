@@ -94,7 +94,10 @@ try
         (http, _) => Task.FromResult(http.Request.Headers.Authorization == "consumer-policy"));
     management.Map(server);
     var registry = new TypertRegistry(session.Context);
-    await management.MountPluginManagerAsync(session.Context, registry, server.Services.GetRequiredService<IHttpContextAccessor>());
+    await management.MountPluginManagerAsync(
+        session.Context,
+        registry,
+        server.Services.GetRequiredService<IHttpContextAccessor>());
     await session.Context.RunAsync(context =>
     {
         new SettingsForms(
@@ -214,12 +217,15 @@ try
             "ordinary inheritance restoration missing");
     using (var refused = await client.PostAsync(
                "/remote/pluginManager/installBundle",
-               JsonBody("""{"args":{"request":{"name":"new-code","version":"1.0.0","source":"explicit"},"options":{"requestId":"static-install","inspectedHash":"unused","enabled":true}}}""")))
+               JsonBody(
+                   """{"args":{"request":{"name":"new-code","version":"1.0.0","source":"explicit"},"options":{"requestId":"static-install","inspectedHash":"unused","enabled":true}}}""")))
     {
         Require(refused.StatusCode == HttpStatusCode.OK, "standard static host carrier refused the request");
         using var result = JsonDocument.Parse(await refused.Content.ReadAsStringAsync());
-        Require(!result.RootElement.GetProperty("ok").GetBoolean() &&
-            result.RootElement.GetProperty("error").GetProperty("code").GetString() == "plugin-manager/toolchain-absent",
+        Require(
+            !result.RootElement.GetProperty("ok").GetBoolean() &&
+            result.RootElement.GetProperty("error").GetProperty("code").GetString() ==
+            "plugin-manager/toolchain-absent",
             "static host accepted dynamic installation");
         Require(
             result.RootElement.GetProperty("error").GetProperty("message").GetString()!.Contains(
@@ -227,8 +233,11 @@ try
                 StringComparison.Ordinal),
             "static code boundary missing");
     }
+
     using (var retired = await client.PostAsync("/cordis/install", JsonBody("{}")))
-        Require(retired.StatusCode == HttpStatusCode.NotFound, "retired handwritten installation route remained active");
+        Require(
+            retired.StatusCode == HttpStatusCode.NotFound,
+            "retired handwritten installation route remained active");
 
     await session.Context.RunAsync(async _ => await provider.DisposeAsync());
     using (var unavailable = await client.PostAsync(

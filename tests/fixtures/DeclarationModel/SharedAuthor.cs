@@ -9,13 +9,26 @@ public sealed class SharedData
     [JsonPropertyName("display_name")]
     public required string Name
     {
-        get; set;
+        get;
+        set;
     }
-    public string? Note { get; set; } = "initial";
-    public int Count { get; set; } = 7;
+
+    public string? Note
+    {
+        get;
+        set;
+    } = "initial";
+
+    public int Count
+    {
+        get;
+        set;
+    } = 7;
+
     public SharedData? Child
     {
-        get; set;
+        get;
+        set;
     }
 }
 
@@ -24,7 +37,8 @@ public sealed class SharedEnvelope
     [JsonPropertyName("child")]
     public SharedData? Child
     {
-        get; set;
+        get;
+        set;
     }
 }
 
@@ -35,7 +49,9 @@ public partial class SharedRemote
     public Task<SharedData> EchoAsync(SharedData value) => Task.FromResult(value);
 }
 
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-    RespectNullableAnnotations = true, RespectRequiredConstructorParameters = true)]
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    RespectNullableAnnotations = true,
+    RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(SharedData))]
 public partial class SharedRemoteJson : JsonSerializerContext;

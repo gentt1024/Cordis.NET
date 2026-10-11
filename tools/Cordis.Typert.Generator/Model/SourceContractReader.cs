@@ -177,7 +177,9 @@ internal sealed partial class SourceContractReader
             parameters
                 .Select(parameter =>
                 {
-                    var lookup = Attribute(method.Parameters.First(value => value.Name == parameter.Name), "Cordis.Composition.RemoteLookupAttribute");
+                    var lookup = Attribute(
+                        method.Parameters.First(value => value.Name == parameter.Name),
+                        "Cordis.Composition.RemoteLookupAttribute");
                     return new NativeParameter(
                         parameter.Name,
                         lookup?.ConstructorArguments.ElementAtOrDefault(1).Value as string ?? parameter.Name,
@@ -234,7 +236,11 @@ internal sealed partial class SourceContractReader
         }
 
         if (named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
-            return new("nullable", "System.Nullable<T>", nullable, [ProjectReference(reference.Arguments[0], depth + 1)]);
+            return new(
+                "nullable",
+                "System.Nullable<T>",
+                nullable,
+                [ProjectReference(reference.Arguments[0], depth + 1)]);
         var definition = named.OriginalDefinition.ToDisplayString();
         if (definition is "System.Collections.Generic.List<T>" or "System.Collections.Generic.IReadOnlyList<T>" or
             "System.Collections.Generic.IList<T>" or "System.Collections.Generic.IEnumerable<T>" or
@@ -272,7 +278,11 @@ internal sealed partial class SourceContractReader
             visiting.Remove(id);
         }
 
-        return new("named", id, nullable, reference.Arguments.Select(value => ProjectReference(value, depth + 1)).ToArray());
+        return new(
+            "named",
+            id,
+            nullable,
+            reference.Arguments.Select(value => ProjectReference(value, depth + 1)).ToArray());
     }
 
     private void ValidateCachedWireNames(NativeTypeReference reference, HashSet<string> checkedTypes)
@@ -345,8 +355,10 @@ internal sealed partial class SourceContractReader
             .Select(value => new NativeConstructor(
                 value.Accessibility,
                 value.Attributes.Any(attribute => attribute.Name == JsonPrefix + "JsonConstructorAttribute"),
-                value.Attributes.Any(attribute => attribute.Name == "System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute"),
-                value.Parameters.Select(parameter => new NativeConstructorParameter(
+                value.Attributes.Any(attribute =>
+                    attribute.Name == "System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute"),
+                value
+                    .Parameters.Select(parameter => new NativeConstructorParameter(
                         parameter.Name,
                         ProjectReference(parameter.Type, depth + 1),
                         members.FirstOrDefault(member => member.Name.Equals(

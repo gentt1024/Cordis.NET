@@ -132,14 +132,28 @@ internal static class ApplicationCommands
                         registry.Register(context, SettingsControllerTypert.Contribution("Cordis.Cli.Settings"));
                         new RemoteNotifications(context, gateway);
                         registry.Register(context, RemoteNotificationsTypert.Contribution("Cordis.Cli.Notifications"));
-                        gateway.RegisterRemoteEvents(context, TypertRemoteEvents.FromCordis(context,
-                        [
-                            new("plugin-manager/changed", [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
-                            new("plugin-manager/install-state", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-                            new("plugin-manager/install-log", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-                            new("settings/document-updated", [TypertCodec.Create(SettingsJson.Default.String), TypertCodec.Create(SettingsJson.Default.Double)]),
-                            new("app-boot/config-reload", []),
-                        ]));
+                        gateway.RegisterRemoteEvents(
+                            context,
+                            TypertRemoteEvents.FromCordis(
+                                context,
+                                [
+                                    new(
+                                        "plugin-manager/changed",
+                                        [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
+                                    new(
+                                        "plugin-manager/install-state",
+                                        [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
+                                    new(
+                                        "plugin-manager/install-log",
+                                        [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
+                                    new(
+                                        "settings/document-updated",
+                                        [
+                                            TypertCodec.Create(SettingsJson.Default.String),
+                                            TypertCodec.Create(SettingsJson.Default.Double)
+                                        ]),
+                                    new("app-boot/config-reload", []),
+                                ]));
                         return Task.CompletedTask;
                     });
                     ((WebApplication)host).MapCordisRemote(
@@ -156,7 +170,10 @@ internal static class ApplicationCommands
                         toolchain);
                     management.Map((WebApplication)host);
                     await management.MountPluginManagerAsync(
-                        session.Context, registry, host.Services.GetRequiredService<IHttpContextAccessor>(), "Cordis.Cli.Management");
+                        session.Context,
+                        registry,
+                        host.Services.GetRequiredService<IHttpContextAccessor>(),
+                        "Cordis.Cli.Management");
                 }
 
                 // Help and one-shot commands may request exit during activation. Still await

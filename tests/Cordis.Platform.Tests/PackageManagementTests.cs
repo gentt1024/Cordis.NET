@@ -176,14 +176,18 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             var grantResult = saved.RootElement.GetProperty("value");
             Assert.True(grantResult.GetProperty("changed").GetBoolean(), grantResult.ToString());
             Assert.Equal("applied", grantResult.GetProperty("application").GetString());
-            Assert.False(grantResult.TryGetProperty("error", out var grantError) && grantError.ValueKind != JsonValueKind.Null,
+            Assert.False(
+                grantResult.TryGetProperty("error", out var grantError) && grantError.ValueKind != JsonValueKind.Null,
                 grantResult.ToString());
             Assert.Equal("independentplugin@5.0.0", permissions.Last().Target);
             Assert.Contains(
                 "independentplugin@5.0.0",
                 await File.ReadAllTextAsync(Path.Combine(profile, DshProfilePolicy.CompatibilityFilename)));
             var repeatedGrant = await operations.SetVersionExemptionAsync(
-                "independentplugin@5.0.0", runtime.Version, true, true);
+                "independentplugin@5.0.0",
+                runtime.Version,
+                true,
+                true);
             Assert.False(repeatedGrant.Changed);
             Assert.Null(repeatedGrant.Error);
             var otherVersion = await operations.InstallPackageAsync(
@@ -598,7 +602,8 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             state.RootElement.GetProperty("generation").GetString());
         var request = new PackageRequest("IndependentPlugin", "1.0.0", Feed);
         using var inspectResponse = await client.PostAsJsonAsync(
-            "/remote/pluginManager/inspect", new
+            "/remote/pluginManager/inspect",
+            new
             {
                 args = new
                 {

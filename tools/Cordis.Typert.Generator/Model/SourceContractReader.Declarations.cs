@@ -32,7 +32,10 @@ internal sealed partial class SourceContractReader
         var reader = new SourceContractReader(compilation, projectDirectory);
         foreach (var diagnostic in declarationErrors)
             reader.diagnostics.Add(
-                new("PreGeneratorDeclaration", diagnostic.Id, diagnostic.GetMessage(CultureInfo.InvariantCulture),
+                new(
+                    "PreGeneratorDeclaration",
+                    diagnostic.Id,
+                    diagnostic.GetMessage(CultureInfo.InvariantCulture),
                     reader.DiagnosticOwner(diagnostic)));
         var roots = metadataNames
             .Distinct(StringComparer.Ordinal)
@@ -73,7 +76,8 @@ internal sealed partial class SourceContractReader
             roots,
             reader.declarations.Values.OrderBy(type => type.Id, StringComparer.Ordinal).ToArray(),
             reader
-                .diagnostics.Concat(reader.declarationDiagnostics).OrderBy(value => value.Symbol, StringComparer.Ordinal)
+                .diagnostics.Concat(reader.declarationDiagnostics)
+                .OrderBy(value => value.Symbol, StringComparer.Ordinal)
                 .ThenBy(value => value.Code, StringComparer.Ordinal)
                 .ToArray());
         try
@@ -116,11 +120,12 @@ internal sealed partial class SourceContractReader
             return new("primitive", type.SpecialType.ToString(), nullable, []);
         if (type is not INamedTypeSymbol named || type.TypeKind == TypeKind.Error)
         {
-            declarationDiagnostics.Add(new(
-                "AnalysisUnsupported",
-                "TYPM201",
-                "Unresolved types and function-pointer signatures require a further declaration projection.",
-                type.ToDisplayString()));
+            declarationDiagnostics.Add(
+                new(
+                    "AnalysisUnsupported",
+                    "TYPM201",
+                    "Unresolved types and function-pointer signatures require a further declaration projection.",
+                    type.ToDisplayString()));
             return new("unsupported", type.ToDisplayString(), nullable, []);
         }
 
@@ -307,8 +312,12 @@ internal sealed partial class SourceContractReader
     {
         if (diagnostic.Location.SourceTree is not { } tree)
             return null;
-        var declaration = tree.GetRoot().FindNode(diagnostic.Location.SourceSpan).AncestorsAndSelf()
-            .OfType<BaseTypeDeclarationSyntax>().FirstOrDefault();
+        var declaration = tree
+            .GetRoot()
+            .FindNode(diagnostic.Location.SourceSpan)
+            .AncestorsAndSelf()
+            .OfType<BaseTypeDeclarationSyntax>()
+            .FirstOrDefault();
         return declaration is not null && compilation.GetSemanticModel(tree).GetDeclaredSymbol(declaration) is { } type
             ? DeclarationId(type)
             : null;

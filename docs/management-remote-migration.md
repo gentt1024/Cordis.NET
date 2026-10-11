@@ -29,6 +29,11 @@ true even when manifest and patch are unchanged; repeating that grant reports fa
 Runtime application remains a separate result field. The .NET workflow has no pnpm workspace
 approval file; build authority is supplied by the host for each preparation.
 
+Unreadable compatibility content remains unknown to the change observer. The existing
+compatibility authority reports warnings and refuses grants and unsafe rewrites. This retains
+the documented .NET startup/data-protection policy while returning a failed grant result;
+manifest and patch reads remain required source observations.
+
 The caller first inspects the archive, then submits its `contentHash` as `inspectedHash`.
 `installBundle` registers the request ID before reinspection, hash comparison and host build
 approval. These steps use the existing installation owner. Initial resource denial returns

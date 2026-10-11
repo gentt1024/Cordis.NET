@@ -104,14 +104,20 @@ internal static class ManagementCommands
                 "plugins" => await manager.ListPluginsAsync(),
                 "bundles" => await manager.ListBundlesAsync(),
                 "sources" => await manager.SourcesAsync(),
-                "versions" => await manager.VersionsAsync(Value(0), source ?? throw new ArgumentException("--source is required.")),
+                "versions" => await manager.VersionsAsync(
+                    Value(0),
+                    source ?? throw new ArgumentException("--source is required.")),
                 "configuration" => await GetAsync("configuration?entryId=" + Uri.EscapeDataString(Value(0))),
                 "schema" => Value(0) == "configuration"
                     ? await GetAsync("configuration/schema?entryId=" + Uri.EscapeDataString(Value(1)))
                     : throw new ArgumentException("Choose settings or configuration."),
                 "edit" => await EditAsync(),
                 "compatibility" => await manager.ListVersionExemptionsAsync(),
-                "grant" => await manager.SetVersionExemptionAsync(Value(0), Value(1), bool.Parse(Value(2)), bool.Parse(Value(3))),
+                "grant" => await manager.SetVersionExemptionAsync(
+                    Value(0),
+                    Value(1),
+                    bool.Parse(Value(2)),
+                    bool.Parse(Value(3))),
                 "wait" => await manager.WaitForInstallAsync(Value(0)),
                 "cancel" => await manager.CancelInstallAsync(Value(0)),
                 "remove" => await manager.RemoveBundleAsync(Value(0)),
@@ -127,7 +133,9 @@ internal static class ManagementCommands
             };
             var printed = result is null or EntryOptions
                 ? result
-                : ConfigurationFile.Parse(JsonSerializer.Serialize(result, result.GetType(), PluginManagerClientJson.Default), true);
+                : ConfigurationFile.Parse(
+                    JsonSerializer.Serialize(result, result.GetType(), PluginManagerClientJson.Default),
+                    true);
             Console.WriteLine(ConfigurationFile.Write(printed, true));
             if (result is null && arguments[0] == "wait")
                 return 3;
@@ -139,7 +147,10 @@ internal static class ManagementCommands
             string Value(int index) =>
                 values.Count > index ? values[index] : throw new ArgumentException("A command argument is missing.");
 
-            ManagerRequest Package() => new(Value(0), Value(1), source ?? throw new ArgumentException("--source is required."));
+            ManagerRequest Package() => new(
+                Value(0),
+                Value(1),
+                source ?? throw new ArgumentException("--source is required."));
 
             async Task<object?> EditAsync()
             {
@@ -185,7 +196,7 @@ internal static class ManagementCommands
                     return await manager.InstallBundleAsync(package, new(id, inspection.ContentHash));
                 }
                 catch (RemoteError error) when (error.Code == "gateway/internal" &&
-                    error.InnerException is HttpRequestException { StatusCode: null })
+                                                error.InnerException is HttpRequestException { StatusCode: null })
                 {
                     // Only transport loss leaves the submission outcome unknown. An explicit
                     // rejection must not borrow the result of a different request with the same ID.

@@ -14,7 +14,10 @@ public sealed class SettingsControllerTests
     [InlineData("replace", "section", "{}", true)]
     [InlineData("mutate", "ops", "[]", true)]
     public async Task Empty_namespace_is_rejected_before_optional_provider_selection_or_execution(
-        string method, string field, string input, bool provide)
+        string method,
+        string field,
+        string input,
+        bool provide)
     {
         await using var root = new Context();
         var registry = new TypertRegistry(root);
@@ -37,11 +40,21 @@ public sealed class SettingsControllerTests
     private sealed class CountingProvider : ISettingsProvider
     {
         internal int Calls;
-        public Task<SettingsDescribeSnapshot> DescribeAsync() => throw new InvalidOperationException("Unexpected describe.");
-        public Task UpdateAsync(string ns, JsonElement patch, [DisallowNull] double? expectedRevision = null!) => Write();
-        public Task ReplaceAsync(string ns, JsonElement section, [DisallowNull] double? expectedRevision = null!) => Write();
-        public Task MutateAsync(string ns, IReadOnlyList<SettingsPathOp> ops,
+
+        public Task<SettingsDescribeSnapshot> DescribeAsync() =>
+            throw new InvalidOperationException("Unexpected describe.");
+
+        public Task UpdateAsync(string ns, JsonElement patch, [DisallowNull] double? expectedRevision = null!) =>
+            Write();
+
+        public Task ReplaceAsync(string ns, JsonElement section, [DisallowNull] double? expectedRevision = null!) =>
+            Write();
+
+        public Task MutateAsync(
+            string ns,
+            IReadOnlyList<SettingsPathOp> ops,
             [DisallowNull] double? expectedRevision = null!) => Write();
+
         private Task Write()
         {
             Calls++;
