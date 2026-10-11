@@ -48,9 +48,11 @@ var profile = await Profiles.LoadAsync(profileDirectory, bundles);
 if (profile.SkippedBundles.Count != 0)
     throw new InvalidOperationException(string.Join("; ", profile.SkippedBundles.Select(skipped => skipped.Reason)));
 var launch = new ProfileLaunch(profile, home, [], bundles);
+var configuration = Path.Combine(profileDirectory, "cordis.yml");
+await File.WriteAllTextAsync(configuration, "[]\n");
 TypertRegistry registry = null!;
 await using var session = await ProfileSession.StartAsync(
-    profile.UserLayer.Source,
+    configuration,
     launch,
     resolver,
     required: new HashSet<string>(["root:one"], StringComparer.Ordinal),
