@@ -73,6 +73,23 @@ public sealed class TypertBinaryTests
         Assert.Contains("export type Boundary0 = string;", Declaration(codec));
     }
 
+    [Theory]
+    [InlineData("""{"type":"string","enum":["AQID",""]}""", "Uint8Array", false)]
+    [InlineData("""{"const":"AQID"}""", "Uint8Array", false)]
+    [InlineData("""{"enum":["AQID",null]}""", "Uint8Array | null", false)]
+    [InlineData("""{"const":null}""", "null", true)]
+    public void Binary_literal_constraints_project_attachment_types_and_preserve_null(
+        string schemaText,
+        string type,
+        bool nullValue)
+    {
+        using var schema = JsonDocument.Parse(schemaText);
+        var codec = TypertCodec.Create(BinaryJson.Default.ByteArray, schema: schema.RootElement);
+        var encoded = codec.EncodeResult(nullValue ? null : new byte[] { 1, 2, 3 });
+        Assert.Equal(nullValue ? 0 : 1, encoded.Attachments.Count);
+        Assert.Contains("export type Boundary0 = " + type + ";", Declaration(codec));
+    }
+
     private static string Declaration(TypertCodec codec) => TypertArtifacts.GenerateClient(
             new TypertContribution("binary", [new("binary#read", "binary", "binary", "read", [], codec)]))
         .Declaration;

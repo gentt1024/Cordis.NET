@@ -196,9 +196,14 @@ public static class TypertArtifacts
             }
 
             if (node.TryGetProperty("enum", out var values))
-                return string.Join(" | ", values.EnumerateArray().Select(value => value.GetRawText()));
+                return string.Join(
+                    " | ",
+                    values
+                        .EnumerateArray()
+                        .Select(value => LiteralType(value, native))
+                        .Distinct(StringComparer.Ordinal));
             if (node.TryGetProperty("const", out var constant))
-                return constant.GetRawText();
+                return LiteralType(constant, native);
             foreach (var union in new[] { "anyOf", "oneOf" })
                 if (node.TryGetProperty(union, out var choices))
                     return string.Join(" | ", choices.EnumerateArray().Select(child => Render(child, native)));
@@ -238,6 +243,11 @@ public static class TypertArtifacts
                     _ => throw new NotSupportedException("Unsupported schema type " + value),
                 }));
         }
+
+        static string LiteralType(JsonElement value, JsonTypeInfo? native) =>
+            TypertBinaryResult.IsBinary(native) && value.ValueKind != JsonValueKind.Null
+                ? "Uint8Array"
+                : value.GetRawText();
 
         string ArrayType(JsonElement node, JsonTypeInfo? native)
         {
