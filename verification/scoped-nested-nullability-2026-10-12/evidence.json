@@ -1,0 +1,142 @@
+{
+  "reviewedBase": "9ae967ca21dbfe739f641ae13aaf6f2ca77bb533",
+  "sourceCommit": "19ff2b60b883911f3f3579006c0128319902d4ae",
+  "sourceTree": "1150c7f00d24ca639de4e20b4315ac0d95b203cb",
+  "upstream": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "commits": [
+    {
+      "commit": "270eaf39958c4ac31dc03e20459d6e7e03624ef5",
+      "change": "Generated outbound Context services and ordinary collection-interface projection. Its original Windows/Linux gates remain failed."
+    },
+    {
+      "commit": "b9d0d8cbfe99b8c2be21b6d2966feffef8c8a638",
+      "change": "Reject mistyped identities through empty scoped signatures. Its original Windows gate remains failed."
+    },
+    {
+      "commit": "19ff2b60b883911f3f3579006c0128319902d4ae",
+      "change": "Repair nested reference nullability and ignored-member mapping; restore complete service publication; align documentation extraction and generated constructor documentation; migrate real consumers."
+    }
+  ],
+  "findings": [
+    {
+      "id": "N01",
+      "disposition": "Reproduced and repaired",
+      "proof": "Generated source event codecs accept nullable nested elements and reject required null elements in both property orders. Saved-model contract packages deliver both DTOs through the typed On listener over the real Host."
+    },
+    {
+      "id": "N02",
+      "disposition": "Reproduced and repaired",
+      "proof": "A legal JsonIgnore same-name member no longer changes the active nullable property contract in the source Host codec. The narrower standalone DTO collision refusal is retained."
+    },
+    {
+      "id": "E02/E03",
+      "disposition": "Chief closure retained",
+      "proof": "Existing qualified event output and actual carrier unused-uplink regressions remain in the complete frozen source gate."
+    }
+  ],
+  "retained": [
+    "One common declaration model and STJ metadata authority",
+    "Existing Connection, Cordis tracing, adapter lookup, scoped identity and generation lifetime",
+    "Existing configuration and installation operation owners",
+    "Explicit authored-schema codecs and narrower standalone DTO refusals"
+  ],
+  "retired": [
+    "Root-only annotation of a reused STJ reference",
+    "Last-member-wins nullability mapping including always-ignored members",
+    "Publication of an empty scoped service before method installation",
+    "Treating traced proxy reference identity as service identity",
+    "Documentation drift caused only by disabled XML output"
+  ],
+  "publicUse": {
+    "authors": "RemoteMethod/RemoteEvent declarations and existing JSON contexts; no new author annotation or model format.",
+    "generatedBoundary": "CreateDeclared(metadata, query); query returns a declaration-use Id and Nullable rule within one codec. Regenerate existing repository consumers; no compatibility overload.",
+    "browser": "mountRemote(owner, connection, adapters), then getRemote(caller, namespace) with typed scoped calls; mount disposal owns the contribution and borrows the Connection.",
+    "dotnetEvents": "Generated On listener from the source declaration or independently packaged saved model.",
+    "ordinaryData": "The existing framework collection projection accepts IEnumerable<T>, ICollection<T>, IReadOnlyCollection<T>, IList<T> alongside lists, arrays and string-key dictionaries; no arbitrary generic implementation execution."
+  },
+  "verification": {
+    "windows": "windows.json",
+    "linux": "linux.json",
+    "browser": "browser-outbound.json",
+    "windowsPassed": 883,
+    "linuxPassed": 880,
+    "linuxSkipped": [
+      "Cordis.Platform.Tests.PackageProcessTests.Exited_sdk_cannot_report_prepared_output_while_its_child_still_writes",
+      "Cordis.Platform.Tests.PackageProcessTests.Cancelled_preparation_stops_child_with_independent_output_pipes_before_returning",
+      "Cordis.Platform.Tests.PackageProcessTests.Host_exit_terminates_owned_package_children_without_waiting_for_sdk_exit"
+    ],
+    "formatStages": 4,
+    "csharpFiles": 277,
+    "formatLogSha256": "6ed89caa0b4f612c86fd57ed3bff0d43950a6e705630bc2ae0b5e3d1738d2e02"
+  },
+  "priorEvidence": [
+    {
+      "name": "N01-N02-red",
+      "observation": "Generated source codecs: three of six cases failed before repair; nested false acceptance, nested false rejection, and ignored member shadow.",
+      "sha256": "0e230cbda02652000120d987aaefe4974aea1da812a8627b0c76d0ff73f2f54e"
+    },
+    {
+      "name": "N01-N02-focused",
+      "observation": "Six source cases passed after repair; later documentation normalization is covered by the final gate.",
+      "sha256": "df611a93195ede147525d28a73b6a4188e6e67821c920d9a001a9df5d45b8c56"
+    },
+    {
+      "name": "standalone-boundary",
+      "observation": "Initial shared fixture included the Host-only ignored collision and hit the existing standalone DTO refusal; that fixture moved to its source Host owner.",
+      "sha256": "e4427d1c3f9b2c0fe62b49f1cd8399ceca36fc7f250d55339030a59439838713"
+    },
+    {
+      "name": "generated-constructor-doc",
+      "observation": "Independent documentation build exposed the missing generated constructor summary; repaired in the emitter.",
+      "sha256": "c07f7406ad03e9313a57b881cc693e7608532e9e9d55bebb601872bc097476e5"
+    },
+    {
+      "name": "documentation-drift",
+      "observation": "XML-disabled source compilation omitted authored docs retained by extraction; repaired common reading instead of weakening drift checks.",
+      "sha256": "f763f2803bb6e6522bb22108407809f3efbbb06b78784bac7d164391e0769b03"
+    },
+    {
+      "name": "listener-fixture-compile",
+      "observation": "The provisional consumer used a nonexistent public Definition; removed the invalid fixture access and exercised the actual On listener. Source owner retains strict negative checks.",
+      "sha256": "8bf03a1ccf5e117cb1294c243e9020e7f476d61a5d65ce797305b5be083f06c5"
+    },
+    {
+      "name": "publication-order",
+      "observation": "Existing real JS consumer saw an empty published service before method installation; restored complete construction before publication.",
+      "sha256": "e79539c9bf1c6a0c430d01fa4de51293d816f965deb7d6b85f3b691aa2f76a95"
+    },
+    {
+      "name": "independent-management-probe",
+      "observation": "Independent saved-model event author, contract packages, typed On listener, and .NET/TS management executed; preliminary working-tree proof only.",
+      "sha256": "6df1e779c71699893bbcf1274af8a344c855cf040e67e70250292f5c0f8e21b0"
+    },
+    {
+      "name": "scoped-empty-arguments",
+      "observation": "Strict TS originally accepted a numeric identity through an empty scoped overload; Record<string, never> restores the required type refusal.",
+      "sha256": "1b427867539587015924d2fabeec971b47a14883adee5e85774a072d4ce91853"
+    },
+    {
+      "name": "windows-270",
+      "observation": "Frozen 270eaf3 failed an obsolete proxy reference identity assertion.",
+      "sha256": "667cca7b73d40c323441cebf68b6017cfd3c79610eaab701a99eb7fb61eb85c4"
+    },
+    {
+      "name": "windows-b9",
+      "observation": "Frozen b9d0d8c failed the same assertion.",
+      "sha256": "b9b75a2662b5b5cbcace48cabcb3052dc65361937af08e981353fc18b12af10f"
+    },
+    {
+      "name": "linux-270",
+      "observation": "Frozen Linux 270eaf3 failed the same assertion.",
+      "sha256": "77a98c3a2fee941c950b798c46e71be01ef47647f4f922f1831ae56533492f2c"
+    }
+  ],
+  "limits": [
+    "No full DSH original-source suite on this candidate",
+    "No static AOT on this candidate",
+    "No hosted CI or remote SourceLink retrieval",
+    "Browser result is the outbound scoped workflow, not the full reverse Context or Peer scope-targeting matrix",
+    "No Maker modification",
+    "No new dependency, package version, upstream pin, push, merge, publication or deployment"
+  ]
+}

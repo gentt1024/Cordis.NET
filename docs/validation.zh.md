@@ -463,3 +463,15 @@ E01、E02、E03 均已复现并修正：声明集合空性进入懒加载的 Hos
 新的 Windows 包 Host 与真实应用内浏览器通过共享 scoped 事件消费者：每次查询当前 adapter、borrowed Context、next／undefined／null、回复结算后的 owned 释放，以及取消后的 handler 结算。[浏览器回执](../verification/events-nullability-2026-10-12/browser-scoped.json)标识实际生成模块与 Host DLL。它证明反向事件路径，不代表出站浏览器 scoped facade 已完成。验证后已关闭临时页面与 Host。
 
 原 `0a722f6` 的 Windows／Linux 门禁仍保留真实可空字典 Remote 调用失败。最终候选首轮 Windows 尝试因 NuGet TLS／漏洞数据不可用而在锁定 restore 处失败。另有明确标记的离线定向复验将 NU1900 保留为警告，不计作完整门禁；连接恢复后，默认 Windows 门禁未使用该例外而通过。277 个 C# 文件的四阶段格式检查收敛；公共 API 增量为生成代码所需的声明空性 codec 入口及查询委托。本批不宣称新增 AOT、托管 CI、完整 DSH 差分／互通、SourceLink 远端获取、源码包、具名 UI 或 Maker 验收。
+
+## 出站 scoped 与嵌套声明修正，2026-10-12
+
+正式实现源码为 `19ff2b60b883911f3f3579006c0128319902d4ae`，tree 为 `1150c7f00d24ca639de4e20b4315ac0d95b203cb`。它包含出站 scoped 与集合后端续建、空参数签名的严格类型修正，以及 Chief N01/N02 修复。[证据](../verification/scoped-nested-nullability-2026-10-12/evidence.json) 将修改及早期失败绑定各自检查点。此前 `270eaf3` 和 `b9d0d8c` 门禁仍为失败，此前浏览器探针也不作为本候选证明。
+
+Windows 与 Linux 均在冻结源码上运行 `python scripts/verify.py --package`，期间源码未改变：每个平台 47 个门禁步骤、18 个包及符号制品。Windows 源码测试通过 883 项；Linux 通过 880 项，跳过的三个 Windows 专用包进程测试在其[回执](../verification/scoped-nested-nullability-2026-10-12/linux.json)中具名列出，[Windows 回执](../verification/scoped-nested-nullability-2026-10-12/windows.json)覆盖这些用例。两端门禁均包含真实 .NET／TS Remote、Settings 和管理事件消费、保存及引用声明模型、增量／Clean／冷构建、预期拒绝、CLR 部署和多 Entry 消费、公共 API 与文档检查。
+
+N01/N02 最初在六个源码用例中失败三项。修复后的源码边界接收合法嵌套 null 元素，在两种属性顺序下拒绝必需位置的 null，并在同名成员始终忽略时保留有效属性合同。独立事件合同包和类型化 `On` 监听通过实际 Host 传递两种嵌套 DTO，覆盖保存模型生成入口。必需 null、递归、转换器、附件、上行、授权及生命周期回归继续保留在适用的现有源码和包门禁中。独立 DTO 后端仍拒绝尚不支持的成员冲突。
+
+[出站浏览器回执](../verification/scoped-nested-nullability-2026-10-12/browser-outbound.json)使用 Windows 冻结包消费者生成的原样制品和 Host。真实浏览器 fetch／WebSocket 调用检查 receiver 和 lookup scope、当前 adapter／身份变化、缺少 adapter、显式 null 与 undefined、直接 lookup fallback、scoped 流、保留回调撤销、重新挂载及借用 Connection 寿命。此浏览器结果不代表完整反向 Context 或 Peer scope-targeting 矩阵通过。
+
+本候选未运行完整 DSH 原始源码套件、静态 AOT、托管 CI、远端 SourceLink 获取或 Maker 验证。这些结果不表示整个 port 或所有具名目标环境已完成。没有改变包版本、依赖或 upstream pin，也未合并、发布或部署。

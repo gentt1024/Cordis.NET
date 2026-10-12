@@ -1,0 +1,61 @@
+{
+  "sourceCommit": "19ff2b60b883911f3f3579006c0128319902d4ae",
+  "sourceTree": "1150c7f00d24ca639de4e20b4315ac0d95b203cb",
+  "status": "passed",
+  "carrier": "Real Codex in-app browser using fetch and WebSocket against the frozen independent package Host through the local fixture proxy.",
+  "visibleResult": "PASS generated outbound scoped: receiver and lookup, current adapter and identity, null/undefined, stream and withdrawal",
+  "consumer": "tests/fixtures/DeclarationModel/SharedClient.ts: scopedCalls",
+  "publicUse": "mountRemote(owner, connection, adapters); getRemote(caller, namespace); typed receiver/lookup calls; await mounted.dispose().",
+  "checks": [
+    "receiver identity from caller Context",
+    "lookup identity from caller Context",
+    "current adapter replacement and identity changes",
+    "explicit null versus undefined and missing adapter",
+    "direct lookup fallback",
+    "scoped downlink",
+    "retained callback withdrawal and remount",
+    "borrowed Connection remains live"
+  ],
+  "sourceSha256": {
+    "tests/fixtures/DeclarationModel/SharedClient.ts": "5c0680879230711d80af57f355f45e707f8c41fac4c7780ea4da555177a812e6",
+    "scripts/typert-browser-consumer.mjs": "2bbe5ca20c8aaa57982b6d7b8b3517590c843b7286e968c31bfe4cfe84c81d27",
+    "src/Cordis.Composition/Client/cordis-remote.mjs": "424ce1db8de690032b687aae772daa567508101633429dcaa05b5c5a137f0afd",
+    "src/Cordis.Composition/TypertArtifacts.cs": "66c9f7f35cd1f66fbc58914461e62115bb729024ba455c821327598c2e61d9a7"
+  },
+  "assetSha256": {
+    "compiled/SharedClient.js": "77939df10f536f68c965e738ddaa6e482c9c36156b2ea7d750ade21523d9b2ef",
+    "compiled/shared.mjs": "451e4ba6d30df3fd9c440c8cafcafad8d67b15ccec81a7438189afba64987ce7",
+    "compiled/cordis-remote.mjs": "424ce1db8de690032b687aae772daa567508101633429dcaa05b5c5a137f0afd",
+    "cordis-context.mjs": "f4d6dd413a39e990d646a2556ca12a44e3a699c189e576d89eb1b4313b0d8f86"
+  },
+  "packageSha256": {
+    "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "ea6777fbb528942ac10d264091c135507a147360b12b3ba4db7ee35b12914d14",
+    "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "eb09d58bda0a8a9c482dedb32fe640091fc9aebb31d1aef5e37feddaa1691bf5",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "fdf4267c889557de5c04650c06bbf115bc753a4aea7cc2b88712b2bd80aeaf5b",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "55d113f0998028e71a81da5a713815503a4d2027321d56ab9f833420d715e954",
+    "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "7419a4edd7ea778596db021a6f27f270b9a3c373987ea1fe3ef838ff661766b5",
+    "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "80948956bb712eba88f046f3f36482fe8195e1a93bead1562a3da3d59966d56c",
+    "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "01f76b6eb6889a957e3fd3c04b8ab080e6269cedaa666d440d2aab2c0f827db2",
+    "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "c0fdda5b4bd91ebe351febcb21524e1bd7925fe0c90ef74f0d7b32a664dbb487",
+    "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "db1a1d9ccd4903cb8c90b1114e8a9888660870ee3281735f278f000f63a390cf",
+    "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "80a1a09383c85f3776fd58ddba89da4a9f5f109b4f45e51c4496d214a875f47d",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "fde786fb3ddcfb09b0332a2b4126cad6065a843e65f031757becb6810ce42e22",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "931f6e25cef8d05254735261ce284c276a4792bfada0b2850c0e3caed2a7e73f",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "6df3f91f3cdcd8c59e8dc3a6c855b173eb1e5b41c55eaff10ce1b5990bc7537f",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "2ccfeff3ff31cebe3b4fb7e427f56066096135fb546c34bf934fa0501ec22904",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "f362ae2f403ed2ac9d7eec985c6371d582da3b815e3ef92fb9c61fc9365a66b8",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "b3ebd799c0386dcf4ebf3fa3fbeabeff40d1ad68085232fe151fd4fc95b8fc81",
+    "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "a15e250e8c9cb79862a3bf691140a71b9b321f0b244cb4d7253a7effe110b0ea",
+    "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "b919a68118f542b26028ed5eadc7068a902cdeff2d3cf5b28efed24901bced2f"
+  },
+  "screenshotSha256": "00bc95a80cad09b44d83656c142796ba43ac15692b20e3bd39f14eb4ea7bc23b",
+  "notClaimed": [
+    "Complete reverse Context browser matrix",
+    "Full Peer scope targeting",
+    "All browsers",
+    "AOT",
+    "Hosted CI",
+    "Full DSH original test suite"
+  ],
+  "setupCorrection": "The first local browser launcher pointed at an empty output directory and stopped before serving. The completed run served the exact compiled assets from the frozen full package consumer, without regenerating or modifying them."
+}
