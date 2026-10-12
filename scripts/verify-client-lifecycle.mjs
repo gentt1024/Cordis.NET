@@ -9,7 +9,7 @@ const runtime = resolve(process.argv[2] ?? 'clients/modules/lib')
 const { bootClientModules, createManagementClient, ManagementOutcomeUnknown, Context } = await import(pathToFileURL(resolve(runtime, 'client.mjs')).href)
 const { createEvents } = await import(pathToFileURL(resolve(runtime, 'events.mjs')).href)
 const { createClient, TypertConnection } = await import(pathToFileURL(resolve(runtime, 'cordis-remote.mjs')).href)
-const createRemote = connection => createClient(connection, [['$events', true, false]])
+const createRemote = connection => createClient(connection, [['$events', true, false, []]])
 const empty = { rev: 'empty', entries: [], batches: [] }
 const graph = { rev: 'one', entries: [{ id: 'panel', url: '/panel.js?rev=one', rev: 'one', inject: [], external: [] }],
   batches: [{ phase: 'application', url: '/panel.js?rev=one', rev: 'one', entries: ['panel'] }] }
@@ -301,7 +301,7 @@ for (const input of ['waiting', 'ended', 'downlink-only']) {
     }
     const socket = new ControlledSocket()
     const connection = new TypertConnection('http://localhost/remote', fetch, () => socket)
-    const remote = createClient(connection, [['probe/duplex', true, input !== 'downlink-only'], ['probe/sibling', true, false]])
+    const remote = createClient(connection, [['probe/duplex', true, input !== 'downlink-only', []], ['probe/sibling', true, false, []]])
     const call = remote['probe/duplex']({})
     const sibling = remote['probe/sibling']({})
     try {

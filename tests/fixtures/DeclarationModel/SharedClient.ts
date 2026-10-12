@@ -13,7 +13,7 @@ export async function run(origin: string, socketOrigin: string, createContext: (
   const client = createRemote(connection)
   const signal = AbortSignal.timeout(15000)
   try {
-    await scopedCalls(connection, createContext)
+    await scopedCalls(origin, socketOrigin, createContext)
     const text = client['sharedData/inputText']({ prefix: 'ts:' }, signal)
     text.send('first'); text.send('second'); text.end(); text.end()
     equal(await collect(text), ['ts:first', 'ts:second', 'ended'], 'Pre-read sends and half-close lost their order')
@@ -71,7 +71,21 @@ interface ScopedOwner extends RemoteOwner, RemoteCaller {
   fiber: { dispose(): Promise<void> }
 }
 
-export async function scopedCalls(connection: TypertConnection, createContext: () => ScopedOwner) {
+export async function scopedCalls(origin: string, socketOrigin: string, createContext: () => ScopedOwner) {
+  const sent = { http: 0, open: 0 }
+  const connection = new TypertConnection(origin + '/remote', (input, init) => {
+    sent.http++
+    const headers = new Headers(init?.headers); headers.set('Authorization', 'consumer-policy')
+    return fetch(input, { ...init, headers })
+  }, () => {
+    const socket = new WebSocket(socketOrigin)
+    const send = socket.send.bind(socket)
+    socket.send = data => {
+      if (typeof data === 'string' && JSON.parse(data).type === 'open') sent.open++
+      send(data)
+    }
+    return socket
+  })
   const owner = createContext()
   const caller = owner.extend({ documentIdentity: 'doc-1', receiverIdentity: 7 })
   const adapters = new Map([
@@ -79,6 +93,26 @@ export async function scopedCalls(connection: TypertConnection, createContext: (
     ['shared:receiver', { identity: (ctx: RemoteCaller): unknown => Reflect.get(ctx, 'receiverIdentity') }],
   ])
   const mounted = await mountRemote(owner, connection, { getClient: key => adapters.get(key) })
+  const preparationFailures: string[] = []
+  async function refused(invoke: () => Promise<unknown> | AsyncIterable<unknown>, stream: boolean, reason: string) {
+    const before = { ...sent }
+    let value: Promise<unknown> | AsyncIterable<unknown> | undefined, synchronous: unknown, rejection: unknown
+    try { value = invoke() } catch (error) { synchronous = error }
+    if (stream) {
+      if (!synchronous && value && Symbol.asyncIterator in value) {
+        // Drain an incorrectly admitted stream so the real Host response and carrier settle.
+        try { for await (const item of value) { void item } } catch { }
+      }
+    } else {
+      try { await value } catch (error) { rejection = error }
+    }
+    const error = stream ? synchronous : rejection
+    if (!(error instanceof Error) || error instanceof RemoteError || !error.message.includes(reason) ||
+        (!stream && (synchronous !== undefined || !(value instanceof Promise))) ||
+        sent.http !== before.http || sent.open !== before.open)
+      preparationFailures.push((stream ? 'stream' : 'unary') + ': ' + reason + ' ' +
+        JSON.stringify({ synchronous: String(synchronous), rejection: String(rejection), before, after: sent }))
+  }
   try {
     const service = getRemote(caller, 'sharedData')
     const read = service.read
@@ -87,8 +121,27 @@ export async function scopedCalls(connection: TypertConnection, createContext: (
     Reflect.set(caller, 'documentIdentity', 'doc-2')
     equal(await read({ suffix: '?' }), { ok: true, value: 'root:doc-2?' }, 'Retained callback cached caller identity')
     equal(await collect(service.watch({})), ['root:doc-2', 'complete'], 'Scoped stream lost its lookup identity')
+    for (const absentAdapter of [true, false]) {
+      if (absentAdapter) adapters.delete('shared:document')
+      else adapters.set('shared:document', { identity: () => undefined })
+      for (const signal of [undefined, AbortSignal.abort(new Error('pre-cancelled'))]) {
+        await refused(() => read({}, signal), false, 'requires argument "documentId"')
+        await refused(() => service.watch({}, signal), true, 'requires argument "documentId"')
+      }
+    }
+    const undefinedResult = await Reflect.apply(read, service, [{ documentId: undefined }])
+    check(!undefinedResult.ok && undefinedResult.error.code === 'gateway/arguments-invalid',
+      'Explicit undefined was confused with a missing argument slot or accepted by the Host')
+    const directNull = await Reflect.apply(read, service, [{ documentId: null }])
+    check(!directNull.ok && directNull.error.code === 'gateway/input-invalid', 'Explicit null was rejected as a missing slot')
+    const identityError = new Error('adapter identity failed')
+    adapters.set('shared:document', { identity: () => { throw identityError } })
+    let identityFailure: unknown
+    try { void read({}) } catch (error) { identityFailure = error }
+    check(identityFailure === identityError, 'Variant selection moved the adapter exception into a Promise')
     adapters.set('shared:document', { identity: () => 'doc-1' })
     equal(await read({}), { ok: true, value: 'root:doc-1!' }, 'Retained callback cached the adapter')
+    equal(await read({ suffix: undefined }), { ok: true, value: 'root:doc-1!' }, 'Optional undefined lost its default')
     adapters.delete('shared:document')
     equal(await read({ documentId: 'doc-2' }), { ok: true, value: 'root:doc-2!' }, 'Direct lookup fallback was lost')
     adapters.set('shared:document', { identity: () => null })
@@ -113,7 +166,12 @@ export async function scopedCalls(connection: TypertConnection, createContext: (
       equal(await getRemote(caller, 'sharedData').read({ documentId: 'doc-2' }),
         { ok: true, value: 'root:doc-2!' }, 'Borrowed Context could not consume a replacement contribution')
       check(!(await read({ documentId: 'doc-2' })).ok, 'Replacement revived a retained old callback')
+      await connection.dispose()
+      const liveService = getRemote(caller, 'sharedData')
+      await refused(() => liveService.read({ documentId: 'doc-2' }), false, 'no active Connection')
+      await refused(() => liveService.watch({ documentId: 'doc-2' }), true, 'no active Connection')
     } finally { await replacement.dispose() }
+    check(preparationFailures.length === 0, preparationFailures.join('\n'))
     // These are generated authoring boundaries; the runtime checks above own behavior.
     if (false) {
       // @ts-expect-error scoped receiver identity belongs to the adapter
@@ -123,7 +181,7 @@ export async function scopedCalls(connection: TypertConnection, createContext: (
       // @ts-expect-error an empty scoped overload must not admit a mistyped direct identity
       void service.watch({ documentId: 7 })
     }
-  } finally { await mounted.dispose(); await owner.fiber.dispose() }
+  } finally { await mounted.dispose(); await owner.fiber.dispose(); await connection.dispose() }
 }
 
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }

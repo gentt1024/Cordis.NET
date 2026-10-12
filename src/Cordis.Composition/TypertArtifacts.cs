@@ -150,6 +150,16 @@ public static partial class TypertArtifacts
                 .Append(descriptor.IsStream ? "true" : "false")
                 .Append(", ")
                 .Append(input is null ? "false" : "true")
+                .Append(", [")
+                .Append(
+                    string.Join(
+                        ", ",
+                        descriptor
+                            .Parameters
+                            .Where(parameter => !parameter.AcceptsUndefined || parameter.Lookup is not null)
+                            .Select(parameter => Quote(parameter.Wire))
+                            .Concat(descriptor.Invocation is { } invocation ? [Quote(invocation.Wire)] : [])))
+                .Append(']')
                 .Append(
                     scopeKey is null
                         ? ""

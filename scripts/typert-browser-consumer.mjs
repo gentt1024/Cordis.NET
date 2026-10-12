@@ -34,7 +34,7 @@ button.onclick = async () => {
     return fetch(input, {...init, headers})
   }, url => { url.searchParams.set('consumer', 'consumer-policy'); return new WebSocket(url) })
   try {
-    await ${outbound ? 'scopedCalls(connection, () => new Context())' : 'scopedEvents(location.origin, connection, () => new Context())'}
+    await ${outbound ? "scopedCalls(location.origin, location.origin.replace('http:', 'ws:') + '/remote/remote.mux', () => new Context())" : 'scopedEvents(location.origin, connection, () => new Context())'}
     result.textContent = ${JSON.stringify(outbound
       ? 'PASS generated outbound scoped: receiver and lookup, current adapter and identity, null/undefined, stream and withdrawal'
       : 'PASS generated package events: current adapter, borrowed Context, next/undefined/null, owned reply and cancelled-handler settlement')}

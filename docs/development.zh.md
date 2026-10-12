@@ -108,9 +108,11 @@ B 保留源所有权、raw 不透明性与既有 Session 队列。独立审查�
 
 上述无 Git 导出限制随后已通过绑定真实源码提交修复。针对该构建修正的独立无 Git `verify.py --aot --package` 已通过，包含严格符号与独立消费。这项结果不验证后续应用基础设施改动，也不代表远端 SourceLink 已可取得。
 
-当前源码在初始片之上扩展了有序配置编辑/reset、嵌套 Settings 与独立声明导出、NuGet/SDK 包操作、HTTP JSON/NDJSON 生成式管理、CLI 操作和浏览器模块交付。上文初始限制描述先前验收批次，包括当时的 Settings hash 视图。当前标准 Settings 使用数值 revision；[Settings 迁移](settings-contract-migration.zh.md)和[管理迁移](management-remote-migration.zh.md)记录唯一现行合同。新增路径分别进行独立审查与组合验证，不能把存在实现当作沿用旧批次证据的理由。
+后续工作扩展了有序配置编辑/reset、嵌套 Settings 与独立声明导出、NuGet/SDK 包操作、生成式管理、CLI 操作和浏览器模块交付。历史 HTTP/NDJSON 切片已被共享 Connection、unary 封套／multipart 和 mux 替换，不是当前传输推荐。上文初始限制描述先前验收批次，包括当时的 Settings hash 视图。当前标准 Settings 使用数值 revision；[Settings 迁移](settings-contract-migration.zh.md)和[管理迁移](management-remote-migration.zh.md)记录唯一现行合同。新增路径分别进行独立审查与组合验证，不能把存在实现当作沿用旧批次证据的理由。
 
 ## 2026-10-09 应用基础设施范围续账
+
+历史范围检查点。下文保留当时证据与 carrier 限制；当前完成部分与剩余出口维护在 D-MODEL／D-WIRE 表中。
 
 本轮承接原应用基础设施任务。工作树起点为干净的 `5a23dcf9816b7d97253741e59f06bdf734c411ed`，DSH 基线仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。2026-10-03 原范围已把 Host/Client 请求、取消、二进制结果和连接恢复列为通用缺口，协议仍待决。原报告也明确 Typert、WebSocket Gateway 和浏览器依赖图未完整复审。其 2026-10-05 续账和上文验收记录仍只证明各自列明的历史路径。
 
@@ -283,15 +285,15 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 
 选定公开边界及其可达引用是分析入口，Remote 只是其中一类。普通 Plugin／Service／Config 保留同进程使用。分析必须保留作者身份、成员签名、泛型定义及实际实参、继承／接口、空性、required、默认值、文档、来源及必要编译事实。外部声明保留可解释引用，不无限遍历第三方实现。后端拒绝与分析事实缺失分别记账。
 
-| 既有职责／选定事实 | 分析状态与本轮义务 | 投影／消费者边界 |
+| 既有职责／选定事实 | 已完成的有界路线 | 剩余出口与主要证据位置 |
 |---|---|---|
-| T01：普通公开声明、Service、Config、事件、显式引用对象 | 选择的普通根使用共同声明模型；完整运行时、事件和对象消费者仍待实施 | 普通 Service 不强制 RPC；事件与对象消费者需要各自路线 |
-| T01/T02：选定成员签名、泛型定义／实参、接口 | 有界声明模型保留选择的方法、interface 和 type-parameter 关系；完整引用图组合仍待实施 | C# 与 TS 分别验收；投影暂不支持不能关闭分析职责 |
-| T02：空性、required、支持的常量／默认值、文档／来源／编译事实 | Remote／data 切片及普通根保留有界事实；本候选的包验证证据见下文 | 当前 .NET DTO／客户端投影拒绝不支持形状，不丢弃事实 |
-| T02：跨包身份与外部引用 | 普通路线保留程序集／metadata 身份及可解释外部引用；完整跨包模型组合仍待实施 | Caller 不引用可卸载 Provider 实现；保留 model-only 作者路线 |
-| T03：运行时、Schema、.NET、TS 消费同一模型 | 所有标准入口必须消费共同声明事实；退出双制品 conformance 桥，保留所选 service 漂移拒绝 | 后端政策保持独立；保留正确运行时及 TS 行为，并验证真实 caller |
-| T04：更丰富的 .NET 方法／数据投影 | optional／default 调用已有原生路线；readonly 数据、record struct、名称冲突仍拒绝；其余要求支持的用例继续开放 | 各后端需要有界支持及实际使用证据；不要求每种分析类型都可序列化 |
-| T05：model-only、pre-CoreCompile 后 STJ、无需 Node、不引用 Provider | 既有包消费 Settings 切片有证据；新增事实和客户端需重新验证 | IDE／design-time 和具名 UI 环境仍待验证；控制台或 Node 不替代 |
+| T01：普通声明、Service、Config、事件与引用对象 | 共同普通／Remote 根、目录、类型化事件声明及生成监听；普通 Service 保留同进程使用 | 沿现有 Context／所有权完成选定引用对象消费者。事件交付由 `RemoteEventsGatewayTests`、`RemoteEventsTests` 及独立管理消费者证明。 |
+| T01/T02：签名、泛型、接口及引用图 | 共同声明保留选定签名、泛型定义／实参、基类／接口及完整声明身份 | 只补已确认 producer／后端／consumer 路线缺少的事实。更广的实参泛型与引用图须在 `typert_declaration_consumer.py` 证明字面模型事实及真实消费。 |
+| T02：空性、required、默认值、文档及编译事实 | 嵌套声明用途／STJ 投影与忽略成员映射在 `19ff2b6` 验证；`aa47d14` 审查接受 N01/N02；已修复关闭 XML 输出导致的提取漂移 | 保持这些关闭结论。不支持的序列化／类型形状须由具体消费需求驱动扩展；源码准入归 `EventDeclarationTests`，生成打包归既有声明消费者。 |
+| T02：跨包身份与外部引用 | 显式引用模型接通普通 DTO/STJ 及真实引用 Remote；独立 caller 不加载 Provider 实现 | 补齐其余引用 Schema／TS／后端组合，沿同一模型。下一出口为具名作者／模型／合同包在无 Provider DLL 下消费，同时检查冲突／缺失引用与重生成。 |
+| T03：运行时、Schema、.NET、TS 消费共同事实 | 共同解释器驱动 Host 绑定、当前保存模型 caller 和类型化事件；已移除重复作者 wire 制品及旧读取器 | 完成各选定分析／目录、Schema 和客户端输出的支持面。运行时 `TypertArtifacts.Contribution` 不等于完整模型后端。使用 `verify-typert-dotnet.py` 与 `verify-typert.py`；不重建已成立模型。 |
+| T04：更丰富的 .NET 方法／数据投影 | optional／default 方法、数组、List、字符串字典及四类框架集合接口已有包证据 | 补齐其余选定方法／数据形状及显式引用消费。拒绝记录当前限制，不等于完成；独立 DTO/STJ 与 Remote 消费者承担验收。 |
+| T05：model-only、pre-CoreCompile 后 STJ、无需 Node／Provider | 独立包作者／caller 已执行 build/pack、增量／Clean／冷生成及漂移拒绝 | 下一作者出口为首次设计时构建显示生成类型，再完成无 Node 的正常 build/pack。随后具名 WPF／Avalonia／Godot .NET／Blazor 消费者须证明调度、视图／Slot 装配、关闭与重新进入；SDK／依赖选择须明确说明。 |
 
 这些是本轮交付义务，不另造总规划。暂时拒绝是准确开发状态，不是完成。改变要求支持的范围或延期已确认职责，需要列出消费者影响并由维护者裁决。
 
@@ -299,13 +301,14 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 
 原生 .NET 与仓库标准 TS 客户端必须消费同一 Registry、Gateway 和操作权威。Context、对象引用／所有权、Peer、uplink、下行流、事件、attachment、取消、恢复仍属本轮通用职责。新增 carrier 必须通过既有所有者解决具体缺口，不另建运行时或业务分发。Settings 复用配置编辑；PluginManager 复用 operations、任务所有权和队列。断开连接不自动取消安装，响应不确定不自动重放写入。
 
-| 边界 | 已有证据／必要续建 | 互通含义 |
+| 边界 | 已完成的有界路线 | 剩余出口与主要证据位置 |
 |---|---|---|
-| 原生 HTTP result envelope、NDJSON；仓库标准 TS runtime | 已有 unary／下行流、错误、取消及 base64 byte-array 切片；本次分别复验 | 此 carrier 上原生 .NET ↔ 仓库 TS 的行为；不证明固定 Node 客户端协议 |
-| 固定 Gateway 客户端 ConnectionHandle RPC 与 connection attachment | 直接上游客户端兼容尚未验证；声明该边界前保留明确 adapter／帧／类型／错误／attachment 清单 | 实际固定客户端 ↔ 原生 Host 调用，含失败及所有权；不要求无关 JSON 字段顺序 |
-| 固定 stream-client／stream-protocol／stream-server | uplink、多路下行流、流生命周期互通仍待完成 | 所需帧、item codec、cancel／close、失败语义及真实跨端运行 |
-| 固定 remote-events 与 protocol 的事件／对象／Context／Peer 声明 | 通用原生语义及适用跨端路线仍待完成 | 共享生命周期和身份；Agent／Session／账户产品选择表留在 Cordis.NET 外 |
-| 上述边界的恢复与替换 | 现有代际检查只是有界基础；消费者恢复仍待完成 | 旧回调不恢复分发；不确定写入结果不授权自动重放 |
+| 标准 unary、结果与附件 | 共享 Connection、关联封套／结果及 multipart 已替换生成器内嵌 carrier、NDJSON 和 unary wire base64 | 保留普通结果与装配错误边界。S01/S02 通过生成包／浏览器调用收口选定 JS 准备，拒绝时零 HTTP/open；`SharedClient.ts` 是主要消费者。 |
+| 固定 Gateway ConnectionHandle RPC | Node 下具名固定 DSH Connection 及独立 .NET/TS 包已有有界执行记录 | 最终候选通过 `verify-typert.py` 重跑选定固定客户端／原生 Host 用例，包含失败、binary 路径和所有权；不扩大为全产品或 SDK stdio 兼容。 |
+| 固定流协议 | text mux、类型化上下行、半关闭、载体失败及逻辑调用寿命已有有界执行 | 补齐剩余声明 codec 与选定跨端组合；在既有生命周期及包消费者中保留准入／未使用上行控制。 |
+| Context、对象、Peer 与固定事件 | receiver／lookup scoped、反向 agent Context、owned／borrowed 释放、生成式类型化事件及直接 operatorPeer fallback 已实现；出站浏览器路径在 `19ff2b6` 验证 | 下一协议出口为固定 Peer／scope-targeting，通过现有 Registry／Gateway／Connection 接通具名原生与浏览器消费者。agent 事件或单条浏览器路线不等于完整 Context／Peer 覆盖。 |
+| 恢复与替换 | 已执行代际撤销、保留回调、重挂载及借用 Connection／Context 边界 | 在同一消费者扩展剩余 scope-targeting 寿命。不确定写入结果不授权重放；安装任务仍属于操作所有者。 |
+| 标准应用与最终交付 | 数值 Settings、生成式管理／事件、CLI 与模块恢复复用配置／operations | 完成 Settings 文档／客户端装配及标准管理 UI 观察。本地准备阶段 PR 说明和 CI 矩阵。最终出口要求同一冻结候选的 Windows/Linux、静态 AOT caller、选定固定一端互通、浏览器、包／符号／SourceLink 及具名平台证据。远端创建 PR、合并、发布须获授权。 |
 
 这里“语义对应”指通过原生所有者实现固定可观察行为；“协议互通”指具名固定上游客户端／传输真实交换所要求的帧、类型和错误。完整通用职责包括剩余原生语义及明确选定的互通边界，单个 unary demo 或措辞变化不能关闭缺口。历史完整 wire 承诺不追溯改写为已经验收。
 
@@ -336,6 +339,8 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 迁移见[Settings 合同迁移](settings-contract-migration.zh.md)。持久 YAML/JSON 格式及 Git 历史不变。标准 Settings 消费者需要重建；未来发布必须使用新的包版本身份。本地源码版本不变。
 
 ### 有限模型与消费者覆盖
+
+本表记录模型重建检查点；当前已完成部分与剩余职责维护在上方 D-MODEL／D-WIRE 表中。
 
 | 职责 | 当前路线 | 完成状态与下一项证据 |
 |---|---|---|

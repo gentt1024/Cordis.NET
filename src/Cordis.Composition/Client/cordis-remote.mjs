@@ -354,28 +354,30 @@ class StreamHandle {
 export function createClient(connection, methods) {
   const state = new Lifetime();
   const client = {dispose:() => state.dispose()};
-  for (const [endpoint, stream, uplink, projection] of methods) {
+  for (const [endpoint, stream, uplink, required, projection] of methods) {
     client[endpoint] = (args, signal, binding) => {
       if (!state.active) {
         if (stream) throw new Error('The Remote contribution was withdrawn.');
         return Promise.resolve(withdrawn());
       }
-      if (binding && projection) {
-        const [key, wire, direct] = projection;
-        const adapter = binding.adapters?.getClient(key);
-        const identity = adapter?.identity(binding.caller);
-        if (identity !== undefined) args = {...args, [wire]:identity};
-        else if (!direct) {
-          const error = new Error(!adapter
-            ? 'Remote ' + endpoint + ' has no Client Context adapter for ' + key
-            : 'Remote ' + endpoint + ' requires a ' + key + ' Context.');
-          if (stream) throw error;
-          return Promise.reject(error);
+      const adapter = binding && projection ? binding.adapters?.getClient(projection[0]) : undefined;
+      const identity = adapter?.identity(binding.caller);
+      const prepare = () => {
+        if (binding && projection) {
+          const [key, wire, direct] = projection;
+          if (identity !== undefined) args = {...args, [wire]:identity};
+          else if (!direct) throw new Error(!adapter
+              ? 'Remote ' + endpoint + ' has no Client Context adapter for ' + key
+              : 'Remote ' + endpoint + ' requires a ' + key + ' Context.');
         }
-      }
-      if (!connection?.active) throw new Error('Remote ' + endpoint + ' has no active Connection.');
-      const combined = AbortSignal.any([state.abort.signal, ...(signal ? [signal] : [])]);
+        if (!record(args)) throw new Error('Remote ' + endpoint + ' requires a named argument object.');
+        for (const wire of required)
+          if (!Object.hasOwn(args, wire)) throw new Error('Remote ' + endpoint + ' requires argument ' + JSON.stringify(wire) + '.');
+        if (!connection?.active) throw new Error('Remote ' + endpoint + ' has no active Connection.');
+        return AbortSignal.any([state.abort.signal, ...(signal ? [signal] : [])]);
+      };
       if (stream) {
+        const combined = prepare();
         const call = connection.open(endpoint, args, combined, uplink);
         state.track(call.completion);
         const handle = new StreamHandle(call, state);
@@ -386,6 +388,7 @@ export function createClient(connection, methods) {
         return handle;
       }
       return state.track((async () => {
+        const combined = prepare();
         try {
           const result = await connection.call(endpoint, args, combined);
           if (!state.active) return withdrawn();

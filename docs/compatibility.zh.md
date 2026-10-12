@@ -10,7 +10,7 @@
 
 生成的 `ForContext(callerContext, registry)` 视图对应上下文关联的 Service 访问。它显式选择 scoped 签名；父客户端提供 direct 签名，不复刻 JavaScript 在参数列表之间的动态回退。接收方 scoped 方法不暴露公开的原始身份参数入口。direct lookup-scoped 方法保留普通身份参数，并获得省去该参数的视图方法。没有匹配 Context 声明或含多个 lookup 参数时仍为 direct。scoped 调用每次进入已有 Cordis 执行域读取当前 adapter 和身份，不缓存两者，不制造 Context，也不拥有借入的 Context／registry／HttpClient。父客户端释放及现有流取消继续沿用当前所有者。
 
-上游缺失哨兵对应 `Undefined.Value`。引用类型身份的显式 null 保留在内部请求封套中，由 Host codec 校验，不合并为缺失，也不提前变成 STJ 序列化失败。值类型身份在进入强类型调用之前须匹配声明的 CLR 类型。Host lookup 对象类型仍保留在声明分析中；独立 caller 只投影其 wire 身份类型。本扩展不实现 owned Context 值、Peer／uplink、完整事件语义或等价浏览器 scoped facade。[作者用法](authoring.zh.md)说明当前消费方式；[验证记录](validation.zh.md)区分包执行证据与这些未完成职责。
+上游缺失哨兵对应 `Undefined.Value`。引用类型身份的显式 null 保留在内部请求封套中，由 Host codec 校验，不合并为缺失，也不提前变成 STJ 序列化失败。值类型身份在进入强类型调用之前须匹配声明的 CLR 类型。Host lookup 对象类型仍保留在声明分析中；独立 caller 只投影其 wire 身份类型。本段说明原 .NET scoped 切片。后续 owned Context、Peer／uplink、事件与浏览器工作在[验证记录](validation.zh.md)中各有证据；当前剩余职责见[开发记录](development.zh.md#remote-语义与互通d-wire)。[作者用法](authoring.zh.md)说明当前消费方式。
 
 Cordis.NET 以[上游文档](upstream.zh.md)所述、DeepSeek Harness 锁定的 vendored Cordis 行为为目标。兼容性按可观察契约评估，不能只看包名或测试数量。
 
@@ -218,6 +218,12 @@ STJ 运行时元数据丢失泛型引用参数的空性。生成式 Host、事�
 固定 `packages/api/gateway/src/client/index.ts` 的 `invokeMethod`、`prepareInvocation`、`RemoteNamespaceService` 决定 scoped 选择：通过 Cordis tracing 取得消费方 Context，查询当前 adapter，区分 undefined 与 null，仅在本来具有直接 descriptor 时允许直接 fallback。原生生成浏览器挂载现在从已有 invocation descriptor 取得接收方与 lookup 两种投影。类型化 `getRemote(ctx, namespace)` 只是 `ctx.get('remote.' + namespace)` 的声明便利入口；命名参数对象保留现有 .NET 生成 wire 命名和省略语义。不增加身份 registry、传输、模型格式或兼容分支。此前只挂载普通 endpoint 函数、没有消费方 Context 投影，是未完成切片，不是目标合同。
 
 普通数据后端的框架集合接口现在复用共同声明中的框架投影。有序 JSON 数组表示、元素空性及引用事实与 Remote 后端共用；具体 .NET 接口选择属于 STJ 数据载体适配。执行任意 enumerable、作者泛型类和其他被拒绝的数据形状仍是独立工作。
+
+### 选定 Client 调用的准备边界，2026-10-12
+
+固定 Client 在进入 `invoke` 或 `invokeStream` 前选择变体，因此 adapter identity 自身的异常仍同步抛出。选定 unary 后，参数准备与缺失／关闭 Connection 的异常拒绝该 Promise，位于将 carrier 错误转为 `RemoteResult` 的 catch 之外。流仍在创建句柄时报告准备失败。撤销与取消沿用现有所有者；预取消不压掉准备错误。
+
+命名参数对象对应上游的位置参数槽。生成元数据从同一 descriptor 列出必需 wire 名，包括 receiver 身份与 lookup 参数；默认值及其他 `AcceptsUndefined` 参数可以省略。选择／注入 scope 后，准备阶段在分发前要求这些 own 属性存在。仅有 direct 变体不能授权本次 fallback。值为 `undefined` 的 own 属性仍算已提供参数槽，对应上游显式位置 undefined；JSON 省略与 Host 必需字段校验继续生效。null 同样保留为已提供的值，交给 Host codec。这是形态准备，不复制 Schema 校验。现有生成客户端按当前元数据重新生成，不保留旧 tuple 读取器。
 
 ### 声明使用位置与 Schema 引用，2026-10-12
 
