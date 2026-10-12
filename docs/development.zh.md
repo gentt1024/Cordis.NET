@@ -293,7 +293,7 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 | T02：跨包身份与外部引用 | 显式引用模型接通普通 DTO/STJ 及真实引用 Remote；独立 caller 不加载 Provider 实现 | 补齐其余引用 Schema／TS／后端组合，沿同一模型。下一出口为具名作者／模型／合同包在无 Provider DLL 下消费，同时检查冲突／缺失引用与重生成。 |
 | T03：运行时、Schema、.NET、TS 消费共同事实 | 共同解释器驱动 Host 绑定、当前保存模型 caller 和类型化事件；已移除重复作者 wire 制品及旧读取器 | 完成各选定分析／目录、Schema 和客户端输出的支持面。运行时 `TypertArtifacts.Contribution` 不等于完整模型后端。使用 `verify-typert-dotnet.py` 与 `verify-typert.py`；不重建已成立模型。 |
 | T04：更丰富的 .NET 方法／数据投影 | optional／default 方法、数组、List、字符串字典及四类框架集合接口已有包证据 | 补齐其余选定方法／数据形状及显式引用消费。拒绝记录当前限制，不等于完成；独立 DTO/STJ 与 Remote 消费者承担验收。 |
-| T05：model-only、pre-CoreCompile 后 STJ、无需 Node／Provider | 独立包作者／caller 已执行 build/pack、增量／Clean／冷生成及漂移拒绝 | 下一作者出口为首次设计时构建显示生成类型，再完成无 Node 的正常 build/pack。随后具名 WPF／Avalonia／Godot .NET／Blazor 消费者须证明调度、视图／Slot 装配、关闭与重新进入；SDK／依赖选择须明确说明。 |
+| T05：model-only、pre-CoreCompile 后 STJ、无需 Node／Provider | 独立包覆盖首次 MSBuild 设计时输入及实际 STJ 编译，随后 build/pack、增量／Clean／冷构建生成与漂移拒绝 | `09c2c11` 已有定向包证据；默认门禁的环境失败及未完成 test-map 在验证记录中保留。实际 IDE 与具名 WPF／Avalonia／Godot .NET／Blazor 消费者仍需调度、视图／Slot 装配、关闭与重新进入证据；SDK／依赖选择须明确说明。 |
 
 这些是本轮交付义务，不另造总规划。暂时拒绝是准确开发状态，不是完成。改变要求支持的范围或延期已确认职责，需要列出消费者影响并由维护者裁决。
 
