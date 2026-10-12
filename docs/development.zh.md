@@ -293,7 +293,7 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 | T02：跨包身份与外部引用 | 显式引用模型接通普通 DTO/STJ 及真实引用 Remote；独立 caller 不加载 Provider 实现 | 补齐其余引用 Schema／TS／后端组合，沿同一模型。下一出口为具名作者／模型／合同包在无 Provider DLL 下消费，同时检查冲突／缺失引用与重生成。 |
 | T03：运行时、Schema、.NET、TS 消费共同事实 | 共同解释器驱动 Host 绑定、当前保存模型 caller 和类型化事件；已移除重复作者 wire 制品及旧读取器 | 完成各选定分析／目录、Schema 和客户端输出的支持面。运行时 `TypertArtifacts.Contribution` 不等于完整模型后端。使用 `verify-typert-dotnet.py` 与 `verify-typert.py`；不重建已成立模型。 |
 | T04：更丰富的 .NET 方法／数据投影 | optional／default 方法、数组、List、字符串字典及四类框架集合接口已有包证据 | 补齐其余选定方法／数据形状及显式引用消费。拒绝记录当前限制，不等于完成；独立 DTO/STJ 与 Remote 消费者承担验收。 |
-| T05：model-only、pre-CoreCompile 后 STJ、无需 Node／Provider | 独立包覆盖首次 MSBuild 设计时输入及实际 STJ 编译，随后 build/pack、增量／Clean／冷构建生成与漂移拒绝 | `09c2c11` 已有定向包证据；默认门禁的环境失败及未完成 test-map 在验证记录中保留。实际 IDE 与具名 WPF／Avalonia／Godot .NET／Blazor 消费者仍需调度、视图／Slot 装配、关闭与重新进入证据；SDK／依赖选择须明确说明。 |
+| T05：model-only、pre-CoreCompile 后 STJ、无需 Node／Provider | 独立包覆盖首次 MSBuild 设计时输入及实际 STJ 编译，随后 build/pack、增量／Clean／冷构建生成与漂移拒绝 | 这些检查还在 `28901b9` 的完整 Windows 包门禁中通过；较早 `09c2c11` 的环境失败在验证记录中保留自己的历史身份。实际 IDE 与具名 WPF／Avalonia／Godot .NET／Blazor 消费者仍需调度、视图／Slot 装配、关闭与重新进入证据；SDK／依赖选择须明确说明。 |
 
 这些是本轮交付义务，不另造总规划。暂时拒绝是准确开发状态，不是完成。改变要求支持的范围或延期已确认职责，需要列出消费者影响并由维护者裁决。
 
@@ -306,7 +306,7 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 | 标准 unary、结果与附件 | 共享 Connection、关联封套／结果及 multipart 已替换生成器内嵌 carrier、NDJSON 和 unary wire base64 | 保留普通结果与装配错误边界。S01/S02 通过生成包／浏览器调用收口选定 JS 准备，拒绝时零 HTTP/open；`SharedClient.ts` 是主要消费者。 |
 | 固定 Gateway ConnectionHandle RPC | Node 下具名固定 DSH Connection 及独立 .NET/TS 包已有有界执行记录 | 最终候选通过 `verify-typert.py` 重跑选定固定客户端／原生 Host 用例，包含失败、binary 路径和所有权；不扩大为全产品或 SDK stdio 兼容。 |
 | 固定流协议 | text mux、类型化上下行、半关闭、载体失败及逻辑调用寿命已有有界执行 | 补齐剩余声明 codec 与选定跨端组合；在既有生命周期及包消费者中保留准入／未使用上行控制。 |
-| Context、对象、Peer 与固定事件 | receiver／lookup scoped、反向 agent Context、owned／borrowed 释放、生成式类型化事件及直接 operatorPeer fallback 已实现；出站浏览器路径在 `19ff2b6` 验证 | 下一协议出口为固定 Peer／scope-targeting，通过现有 Registry／Gateway／Connection 接通具名原生与浏览器消费者。agent 事件或单条浏览器路线不等于完整 Context／Peer 覆盖。 |
+| Context、对象、Peer 与固定事件 | receiver／lookup scoped、反向 agent Context、owned／borrowed 释放、类型化事件及 operatorPeer fallback 已实现。`28901b9` 补齐原生身份／祖先 scope 路由及 Peer key，并有真实生成式 .NET／TS 包调用。 | 同一 `28901b9` 包及生成资产已通过真实出站浏览器调用，包含原生 Host Peer 路由；这不代表浏览器侧 scope 实现已获验证。scope store／layer 和剩余具名 Context／Peer 组合保留独立出口。本条 Host 路线不代表完整覆盖。 |
 | 恢复与替换 | 已执行代际撤销、保留回调、重挂载及借用 Connection／Context 边界 | 在同一消费者扩展剩余 scope-targeting 寿命。不确定写入结果不授权重放；安装任务仍属于操作所有者。 |
 | 标准应用与最终交付 | 数值 Settings、生成式管理／事件、CLI 与模块恢复复用配置／operations | 完成 Settings 文档／客户端装配及标准管理 UI 观察。本地准备阶段 PR 说明和 CI 矩阵。最终出口要求同一冻结候选的 Windows/Linux、静态 AOT caller、选定固定一端互通、浏览器、包／符号／SourceLink 及具名平台证据。远端创建 PR、合并、发布须获授权。 |
 

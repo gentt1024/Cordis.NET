@@ -502,3 +502,20 @@ Windows x64 源码测试通过 883 项；四阶段格式检查在 277 个 C# 文
 - 两组定向消费者均在冻结最终包批次通过。更早的引用探针也独立遇到过一次 dotnet 启动拒绝；该失败及成功重试与最终包执行分别保留。
 
 本证据为 Windows x64 / SDK 10.0.111。本候选没有执行完整 `--package` 门禁、符号／debug 消费、真实浏览器、Linux、Native AOT、托管 CI、实际 IDE 交互或具名 UI 平台验收；MSBuild 设计时证据不覆盖这些边界。其余引用 Schema/TS 后端与 Peer/scope-targeting 仍未完成。前一组 S01/S02 审查固定在已推送 `9243d3a`，本地续建结果不改变其证据。
+
+## Scope 与 Peer 路由，2026-10-12
+
+实现 `28901b9484199c7a7faba36baef1db000f71852a` 完成 scope 标签继承、身份／祖先事件路由、基础过滤器保留、父链绑定／重绑及基于 Fiber 的静止清理。Connection 和直接调用 fallback 的 Peer 以自身为 key。生成的 waterfall 调用使用路由载体，真实 subject 留在类型化参数中；转发遵循固定 `packages/api/remotes/src/index.ts`：无 key 时继续本地处理，有 key 时须在投影前确认 subject 类型正确且与 key 是同一对象。临时的原始 subject 转发路径退出。
+
+原生合同的主要测试位于 `ScopeTests`、`TypertGatewayPeerTests` 和 `RemoteEventsGatewayTests`。`RemoteEventsTests` 通过实际 ASP.NET／事件投递保护生成器对 subject 过滤器的保留。现有独立声明包消费者通过生成的 .NET 与 TS 客户端调用 Peer／子 scope／无标签路由，不传身份参数，也不引用 Provider 实现。首次 design-time 编译、普通 build／pack、引用变化、Clean、拒绝和生命周期检查继续保留。固定 DSH 的 11 项原始 scope 测试另在锁定版本上通过。
+
+[收据](../verification/scope-routing-2026-10-12/evidence.json) 绑定精确源码、18 个 nupkg／snupkg 文件、测试结果和生成消费者步骤。最终 Windows x64／SDK 10.0.111 的 `verify.py --package` 在干净且未变化的源码上完整通过：890 项测试、test-map、JIT／模块／CLI／API、包符号及调试消费者、独立 NuGet／HTTP 调用、CLR 部署／多 Entry、选定固定客户端互操作，以及完整生成式 .NET／TS 消费组。四阶段格式检查也一致通过，没有修改源码。
+
+此前失败保留原貌，不拼接成这次成功：
+
+- `d2de367` 通过 886 项测试和 test-map 后，符号检查启动 Git 遭遇 WinError 5。额外原生反例暴露无 key 载体准入问题；四例回归在修正前有两例失败。[独立收据](../verification/scope-routing-2026-10-12/preliminary.json) 保留不变。
+- 首次 `28901b9` 验证遇到系统临时盘空间耗尽，导致写入与插件准备失败。失败 TRX 以及格式工具的 I/O 失败继续保留。
+- 首次临时目录恢复误放在仓库内，使夹具项目继承仓库 MSBuild 设置；这一轮不作为独立消费证据。该轮还记录了一项尚未归因的 HMR 超时。没有为这些失败添加生产补丁或修改断言。
+- 新建的空 HTTP 缓存无法访问 NuGet 漏洞数据源。后续保留已有 nuget.org 缓存，没有关闭审计。最终验证和格式检查使用另一卷上经核对位于仓库外的临时目录。Git 启动拒绝未被诊断为与磁盘耗尽相同的原因。
+
+真实浏览器使用同一冻结包和生成资产也已通过：原生 Host Peer 路由、receiver／lookup、当前 adapter 与身份、null／undefined、流和撤销。页面结果及资产／截图 hash 独立于严格 TypeScript 和 Node 检查记录。首次自动工具审批拒绝后，用户明确授权临时 loopback 代理；验证后两个夹具进程均已关闭。这证明浏览器调用原生 Host 路由，不代表浏览器侧 scope 实现已获验证。本候选未运行 Linux、Native AOT、托管 CI、真实 IDE 或具名 UI 框架验证。本批不关闭全部 Peer／Context 工作流、scope store／layer 或剩余引用后端。Chief 对 S01/S02 和 N01/N02 的关闭结论继续有效。
