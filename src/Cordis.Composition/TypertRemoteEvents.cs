@@ -206,6 +206,12 @@ public static class TypertRemoteEvents
             {
                 ended = true;
                 queue.Writer.TryComplete();
+                while (queue.Reader.TryRead(out var abandoned))
+                {
+                    if (abandoned is TypertRemoteEventInvocation invocation)
+                        invocation.Reject(new OperationCanceledException("The Remote event source was removed."));
+                }
+
                 await owner.RunAsync(async _ =>
                 {
                     foreach (var listener in listeners.AsEnumerable().Reverse())

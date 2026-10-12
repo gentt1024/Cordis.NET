@@ -422,3 +422,5 @@ G01 在既有共同声明中采用 `[RemoteUplink] IAsyncEnumerable<T>`。生成
 `c3db1f9` 之后的事件续建已将共同模型委托声明、生成式 Host 选择和 .NET／TS 类型化监听接到固定 `$events` 帧。16 个 Gateway 场景保留源撤销、JSON 快照及清理失败阻止替换的回归，并检查待决 waterfall 重投、旧 client 拒绝、回复幂等和 next／undefined／null／rejected 结果。6 个 loopback ASP.NET／.NET 场景实际消费生成声明，检查借用所有权、不同结果及 handler／回复结算后的 owned 释放，包括 Connection 主动释放。定向入口为 `RemoteEventsGatewayTests` 和 `RemoteEventsTests`。初步包消费者已从包内共同模型编译独立类型化事件监听，并运行真实 .NET／TS 管理调用；TS 消费者还检查反向 Context 和 owned 结算。旧通知 Remote／导出及手写观察入口已移除。源码测试 871 项通过，但这些初步结果属于工作树证据，不是冻结候选包门禁。最终候选证据另记于 validation.zh.md。直接 Gateway 的 operatorPeer fallback、浏览器 scoped 消费和其余模型／后端职责仍开放。
 
 Chief 对 `c3db1f9` 的审查关闭 R01／R02，并保持 F02／F04 关闭。独立 JS 探针验证了队列修正；C# 执行仍属实施者证据。旧回执保留原源码与包身份。当前事件建设另行贯通共同委托声明、类型化监听和标准包消费者，不属于旧修正回执的验证范围。
+
+冻结事件检查点 `5c8ff12` 在补充边界探针中暴露了一处撤销缺口：三个 waterfall 入队后立即撤销源，会留下两个调用任务等待。现由事件源在迭代器退出时拒绝仍在自身队列中的调用，已经交付的调用继续归 Gateway 清理。回归在 `5c8ff12` 上失败，修正后 17 个 Gateway 事件场景通过。`5c8ff12` 的既有验证保留原源码身份，不能证明此次修正；最终候选另记回执。

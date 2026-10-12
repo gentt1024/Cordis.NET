@@ -204,5 +204,4 @@ public sealed class RemoteEventsTests
     }
 
     private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
-
 }

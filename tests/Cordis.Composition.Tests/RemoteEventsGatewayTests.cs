@@ -11,6 +11,41 @@ public sealed class RemoteEventsGatewayTests
     private static readonly TimeSpan Limit = TimeSpan.FromSeconds(10);
 
     [Fact]
+    public async Task Withdrawing_selected_source_settles_every_queued_waterfall()
+    {
+        await using var root = new Context();
+        Task<JsonElement>[] pending = [];
+        await root.RunAsync(async ctx =>
+        {
+            var gateway = new TypertGateway(ctx, new TypertRegistry(ctx));
+            var codec = TypertCodec.Create(NotificationTestsJson.Default.JsonElement);
+            var definition = TypertRemoteEvents.Waterfall<Context, JsonElement, JsonElement>(
+                "selected",
+                codec,
+                codec,
+                subject => new(subject, "agent"));
+            var source = gateway.RegisterRemoteEvents(
+                ctx,
+                TypertRemoteEvents.FromCordis(ctx, [definition]),
+                new("home"));
+            pending = Enumerable
+                .Range(0, 3)
+                .Select(_ => TypertRemoteEvents.AwaitResult<JsonElement>(
+                    ctx.Events.WaterfallWith(
+                        ctx,
+                        "selected",
+                        () => Task.FromResult<object?>(Json("{}")),
+                        ctx,
+                        Json("{}"),
+                        CancellationToken.None)))
+                .ToArray();
+            await source.DisposeAsync();
+        });
+        foreach (var invocation in pending)
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => invocation.WaitAsync(Limit));
+    }
+
+    [Fact]
     public async Task Event_source_cannot_cross_the_Gateway_root()
     {
         await using var root = new Context();
