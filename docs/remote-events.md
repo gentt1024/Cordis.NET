@@ -37,7 +37,7 @@ var decision = await DecisionRequestedTypert.InvokeAsync(
     caller, agent, request, localContinuation, cancellationToken);
 ```
 
-The business call supplies the subject, not a wire identity. The generated invocation uses `Scope.Target(agent, agent)` as its routing receiver and keeps the subject in the typed argument. The forwarding binding derives the Context and `agentId`, verifies that the carrier key is that exact subject, and sends only declared JSON data. Existing Cordis filtering, continuation and source ownership remain in use.
+The business call supplies the subject, not a wire identity. The generated invocation uses `Scope.Target(agent, agent)` as its routing receiver and keeps the subject in the typed argument. The forwarding binding derives the Context and `agentId`, verifies that the carrier key is that exact subject, and sends only declared JSON data. A receiver without a scope key continues locally through `next()`; a keyed carrier with a missing or different subject is refused before projection. Existing Cordis filtering, continuation and source ownership remain in use.
 
 ## Listen in C#
 

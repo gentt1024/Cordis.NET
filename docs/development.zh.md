@@ -481,3 +481,5 @@ Chief 对 `9ae967c` 的审查关闭 E02/E03，通过 N01/N02 保留 E01。两个
 Chief 对已推送 `9243d3a` 的审查关闭 S01/S02，保留 N01/N02 及此前事件／流问题的关闭结论。其独立证据是 JS 和真实固定 Cordis 探针，不是重跑 .NET 包、ASP.NET 或浏览器。原环境失败与同源码同包补完在验证记录中继续分列。本地 `09c2c11` design-time 工作保留自己的收据及完整运行 test-map 未完成边界。
 
 后续实现将固定 scope 标签与路由载体接入现有 Core 分发、Peer 和生成的 waterfall。`ScopeTests` 主责原生身份／祖先／过滤／静止清理行为；现有 Peer 测试主责 Connection／fallback 隔离及撤销。现有生成式 Remote 事件测试保护 subject 过滤器。独立共享 DTO／Remote 包消费者调用一个不接收身份参数的方法，分发 Peer、子 scope 和无标签事件；.NET 与 TS 消费同一结果。其现有浏览器入口验证同一 Host 路由。这不证明浏览器侧 scope 实现或全部 Peer 工作流。scope store／layer、更多引用后端、真实 IDE／具名平台及最终冻结跨平台门禁仍是原有职责，不随本批隐式关闭。
+
+首个 scope 检查点 `d2de367` 通过 886 项测试及 test-map，随后包门禁在符号检查启动 Git 时遭遇访问拒绝。额外固定源码对照和独立原生探针发现：无 key 的转发必须继续本地处理，而有 key 但 subject 类型错误必须拒绝。现有 Gateway 事件测试主责四例回归（修正前两例失败）；修正仅调整准入顺序。初次门禁、额外发现和后续候选分别保留证据。

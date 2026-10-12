@@ -239,6 +239,6 @@ Chief 对 `9ae967c` 的审查发现，只给复用的 STJ `$ref` 根部增加空
 
 `Scope.Target(subject, key)` 捕获 subject 当前的过滤器，允许无标签监听者，以及 key 本身或其祖先标签的监听者。后代不准入；现有 Global 监听选项仍跳过过滤。null key 表示无路由标签，与 JSON null 或 Remote Undefined 无关。`IsCarrier` 区分无标签载体和普通 receiver。父链只绑定一次；只有原 binding 句柄可以重绑，拒绝成环，调用方仍须保证没有保留旧父级下产生的东西。
 
-`DisposeRawAsync` 使用普通 Fiber disposer。`DisposeAsync` 还等待 `Fiber.WaitAsync`，使并发释放等待已由 raw 入口启动的清理。它复用原生生命周期工作，不增加所有者或调度器。Peer 以自身为 scope key，Connection／fallback 所有权及 socket 借用关系保持不变。生成的 waterfall 调用改用以 subject 为 key 的载体，保留 subject 的基础过滤器，并把 subject 留在参数中。转发核对载体 key 与 subject 的对象身份。临时的原始 subject receiver 路径退出；消费者重新生成。
+`DisposeRawAsync` 使用普通 Fiber disposer。`DisposeAsync` 还等待 `Fiber.WaitAsync`，使并发释放等待已由 raw 入口启动的清理。它复用原生生命周期工作，不增加所有者或调度器。Peer 以自身为 scope key，Connection／fallback 所有权及 socket 借用关系保持不变。生成的 waterfall 调用改用以 subject 为 key 的载体，保留 subject 的基础过滤器，并把 subject 留在参数中。按固定 `packages/api/remotes/src/index.ts`，转发先在载体没有 key 时调用 `next()`（包括普通 receiver）；有 key 时，必须在投影前确认 subject 类型正确且与 key 是同一对象。临时的原始 subject receiver 路径退出；消费者重新生成。
 
 这完成上述原生路由机制，不代表 scope store／layer 导出、所有反向 Context adapter 或全部 Peer 互操作完成。具体候选的执行结果及平台限制见验证记录。

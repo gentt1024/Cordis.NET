@@ -88,9 +88,10 @@ public static class TypertRemoteEvents
             object?[] args,
             Action<TypertRemoteEventDispatch> publish)
         {
-            if (args.Length != 3 || args[0] is not TSubject subject || !Scope.IsCarrier(evt.Receiver))
+            var key = Scope.CarrierKeyOf(evt.Receiver);
+            if (key is null)
                 return await TypertRemoteEventsClient.AwaitAsync(evt.Next());
-            if (!ReferenceEquals(Scope.CarrierKeyOf(evt.Receiver), subject))
+            if (args.Length != 3 || args[0] is not TSubject subject || !ReferenceEquals(key, subject))
                 throw new InvalidOperationException("A scoped event must carry its routing subject directly.");
             var target = project(subject);
             var payload = request.Encode((TRequest)args[1]!);

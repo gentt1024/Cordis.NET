@@ -1,0 +1,247 @@
+{
+  "sourceCommit": "d2de36743e8cb1bf73e986e3936775535e583947",
+  "status": "failed",
+  "sourceUnchanged": true,
+  "cleanWorkingTree": true,
+  "platform": "Windows x64",
+  "sdkVersion": "10.0.111",
+  "gate": {
+    "status": "failed",
+    "reportSha256": "6f56587a53ece5909e8797fc3e2a6b272cfd45f05696c7a09623d95570846a9e",
+    "steps": [
+      {
+        "name": "sdk",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "sdk-version",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "restore",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "build",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "test",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "test-map",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-1",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-2",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-repeat-2",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-3",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-repeat-3",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "upgrade-jit",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "example",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-modules-build",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-modules-types",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-lifecycle",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-shared-modules",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-author-watch",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "cli-validate",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "cli-preview",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "cli-invocation",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "cli-usage",
+        "exitCode": 2,
+        "expectedExitCode": 2
+      },
+      {
+        "name": "cli-invalid-option",
+        "exitCode": 1,
+        "expectedExitCode": 1
+      },
+      {
+        "name": "api",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "typert-optional",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "pack",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "package-symbols-and-debug-consumer",
+        "exitCode": 1,
+        "expectedExitCode": 0
+      }
+    ]
+  },
+  "tests": [
+    {
+      "sha256": "90948f697064e4a21ed7fdf9e0555a2590c15586c6374e72875f0815d849b80f",
+      "total": 148,
+      "passed": 148,
+      "failed": 0
+    },
+    {
+      "sha256": "0e949f0e2f32646dc2713f55eade4080e388c81aa8726100aadb858b0d2b0178",
+      "total": 113,
+      "passed": 113,
+      "failed": 0
+    },
+    {
+      "sha256": "77a2c1bc3c41a537adb6f4334ca8ac899fab93bff230dfd8a4218e78b91b1b0e",
+      "total": 499,
+      "passed": 499,
+      "failed": 0
+    },
+    {
+      "sha256": "f93fa0e7e5eff5bcc216d51efdb69723f3307fd8cfc9046fe6fe2d00fba29325",
+      "total": 126,
+      "passed": 126,
+      "failed": 0
+    }
+  ],
+  "packages": {
+    "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "483ae30147a7974eb61aced036af460bb9e9e93d4ef9a1a88221f78a6f8152f1",
+    "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "fceb1087109d8144250c6f2532d15c38426e586548eccfc4e0db66340cc1f043",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "53d2e8bc4e82a06b9e43a78fc76a76f7529c3493c29345a53449328efd6f61eb",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "de71b7521e41646483107e0bce06105f9d701427e39d3764a4504b43e04a549e",
+    "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "de23580212c5b7ffac6b162286d041a6d1548cc845c2e8770158db2d8df0d461",
+    "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "6f33d0c407258a74fe8851a678811de7004b8487277976fda29dca8d1d87e78d",
+    "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "e352268e00fedc242962d48cffbfb3c4f8b0e16422209509cf2fde1642d4976e",
+    "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "b2807eab91900d80bc7d5746e481d4035e38dffbbbd75decf69201ff787f3b8a",
+    "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "9feb84585e08c7b3268aca0320aa65097e6fcbe325b4ecbbf60e2508b9edc757",
+    "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "fc32c8b75825679600b89e0356fc0109f8b1c47f99b6ad787a84b3054de81353",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "1d8d92d05b0a0a7ebd81f41e6751ac1a5f195737daa90e0275bbd918750f0d75",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "12f0355cb1138ebabef2aa5a507669ad65f9367d9e5b80c97822d8c1f2441f12",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "abefd446f4e1251f5014aba197190c5794388b8137876638a58cfec7fded77d0",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "900b5d63da584363852a44eeb196cb4f89e0c3392570d81b37a6b8fa20198467",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "de90a3ae9ce987209f23731ccb433f42bd8b3da028271fe643d9acdef844fad3",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "4c6c2f8e332ecb8dabc4abaf23c3eef92a12bf4a317bf6fd13e3762346547c5c",
+    "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "5fd11bf040d64e243a3d2dadae7fc7a31174c826eec0fc636ed98320ff950b75",
+    "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "b982379bd75442be2b57a4514d4d09dde96a5211e185aae954ab3906aff1cbbb"
+  },
+  "upstream": {
+    "commit": "639ed015397290b3745d163aafe02ffee4aa3f84",
+    "testFile": "packages/core/scope/tests/scope.spec.ts",
+    "passed": 11,
+    "reportSha256": "b3a1d111773c896534b6e044cebc65d592bec59ffc2c42bd9a67756cd8296ee6"
+  },
+  "red": [
+    {
+      "change": "Restore prior TypertPeer Fiber-only integration from 2b3f515",
+      "outcome": "Scope identity routing assertion fails",
+      "logSha256": "4cbdc55a80d9f6a51c74d62eea00412353f465fd0267b22c03942513533fd831"
+    },
+    {
+      "change": "Use caller instead of subject as generated carrier base",
+      "outcome": "Excluded subject reached the Remote handler",
+      "logSha256": "62a8ed7727d627303ed15240d03666fac68aabccc8cc5acfd1f3d20ea48d6eeb"
+    }
+  ],
+  "preliminaryFailures": [
+    {
+      "kind": "Fixture overload error",
+      "detail": "Nested async lambda selected Action/async-void; replaced with an actual IAsyncDisposable fixture. This is not evidence of a Core quiescence defect.",
+      "logSha256": "ea1d1022b145449676db6721a7ad5b4c1e2fbd3fb8ff62d98ccf30a591ef62c5"
+    },
+    {
+      "kind": "Fixture build error",
+      "detail": "Nullable Context.Filter invocation in event fixture; no runtime assertion executed.",
+      "logSha256": "d63f41c799fca07ed3dd2433564ae1c2151ed35b20fe4f2b4fcb7371ddfbb890"
+    },
+    {
+      "kind": "Initial carrier-base counterexample",
+      "detail": "Incorrect caller base reached remote delivery and timed out at the existing reply gate. Later probe asserts the unexpected handler entry directly.",
+      "logSha256": "795a3200019afea975751aad8db87963f7c03c6b477f0d91269a0ea495ba2b8e"
+    }
+  ],
+  "format": {
+    "result": "All four stages agree; zero source changes",
+    "logSha256": "840df4955187cd3db789f98a8a66ba56308deb80bcdca49e761a7229b6d2e1f6"
+  },
+  "limits": [
+    "No Linux, Native AOT, hosted CI, live IDE or named UI-framework run for this candidate",
+    "Browser calls exercise native Host Peer routing, not a browser-side scope implementation",
+    "No whole DSH product/SDK interoperability or scope store/layer completion claim",
+    "Full package gate stopped at git Process.Start WinError 5 in symbol inspection; later package consumers did not run on this candidate"
+  ],
+  "additionalFinding": {
+    "result": "Unkeyed carrier incorrectly rejected; keyed wrong-type subject incorrectly continued",
+    "primaryRegression": "RemoteEventsGatewayTests.Scoped_forwarding_checks_the_key_before_projecting",
+    "redPassed": 2,
+    "redFailed": 2,
+    "redLogSha256": "58f7093cdeafbda5b2da07ab4108f668032d89aa473ef8269385756c7bfc7113"
+  }
+}

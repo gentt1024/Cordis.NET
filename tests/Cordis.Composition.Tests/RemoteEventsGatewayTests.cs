@@ -10,6 +10,55 @@ public sealed class RemoteEventsGatewayTests
 {
     private static readonly TimeSpan Limit = TimeSpan.FromSeconds(10);
 
+    [Theory]
+    [InlineData("ordinary", false)]
+    [InlineData("unkeyed", false)]
+    [InlineData("different-key", true)]
+    [InlineData("different-subject-type", true)]
+    public async Task Scoped_forwarding_checks_the_key_before_projecting(string kind, bool rejected)
+    {
+        await using var root = new Context();
+        await root.RunAsync(async ctx =>
+        {
+            var projected = 0;
+            var codec = TypertCodec.Create(NotificationTestsJson.Default.JsonElement);
+            var definition = TypertRemoteEvents.Waterfall<Context, JsonElement, JsonElement>(
+                "selected",
+                codec,
+                codec,
+                subject =>
+                {
+                    projected++;
+                    return new(subject, "agent");
+                });
+            var gateway = new TypertGateway(ctx, new TypertRegistry(ctx));
+            await using var source = gateway.RegisterRemoteEvents(
+                ctx,
+                TypertRemoteEvents.FromCordis(ctx, [definition]),
+                new("home"));
+            object receiver = kind switch
+            {
+                "ordinary" => ctx,
+                "unkeyed" => Scope.Target(ctx, null),
+                "different-key" => Scope.Target(ctx, new object()),
+                _ => Scope.Target(ctx, ctx)
+            };
+            var pending = TypertRemoteEvents.AwaitResult<JsonElement>(
+                ctx.Events.WaterfallWith(
+                    receiver,
+                    "selected",
+                    () => Task.FromResult<object?>(Json("\"local\"")),
+                    kind == "different-subject-type" ? new object() : ctx,
+                    Json("{}"),
+                    CancellationToken.None));
+            if (rejected)
+                await Assert.ThrowsAsync<InvalidOperationException>(() => pending.WaitAsync(Limit));
+            else
+                Assert.Equal("local", (await pending.WaitAsync(Limit)).GetString());
+            Assert.Equal(0, projected);
+        });
+    }
+
     [Fact]
     public async Task Withdrawing_selected_source_settles_every_queued_waterfall()
     {
