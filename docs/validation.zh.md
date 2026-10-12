@@ -475,3 +475,15 @@ N01/N02 最初在六个源码用例中失败三项。修复后的源码边界接
 [出站浏览器回执](../verification/scoped-nested-nullability-2026-10-12/browser-outbound.json)使用 Windows 冻结包消费者生成的原样制品和 Host。真实浏览器 fetch／WebSocket 调用检查 receiver 和 lookup scope、当前 adapter／身份变化、缺少 adapter、显式 null 与 undefined、直接 lookup fallback、scoped 流、保留回调撤销、重新挂载及借用 Connection 寿命。此浏览器结果不代表完整反向 Context 或 Peer scope-targeting 矩阵通过。
 
 本候选未运行完整 DSH 原始源码套件、静态 AOT、托管 CI、远端 SourceLink 获取或 Maker 验证。这些结果不表示整个 port 或所有具名目标环境已完成。没有改变包版本、依赖或 upstream pin，也未合并、发布或部署。
+
+## 选定 Client 调用准备，2026-10-12
+
+源码 `dfee9489af89a9badbc9e0845a5ec2da82c4f125` 修正 `aa47d14` 审查的 S01/S02。既有生成包消费者先在 `19ff2b6` 上失败：缺少 direct lookup 参数槽仍发出 HTTP/open 或变成取消结果，关闭 Connection 又同步逸出选定 unary 调用。修正后的消费者证明本地 unary rejection、流创建失败及零分发，同时保留显式 undefined/null、默认值、合法 fallback、adapter 选择异常和贡献寿命。N01/N02 保持关闭，本批没有重建模型。
+
+Windows x64 源码测试通过 883 项；四阶段格式检查在 277 个 C# 文件上达成一致。首次 `python scripts/verify.py --package` 通过源码／客户端／API 检查并生成 18 个包／符号制品，但符号检查器启动 Git 时遇到 WinError 5。重试也出现 apphost／Git 启动拒绝。这些失败保留，本候选没有一条从头到尾全绿的完整脚本回执。
+
+未改动的符号检查器随后通过精确冻结源码清单路线，完成所有包／PDB／源码及真实离线调试消费者检查。源码由一次 Git batch 读取提交内容，在写清单前逐个核对 blob 对象哈希。其余原门禁命令随后在同一源码、未改变的包字节上通过，包含独立消费者、HTTP 重发布、CLR 部署／多 Entry、保存／引用模型、Settings、管理与生成式事件。临时续跑驱动最初遗漏既有 CLI fixture；修正后复制原 fixture，没有改变断言。重复 Git 子进程启动失败的根因仍未查明。
+
+真实内置浏览器直接消费这批包生成的原样资产，通过同一 scoped／准备边界消费者。[回执](../verification/client-preparation-2026-10-12/evidence.json)记录原始失败、补完检查、包和测试身份；[浏览器回执](../verification/client-preparation-2026-10-12/browser.json)绑定源码、资产与截图。Linux、静态 AOT、托管 CI、远端 SourceLink 获取、完整 DSH 原始测试套件及完整 Context／Peer 矩阵未在本批重跑。本次收口未推送、合并或发布。
+
+另一个先行包探针确认下一作者体验缺口：首次设计时 Compile 缺少生成 DTO／客户端输入，随后普通 build 会生成两者并编译消费者。这是 MSBuild 输入证据，不是实时 IDE 验收，也不计作最终包验收。[开发记录](development.zh.md)的 D-MODEL／D-WIRE 保留当前剩余出口。
