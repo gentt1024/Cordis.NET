@@ -113,6 +113,8 @@ async function binaryResponse(response) {
   return envelope;
 }
 
+const eventLifetime = Symbol('event-lifetime');
+
 export class TypertConnection {
   #base;
   #fetcher;
@@ -155,6 +157,11 @@ export class TypertConnection {
       this.#lifetime.track(this.#mux.completion);
     }
     return this.#mux.open(endpoint, args, signal, uplink);
+  }
+
+  [eventLifetime](start) {
+    if (!this.active) throw new Error('Remote has no active Connection.');
+    return this.#lifetime.track(start(this.#lifetime.abort.signal));
   }
 
   dispose() { return this.#lifetime.dispose(); }
@@ -436,4 +443,113 @@ export async function mountClient(ctx, remote, namespaceSpecs) {
   });
   await dispose;
   return {remote, dispose};
+}
+
+// Fixed DSH owned-value identity also works across independently bundled providers.
+export const TYPERT_OWNED_VALUE = Symbol.for('dsh.typert.owned-value');
+export function typertOwnedValue(value, release) {
+  let active = true;
+  return { [TYPERT_OWNED_VALUE]: true, value, [Symbol.dispose]() {
+    if (!active) return;
+    active = false;
+    release();
+  }};
+}
+
+const eventNext = Symbol('remote-event.next');
+const exactEvent = (value, keys) => record(value) && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+const eventText = value => typeof value === 'string' && value.length > 0;
+
+export function createEventsClient(owner, connection, selection, adapters) {
+  const selected = new Set(selection);
+  const prefix = 'internal/remote-events/' + crypto.randomUUID() + '/';
+  const lifetime = new Lifetime();
+  let running = false;
+  const report = (name, error) => console.error('Remote event ' + name, error);
+  async function answer(frame, clientId, signal) {
+    let resolved;
+    try { resolved = adapters?.getClient('agent')?.resolve(frame.agentId); }
+    catch (error) { report(frame.event, error); }
+    const owned = resolved?.[TYPERT_OWNED_VALUE] === true ? resolved : undefined;
+    try {
+      const target = owned ? owned.value : resolved;
+      let outcome = {kind:'next'};
+      if (target !== undefined && target !== null) {
+        try {
+          const result = await target.waterfall(target, prefix + frame.event,
+            {...frame.request, agent:target, signal}, async () => eventNext);
+          if (result !== eventNext) {
+            if (result !== undefined && !uplinkValue(result)) throw new Error('Remote event result must be lossless JSON.');
+            outcome = result === undefined ? {kind:'result'} : {kind:'result',value:result};
+          }
+        } catch (error) {
+          if (signal.aborted) return;
+          const rejection = {name: typeof error?.name === 'string' ? error.name : 'Error',
+            message: typeof error?.message === 'string' ? error.message : String(error)};
+          if (typeof error?.code === 'string') rejection.code = error.code;
+          if (error?.details !== undefined && uplinkValue(error.details)) rejection.details = error.details;
+          outcome = {kind:'rejected',error:rejection};
+        }
+      }
+      if (signal.aborted) return;
+      const response = await connection.call('$events/result', {clientId,eventId:frame.eventId,outcome}, signal);
+      if (!response.ok) throw response.error;
+    } finally { owned?.[Symbol.dispose](); }
+  }
+  async function pump(signal, ready) {
+    const failed = new AbortController();
+    const combined = AbortSignal.any([signal,failed.signal]);
+    const tasks = new Set();
+    const active = new Map();
+    const source = connection.open('$events', {}, combined);
+    let clientId;
+    try {
+      for await (const frame of { [Symbol.asyncIterator]: () => source }) {
+        if (clientId === undefined) {
+          if (!exactEvent(frame,['type','clientId','host']) || frame.type !== 'ready' || !eventText(frame.clientId) ||
+              !exactEvent(frame.host,['home']) || typeof frame.host.home !== 'string') throw new Error('Invalid event readiness.');
+          clientId = frame.clientId;
+          await ready(frame.host);
+        } else if (exactEvent(frame,['type','eventId']) && frame.type === 'cancel' && eventText(frame.eventId)) {
+          active.get(frame.eventId)?.abort();
+        } else if (exactEvent(frame,['type','event','args']) && frame.type === 'emit' && eventText(frame.event) && Array.isArray(frame.args) && uplinkValue(frame.args)) {
+          if (selected.has(frame.event)) void owner.parallel(prefix + frame.event, ...frame.args).catch(error => report(frame.event,error));
+        } else if (exactEvent(frame,['type','event','eventId','agentId','request']) && frame.type === 'waterfall' &&
+            eventText(frame.event) && eventText(frame.eventId) && eventText(frame.agentId) && record(frame.request) &&
+            !Object.hasOwn(frame.request,'agent') && !Object.hasOwn(frame.request,'signal') && uplinkValue(frame.request)) {
+          const controller = new AbortController();
+          active.set(frame.eventId,controller);
+          const delivery = AbortSignal.any([combined,controller.signal]);
+          const task = answer(frame,clientId,delivery).catch(error => { if (!delivery.aborted) failed.abort(error); })
+            .finally(() => { if(active.get(frame.eventId) === controller) active.delete(frame.eventId); tasks.delete(task); });
+          tasks.add(task);
+        } else throw new Error('Invalid Remote event frame.');
+      }
+      if (!signal.aborted) throw new RemoteStreamCarrierError('The Remote event stream ended unexpectedly.');
+    } catch(error) {
+      if (failed.signal.aborted) throw failed.signal.reason;
+      if (!signal.aborted) throw error;
+    } finally {
+      for (const controller of active.values()) controller.abort();
+      await Promise.allSettled(tasks);
+      await source.dispose();
+    }
+  }
+  return {
+    context: owner,
+    on(caller, name, listener) {
+      if (!lifetime.active || !selected.has(name)) throw new Error('Remote event is not selected or its Client was withdrawn.');
+      if (caller.root !== owner.root) throw new Error('Remote event listeners must share their Client root.');
+      return caller.on(prefix + name, listener);
+    },
+    run(signal, ready) {
+      if (!lifetime.active || running) throw new Error('Remote event Client is withdrawn or already running.');
+      running = true;
+      try {
+        return lifetime.track(connection[eventLifetime](carrier => pump(AbortSignal.any([signal,lifetime.abort.signal,carrier]),ready)))
+          .finally(() => {running=false;});
+      } catch(error) { running=false; throw error; }
+    },
+    dispose() { return lifetime.dispose(); }
+  };
 }

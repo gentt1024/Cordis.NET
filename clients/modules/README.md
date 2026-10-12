@@ -45,11 +45,13 @@ For a Host mapped at `/cordis`, a browser entry can use:
 
 ```js
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
-import { createRemote as createNotifications } from '/client-runtime/notifications.mjs'
+import { createEvents } from '/client-runtime/events.mjs'
+import { TypertConnection } from '/client-runtime/cordis-remote.mjs'
 
 const modules = await bootClientModules({ graph: { rev: 'initial', entries: [], batches: [] } })
-const notifications = createNotifications(location.origin + '/remote')
-const management = createManagementClient({ baseUrl: '/cordis', modules, notifications })
+const connection = new TypertConnection(location.origin + '/remote')
+const events = createEvents(modules.context, connection)
+const management = createManagementClient({ baseUrl: '/cordis', modules, events })
 management.connection.subscribe(() => renderConnection(management.connection.getSnapshot()))
 management.subscribe(event => renderProgress(event))
 ```
@@ -62,9 +64,9 @@ Settings is consumed through the generated standard Remote module, not handwritt
 
 `SlotCore` is the fixed generic contribution registry, exported beside the module client. It does not bring a React runtime into the bundle. Its type declarations retain the upstream renderer contracts and ship their licensed React/CSS type dependencies. Import types and augment `SlotMap` through the public `@cordis-net/client-modules/slots` subpath. A host can declare root and child seats; a plugin registers a component and owns the returned disposer with `ctx.effect`. The examples demonstrate a provider declaring a list seat and a separate panel registering into it. Replacement clears the previous registry's entries, and withdrawal removes the panel's contribution. Application-specific renderer and session binding remain outside this package.
 
-`createManagementClient` requires the generated notification client in `notifications` and accepts optional `transport.fetch` and `recovery`. The carrier is native HTTP JSON/NDJSON. The fixed upstream controller owns handshake deadlines, continuous backoff, browser offline suspension and manual `management.reconnect()`. Failed handshakes close their subscription attempt and retry even when the stream remained open. Injected fetch carriers honor read cancellation; the generated notification client releases its observer when that attempt is aborted. Late callbacks cannot publish readiness. Recovery never replays writes.
+`createManagementClient` requires the generated notification client in `events` and accepts optional `transport.fetch` and `recovery`. The carrier is native HTTP envelopes and WebSocket mux. The fixed upstream controller owns handshake deadlines, continuous backoff, browser offline suspension and manual `management.reconnect()`. Failed handshakes close their subscription attempt and retry even when the stream remained open. Injected fetch carriers honor read cancellation; the generated notification client releases its observer when that attempt is aborted. Late callbacks cannot publish readiness. Recovery never replays writes.
 
-`management.close()` closes recovery and withdraws modules; the page still owns `modules.dispose()` and `notifications.dispose()`. Release all three when disposing the page. The isolated `client-modules-browser-host.mjs` carrier exercises factory scripts in a browser, but does not prove native management, configuration or Host composition.
+`management.close()` closes recovery and withdraws modules; the page still owns `modules.dispose()` and `events.dispose()`. Release all three when disposing the page. The isolated `client-modules-browser-host.mjs` carrier exercises factory scripts in a browser, but does not prove native management, configuration or Host composition.
 
 Run `node scripts/verify-client-shared-modules.mjs` for an independent built-plugin check of the public bootstrap with an injected Node transport.
 For real browser transport checks, start `node scripts/client-modules-browser-host.mjs` and open its printed origin at `/shared`.

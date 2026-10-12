@@ -390,7 +390,7 @@ public sealed class RemoteGenerator : IIncrementalGenerator
     private static string SymbolId(ISymbol symbol) => symbol.ContainingAssembly.Identity + ":" +
         (symbol.GetDocumentationCommentId() ?? symbol.ToDisplayString());
 
-    private static ITypeSymbol Resolve(
+    internal static ITypeSymbol Resolve(
         DeclarationReference reference,
         Compilation compilation,
         DeclarationModelDocument model)

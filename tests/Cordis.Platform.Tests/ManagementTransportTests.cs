@@ -332,21 +332,18 @@ public sealed class ManagementTransportTests
             await socket.SendAsync(
                 Encoding
                     .UTF8.GetBytes(
-                        """{"type":"open","streamId":"notifications","endpoint":"remoteNotifications/watch","payload":{"args":{}}}""")
+                        """{"type":"open","streamId":"notifications","endpoint":"$events","payload":{"args":{}}}""")
                     .AsMemory(),
                 WebSocketMessageType.Text,
                 true,
                 CancellationToken.None);
             using var ready = await ReadFrameAsync(socket);
             Assert.Equal("item", ready.RootElement.GetProperty("type").GetString());
-            Assert.Equal("ready", ready.RootElement.GetProperty("value").GetProperty("kind").GetString());
+            Assert.Equal("ready", ready.RootElement.GetProperty("value").GetProperty("type").GetString());
             await notifications.DisposeAsync();
             using var withdrawn = await ReadFrameAsync(socket);
-            Assert.Equal("error", withdrawn.RootElement.GetProperty("type").GetString());
+            Assert.Equal("end", withdrawn.RootElement.GetProperty("type").GetString());
             Assert.Equal("notifications", withdrawn.RootElement.GetProperty("streamId").GetString());
-            Assert.Equal(
-                "gateway/service-unavailable",
-                withdrawn.RootElement.GetProperty("error").GetProperty("code").GetString());
             await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "consumer done", CancellationToken.None);
             await session.Context.DisposeAsync();
             Assert.Equal(HttpStatusCode.Gone, (await client.GetAsync("/cordis/state")).StatusCode);

@@ -6,8 +6,10 @@ import { setTimeout as delay } from 'node:timers/promises'
 globalThis.location = new URL('http://localhost/')
 globalThis.document = { querySelectorAll() { return [] } }
 const runtime = resolve(process.argv[2] ?? 'clients/modules/lib')
-const { bootClientModules, createManagementClient, ManagementOutcomeUnknown } = await import(pathToFileURL(resolve(runtime, 'client.mjs')).href)
-const { createRemote, TypertConnection } = await import(pathToFileURL(resolve(runtime, 'notifications.mjs')).href)
+const { bootClientModules, createManagementClient, ManagementOutcomeUnknown, Context } = await import(pathToFileURL(resolve(runtime, 'client.mjs')).href)
+const { createEvents } = await import(pathToFileURL(resolve(runtime, 'events.mjs')).href)
+const { createClient, TypertConnection } = await import(pathToFileURL(resolve(runtime, 'cordis-remote.mjs')).href)
+const createRemote = connection => createClient(connection, [['$events', true, false]])
 const empty = { rev: 'empty', entries: [], batches: [] }
 const graph = { rev: 'one', entries: [{ id: 'panel', url: '/panel.js?rev=one', rev: 'one', inject: [], external: [] }],
   batches: [{ phase: 'application', url: '/panel.js?rev=one', rev: 'one', entries: ['panel'] }] }
@@ -57,7 +59,7 @@ function notifications() {
         return
       }
       assert.equal(frame.type, 'open')
-      assert.equal(frame.endpoint, 'remoteNotifications/watch')
+      assert.equal(frame.endpoint, '$events')
       const socket = this
       const stream = { closed: false,
         send(value) {
@@ -69,7 +71,7 @@ function notifications() {
       }
       this.calls.set(frame.streamId, stream)
       streams.push(stream)
-      queueMicrotask(() => stream.send({ kind: 'ready' }))
+      queueMicrotask(() => stream.send({ type: 'ready', clientId: frame.streamId, host: {home:''} }))
     }
     close() {
       if (this.closed) return
@@ -80,13 +82,14 @@ function notifications() {
     }
   }
   const connection = new TypertConnection('http://localhost/remote', fetch, url => new Socket(url))
-  const remote = createRemote(connection)
-  return { ...remote, async dispose() { await remote.dispose(); await connection.dispose() } }
+  const owner = new Context()
+  const remote = createEvents(owner, connection)
+  return { ...remote, async dispose() { await remote.dispose(); await connection.dispose(); await owner.fiber.dispose() } }
 }
 const modules = await bootClientModules({ graph, loadBundle })
 const initial = modules.context.get('panel')
 const notificationClient = notifications()
-const client = createManagementClient({ modules, notifications: notificationClient, transport, recovery })
+const client = createManagementClient({ modules, events: notificationClient, transport, recovery })
 try {
   await until(() => client.connection.getSnapshot().phase === 'connected', 'Initial notification handshake')
   const firstStream = streams.at(-1)
@@ -94,12 +97,12 @@ try {
   const unsubscribe = client.subscribe(event => progress.push(event))
   const progressReads = reads
   const progressFrames = [
-    { kind: 'event', event: 'plugin-manager/install-state', args: [{ requestId: 'original-install', phase: 'prepare' }] },
-    { kind: 'event', event: 'plugin-manager/install-log', args: [{ requestId: 'original-install', phase: 'prepare', output: 'building' }] },
+    { type: 'emit', event: 'plugin-manager/install-state', args: [{ requestId: 'original-install', phase: 'prepare' }] },
+    { type: 'emit', event: 'plugin-manager/install-log', args: [{ requestId: 'original-install', phase: 'prepare', output: 'building' }] },
   ]
   for (const frame of progressFrames) firstStream.send(frame)
   await until(() => progress.length === 2, 'Original install progress forwarded')
-  assert.deepEqual(progress, progressFrames, 'Progress must preserve original event names and arguments')
+  assert.deepEqual(progress, progressFrames.map(({event,args}) => ({event,args})), 'Progress must preserve original event names and arguments')
   assert.equal(reads, progressReads, 'Progress must not query state or synchronize the graph')
   assert.deepEqual([apply, dispose], [1, 0], 'Progress must preserve page plugin instances')
   unsubscribe()
@@ -124,7 +127,7 @@ try {
   assert.equal(failedStream.closed, true, 'Failed query releases its still-open notification stream')
   assert.equal(writes, 1, 'Recovery must not replay an uncertain write')
   currentGraph = empty
-  streams.at(-1).send({ kind: 'event', event: 'client-modules/changed', args: [] })
+  streams.at(-1).send({ type: 'emit', event: 'client-modules/changed', args: [] })
   await until(() => dispose === 1, 'Actual graph withdrawal releases effects')
   await client.close()
   const count = streams.length
@@ -151,7 +154,7 @@ console.log('PASS fixed upstream startup audit rejects import, apply and pending
 
 let pendingSignal, pendingStarted = false, aborted = false, blocked = true
 const cancellationNotifications = notifications()
-const cancellationClient = createManagementClient({ notifications: cancellationNotifications, recovery, transport: {
+const cancellationClient = createManagementClient({ events: cancellationNotifications, recovery, transport: {
   ...transport,
   async fetch(url, init) {
     if (blocked && url.endsWith('/state')) {
@@ -180,7 +183,7 @@ network.navigator = { onLine: false }
 globalThis.window = network
 const streamCount = streams.length
 const networkNotifications = notifications()
-const networkClient = createManagementClient({ notifications: networkNotifications, recovery, transport })
+const networkClient = createManagementClient({ events: networkNotifications, recovery, transport })
 await delay(20)
 assert.equal(streams.length, streamCount, 'Offline startup must not open the carrier')
 network.dispatchEvent(new Event('online'))
@@ -205,7 +208,7 @@ const closingModules = await bootClientModules({ graph, async loadBundle() {
   } }) })
 } })
 const closingNotifications = notifications()
-const closingClient = createManagementClient({ modules: closingModules, notifications: closingNotifications, recovery, transport })
+const closingClient = createManagementClient({ modules: closingModules, events: closingNotifications, recovery, transport })
 currentGraph = graph
 await until(() => closingClient.connection.getSnapshot().phase === 'connected', 'Close fixture ready')
 const writesBeforeClose = writes
@@ -241,7 +244,7 @@ try {
     const socket = new ControlledSocket()
     const connection = new TypertConnection('http://localhost/remote', fetch, () => socket)
     const remote = createRemote(connection)
-    const sibling = remote['remoteNotifications/watch']({})
+    const sibling = remote['$events']({})
     try {
       if (mode !== 'connecting') {
         socket.dispatchEvent(new Event('open'))
@@ -250,7 +253,7 @@ try {
       const controller = new AbortController()
       const reason = mode === 'pre-aborted-null' ? null : new Error('cancel before wire admission')
       if (mode.startsWith('pre-aborted')) controller.abort(reason)
-      const cancelled = remote['remoteNotifications/watch']({}, controller.signal)
+      const cancelled = remote['$events']({}, controller.signal)
       if (mode === 'immediate-dispose') await cancelled.dispose()
       else {
         if (mode === 'connecting') controller.abort(reason)
@@ -272,11 +275,11 @@ try {
   const reason = new Error('already cancelled')
   const signal = AbortSignal.abort(reason)
   try {
-    const call = fresh['remoteNotifications/watch']({}, signal)
+    const call = fresh['$events']({}, signal)
     await assert.rejects(call[Symbol.asyncIterator]().next(), error => error === reason)
     assert.equal(connections, 0, 'Pre-cancelled call must not acquire a carrier')
     const invalid = {}; invalid.self = invalid
-    const invalidCall = fresh['remoteNotifications/watch'](invalid, signal)
+    const invalidCall = fresh['$events'](invalid, signal)
     await assert.rejects(invalidCall[Symbol.asyncIterator]().next(), error => error instanceof TypeError)
     assert.equal(connections, 0, 'Local preparation failure must precede cancellation and carrier creation')
   } finally { await fresh.dispose(); await freshConnection.dispose() }
@@ -286,7 +289,7 @@ try {
 console.log('PASS pre-abort, immediate dispose and connecting cancellation send zero open frames and preserve siblings')
 
 // Remote termination owns the downlink result even while the uplink waits for input.
-const { createClient, RemoteError, RemoteStreamCarrierError } = await import(pathToFileURL(resolve(runtime, 'cordis-remote.mjs')).href)
+const { RemoteError, RemoteStreamCarrierError } = await import(pathToFileURL(resolve(runtime, 'cordis-remote.mjs')).href)
 const terminalFailures = []
 for (const input of ['waiting', 'ended', 'downlink-only']) {
   for (const terminal of ['end', 'error', 'carrier']) {

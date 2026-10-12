@@ -56,7 +56,20 @@ internal sealed class DeclarationRemoteProjection
     private NativeService Service(RemoteServiceContract contract)
     {
         var type = contract.Facts;
-        var contextReference = contract.JsonContext;
+        var serializer = Serializer(contract.JsonContext, type);
+
+        return new(
+            contract.Key,
+            contract.Namespace,
+            type.MetadataName.Replace('+', '.'),
+            serializer,
+            contract.Methods.Select(Method).ToArray(),
+            type.Documentation,
+            type.Location);
+    }
+
+    private NativeSerializerContext? Serializer(DeclarationReference? contextReference, DeclarationType type)
+    {
         NativeSerializerContext? serializer = null;
         namingPolicy = "0";
         if (contextReference is null || contextReference.Kind != "named")
@@ -104,14 +117,38 @@ internal sealed class DeclarationRemoteProjection
                 authored);
         }
 
-        return new(
-            contract.Key,
-            contract.Namespace,
-            type.MetadataName.Replace('+', '.'),
-            serializer,
-            contract.Methods.Select(Method).ToArray(),
-            type.Documentation,
-            type.Location);
+        return serializer;
+    }
+
+    internal static (NativeTypeDeclaration[] Types, NativeTypeReference[] Args, NativeTypeReference? Request,
+        NativeTypeReference? Result, bool Optional, NativeSerializerContext Serializer) EventData(
+            DeclarationModelDocument model,
+            RemoteEventContract contract,
+            DeclarationModelDocument[] references)
+    {
+        var projection = new DeclarationRemoteProjection(model, references);
+        var serializer = projection.Serializer(contract.JsonContext, contract.Facts)!;
+        var args = contract.Subject is null
+            ? contract.Parameters.Select(p => projection.Reference(p.Type)).ToArray()
+            : [];
+        var request = contract.Request is { } input ? projection.Reference(input) : null;
+        var output = contract.Result;
+        var optional = output is { Kind: "named", Arguments.Length: 1 } && model.Declarations.Any(type =>
+            type.Id == output.Name && type.MetadataName == "Cordis.Composition.RemoteOptional`1");
+        if (optional)
+            output = output!.Arguments[0];
+        var result = output is null ? null : projection.Reference(output);
+        var errors = projection
+            .diagnostics.Concat(
+                projection.declarations.Diagnostics.Where(diagnostic => diagnostic.Symbol is null ||
+                    projection.types.Keys.Any(id =>
+                        diagnostic.Symbol == id || diagnostic.Symbol.StartsWith(id + ".", StringComparison.Ordinal))))
+            .Concat(DeclarationRemoteContract.SourceDiagnostics(model, contract.Facts, contract.JsonContext))
+            .ToArray();
+        if (errors.Length != 0)
+            throw new InvalidDataException(string.Join("; ", errors.Select(e => e.Code + ": " + e.Message)));
+        return (projection.types.Values.OrderBy(type => type.Id, StringComparer.Ordinal).ToArray(), args, request,
+            result, optional, serializer);
     }
 
     private NativeMethod Method(RemoteMethodContract method)

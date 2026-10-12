@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+[assembly: TypertContext("agent", typeof(string))]
+
 var directory = Path.GetFullPath(args.Single());
 Directory.CreateDirectory(directory);
 var profile = Path.Combine(directory, "profile");
@@ -53,7 +55,6 @@ await using var session = await ProfileSession.StartAsync(
             }
         }));
 var managerContracts = PluginManagerTypert.Contribution("Cordis.Independent.Management");
-var notificationsContracts = RemoteNotificationsTypert.Contribution("Cordis.Independent.Notifications");
 var registry = new TypertRegistry(session.Context);
 var gateway = new TypertGateway(session.Context, registry);
 var denied = new ConcurrentDictionary<string, bool>(StringComparer.Ordinal);
@@ -62,6 +63,13 @@ var observations = new ConcurrentDictionary<string, TaskCompletionSource>(String
 var cancellationObservations = new ConcurrentDictionary<string, TaskCompletionSource>(StringComparer.Ordinal);
 var buildDecisions = new ConcurrentDictionary<string, BuildDecision>(StringComparer.Ordinal);
 EffectHandle events = null!;
+TypertRemoteEventDefinition[] selectedEvents =
+[
+    PluginManagerChangedEventTypert.Definition,
+    PluginInstallStateEventTypert.Definition,
+    PluginInstallLogEventTypert.Definition,
+    DecisionRequestedTypert.Forward(agent => new(agent.Context, agent.Id))
+];
 await session.Context.RunAsync(context =>
 {
     new PluginManager(
@@ -91,29 +99,27 @@ await session.Context.RunAsync(context =>
             return !denied.ContainsKey(permission.Operation);
         },
         packages);
-    new RemoteNotifications(context, gateway);
     registry.Register(context, managerContracts);
-    registry.Register(context, notificationsContracts);
     events = RegisterEvents(context);
     return Task.CompletedTask;
 });
 
 EffectHandle RegisterEvents(Context context) => gateway.RegisterRemoteEvents(
     context,
-    TypertRemoteEvents.FromCordis(
-        context,
-        [
-            new("plugin-manager/changed", [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
-            new("plugin-manager/install-state", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-            new("plugin-manager/install-log", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)])
-        ]));
+    TypertRemoteEvents.FromCordis(context, selectedEvents),
+    new TypertRemoteEventHost(launch.Home));
 
+TaskCompletionSource? eventReplyGate = null;
+var eventReplyStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 var builder = WebApplication.CreateSlimBuilder();
 builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Logging.ClearProviders();
 await using var server = builder.Build();
 server.MapGet("/client-runtime/cordis-remote.mjs", () => Results.Text(TypertClientRuntime.Module, "text/javascript"));
 server.MapGet("/client-runtime/cordis-remote.d.mts", () => Results.Text(TypertClientRuntime.Declaration, "text/plain"));
+var eventArtifact = TypertArtifacts.GenerateEvents(selectedEvents);
+server.MapGet("/client-runtime/events.mjs", () => Results.Text(eventArtifact.Module, "text/javascript"));
+server.MapGet("/client-runtime/events.d.ts", () => Results.Text(eventArtifact.Declaration, "text/plain"));
 TypertHostConnection remoteConnection = null!;
 await session.Context.RunAsync(owner =>
 {
@@ -121,17 +127,67 @@ await session.Context.RunAsync(owner =>
     return Task.CompletedTask;
 });
 server.UseWebSockets();
+server.Use(async (http, next) =>
+{
+    if (http.Request.Path.Value!.EndsWith("/$events/result", StringComparison.Ordinal) && eventReplyGate is { } gate)
+    {
+        eventReplyStarted.TrySetResult();
+        await gate.Task;
+    }
+
+    await next(http);
+});
+server.MapPost(
+    "/control/hold-event-reply",
+    () =>
+    {
+        eventReplyGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        return Results.Ok();
+    });
+server.MapPost(
+    "/control/wait-event-reply",
+    async () =>
+    {
+        await eventReplyStarted.Task;
+        return Results.Ok();
+    });
+server.MapPost(
+    "/control/release-event-reply",
+    () =>
+    {
+        eventReplyGate?.TrySetResult();
+        eventReplyGate = null;
+        return Results.Ok();
+    });
+server.MapPost(
+    "/control/decision",
+    async (HttpContext http) =>
+    {
+        Task<RemoteOptional<string?>> invocation = null!;
+        await session.Context.RunAsync(ctx =>
+        {
+            invocation = DecisionRequestedTypert.InvokeAsync(
+                ctx,
+                new EventSubject(ctx, "agent-1"),
+                new DecisionRequest(http.Request.Query["mode"].ToString()),
+                () => Task.FromResult(new RemoteOptional<string?>("fallback")),
+                http.RequestAborted);
+            return Task.CompletedTask;
+        });
+        var result = await invocation;
+        return Results.Text(
+            JsonSerializer.Serialize(
+                new DecisionReply(result.HasValue, result.HasValue ? result.Value : null),
+                DecisionJson.Default.DecisionReply),
+            "application/json");
+    });
 server.MapCordisRemote(
     "/remote",
     remoteConnection,
     (http, _) => Task.FromResult(
         (http.Request.Headers.Authorization == "consumer-policy" ||
             http.Request.Query["consumer"] == "consumer-policy")));
-foreach (var pair in new[]
-         {
-             (Name: "management", Contract: managerContracts),
-             (Name: "notifications", Contract: notificationsContracts)
-         })
+foreach (var pair in new[] { (Name: "management", Contract: managerContracts) })
 {
     var artifact = TypertArtifacts.GenerateClient(pair.Contract);
     server.MapGet("/client-runtime/" + pair.Name + ".mjs", () => Results.Text(artifact.Module, "text/javascript"));
@@ -441,3 +497,23 @@ sealed class FixtureToolchain(string directory) : IProfilePackageToolchain
             ? Directory.GetDirectories(Path.Combine(directory, "prepared"), name + "@*")
             : [];
 }
+
+public sealed record EventSubject(Context Context, string Id);
+
+public sealed record DecisionRequest(string Mode);
+
+public sealed record DecisionReply(bool HasValue, string? Value);
+
+[RemoteEvent("fixture/decision", typeof(DecisionJson))]
+public delegate Task<RemoteOptional<string?>> DecisionRequested(
+    [RemoteLookup("agent", "agentId", typeof(string))]
+    EventSubject agent,
+    DecisionRequest request,
+    Func<Task<RemoteOptional<string?>>> next,
+    CancellationToken signal);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(DecisionRequest))]
+[JsonSerializable(typeof(DecisionReply))]
+[JsonSerializable(typeof(string))]
+public partial class DecisionJson : JsonSerializerContext;

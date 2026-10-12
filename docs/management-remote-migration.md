@@ -3,7 +3,7 @@
 [中文](management-remote-migration.zh.md)
 
 The current source uses one generated `pluginManager` contract and the generated
-`remoteNotifications/watch` stream. `PluginManager` shares the running profile's
+`$events` stream. `PluginManager` shares the running profile's
 `PluginConfigurationOperations`, toolchain and installation table. The maintained CLI and
 ManagedApplication consume these contracts. This source change requires rebuilding clients;
 it does not change a published package or persisted profile format.
@@ -16,7 +16,7 @@ it does not change a published package or persisted profile format.
 | Persistent enablement | `setPluginEnabled`, `setBundleEnabled` |
 | Package installation | `inspect`, `installBundle`, `waitForInstall`, `cancelInstall`, `removeBundle` |
 | Exact runtime exemptions | `listVersionExemptions`, `setVersionExemption` |
-| Selected host notifications | `remoteNotifications/watch` |
+| Selected host notifications | `$events` |
 
 Installation uses an exact `PackageRequest { name, version, source }` and
 `PluginInstallOptions { requestId, inspectedHash, enabled? }`. NuGet sources and SDK preparation
@@ -57,8 +57,8 @@ sent explicitly as null, so the generated .NET client validates the same contrac
 ## Generated client use
 
 The build tool `tools/Cordis.ClientAssets` exports the actual runtime contributions as
-`management.mjs`, `notifications.mjs`, `settings.mjs` and their declarations. The browser SDK
-ships them through `/management`, `/notifications` and `/settings` package exports. It does not
+`management.mjs`, `events.mjs`, `settings.mjs` and their declarations. The browser SDK
+ships them through `/management`, `/events` and `/settings` package exports. It does not
 keep handwritten PluginManager DTOs or method decoders.
 
 ```js
@@ -88,14 +88,14 @@ Composition ships the selected service model at
 
 The host selects emit names and argument codecs with `TypertRemoteEvents.FromCordis`, then
 registers one source with `TypertGateway.RegisterRemoteEvents`. The Gateway runs one source
-pump and broadcasts to each subscriber. The generated watch stream first sends `{ kind: "ready" }`,
-then `{ kind: "event", event, args }`. Subscribe before reading current state and graph.
+pump and broadcasts to each subscriber. The fixed event stream first sends `{ type: "ready", clientId, host: { home } }`,
+then `{ type: "emit", event, args }`. Subscribe before reading current state and graph.
 
 Disconnect removes one observer. Source withdrawal closes all observers immediately, then
 cancels and joins the source. Events have no replay, durable delivery or exactly-once promise.
 Reconnection subscribes again and reads the current authorities. The browser recovery client
 uses the existing connection controller and retains plugins and drafts during temporary loss.
-`createManagementClient` takes a generated notification client in `options.notifications` and
+`createManagementClient` takes a generated notification client in `options.events` and
 an optional `transport.fetch`; `transport.openEvents` is removed.
 
 Iterator read and disposal errors reach the owner. C# can surface an async iterator's finally
@@ -120,3 +120,5 @@ The shared Connection uses the fixed unary envelope, unary multipart attachments
 Per-method NDJSON and generator-embedded carrier code are removed. Host-selected emit notifications
 do not complete typed uplink, reverse Context resolution, waterfalls or owned-value graphs. The original [scope ledger](development.md) and [validation record](validation.md)
 retain those responsibilities and the exact platform evidence.
+
+Typed emit and scoped waterfall authoring, reverse Context resolution and owned cleanup are described in [Remote events](remote-events.md). The former notification Remote and `/notifications` client export are removed; regenerate consumers using `/events` and `createEvents`.

@@ -8,7 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const [origin, destination] = process.argv.slice(2)
 const output = resolve(destination)
 await mkdir(output, { recursive: true })
-for (const name of ['management', 'notifications']) {
+for (const name of ['management', 'events']) {
   for (const extension of ['mjs', 'd.ts']) {
     const response = await fetch(origin + '/client-runtime/' + name + '.' + extension)
     assert.equal(response.status, 200, 'The actual host must publish its generated contract')
@@ -27,7 +27,7 @@ const ts = requireTools('typescript')
 const program = ts.createProgram([resolve(output, 'Client.ts')], {
   strict: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022,
   module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler,
-  lib: ['lib.es2022.d.ts', 'lib.dom.d.ts', 'lib.dom.iterable.d.ts'], types: [], outDir: resolve(output, 'compiled'),
+  lib: ['lib.es2022.d.ts', 'lib.dom.d.ts', 'lib.dom.iterable.d.ts', 'lib.esnext.disposable.d.ts'], types: [], outDir: resolve(output, 'compiled'),
 })
 const diagnostics = ts.getPreEmitDiagnostics(program)
 if (diagnostics.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(diagnostics, {
@@ -35,9 +35,10 @@ if (diagnostics.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(
 }))
 const emitted = program.emit()
 assert.equal(emitted.emitSkipped, false, 'Independent strict TypeScript caller was not emitted')
-for (const name of ['management', 'notifications', 'cordis-remote']) {
+for (const name of ['management', 'events', 'cordis-remote']) {
   await writeFile(resolve(output, 'compiled', name + '.mjs'), await readFile(resolve(output, name + '.mjs')))
 }
 const { run } = await import(pathToFileURL(resolve(output, 'compiled/Client.js')).href)
-await run(origin)
-console.log('PASS actual generated TypeScript PluginManager and RemoteNotifications package clients')
+const { Context } = await import(pathToFileURL(resolve(root, 'clients/modules/lib/client.mjs')).href)
+await run(origin, () => new Context())
+console.log('PASS actual generated TypeScript PluginManager and typed event package clients')

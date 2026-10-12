@@ -1,3 +1,11 @@
+using PackageProgress = Cordis.Composition.PackageProgress;
+using PluginManagerJson = Cordis.Composition.PluginManagerJson;
+using PluginInstallLogEventTypert = Cordis.Composition.PluginInstallLogEventTypert;
+using PluginInstallStateEventTypert = Cordis.Composition.PluginInstallStateEventTypert;
+using TypertRegistry = Cordis.Composition.TypertRegistry;
+using TypertRemoteEventsClient = Cordis.Composition.TypertRemoteEventsClient;
+using Cordis;
+using System.Threading.Channels;
 using RemoteStreamCarrierException = Cordis.Composition.RemoteStreamCarrierException;
 using TypertConnection = Cordis.Composition.TypertConnection;
 using System.Text.Json;
@@ -13,10 +21,10 @@ http.DefaultRequestHeaders.Authorization = new("consumer-policy");
 var address = new Uri(args.Single());
 await using var connection = new TypertConnection(http, new Uri(address, "/remote"));
 await using var manager = new PluginManagerClient(connection);
-await using var notifications = new NotificationsClient(connection);
+await using var notifications = new EventObservation(connection);
 using var observation = new CancellationTokenSource();
-await using var events = (await notifications.WatchAsync(observation.Token)).GetAsyncEnumerator();
-Assert(await Next(events) && events.Current.Kind == "ready", "Subscribe before querying inventory.");
+await notifications.StartAsync(observation.Token);
+await using var events = notifications.Read().GetAsyncEnumerator();
 var plugins = (await manager.ListPluginsAsync()).Value;
 var worker = plugins.Single(row => row.EntryId == "root:worker");
 Assert(
@@ -195,9 +203,9 @@ using (var probe = await Probe())
     Assert(
         probe.RootElement.GetProperty("cancellations").GetInt32() == 1,
         "Disconnect cancelled installation preparation.");
-await using var reconnected = new NotificationsClient(connection);
-await using var resumed = (await reconnected.WatchAsync()).GetAsyncEnumerator();
-Assert(await Next(resumed) && resumed.Current.Kind == "ready", "Fresh notification observer did not become ready.");
+await using var reconnected = new EventObservation(connection);
+await reconnected.StartAsync();
+await using var resumed = reconnected.Read().GetAsyncEnumerator();
 Assert(
     ((await manager.ListBundlesAsync()).Value).Any(row => row.Name == "existing" && row.Version == "1.0.0"),
     "Reconnect inferred installation success without querying.");
@@ -253,24 +261,23 @@ foreach (var mode in new[] { "cancelled", "failed" })
         "Typed cancellation discarded actual residual files or exit status.");
 }
 
-await using (var cancelledNotifications = new NotificationsClient(connection))
+await using (var cancelledNotifications = new EventObservation(connection))
 using (var lifetime = new CancellationTokenSource())
-await using (var reader = (await cancelledNotifications.WatchAsync(lifetime.Token)).GetAsyncEnumerator())
 {
-    Assert(await Next(reader) && reader.Current.Kind == "ready", "Cancellation observer was never subscribed.");
+    await cancelledNotifications.StartAsync(lifetime.Token);
+    await using var reader = cancelledNotifications.Read().GetAsyncEnumerator();
     var reading = ReadUntilEnd(reader);
     lifetime.Cancel();
-    await Cancelled(reading);
+    await reading.WaitAsync(TimeSpan.FromSeconds(10));
 }
 
 foreach (var control in new[] { "terminal", "incomplete", "malformed" })
 {
     await using var invalidConnection = new TypertConnection(http, new Uri(address, "/" + control));
-    await using var invalid = new NotificationsClient(invalidConnection);
-    await using var reader = (await invalid.WatchAsync()).GetAsyncEnumerator();
+    await using var invalid = new EventObservation(invalidConnection);
     if (control == "terminal")
     {
-        var error = await StreamFailure(() => reader.MoveNextAsync().AsTask(), "fixture/stream");
+        var error = await StreamFailure(() => invalid.StartAsync(), "fixture/stream");
         Assert(
             error.Details!.Value.GetProperty("stage").GetString() == "source",
             "Terminal stream error lost its details.");
@@ -279,7 +286,7 @@ foreach (var control in new[] { "terminal", "incomplete", "malformed" })
     {
         try
         {
-            await reader.MoveNextAsync();
+            await invalid.StartAsync();
             throw new InvalidOperationException("Expected a carrier failure.");
         }
         catch (RemoteStreamCarrierException)
@@ -289,20 +296,19 @@ foreach (var control in new[] { "terminal", "incomplete", "malformed" })
 }
 
 await Control("remove-source");
-await StreamFailure(
-    async () =>
-    {
-        while (await Next(resumed))
-        {
-        }
-    },
-    "gateway/service-unavailable");
+try
+{
+    await ReadUntilEnd(resumed);
+    throw new InvalidOperationException("Expected source withdrawal failure.");
+}
+catch (RemoteStreamCarrierException)
+{
+}
+
 await Control("restore-source");
-await using var restored = new NotificationsClient(connection);
-await using var restoredEvents = (await restored.WatchAsync()).GetAsyncEnumerator();
-Assert(
-    await Next(restoredEvents) && restoredEvents.Current.Kind == "ready",
-    "Removed source could not be independently remounted.");
+await using var restored = new EventObservation(connection);
+await restored.StartAsync();
+await using var restoredEvents = restored.Read().GetAsyncEnumerator();
 Assert(
     ((await manager.ListPluginsAsync()).Value).Single(row => row.EntryId == "root:worker").Enabled,
     "Notification errors changed the managed plugin outcome.");
@@ -358,10 +364,10 @@ async Task Deny(string operation, bool enabled)
 
 async Task<JsonDocument> Probe() => JsonDocument.Parse(await http.GetStringAsync(new Uri(address, "/control/probe")));
 
-static async Task<bool> Next(IAsyncEnumerator<TypertRemoteNotification> reader) =>
+static async Task<bool> Next(IAsyncEnumerator<ObservedEvent> reader) =>
     await reader.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(20));
 
-static async Task Event(IAsyncEnumerator<TypertRemoteNotification> reader, Func<TypertRemoteNotification, bool> matches)
+static async Task Event(IAsyncEnumerator<ObservedEvent> reader, Func<ObservedEvent, bool> matches)
 {
     while (await Next(reader))
         if (matches(reader.Current))
@@ -369,7 +375,7 @@ static async Task Event(IAsyncEnumerator<TypertRemoteNotification> reader, Func<
     throw new InvalidOperationException("Expected notification was not delivered.");
 }
 
-static async Task ReadUntilEnd(IAsyncEnumerator<TypertRemoteNotification> reader)
+static async Task ReadUntilEnd(IAsyncEnumerator<ObservedEvent> reader)
 {
     while (await Next(reader))
     {
@@ -382,20 +388,6 @@ static async Task<RemoteError> Failure<T>(Func<Task<Cordis.Composition.RemoteRes
     Assert(!result.Ok, "Expected Remote failure: " + code);
     Assert(result.Error.Code == code, "Wrong Remote failure: " + result.Error.Code + ", expected " + code);
     return result.Error;
-}
-
-static async Task Cancelled(Task read)
-{
-    try
-    {
-        await read.WaitAsync(TimeSpan.FromSeconds(20));
-    }
-    catch (OperationCanceledException)
-    {
-        return;
-    }
-
-    throw new InvalidOperationException("Expected stream cancellation.");
 }
 
 static async Task<RemoteError> StreamFailure(Func<Task> read, string code)
@@ -432,4 +424,58 @@ static void Assert(bool value, string reason)
 {
     if (!value)
         throw new InvalidOperationException(reason);
+}
+
+sealed record ObservedEvent(string Event, IReadOnlyList<JsonElement> Args);
+
+sealed class EventObservation : IAsyncDisposable
+{
+    private readonly Context owner = new();
+    private readonly TypertRemoteEventsClient client;
+    private readonly Channel<ObservedEvent> queue = Channel.CreateUnbounded<ObservedEvent>();
+    private Task? pump;
+    public EventObservation(TypertConnection connection) => client = new(owner, new TypertRegistry(owner), connection);
+
+    public async Task StartAsync(CancellationToken token = default)
+    {
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await owner.RunAsync(ctx =>
+        {
+            ChangedEvent.On(client, ctx, _ => queue.Writer.TryWrite(new("plugin-manager/changed", [])));
+            PluginInstallStateEventTypert.On(client, ctx, value => Publish("plugin-manager/install-state", value));
+            PluginInstallLogEventTypert.On(client, ctx, value => Publish("plugin-manager/install-log", value));
+            return Task.CompletedTask;
+        });
+        pump = Run();
+        await ready.Task.WaitAsync(TimeSpan.FromSeconds(15));
+
+        async Task Run()
+        {
+            try
+            {
+                await client.RunAsync(_ => ready.TrySetResult(), token);
+                queue.Writer.TryComplete();
+            }
+            catch (Exception error)
+            {
+                ready.TrySetException(error);
+                queue.Writer.TryComplete(error);
+            }
+        }
+    }
+
+    public IAsyncEnumerable<ObservedEvent> Read() => queue.Reader.ReadAllAsync();
+
+    private void Publish(string name, PackageProgress progress) => queue.Writer.TryWrite(
+        new(
+            name,
+            [JsonSerializer.SerializeToElement(progress, PluginManagerJson.Default.PackageProgress)]));
+
+    public async ValueTask DisposeAsync()
+    {
+        await client.DisposeAsync();
+        if (pump is not null)
+            await pump;
+        await owner.DisposeAsync();
+    }
 }

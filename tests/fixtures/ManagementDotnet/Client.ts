@@ -1,9 +1,10 @@
 import { createRemote as createManagementRemote, TypertConnection, RemoteError, type RemoteResult } from './management.mjs'
-import { createRemote as createNotificationRemote } from './notifications.mjs'
-
-type NotificationClient = ReturnType<typeof createNotificationRemote>
-type NotificationResult = ReturnType<NotificationClient['remoteNotifications/watch']> extends AsyncIterable<infer Item> ? Item : never
-type Notification = NotificationResult
+import { createEvents, type EventListeners } from './events.mjs'
+import type { RemoteEventContext } from './cordis-remote.mjs'
+import { RemoteStreamCarrierError, typertOwnedValue } from './cordis-remote.mjs'
+type Notification = { [K in keyof EventListeners]: { event: K; args: Parameters<EventListeners[K]> } }[keyof EventListeners]
+type NotificationResult = Notification
+type EventOwner = RemoteEventContext & { fiber: {dispose(): Promise<void>} }
 function assert(value: unknown, reason: string): asserts value { if (!value) throw new Error(reason) }
 function accepted<T>(result: RemoteResult<T>): T { if (!result.ok) throw result.error; return result.value }
 async function failure(call: Promise<RemoteResult<unknown>>, code: string) {
@@ -20,20 +21,19 @@ async function event(reader: AsyncIterator<NotificationResult>, match: (frame: N
 }
 
 /** Strict independent TypeScript author consuming generated declarations and the actual native Host. */
-export async function run(origin: string) {
+export async function run(origin: string, createContext: () => EventOwner) {
   const fetcher: typeof fetch = (input, init) => {
     const headers = new Headers(init?.headers)
     headers.set('Authorization', 'consumer-policy')
     return fetch(input, { ...init, headers })
   }
   const connection = new TypertConnection(origin + '/remote', fetcher, url => { url.searchParams.set('consumer', 'consumer-policy'); return new WebSocket(url) })
+  await scopedEvents(origin, connection, createContext)
   const manager = createManagementRemote(connection)
-  const notifications = createNotificationRemote(connection)
-  const observation = new AbortController()
-  const reader = notifications['remoteNotifications/watch']({}, observation.signal)[Symbol.asyncIterator]()
+  const notifications = await observe(connection, createContext)
+  const reader = notifications.reader
   const remotes = [manager, notifications]
   try {
-    assert((await next(reader)).kind === 'ready', 'Ready must precede the inventory query')
     const plugins = accepted(await manager['pluginManager/listPlugins']({}))
     const worker = plugins.find(row => row.entryId === 'root:worker')
     assert(worker?.enabled && worker.patchId === 'worker' && worker.readOnlyReason == null, 'Generated inventory lost the writable profile entry')
@@ -82,15 +82,14 @@ export async function run(origin: string) {
     await control('wait-preparing', 'existing', '2.0.0')
     const log = await event(reader, frame => frame.event === 'plugin-manager/install-log')
     assert(log.args?.length === 1 && object(log.args[0]).requestId === 'disconnected-update', 'Notification lost the original event argument')
-    observation.abort()
+    await notifications.dispose()
     await reader.return?.()
     response.abort()
     await failure(installing, 'gateway/cancelled')
     assert((await probe()).cancellations === 0, 'Request disconnect cancelled platform preparation')
-    const resumedRemote = createNotificationRemote(connection)
+    const resumedRemote = await observe(connection, createContext)
     remotes.push(resumedRemote)
-    const resumed = resumedRemote['remoteNotifications/watch']({})[Symbol.asyncIterator]()
-    assert((await next(resumed)).kind === 'ready', 'Reconnect did not subscribe again')
+    const resumed = resumedRemote.reader
     assert(accepted(await manager['pluginManager/listBundles']({})).some(row => row.name === 'existing' && row.version === '1.0.0'), 'Reconnect inferred success without querying state')
     const waiting = manager['pluginManager/waitForInstall']({ requestId: 'disconnected-update' })
     await control('wait-observed', 'disconnected-update')
@@ -107,16 +106,15 @@ export async function run(origin: string) {
     let terminal: unknown
     try { for await (const _ of { [Symbol.asyncIterator]: () => resumed }) { /* Drain queued business notifications. */ } }
     catch (error) { terminal = error }
-    assert(terminal instanceof RemoteError && terminal.code === 'gateway/service-unavailable', 'Source removal did not terminate the typed observer')
+    assert(terminal instanceof RemoteStreamCarrierError, 'Source removal did not terminate the typed observer')
     await control('restore-source')
-    const restoredRemote = createNotificationRemote(connection)
+    const restoredRemote = await observe(connection, createContext)
     remotes.push(restoredRemote)
-    const restored = restoredRemote['remoteNotifications/watch']({})[Symbol.asyncIterator]()
-    assert((await next(restored)).kind === 'ready', 'Restored source did not admit a new observer')
+    const restored = restoredRemote.reader
     assert(accepted(await manager['pluginManager/listPlugins']({})).find(row => row.entryId === 'root:worker')?.enabled, 'Notification failure changed plugin outcome')
     await restored.return?.()
   } finally {
-    observation.abort()
+    await notifications.dispose()
     await Promise.all(remotes.map(remote => remote.dispose()))
     await connection.dispose()
     await reader.return?.()
@@ -139,4 +137,106 @@ export async function run(origin: string) {
 function object(value: unknown): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('Object expected')
   return Object.fromEntries(Object.entries(value))
+}
+
+async function observe(connection: TypertConnection, createContext: () => EventOwner) {
+  const owner = createContext()
+  const client = createEvents(owner, connection)
+  const values: Notification[] = []
+  let wake: (() => void) | undefined
+  let ended = false
+  let failure: { error: unknown } | undefined
+  const publish = (frame: Notification): void => { values.push(frame); wake?.() }
+  client.on(owner, 'plugin-manager/changed', value => publish({event:'plugin-manager/changed',args:[value]}))
+  client.on(owner, 'plugin-manager/install-log', value => publish({event:'plugin-manager/install-log',args:[value]}))
+  client.on(owner, 'plugin-manager/install-state', value => publish({event:'plugin-manager/install-state',args:[value]}))
+  const controller = new AbortController()
+  let accept!: () => void
+  let reject!: (error: unknown) => void
+  const ready = new Promise<void>((resolve, refused) => { accept=resolve; reject=refused })
+  const pump = client.run(controller.signal, () => accept()).catch((error: unknown) => { failure={error}; reject(error) })
+    .finally(() => {ended=true; wake?.()})
+  await ready
+  const reader: AsyncIterator<Notification> = {
+    async next() {
+      while (!values.length && !ended) await new Promise<void>(resolve => {wake=resolve})
+      if (values.length) return {done:false,value:values.shift()!}
+      if (failure) throw failure.error
+      return {done:true,value:undefined}
+    },
+    async return() { controller.abort(); await pump; return {done:true,value:undefined} },
+  }
+  return {reader, async dispose() {controller.abort(); await client.dispose(); await pump; await owner.fiber.dispose()} }
+}
+
+async function scopedEvents(origin: string, connection: TypertConnection, createContext: () => EventOwner) {
+  const owner = createContext()
+  let resolves = 0, releases = 0, adapterReads = 0
+  const releaseCount = (): number => releases
+  let owned = false
+  const events = createEvents(owner, connection, {getClient(key) {
+    assert(key === 'agent', 'Fixed agent adapter key changed')
+    adapterReads++
+    return { resolve(identity) {
+      assert(identity === 'agent-1', 'Host subject identity was not projected')
+      resolves++
+      return owned ? typertOwnedValue(owner, () => {releases++}) : owner
+    }}
+  }})
+  let settle!: () => void
+  let entered!: () => void
+  let cancelled!: () => void
+  const holding = new Promise<void>(resolve => {settle=resolve})
+  const entry = new Promise<void>(resolve => {entered=resolve})
+  const cancellation = new Promise<void>(resolve => {cancelled=resolve})
+  events.on(owner, 'fixture/decision', async (request, next) => {
+    assert(request.agent === owner, 'Reverse Context did not replace the Host subject')
+    if (request.mode === 'next') return next()
+    if (request.mode === 'undefined') return undefined
+    if (request.mode === 'hold') {
+      request.signal.addEventListener('abort', () => cancelled(), {once:true})
+      entered()
+      await holding
+      assert(releaseCount() === 2, 'Cancelled handler lost its owned Context before settlement')
+    }
+    return null
+  })
+  const signal = new AbortController()
+  let ready!: () => void
+  const opening = new Promise<void>(resolve => {ready=resolve})
+  const pump = events.run(signal.signal, () => ready())
+  try {
+    await opening
+    const ask = (mode: string, signal?: AbortSignal) => fetch(origin + '/control/decision?mode=' + mode, {method:'POST',signal})
+    const next = object(await (await ask('next')).json())
+    assert(next.hasValue === true && next.value === 'fallback' && releaseCount() === 0, 'Borrowed continuation changed or was released')
+    owned = true
+    const absent = object(await (await ask('undefined')).json())
+    assert(absent.hasValue === false, 'Undefined was converted to null or continuation')
+    await fetch(origin + '/control/hold-event-reply', {method:'POST'})
+    const answered = ask('null')
+    await fetch(origin + '/control/wait-event-reply', {method:'POST'})
+    assert(releaseCount() === 1, 'Owned Context was released before its reply settled')
+    await fetch(origin + '/control/release-event-reply', {method:'POST'})
+    const nil = object(await (await answered).json())
+    assert(nil.hasValue === true && nil.value === null, 'Explicit null was lost')
+    const abort = new AbortController()
+    const pending = ask('hold', abort.signal).catch((error: unknown) => error)
+    await entry
+    abort.abort()
+    await cancellation
+    const closing = events.dispose()
+    let closed = false
+    void closing.then(() => {closed=true})
+    await Promise.resolve()
+    assert(!closed && releaseCount() === 2, 'Cancellation released active owned work')
+    settle()
+    await closing
+    await pending
+    assert(releaseCount() === 3 && resolves === 4 && adapterReads === 4, 'Resolution/release was cached, skipped or duplicated')
+    owner.on('borrowed-owner-alive', () => {})
+  } finally {
+    settle(); signal.abort()
+    await events.dispose(); await pump; await owner.fiber.dispose()
+  }
 }

@@ -104,7 +104,7 @@ const server = createServer(async (request, response) => {
       : url.pathname === '/shared-check.mjs' ? resolve(root, 'clients/modules/examples/shared/check.mjs')
       : url.pathname === '/client-runtime/client.mjs' ? resolve(runtime, 'client.mjs')
       : url.pathname === '/client-runtime/cordis-remote.mjs' ? resolve(runtime, 'cordis-remote.mjs')
-      : url.pathname === '/client-runtime/notifications.mjs' ? resolve(runtime, 'notifications.mjs') : undefined
+      : url.pathname === '/client-runtime/events.mjs' ? resolve(runtime, 'events.mjs') : undefined
     if (file === undefined) { response.writeHead(404); response.end(); return }
     response.writeHead(200, { 'content-type': ['/', '/shared', '/recovery'].includes(url.pathname) ? 'text/html' : 'text/javascript' })
     response.end(await readFile(file))

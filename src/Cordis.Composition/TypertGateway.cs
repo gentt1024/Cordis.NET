@@ -131,6 +131,13 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         {
             await caller.RunAsync(async _ =>
             {
+                if (endpoint == TypertEventProtocol.Result)
+                {
+                    await ReceiveRemoteEventResultAsync(arguments);
+                    result = TypertRemoteResult.Success(default);
+                    return;
+                }
+
                 var prepared = await PrepareAsync(endpoint, arguments);
                 if (prepared.Descriptor.IsStream)
                     throw Fault("gateway/signature-invalid", endpoint, "A stream method requires the stream carrier.");
@@ -198,6 +205,13 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         TypertPeer? peer,
         IAsyncEnumerable<JsonElement>? uplink = null)
     {
+        if (endpoint == TypertEventProtocol.Stream)
+        {
+            await foreach (var frame in ReadRemoteEventsAsync(arguments, cancellationToken))
+                yield return frame;
+            yield break;
+        }
+
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         Prepared? prepared = null;
         TypertUplinkReader? input = null;

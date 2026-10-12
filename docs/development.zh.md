@@ -72,7 +72,7 @@ const modules = await bootClientModules({
 既有验证流程运行 `verify-client-shared-modules.mjs`，由独立插件消费构建后的公开包，使用注入的 Node transport。既有浏览器验证载体的 `/shared` 页面另行验证真实默认/自定义 script transport 和缺失供应者。这些结果不替代原生目录测试、上游断言或托管验证。
 
 
-浏览器首次启动调用固定 web 激活审计；导入失败、激活失败和等待缺失服务的 Pending 条目会拒绝启动并清理。暂时断线保留插件和草稿。公开客户端在 `options.notifications` 接受生成通知客户端，并接受 `transport.fetch`、`recovery` 及手动 `reconnect()`。固定连接控制器在生成 NDJSON 订阅上负责握手截止、重试/退避和离线/上线处理；收到订阅就绪后读取完整 state 和 graph。关闭所有者会拒绝新写入、取消读取并等待撤销。恢复不重放结果未知的写操作。
+浏览器首次启动调用固定 web 激活审计；导入失败、激活失败和等待缺失服务的 Pending 条目会拒绝启动并清理。暂时断线保留插件和草稿。公开客户端在 `options.events` 接受生成通知客户端，并接受 `transport.fetch`、`recovery` 及手动 `reconnect()`。固定连接控制器在固定 `$events` mux 订阅上负责握手截止、重试/退避和离线/上线处理；收到订阅就绪后读取完整 state 和 graph。关闭所有者会拒绝新写入、取消读取并等待撤销。恢复不重放结果未知的写操作。
 
 ## 应用调用
 
@@ -418,3 +418,7 @@ G01 在既有共同声明中采用 `[RemoteUplink] IAsyncEnumerable<T>`。生成
 `fbcdf20` 审查关闭了原 F02/F04，但发现活动 JS 上行关闭路径的 R01，以及集合结果元数据的 R02。两者均已在修前实际复现。续建分支的 `85ec46a` 承接这组有界修正，其完整 Git tree 与隔离验证源码 `29d7c4a` 相同。没有修改公开签名、依赖或 wire 格式。主要回归扩展 `verify-client-lifecycle.mjs` 和 `TypertBinaryTests`，使用既有公开工厂与生产 runtime。
 
 反向 Context、owned value 和固定事件仍是独立的未提交施工。初步的 handler／回复寿命检查不构成事件、模型与消费者的完整验收。后续沿固定 `$events` 工作流继续，保留每次读取当前 adapter 和借用资源的所有权边界，不另造队列终止策略，也不把选定通知切片当作最终事件合同。本次修正证据记录于 validation.zh.md，不替换此前回执。
+
+`c3db1f9` 之后的事件续建已将共同模型委托声明、生成式 Host 选择和 .NET／TS 类型化监听接到固定 `$events` 帧。16 个 Gateway 场景保留源撤销、JSON 快照及清理失败阻止替换的回归，并检查待决 waterfall 重投、旧 client 拒绝、回复幂等和 next／undefined／null／rejected 结果。6 个 loopback ASP.NET／.NET 场景实际消费生成声明，检查借用所有权、不同结果及 handler／回复结算后的 owned 释放，包括 Connection 主动释放。定向入口为 `RemoteEventsGatewayTests` 和 `RemoteEventsTests`。初步包消费者已从包内共同模型编译独立类型化事件监听，并运行真实 .NET／TS 管理调用；TS 消费者还检查反向 Context 和 owned 结算。旧通知 Remote／导出及手写观察入口已移除。源码测试 871 项通过，但这些初步结果属于工作树证据，不是冻结候选包门禁。最终候选证据另记于 validation.zh.md。直接 Gateway 的 operatorPeer fallback、浏览器 scoped 消费和其余模型／后端职责仍开放。
+
+Chief 对 `c3db1f9` 的审查关闭 R01／R02，并保持 F02／F04 关闭。独立 JS 探针验证了队列修正；C# 执行仍属实施者证据。旧回执保留原源码与包身份。当前事件建设另行贯通共同委托声明、类型化监听和标准包消费者，不属于旧修正回执的验证范围。

@@ -1,5 +1,5 @@
 import { ConnectionController, type ConnectionRecoveryConfig, type ConnectionGenerationSource } from '@cordis-net/connection'
-import type { RemoteClient as NotificationClient } from '../.types/standard/notifications.js'
+import type { EventsClient, EventListeners } from '../.types/standard/events.js'
 import type { ClientModules } from './index.ts'
 
 export interface ManagementState {
@@ -20,8 +20,7 @@ export interface ConfigurationChange {
   readonly error: string | null; readonly diagnostic: string | null; readonly recoveryErrors: readonly string[] | null
 }
 export interface ConfigurationView { readonly entryId: string; readonly revision: string; readonly raw: unknown }
-type NotificationResult = ReturnType<NotificationClient['remoteNotifications/watch']> extends AsyncIterable<infer Item> ? Item : never
-export type ManagementEvent = NotificationResult
+export type ManagementEvent = { [K in keyof EventListeners]: { readonly event: K; readonly args: Parameters<EventListeners[K]> } }[keyof EventListeners]
 
 /** A transport refusal has a known response; it is distinct from an unobserved mutation outcome. */
 export class ManagementHttpError extends Error {
@@ -67,8 +66,8 @@ export interface ManagementTransport {
   fetch?: (url: string, init: RequestInit) => Promise<Response>
 }
 export interface ManagementClientOptions {
-  /** The actual generated RemoteNotifications client, owned by the shell. */
-  readonly notifications: NotificationClient
+  /** The generated selected event client, owned by the shell. */
+  readonly events: EventsClient
   readonly baseUrl?: string
   readonly modules?: ClientModules
   readonly transport?: ManagementTransport
@@ -129,7 +128,6 @@ export function createManagementClient(options: ManagementClientOptions): Manage
     if (signal.aborted || closed) return
     readController = new AbortController()
     eventGeneration = undefined
-    let subscribed = false
     let ended = false
     const abort = (): void => { epoch++; readController.abort() }
     signal.addEventListener('abort', abort, { once: true })
@@ -154,26 +152,34 @@ export function createManagementClient(options: ManagementClientOptions): Manage
       })
       await refresh
     }
-    try {
-      for await (const event of options.notifications['remoteNotifications/watch']({}, signal)) {
-        if (signal.aborted || closed) return
-        if (event.kind === 'ready') {
-          if (subscribed) throw new Error('Notification subscription sent duplicate readiness')
-          subscribed = true
-          await synchronize(true)
-        } else if (event.kind === 'event') {
-          if (!subscribed) throw new Error('Notification arrived before subscription readiness')
-          if (!event.event?.startsWith('plugin-manager/install-')) await synchronize(false)
-          for (const listener of [...events]) {
-            try { listener(event) } catch (error) { console.error('management: event subscriber failed', error) }
-          }
-        } else throw new Error('Unknown notification item')
+    const failure = new AbortController()
+    const stop: (() => unknown)[] = []
+    const receive = (event: ManagementEvent): void => {
+      if (signal.aborted || ended || closed) return
+      const delivery = async (): Promise<void> => {
+        if (!event.event.startsWith('plugin-manager/install-')) await synchronize(false)
+        for (const listener of [...events]) {
+          try { listener(event) } catch (error) { console.error('management: event subscriber failed', error) }
+        }
       }
-      if (!signal.aborted && !closed) throw new Error('Notification subscription ended')
+      void delivery().catch((error: unknown) => { failure.abort(error) })
+    }
+    const on = options.events.on.bind(options.events)
+    const caller = options.events.context
+    stop.push(on(caller, 'plugin-manager/changed', value => receive({ event: 'plugin-manager/changed', args: [value] })))
+    stop.push(on(caller, 'plugin-manager/install-state', value => receive({ event: 'plugin-manager/install-state', args: [value] })))
+    stop.push(on(caller, 'plugin-manager/install-log', value => receive({ event: 'plugin-manager/install-log', args: [value] })))
+    stop.push(on(caller, 'settings/document-updated', (ns, revision) => receive({ event: 'settings/document-updated', args: [ns, revision] })))
+    stop.push(on(caller, 'app-boot/config-reload', () => receive({ event: 'app-boot/config-reload', args: [] })))
+    stop.push(on(caller, 'client-modules/changed', () => receive({ event: 'client-modules/changed', args: [] })))
+    try {
+      await options.events.run(AbortSignal.any([signal, failure.signal]), async () => { await synchronize(true) })
+      if (failure.signal.aborted) throw failure.signal.reason
     } catch (error) {
       if (!signal.aborted && !closed) publish({ phase: 'disconnected', diagnostic: error instanceof Error ? error.message : String(error) })
     } finally {
       ended = true
+      for (const dispose of stop) dispose()
       abort()
       signal.removeEventListener('abort', abort)
     }

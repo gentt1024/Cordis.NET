@@ -5,7 +5,28 @@ using System.Threading.Channels;
 namespace Cordis.Composition;
 
 /// <summary>One host-selected emit event and the explicit codec for each original argument.</summary>
-public sealed record TypertRemoteEventDefinition(string Event, IReadOnlyList<TypertCodec> Args);
+public sealed record TypertRemoteEventDefinition(string Event, IReadOnlyList<TypertCodec> Args)
+{
+    /// <summary>The projected request codec for a scoped waterfall; null for an emit.</summary>
+    public TypertCodec? Request
+    {
+        get;
+        internal init;
+    }
+
+    /// <summary>The business result codec for a scoped waterfall.</summary>
+    public TypertCodec? Result
+    {
+        get;
+        internal init;
+    }
+
+    internal Func<Context, string, Action<TypertRemoteEventDispatch>, EffectHandle>? Subscribe
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>Adapters for a host's explicit selection of Cordis emit notifications.</summary>
 public static class TypertRemoteEvents
@@ -14,7 +35,7 @@ public static class TypertRemoteEvents
     /// <remarks>
     /// The event names, argument count and codecs belong to the host. Encoding failure ends the source
     /// with gateway/event-invalid and leaves the triggering emit operation's result intact. The source
-    /// does not dispatch waterfalls, select product events or serialize undeclared CLR objects.
+    /// forwards only selected declarations; it does not select product events or serialize undeclared CLR objects.
     /// </remarks>
     public static TypertRemoteEventSource FromCordis(
         Context owner,
@@ -43,12 +64,61 @@ public static class TypertRemoteEvents
         return cancellationToken => Open(owner, definitions, cancellationToken);
     }
 
-    private static IAsyncEnumerable<TypertRemoteEventFrame> Open(
+    /// <summary>Bind a selected scoped declaration to the Host's subject projection.</summary>
+    public static TypertRemoteEventDefinition Waterfall<TSubject, TRequest, TResult>(
+        string name,
+        TypertCodec request,
+        TypertCodec result,
+        Func<TSubject, TypertRemoteEventTarget> project)
+        where TSubject : class
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        return new(name, [])
+        {
+            Request = request,
+            Result = result,
+            Subscribe = (owner, eventName, publish) => owner.On(
+                eventName,
+                (evt, args) => Invoke(eventName, evt, args, publish))
+        };
+
+        async Task<object?> Invoke(
+            string eventName,
+            EventContext evt,
+            object?[] args,
+            Action<TypertRemoteEventDispatch> publish)
+        {
+            if (args.Length != 3 || args[0] is not TSubject subject || !ReferenceEquals(evt.Receiver, subject))
+                return await TypertRemoteEventsClient.AwaitAsync(evt.Next());
+            var target = project(subject);
+            var payload = request.Encode((TRequest)args[1]!);
+            TypertEventProtocol.Request(payload);
+            var completion =
+                new TaskCompletionSource<TypertRemoteEventOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+            publish(
+                new TypertRemoteEventInvocation(
+                    eventName,
+                    target.Context,
+                    target.AgentId,
+                    payload,
+                    (CancellationToken)args[2]!,
+                    value => completion.TrySetResult(value),
+                    error => completion.TrySetException(error)));
+            return await completion.Task is TypertRemoteEventOutcome.Result answer
+                ? result.Decode(answer.Value)
+                : await TypertRemoteEventsClient.AwaitAsync(evt.Next());
+        }
+    }
+
+    /// <summary>Await an event result through the existing Cordis waterfall dispatcher.</summary>
+    public static async Task<T> AwaitResult<T>(object? value) => (T)(await TypertRemoteEventsClient.AwaitAsync(value))!;
+
+    private static IAsyncEnumerable<TypertRemoteEventDispatch> Open(
         Context owner,
         IReadOnlyList<TypertRemoteEventDefinition> definitions,
         CancellationToken cancellationToken)
     {
-        var queue = Channel.CreateUnbounded<TypertRemoteEventFrame>(
+        var queue = Channel.CreateUnbounded<TypertRemoteEventDispatch>(
             new()
             {
                 SingleReader = true,
@@ -60,6 +130,21 @@ public static class TypertRemoteEvents
         try
         {
             foreach (var definition in definitions)
+            {
+                if (definition.Subscribe is { } subscribe)
+                {
+                    listeners.Add(
+                        subscribe(
+                            owner,
+                            definition.Event,
+                            frame =>
+                            {
+                                if (ended || !queue.Writer.TryWrite(frame))
+                                    throw new InvalidOperationException("The Remote event source has ended.");
+                            }));
+                    continue;
+                }
+
                 listeners.Add(
                     owner.On(
                         definition.Event,
@@ -83,7 +168,8 @@ public static class TypertRemoteEvents
                                     values[index] = value.Clone();
                                 }
 
-                                queue.Writer.TryWrite(new(definition.Event, Array.AsReadOnly(values)));
+                                queue.Writer.TryWrite(
+                                    new TypertRemoteEventFrame(definition.Event, Array.AsReadOnly(values)));
                             }
                             catch (Exception error)
                             {
@@ -98,6 +184,7 @@ public static class TypertRemoteEvents
 
                             return Undefined.Value;
                         }));
+            }
         }
         catch (Exception error)
         {
@@ -107,7 +194,7 @@ public static class TypertRemoteEvents
 
         return Iterate(cancellationToken);
 
-        async IAsyncEnumerable<TypertRemoteEventFrame> Iterate(
+        async IAsyncEnumerable<TypertRemoteEventDispatch> Iterate(
             [EnumeratorCancellation] CancellationToken lifetime)
         {
             try

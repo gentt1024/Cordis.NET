@@ -718,7 +718,9 @@ public sealed record TypertHostContextAdapter(
     Func<object?, ValueTask<Context?>> Resolve);
 
 /// <summary>Client Context-to-wire and wire-to-Context provider.</summary>
-public sealed record TypertClientContextAdapter(Func<Context, object?> Identity, Func<object?, Context?> Resolve);
+public sealed record TypertClientContextAdapter(
+    Func<Context, object?> Identity,
+    Func<object?, TypertResolvedContext?> Resolve);
 
 /// <summary>Committed registry notification.</summary>
 public sealed record TypertRegistryChange(string Kind, string Key);

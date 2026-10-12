@@ -112,7 +112,6 @@ var management = new CordisManagement(
 management.Map(app);
 var settingsContracts = SettingsControllerTypert.Contribution("Cordis.ManagedApplication.Settings");
 var managerContracts = PluginManagerTypert.Contribution("Cordis.ManagedApplication.Management");
-var notificationContracts = RemoteNotificationsTypert.Contribution("Cordis.ManagedApplication.Notifications");
 var registry = new TypertRegistry(session.Context);
 var gateway = new TypertGateway(session.Context, registry);
 await session.Context.RunAsync(context =>
@@ -123,22 +122,10 @@ await session.Context.RunAsync(context =>
         _ => new SettingsPolicy(["limit", "label", "credential"]));
     new SettingsController(context);
     registry.Register(context, settingsContracts);
-    new RemoteNotifications(context, gateway);
-    registry.Register(context, notificationContracts);
     gateway.RegisterRemoteEvents(
         context,
-        TypertRemoteEvents.FromCordis(
-            context,
-            [
-                new("plugin-manager/changed", [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
-                new("plugin-manager/install-state", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-                new("plugin-manager/install-log", [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-                new(
-                    "settings/document-updated",
-                    [TypertCodec.Create(SettingsJson.Default.String), TypertCodec.Create(SettingsJson.Default.Double)]),
-                new("app-boot/config-reload", []),
-                new("client-modules/changed", []),
-            ]));
+        TypertRemoteEvents.FromCordis(context, StandardRemoteEvents.Definitions),
+        new TypertRemoteEventHost(launch.Home));
     return Task.CompletedTask;
 });
 await management.MountPluginManagerAsync(
@@ -159,12 +146,10 @@ app.MapCordisRemote(
     (http, _) => Task.FromResult(Authorized(http)));
 app.MapGet("/client-runtime/cordis-remote.mjs", () => Results.Text(TypertClientRuntime.Module, "text/javascript"));
 app.MapGet("/client-runtime/cordis-remote.d.mts", () => Results.Text(TypertClientRuntime.Declaration, "text/plain"));
-foreach (var (name, contracts) in new[]
-         {
-             ("settings", settingsContracts),
-             ("management", managerContracts),
-             ("notifications", notificationContracts)
-         })
+var eventArtifact = TypertArtifacts.GenerateEvents(StandardRemoteEvents.Definitions);
+app.MapGet("/client-runtime/events.mjs", () => Results.Text(eventArtifact.Module, "text/javascript"));
+app.MapGet("/client-runtime/events.d.ts", () => Results.Text(eventArtifact.Declaration, "text/plain"));
+foreach (var (name, contracts) in new[] { ("settings", settingsContracts), ("management", managerContracts) })
 {
     var client = TypertArtifacts.GenerateClient(contracts);
     app.MapGet("/client-runtime/" + name + ".mjs", () => Results.Text(client.Module, "text/javascript"));

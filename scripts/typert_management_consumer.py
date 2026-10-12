@@ -24,13 +24,13 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
             if declaration["accessibility"] == "Public"
             for attribute in declaration["attributes"]
             if attribute["name"] == "Cordis.Composition.RemoteServiceAttribute"]
-        if any(service_keys.count(key) != 1 for key in ("pluginManager", "remoteNotifications")):
-            raise RuntimeError("The package must contain the actual standard PluginManager and RemoteNotifications model.")
+        if any(service_keys.count(key) != 1 for key in ("pluginManager",)):
+            raise RuntimeError("The package must contain the actual standard PluginManager model.")
     contracts = []
     contract_feed = source / "author-feed"
     for service, name, namespace in (
         ("pluginManager", "PluginManagerClient", "IndependentManagement.Manager"),
-        ("remoteNotifications", "NotificationsClient", "IndependentManagement.Notifications"),
+        ("plugin-manager/changed", "ChangedEvent", "IndependentManagement.Notifications"),
     ):
         package_id = "IndependentManagement." + ("Manager" if service == "pluginManager" else "Notifications") + ".Contracts"
         folder, path = project("ManagementContracts" if service == "pluginManager" else "NotificationContracts",
@@ -41,7 +41,7 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
             f'<CordisTypertClientName>{name}</CordisTypertClientName>', composition,
             f'<ItemGroup><None Include="{model_name}" Pack="true" PackagePath="cordis/typert/"/></ItemGroup>')
         (folder / model_name).write_bytes(model_bytes)
-        run("standard-" + service + "-client-pack", [dotnet, "pack", path, "-c", "Release", "-o", contract_feed])
+        run("standard-" + service.replace("/", "-") + "-client-pack", [dotnet, "pack", path, "-c", "Release", "-o", contract_feed])
         contracts.append(f'<PackageReference Include="{package_id}" Version="1.0.0-alpha"/>')
     host, host_project = project("ManagementHost", '<OutputType>Exe</OutputType>', composition +
         f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>'

@@ -94,7 +94,7 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
                                 for attribute in declaration["attributes"]
                                 if attribute["name"] == "Cordis.Composition.RemoteServiceAttribute"]
                 assert len(service_keys) == 3 and set(service_keys) == {
-                    "settingsController", "pluginManager", "remoteNotifications"
+                    "settingsController", "pluginManager"
                 }, (identity, service_keys)
                 assert not any(PurePosixPath(name).name.startswith("Microsoft.CodeAnalysis") for name in entries), identity
 

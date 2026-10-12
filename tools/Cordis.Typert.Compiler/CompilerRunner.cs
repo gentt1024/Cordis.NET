@@ -106,6 +106,22 @@ internal static class CompilerRunner
                 .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
                 .ToArray()
             : [];
+        var eventDeclaration = model.Declarations.SingleOrDefault(type =>
+        {
+            var marker = DeclarationAttributeProjection.Attribute(
+                type.Attributes,
+                "Cordis.Composition.RemoteEventAttribute");
+            return model.Roots.Contains(type.Id) && marker is not null &&
+                (type.MetadataName == service ||
+                    DeclarationAttributeProjection.String(marker.Arguments.FirstOrDefault()) == service);
+        });
+        if (eventDeclaration is not null)
+            return DotnetProjectionEmitter.EmitEvent(
+                model,
+                DeclarationEventContract.Read(model, eventDeclaration.Id),
+                references,
+                Required(options, "namespace"),
+                Required(options, "client"));
         return DotnetProjectionEmitter.Emit(
             DeclarationRemoteProjection.Project(model, service, references),
             Required(options, "namespace"),

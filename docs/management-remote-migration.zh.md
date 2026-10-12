@@ -2,7 +2,7 @@
 
 [English](management-remote-migration.md)
 
-当前源码使用唯一的生成式 `pluginManager` 合同及生成式 `remoteNotifications/watch` 流。
+当前源码使用唯一的生成式 `pluginManager` 合同及生成式 `$events` 流。
 `PluginManager` 共用运行 Profile 的 `PluginConfigurationOperations`、工具链和安装任务表。
 维护中的 CLI 与 ManagedApplication 消费这些合同。本次源码修改要求重建客户端，不改变已发布包或持久 Profile 格式。
 
@@ -14,7 +14,7 @@
 | 持久启停 | `setPluginEnabled`、`setBundleEnabled` |
 | 包安装 | `inspect`、`installBundle`、`waitForInstall`、`cancelInstall`、`removeBundle` |
 | 精确 runtime 豁免 | `listVersionExemptions`、`setVersionExemption` |
-| 宿主选择的通知 | `remoteNotifications/watch` |
+| 宿主选择的通知 | `$events` |
 
 安装使用精确的 `PackageRequest { name, version, source }` 与
 `PluginInstallOptions { requestId, inspectedHash, enabled? }`。
@@ -47,8 +47,8 @@ manifest 和 patch 仍要求成功读取其来源。
 ## 生成客户端用法
 
 构建工具 `tools/Cordis.ClientAssets` 从实际运行贡献导出
-`management.mjs`、`notifications.mjs`、`settings.mjs` 及其声明。
-浏览器 SDK 通过 `/management`、`/notifications`、`/settings` 包导出供应这些制品，不保留手写 PluginManager DTO 或方法解码器。
+`management.mjs`、`events.mjs`、`settings.mjs` 及其声明。
+浏览器 SDK 通过 `/management`、`/events`、`/settings` 包导出供应这些制品，不保留手写 PluginManager DTO 或方法解码器。
 
 ```js
 import { createRemote, TypertConnection } from '@cordis-net/client-modules/management'
@@ -75,13 +75,13 @@ Composition 在 `cordis/typert/Cordis.Composition.cordis.model.json` 供应选�
 
 宿主通过 `TypertRemoteEvents.FromCordis` 选择 emit 名称及参数 codec，再以
 `TypertGateway.RegisterRemoteEvents` 注册唯一源。Gateway 运行一个 source pump，向各订阅者广播。
-生成 watch 流先发送 `{ kind: "ready" }`，随后发送 `{ kind: "event", event, args }`。
+固定事件流先发送 `{ type: "ready", clientId, host: { home } }`，随后发送 `{ type: "emit", event, args }`。
 先订阅，再读取当前 state 和 graph。
 
 断线只移除一个观察者。撤销源立即关闭所有观察者，再取消并等待源结束。
 通知不提供重放、持久交付或恰好一次保证。重连重新订阅并读取现有权威。
 浏览器恢复客户端复用既有 connection controller，暂时断线时保留插件和草稿。
-`createManagementClient` 在 `options.notifications` 接受生成通知客户端，可选 `transport.fetch`；
+`createManagementClient` 在 `options.events` 接受生成通知客户端，可选 `transport.fetch`；
 `transport.openEvents` 已退出。
 
 迭代读取和释放异常传到所有者。C# 可能通过 `MoveNextAsync` 抛出 async iterator 的 finally 异常，
@@ -102,3 +102,5 @@ Maker 适配属于其自己的会话：重新生成客户端、绑定当前宿�
 每方法 NDJSON 与生成器内嵌 carrier 已退出。宿主选择的 emit 通知尚未闭环 typed uplink、反向 Context 解析、
 waterfall 或 owned-value 图。
 原[范围账本](development.zh.md)与[验证记录](validation.zh.md)继续记录这些职责及精确平台证据。
+
+类型化 emit／scoped waterfall 作者声明、反向 Context 解析与 owned 清理见[Remote 事件](remote-events.zh.md)。原通知 Remote 和 `/notifications` 客户端导出已退出；消费者重新生成并使用 `/events` 与 `createEvents`。

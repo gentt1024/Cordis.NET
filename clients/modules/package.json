@@ -18,9 +18,9 @@
       "types": "./lib/types/standard/management.d.ts",
       "default": "./lib/management.mjs"
     },
-    "./notifications": {
-      "types": "./lib/types/standard/notifications.d.ts",
-      "default": "./lib/notifications.mjs"
+    "./events": {
+      "types": "./lib/types/standard/events.d.ts",
+      "default": "./lib/events.mjs"
     },
     "./settings": {
       "types": "./lib/types/standard/settings.d.ts",

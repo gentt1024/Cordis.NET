@@ -130,30 +130,18 @@ internal static class ApplicationCommands
                             ns => new SettingsPolicy(settings.GetValueOrDefault(ns) ?? []));
                         new SettingsController(context);
                         registry.Register(context, SettingsControllerTypert.Contribution("Cordis.Cli.Settings"));
-                        new RemoteNotifications(context, gateway);
-                        registry.Register(context, RemoteNotificationsTypert.Contribution("Cordis.Cli.Notifications"));
                         gateway.RegisterRemoteEvents(
                             context,
                             TypertRemoteEvents.FromCordis(
                                 context,
                                 [
-                                    new(
-                                        "plugin-manager/changed",
-                                        [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
-                                    new(
-                                        "plugin-manager/install-state",
-                                        [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-                                    new(
-                                        "plugin-manager/install-log",
-                                        [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-                                    new(
-                                        "settings/document-updated",
-                                        [
-                                            TypertCodec.Create(SettingsJson.Default.String),
-                                            TypertCodec.Create(SettingsJson.Default.Double)
-                                        ]),
-                                    new("app-boot/config-reload", []),
-                                ]));
+                                    PluginManagerChangedEventTypert.Definition,
+                                    PluginInstallStateEventTypert.Definition,
+                                    PluginInstallLogEventTypert.Definition,
+                                    SettingsDocumentUpdatedEventTypert.Definition,
+                                    ConfigurationReloadEventTypert.Definition,
+                                ]),
+                            new TypertRemoteEventHost(launch.Home));
                         return Task.CompletedTask;
                     });
                     TypertHostConnection remoteConnection = null!;

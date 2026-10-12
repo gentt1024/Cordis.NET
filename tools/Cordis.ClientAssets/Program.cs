@@ -7,7 +7,9 @@ Directory.CreateDirectory(directory);
 Save("cordis-remote.mjs", TypertClientRuntime.Module);
 Save("cordis-remote.d.mts", TypertClientRuntime.Declaration);
 Write("management", PluginManagerTypert.Contribution("Cordis.NET.PluginManager"));
-Write("notifications", RemoteNotificationsTypert.Contribution("Cordis.NET.Notifications"));
+var events = TypertArtifacts.GenerateEvents(StandardRemoteEvents.Definitions);
+Save("events.mjs", events.Module);
+Save("events.d.ts", events.Declaration);
 Write("settings", SettingsControllerTypert.Contribution("Cordis.NET.Settings"));
 
 void Write(string name, TypertContribution contribution)

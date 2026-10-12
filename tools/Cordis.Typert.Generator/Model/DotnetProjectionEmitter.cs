@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Cordis.Typert.Generator.Model;
 
-internal sealed class DotnetProjectionEmitter
+internal sealed partial class DotnetProjectionEmitter
 {
     private readonly RemoteProjection? model;
     private readonly string client;
@@ -30,7 +30,8 @@ internal sealed class DotnetProjectionEmitter
         NativeTypeReference[] roots,
         string identity,
         string targetNamespace,
-        string context)
+        string context,
+        NativeSerializerContext? serializer = null)
     {
         if (targetNamespace.Split('.').Any(part => !SyntaxFacts.IsValidIdentifier(part)))
             throw new InvalidDataException("Data namespace must contain valid C# identifiers.");
@@ -47,15 +48,34 @@ internal sealed class DotnetProjectionEmitter
             .AppendLine("#nullable enable")
             .AppendLine("using System.Text.Json;")
             .AppendLine("using System.Text.Json.Serialization;")
+            .AppendLine("using System.Text.Json.Serialization.Metadata;")
             .AppendLine("namespace " + targetNamespace + ";");
         foreach (var id in emitter.reachable.Order(StringComparer.Ordinal))
-            emitter.EmitType(emitter.declarations[id], dataCarrier: true);
-        emitter.output.AppendLine(
-            "[global::System.Text.Json.Serialization.JsonSourceGenerationOptions(GenerationMode = global::System.Text.Json.Serialization.JsonSourceGenerationMode.Metadata, RespectNullableAnnotations = true, RespectRequiredConstructorParameters = true)]");
-        foreach (var id in emitter.reachable.Order(StringComparer.Ordinal))
+            emitter.EmitType(emitter.declarations[id], dataCarrier: serializer is null);
+        emitter.output.AppendLine("/// <summary>JSON metadata for the selected declaration data.</summary>");
+        if (serializer is null)
             emitter.output.AppendLine(
-                "[global::System.Text.Json.Serialization.JsonSerializable(typeof(" +
-                Identifier(emitter.declarations[id].Name) + "))]");
+                "[global::System.Text.Json.Serialization.JsonSourceGenerationOptions(GenerationMode = global::System.Text.Json.Serialization.JsonSourceGenerationMode.Metadata, RespectNullableAnnotations = true, RespectRequiredConstructorParameters = true)]");
+        else
+        {
+            ValidateSerializer(serializer);
+            foreach (var attribute in serializer.Attributes.Where(value =>
+                         value.Name == "System.Text.Json.Serialization.JsonSourceGenerationOptionsAttribute"))
+                emitter.EmitAttribute(attribute);
+        }
+
+        foreach (var name in emitter
+                     .reachable.Select(id => Identifier(emitter.declarations[id].Name))
+                     .Concat(
+                         roots.Select(root => emitter.TypeName(
+                             root with
+                             {
+                                 Nullability = "NotAnnotated"
+                             })))
+                     .Distinct(StringComparer.Ordinal)
+                     .Order(StringComparer.Ordinal))
+            emitter.output.AppendLine(
+                "[global::System.Text.Json.Serialization.JsonSerializable(typeof(" + name + "))]");
         emitter.output.AppendLine(
             "public partial class " + Identifier(context) +
             " : global::System.Text.Json.Serialization.JsonSerializerContext;");
@@ -394,9 +414,9 @@ internal sealed class DotnetProjectionEmitter
         output.AppendLine("}");
     }
 
-    private void EmitContext(NativeService service)
+    private static void ValidateSerializer(NativeSerializerContext serializer)
     {
-        foreach (var attribute in service.Serializer!.Attributes.Where(value =>
+        foreach (var attribute in serializer.Attributes.Where(value =>
                      value.Name == "System.Text.Json.Serialization.JsonSourceGenerationOptionsAttribute"))
         {
             if (attribute.NamedArguments.Any(value => value.Name == "Converters"))
@@ -411,14 +431,20 @@ internal sealed class DotnetProjectionEmitter
                     "Populate object creation semantics require a separately supported caller projection.");
         }
 
-        foreach (var attribute in service.Serializer.Attributes.Where(value =>
+        foreach (var attribute in serializer.Attributes.Where(value =>
                      value.Name == "System.Text.Json.Serialization.JsonSerializableAttribute"))
             if (attribute.NamedArguments.Any(value =>
                     value.Name == "GenerationMode" && value.Value.Json is not ("0" or "1")))
                 throw new InvalidDataException(
                     "Per-type serialization-only metadata does not support a standalone caller decoder.");
+    }
+
+    private void EmitContext(NativeService service)
+    {
+        ValidateSerializer(service.Serializer!);
         var options = service
-            .Serializer.Attributes.Where(value =>
+            .Serializer!
+            .Attributes.Where(value =>
                 value.Name == "System.Text.Json.Serialization.JsonSourceGenerationOptionsAttribute")
             .ToArray();
         var roots = service

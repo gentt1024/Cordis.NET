@@ -196,3 +196,9 @@ Remote 内层 payload 仅包含 `args` 自有字段，其值必须为 JSON 对�
 Unary 附件提取与生成的 TypeScript 结果类型共同使用实际 STJ 元数据。内置 `byte[]` converter 提供二进制能力；schema 的 `contentEncoding: base64` 注解不提供这种能力。属性／类型 converter 保留作者定义的表示。编码字节上的 enum／const 约束投影为二进制结果类型，null 分支继续保留。输入与 mux item 继续使用既有 JSON codec。根字节直接快照为附件；嵌套对象仍先经 STJ 再提取，以保留作者 converter 和序列化规则，避免第二次读取属性。这项内部转换仍有分配成本，不是第二种 wire 格式。
 
 Peer 关闭先中止自有物理 I/O 并取消寿命，再等待发送锁与自有泵结算。协议拒绝在没有挂起发送时可以发送关闭帧。物理请求释放资源前加入同一次停止操作。逻辑取消仍保留其他调用和借用的 Peer；没有引入远端释放确认或清理超时。
+
+### 固定 Remote 事件与类型化声明投影，2026-10-12
+
+事件路径使用固定 `$events`／`$events/result`、ready／emit／waterfall／cancel 帧及 `agent`／`agentId` 身份。公开委托在现有声明模型中保留事件事实，生成式 Host 描述与 .NET／TS 监听解释同一声明。C# 将 TS 的 receiver／request 形状表达为类型化 subject、request、同结果类型 next 及取消参数。Host 装配从 subject 得到身份，正常调用不传 wire 身份。客户端 `RemoteEventResult<T>` 将内部 continuation 标记与 undefined（`RemoteOptional<T>`）、null 分开。这是 CLR 结果类型适配，不改变 wire outcome。
+
+反向 resolver 与 owned release 保持同步，每次调用读取当前 adapter。borrowed Context 保持借用，owned Context 即使遇到取消也存活至 handler 和回复结算。源撤销结束观察；清理失败仍归现有 Fiber，可拒绝替换。待决 waterfall 跨观察者断线保留；旧 client 身份不能结算当前交付，已完成回复保持幂等。标准通知消费者直接迁移到类型化事件监听，旧通知 Remote 退出。作者声明、选择与寿命边界见[Remote 事件](remote-events.zh.md)。本候选验证与此前队列／集合修正分别记录。

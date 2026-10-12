@@ -273,10 +273,18 @@ internal static class DeclarationRemoteContract
         return true;
     }
 
-    internal static NativeDiagnostic[] SourceDiagnostics(DeclarationModelDocument model, RemoteServiceContract service)
+    internal static NativeDiagnostic[] SourceDiagnostics(
+        DeclarationModelDocument model,
+        RemoteServiceContract service) =>
+        SourceDiagnostics(model, service.Facts, service.JsonContext);
+
+    internal static NativeDiagnostic[] SourceDiagnostics(
+        DeclarationModelDocument model,
+        DeclarationType facts,
+        DeclarationReference? jsonContext)
     {
-        var selected = DeclarationModelConformance.Select(model, service.Facts.MetadataName.Replace('+', '.'));
-        var context = selected.Declarations.FirstOrDefault(type => type.Id == service.JsonContext?.Name);
+        var selected = DeclarationModelConformance.Select(model, facts.MetadataName.Replace('+', '.'));
+        var context = selected.Declarations.FirstOrDefault(type => type.Id == jsonContext?.Name);
         return selected
             .Diagnostics.Where(diagnostic => !(diagnostic.Category == "PreGeneratorDeclaration" &&
                 diagnostic.Code == "CS0534" && diagnostic.Symbol == context?.Id && context is not null &&

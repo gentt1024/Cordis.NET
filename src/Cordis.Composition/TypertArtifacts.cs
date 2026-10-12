@@ -8,7 +8,7 @@ namespace Cordis.Composition;
 public sealed record TypertClientArtifact(string Module, string Declaration);
 
 /// <summary>Native emitters consuming compiler-independent Typert metadata.</summary>
-public static class TypertArtifacts
+public static partial class TypertArtifacts
 {
     /// <summary>Build package schemas and reflected method signatures from compiler-generated descriptors.</summary>
     public static TypertContribution Contribution(

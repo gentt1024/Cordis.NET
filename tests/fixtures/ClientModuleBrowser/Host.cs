@@ -12,9 +12,10 @@ TypertHostConnection connection = null!;
 await root.RunAsync(owner =>
 {
     owner.Provide("typert", registry);
-    new RemoteNotifications(owner, gateway);
-    registry.Register(owner, RemoteNotificationsTypert.Contribution("browser-fixture"));
-    gateway.RegisterRemoteEvents(owner, TypertRemoteEvents.FromCordis(owner, [new("client-modules/changed", [])]));
+    gateway.RegisterRemoteEvents(
+        owner,
+        TypertRemoteEvents.FromCordis(owner, [ClientModulesChangedEventTypert.Definition]),
+        new TypertRemoteEventHost(""));
     connection = new(owner, gateway);
     return Task.CompletedTask;
 });
@@ -26,7 +27,7 @@ server.UseWebSockets();
 server.MapCordisRemote(
     "/remote",
     connection,
-    (_, endpoint) => Task.FromResult(endpoint is "remote.mux" or "remoteNotifications/watch"));
+    (_, endpoint) => Task.FromResult(endpoint is "remote.mux" or "$events/result"));
 server.MapPost(
     "/changed",
     () => root.RunAsync(owner =>

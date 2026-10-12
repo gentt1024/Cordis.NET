@@ -16,14 +16,14 @@ await writeFile(resolve(directory, 'package.json'), '{"private":true,"type":"mod
 await writeFile(resolve(directory, 'client.ts'), await readFile(resolve(root, 'clients/modules/examples/provider/client.ts'), 'utf8'))
 await writeFile(resolve(directory, 'management.ts'), `import { createManagementClient, type ManagementClient, type ManagementEvent, type ConfigurationOperation, type ConfigurationChange } from '@cordis-net/client-modules'
 import type { RemoteClient as PluginManager } from '@cordis-net/client-modules/management'
-import type { RemoteClient as Notifications } from '@cordis-net/client-modules/notifications'
+import type { EventsClient as Notifications } from '@cordis-net/client-modules/events'
 export function edit(client: ManagementClient, operations: readonly ConfigurationOperation[], revision: string): Promise<ConfigurationChange> { return client.mutateConfiguration('root:plugin', operations, revision) }
-export function modulesChanged(event: ManagementEvent): boolean { return event.kind === 'event' && event.event === 'client-modules/changed' }
+export function modulesChanged(event: ManagementEvent): boolean { return event.event === 'client-modules/changed' }
 export function connection(client: ManagementClient) { return client.connection.getSnapshot() }
 export function readConfiguration(client: ManagementClient) { return client.readConfiguration('root:plugin') }
 export function compatibility(client: PluginManager) { return client['pluginManager/listVersionExemptions']({}) }
 export function install(client: PluginManager, input: Parameters<PluginManager['pluginManager/installBundle']>[0]) { return client['pluginManager/installBundle'](input) }
-export function connect(notifications: Notifications) { return createManagementClient({ notifications }) }
+export function connect(notifications: Notifications) { return createManagementClient({ events: notifications }) }
 `)
 await writeFile(resolve(directory, 'shell.ts'), `import { bootClientModules } from '@cordis-net/client-modules'
 const shared = { name: 'page-owned singleton' }
@@ -34,7 +34,7 @@ export function boot(graph: unknown, loadBundle: (url: string) => Promise<void>)
 const program = ts.createProgram(['client.ts', 'management.ts', 'shell.ts'].map(name => resolve(directory, name)), {
   noEmit: true, strict: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022,
   module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler,
-  lib: ['lib.es2022.d.ts', 'lib.dom.d.ts', 'lib.dom.iterable.d.ts'], types: [],
+  lib: ['lib.es2022.d.ts', 'lib.dom.d.ts', 'lib.dom.iterable.d.ts', 'lib.esnext.disposable.d.ts'], types: [],
 })
 const diagnostics = ts.getPreEmitDiagnostics(program)
 if (diagnostics.length) {

@@ -25,13 +25,14 @@ internal static class DeclarationModelConformance
         var selected = model
             .Roots.Select(id => declarations[id])
             .Where(type =>
-                Attribute(type.Attributes, "Cordis.Composition.RemoteServiceAttribute") is { } marker &&
+                (Attribute(type.Attributes, "Cordis.Composition.RemoteServiceAttribute") ??
+                    Attribute(type.Attributes, "Cordis.Composition.RemoteEventAttribute")) is { } marker &&
                 (type.MetadataName.Replace('+', '.') == service ||
                     String(marker.Arguments.FirstOrDefault()) == service))
             .ToArray();
         if (selected.Length != 1)
             throw new InvalidDataException(
-                $"Declaration model must contain exactly one selected Remote service '{service}'.");
+                $"Declaration model must contain exactly one selected Remote declaration '{service}'.");
         var reachable = new HashSet<string>(StringComparer.Ordinal);
         var symbols = new HashSet<string>(StringComparer.Ordinal);
         Visit(selected[0].Id);

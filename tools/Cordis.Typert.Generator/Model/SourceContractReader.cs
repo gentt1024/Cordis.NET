@@ -66,7 +66,16 @@ internal sealed partial class SourceContractReader
         return ReadDeclarations(
             compilation,
             projectDirectory,
-            metadataNames.Concat(roots.Select(MetadataName)),
+            metadataNames
+                .Concat(roots.Select(MetadataName))
+                .Concat(
+                    compilation
+                        .SyntaxTrees.SelectMany(tree =>
+                            tree.GetRoot().DescendantNodes().OfType<DelegateDeclarationSyntax>())
+                        .Select(node => compilation.GetSemanticModel(node.SyntaxTree).GetDeclaredSymbol(node))
+                        .OfType<INamedTypeSymbol>()
+                        .Where(type => Attribute(type, "Cordis.Composition.RemoteEventAttribute") is not null)
+                        .Select(MetadataName)),
             true,
             referenceDocumentation);
     }

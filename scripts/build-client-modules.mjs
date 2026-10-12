@@ -51,7 +51,7 @@ await cp(resolve(source, '.types/vendor'), resolve(output, 'types/vendor'), { re
 await cp(standard, resolve(output, 'types/standard'), { recursive: true })
 await cp(resolve(standard, 'cordis-remote.mjs'), resolve(output, 'cordis-remote.mjs'))
 await cp(resolve(standard, 'cordis-remote.d.mts'), resolve(output, 'cordis-remote.d.mts'))
-for (const name of ['management', 'notifications', 'settings']) {
+for (const name of ['management', 'events', 'settings']) {
   await cp(resolve(standard, name + '.mjs'), resolve(output, name + '.mjs'))
   await cp(resolve(standard, name + '.d.ts'), resolve(output, name + '.d.ts'))
 }
@@ -87,7 +87,7 @@ const typeAliases = {
   'react': 'vendor/contracts/react/index.d.ts',
   'prop-types': 'vendor/contracts/prop-types/index.d.ts',
   'csstype': 'vendor/contracts/csstype/index.d.ts',
-  '../.types/standard/notifications.js': 'standard/notifications.d.ts',
+  '../.types/standard/events.js': 'standard/events.d.ts',
 }
 async function rewriteTypes(directory) {
   for (const item of await readdir(directory, { withFileTypes: true })) {
@@ -108,7 +108,7 @@ await rewriteTypes(resolve(output, 'types'))
 await writeFile(resolve(output, 'package.json'), JSON.stringify({ name: '@cordis-net/client-modules',
   private: true, type: 'module', exports: { '.': { types: './types/src/index.d.ts', default: './client.mjs' },
     './slots': { types: './types/vendor/slots/index.d.ts', default: './client.mjs' },
-    ...Object.fromEntries(['management', 'notifications', 'settings'].map(name => [
+    ...Object.fromEntries(['management', 'events', 'settings'].map(name => [
       './' + name, { types: './types/standard/' + name + '.d.ts', default: './' + name + '.mjs' },
     ])) } }, null, 2) + '\n')
 

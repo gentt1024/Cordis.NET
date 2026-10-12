@@ -24,7 +24,7 @@
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
 import { createRemote as createSettingsRemote, TypertConnection } from '/client-runtime/settings.mjs'
 import { createRemote as createPluginManagerRemote } from '/client-runtime/management.mjs'
-import { createRemote as createNotificationRemote } from '/client-runtime/notifications.mjs'
+import { createEvents as createNotificationRemote } from '/client-runtime/events.mjs'
 let settingsRemote, pluginManager, notifications, remoteConnection
 function accepted(result) { if (!result.ok) throw result.error; return result.value }
 const modules = await bootClientModules({graph:{rev:'initial',entries:[],batches:[]}})
@@ -65,8 +65,8 @@ function connect() {
       headers.set('If-Cordis-Generation', current.state.generation)
       return fetch(url, {...init,headers,credentials:'same-origin'})
     })
-    notifications = createNotificationRemote(remoteConnection)
-    owner = createManagementClient({baseUrl:'/cordis',modules,notifications})
+    notifications = createNotificationRemote(modules.context, remoteConnection)
+    owner = createManagementClient({baseUrl:'/cordis',modules,events:notifications})
     client = owner
     settingsRemote = createSettingsRemote(remoteConnection)
     pluginManager = createPluginManagerRemote(remoteConnection)

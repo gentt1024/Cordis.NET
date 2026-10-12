@@ -25,23 +25,16 @@ internal static class ManagementTestHost
             server.Services.GetRequiredService<IHttpContextAccessor>());
         await session.Context.RunAsync(context =>
         {
-            new RemoteNotifications(context, gateway);
-            registry.Register(context, RemoteNotificationsTypert.Contribution("Cordis.Tests.Notifications"));
             notifications = gateway.RegisterRemoteEvents(
                 context,
                 TypertRemoteEvents.FromCordis(
                     context,
                     [
-                        new(
-                            "plugin-manager/changed",
-                            [TypertCodec.Create(PluginManagerJson.Default.PluginManagerChanged)]),
-                        new(
-                            "plugin-manager/install-state",
-                            [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-                        new(
-                            "plugin-manager/install-log",
-                            [TypertCodec.Create(PluginManagerJson.Default.PackageProgress)]),
-                    ]));
+                        PluginManagerChangedEventTypert.Definition,
+                        PluginInstallStateEventTypert.Definition,
+                        PluginInstallLogEventTypert.Definition,
+                    ]),
+                new TypertRemoteEventHost(""));
             return Task.CompletedTask;
         });
         management.Map(server);

@@ -3,7 +3,8 @@
 <button id="run">Run recovery checks</button><pre id="result">Ready</pre>
 <script type="module">
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
-import { createRemote, TypertConnection } from '/client-runtime/notifications.mjs'
+import { createEvents } from '/client-runtime/events.mjs'
+import { TypertConnection } from '/client-runtime/cordis-remote.mjs'
 const result = document.querySelector('#result')
 const button = document.querySelector('#run')
 const check = (condition, message) => { if (!condition) throw new Error(message) }
@@ -28,8 +29,8 @@ button.onclick = async () => {
     const instance = modules.context.get('shared-result')
     instance.draft = 'unsaved text'
     connection = new TypertConnection(location.origin + '/remote')
-    notifications = createRemote(connection)
-    management = createManagementClient({ modules, notifications, recovery: { backoffBaseMs: 20, backoffMaxMs: 50 } })
+    notifications = createEvents(modules.context, connection)
+    management = createManagementClient({ modules, events: notifications, recovery: { backoffBaseMs: 20, backoffMaxMs: 50 } })
     const phases = []
     management.connection.subscribe(() => phases.push(management.connection.getSnapshot().phase))
     await until(() => management.connection.getSnapshot().phase === 'connected', 'Notification ready and state query')

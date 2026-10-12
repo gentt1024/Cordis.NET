@@ -23,6 +23,9 @@ public sealed partial class TypertConnection : IAsyncDisposable
 
     internal bool Active => lifetime.Active;
 
+    internal TypertCallLifetime.Lease Enter() => lifetime.Enter() ??
+        throw new InvalidOperationException("The Remote Connection is closed.");
+
     internal async Task<TypertRemoteResult> CallAsync(string endpoint, JsonElement arguments, CancellationToken token)
     {
         using var call = lifetime.Enter() ?? throw new InvalidOperationException("The Remote Connection is closed.");
