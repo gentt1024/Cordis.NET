@@ -239,13 +239,18 @@ internal sealed class CordisRemoteMux(
         {
             // Owner shutdown breaks pending physical I/O before joining it. An idle
             // protocol close can still send its status without waiting for a peer reply.
-            if (!acquired || status == WebSocketCloseStatus.EndpointUnavailable)
-                socket?.Abort();
-            await lifetime.CancelAsync();
             if (!acquired)
             {
+                socket?.Abort();
+                await lifetime.CancelAsync();
                 await sends.WaitAsync(CancellationToken.None);
                 acquired = true;
+            }
+            else if (status == WebSocketCloseStatus.EndpointUnavailable)
+            {
+                if (socket?.State is WebSocketState.Open or WebSocketState.CloseReceived)
+                    socket.Abort();
+                await lifetime.CancelAsync();
             }
 
             if (socket?.State is WebSocketState.Open or WebSocketState.CloseReceived)
@@ -259,6 +264,7 @@ internal sealed class CordisRemoteMux(
         {
             if (acquired)
                 sends.Release();
+            await lifetime.CancelAsync();
         }
     }
 

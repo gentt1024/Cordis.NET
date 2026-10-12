@@ -168,7 +168,7 @@ class Inbox {
   wake;
 
   push(value) { if (!this.terminal) { this.values.push(value); this.wake?.(); } }
-  end(error) { if (!this.terminal) { this.terminal = true; this.error = error; this.wake?.(); } }
+  end(error) { if (!this.terminal) { this.terminal = true; this.failed = error !== undefined; this.error = error; this.wake?.(); } }
   fail(error) { this.values.length = 0; this.error = error; this.failed = true; this.terminal = true; this.wake?.(); }
   async next() {
     while (!this.values.length && !this.terminal) await new Promise(resolve => { this.wake = resolve; });
