@@ -1,0 +1,45 @@
+{
+  "reviewedBase": "fbcdf2099dd96a093a88f1423950928510da741c",
+  "upstream": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "validationSource": "29d7c4a1e2769ad77f53a2df7a5dc0912cf9c5cd",
+  "continuationCommit": "85ec46a83c32ec0f51bbc84ac2850fdba3f29415",
+  "identicalGitTree": "0c6df899d54067b167e9f31282d75a4aec00c9c1",
+  "scope": "Bounded R01/R02 correction. Windows and WSL Ubuntu 24.04 Linux x64 JIT repository/package gates. Each platform has its own package archive hashes. No new AOT, actual browser, original DSH suite, whole-runtime differential, hosted CI, remote SourceLink retrieval, source archive or Maker execution is claimed.",
+  "sourceInventoryIdenticalAcrossPlatforms": true,
+  "redEvidence": [
+    {
+      "finding": "R01",
+      "sourceRuntimeSha256": "d6fcbd2ca2f0605c90d4cf0a1549d48647f0985cb372c392774fb8730ef10942",
+      "logSha256": "6b27c1e352953a081bb2cde4222a59da2f8e0bdd66c861506cac1dc581b04840",
+      "observed": "Waiting uplink replaced end, RemoteError and carrier failure with undefined rejection. Six downlink-only / ended-uplink controls passed."
+    },
+    {
+      "finding": "R02",
+      "source": "fbcdf2099dd96a093a88f1423950928510da741c",
+      "logSha256": "e8a4c9829bf786d74f75d3a37be0e6b303059f409207a51307568fcd9f27d765",
+      "observed": "Four sequence/dictionary and nullable cases encoded attachments but failed generated Uint8Array type assertions. Ordinary Create controls retain their metadata."
+    }
+  ],
+  "primaryRegressionOwners": [
+    "scripts/verify-client-lifecycle.mjs",
+    "tests/Cordis.Composition.Tests/TypertBinaryTests.cs"
+  ],
+  "focusedAfter": {
+    "javascriptLogSha256": "00fd6bc80070ac721db8d647fbf0dfa3bbb525afcc270b736df8607f23845b67",
+    "binaryTestsLogSha256": "b77d8beeadbdcc81be74b46f3a4a611ec4299efc642905e9d04382182c81a47d",
+    "binaryTestsPassed": 12
+  },
+  "format": {
+    "allFourStagesAgreed": true,
+    "csharpFiles": 261,
+    "logSha256": "ad560e07ea741634b47b9e3c24a5d81432adf59b48b2a97eed4841b70aa50291"
+  },
+  "setupFailure": {
+    "logSha256": "d7c348ead569a5ad7a590a8dbddb439376ab59a9237c1fecbc0b4e9e76ea0183",
+    "reason": "Fresh client-module build lacked installed @types/node. Installing the existing client lockfile resolved it; no dependency change."
+  },
+  "publicUse": "Existing generated Remote clients and shared Connection remain. Host may terminate an open duplex input without losing buffered results or failure identity. CreateSequence/CreateDictionary results project attachment types using the same metadata as encoding.",
+  "retainedSemantics": "F02/F04 original closures retained. Null/undefined rejection stays a failure. OptionalCodec keeps JSON-only result encoding and is not assigned attachment metadata.",
+  "remaining": "Reverse Context/owned-value/fixed events are separate uncommitted work, not covered by this candidate. Original model, platform and direct Gateway Peer duties remain open.",
+  "previousReceipt": "verification/remote-carrier-corrections-2026-10-12/evidence.json"
+}

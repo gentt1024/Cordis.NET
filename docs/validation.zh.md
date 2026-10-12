@@ -429,3 +429,13 @@ F01 原有的 open／cancel 泄漏及 null 取消原因丢失、F02 接受内层
 公共调用继续使用共享 Connection、生成的 `RemoteResult<T>` 和流句柄。修正后的行为为：准入前取消不发送 open，内层 payload 在 lookup 前校验，二进制类型由实际元数据决定，关闭既解除阻塞 I/O，也保留已完成的协议关闭帧。根字节绕过 base64；嵌套对象仍先经 STJ 再提取。没有新增 API 世代或兼容路线。
 
 这只是 Windows 下的有界修正门禁，不代表 Linux、托管 CI、原生 Host 或完整平台验收。反向 Context、owned value、固定完整事件、直接 Gateway operatorPeer fallback、浏览器 scoped 及其他原职责仍开放。本回执不包含 Maker、版本、依赖、上游 pin、推送、合并或发布变更。
+
+## 上行终止与集合投影修正，2026-10-12
+
+`fbcdf20` 审查关闭原 F02/F04，同时指出此前四项全部闭合的判断过宽。R01 已在未改动的 `8da4cb4` 生产 JS 中复现：上行等待输入、下行延后消费时，缓冲项丢失，end、RemoteError 或 carrier failure 被 undefined 拒绝覆盖。仅下行和已 End 上行的对照通过。R02 也已本地执行：集合／字典及 nullable 的四种组合生成附件成功，但二进制类型断言失败。[修正回执](../verification/remote-queue-collections-2026-10-12/evidence.json)保留失败日志哈希，此前回执不变。
+
+冻结源码 `29d7c4a1e2769ad77f53a2df7a5dc0912cf9c5cd` 在 Windows x64 和 WSL Ubuntu 24.04 x64 上通过 `python scripts/verify.py --package`。续建分支的 `85ec46a83c32ec0f51bbc84ac2850fdba3f29415` 具有完全相同的 Git tree。两边源码清单一致，验证期间均未变化。Windows 源码测试 862 通过；Linux 为 859 通过，跳过三个具名 Windows 专用进程场景。每边完成 47 个外层步骤，检查 18 个包／符号归档。生成式 .NET/TS 消费者在 Windows 完成 149 步、Linux 完成 150 步，包含预期拒绝；这些步骤不与源码测试数相加。[Windows](../verification/remote-queue-collections-2026-10-12/windows.json) 与 [Linux](../verification/remote-queue-collections-2026-10-12/linux.json) 回执分别记录实际报告、TRX、包与源码哈希。
+
+公共用法不变。Host 可以在上行仍打开时终止双向流：end／RemoteError 保留缓冲项，物理失败保留 carrier 类别。关闭输入不再制造拒绝。集合结果 codec 转发其委托编码使用的元数据，包括 nullable 集合；Optional codec 保留纯 JSON 结果编码。四个格式化阶段对 261 个 C# 文件达成一致，双语文档检查通过。新工作树首次客户端模块构建缺少依赖的问题，通过安装既有 lockfile 解决，没有修改依赖。
+
+未提交的反向 Context／owned value／固定事件施工及其初步寿命测试仍单独记录。本候选没有新增 Native AOT、真实浏览器、原始 DSH 套件、全运行时差分、托管 CI、远端 SourceLink 获取、源码归档或 Maker 证据。版本、依赖、上游 pin 未变，未推送、合并、发布或部署。

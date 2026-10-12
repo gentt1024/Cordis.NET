@@ -412,3 +412,9 @@ The bounded follow-up to `a5e5b59` addresses pre-open JS cancellation, exact nes
 The next original duties remain reverse Context and owned values, fixed `$events/$events/result`, browser scoped consumption and the standard artifact chain. Direct Gateway's default Peer still needs comparison with the fixed `operatorPeer` fallback; nullable Peer documentation does not establish an adaptation. This correction adds no public API generation, dependency or historical compatibility path.
 
 Correction source `8da4cb4` completed the Windows package gate and same-source fixed-client, Native AOT caller and browser checks; see [validation](validation.md#remote-carrier-review-corrections-2026-10-12). The failed `300f171` checkpoint remains recorded. Original open duties above are unchanged.
+
+### Shared queue and collection correction checkpoint, 2026-10-12
+
+The review of `fbcdf20` closed the original F02/F04 findings but found R01 in the active JS uplink's close path and R02 in collection result metadata. Both were reproduced before repair. `85ec46a` carries the bounded correction on the continuation branch; its complete Git tree matches isolated validation source `29d7c4a`. No public signature, dependency or wire format changed. The primary regressions extend `verify-client-lifecycle.mjs` and `TypertBinaryTests`, using existing public factories and the production runtime.
+
+Reverse Context, owned values and fixed event work remain separate, uncommitted construction. Their preliminary handler/reply lifetime checks do not establish complete event/model/consumer acceptance. Continue from the fixed `$events` workflow after this correction, retaining current adapter lookup and borrowed ownership. Do not reintroduce a second queue termination policy or treat the selected notification slice as the final event contract. Current correction evidence belongs in validation.md, without replacing earlier receipts.

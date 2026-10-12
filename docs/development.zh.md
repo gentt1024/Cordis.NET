@@ -412,3 +412,9 @@ G01 在既有共同声明中采用 `[RemoteUplink] IAsyncEnumerable<T>`。生成
 原范围的下一项仍为反向 Context 与 owned value、固定 `$events/$events/result`、浏览器 scoped 消费和标准制品链。直接 Gateway 的默认 Peer 仍须对照固定 `operatorPeer` fallback，nullable Peer 文档不能自行构成适配依据。本修正没有新增公开 API 世代、依赖或历史兼容路径。
 
 修正源码 `8da4cb4` 已完成 Windows 包门禁及同源码的固定客户端、Native AOT caller 和浏览器检查，详见[验证记录](validation.zh.md#remote-载体审查修正2026-10-12)。失败检查点 `300f171` 继续保留。上述原范围开放职责不变。
+
+### 共享队列与集合修正检查点，2026-10-12
+
+`fbcdf20` 审查关闭了原 F02/F04，但发现活动 JS 上行关闭路径的 R01，以及集合结果元数据的 R02。两者均已在修前实际复现。续建分支的 `85ec46a` 承接这组有界修正，其完整 Git tree 与隔离验证源码 `29d7c4a` 相同。没有修改公开签名、依赖或 wire 格式。主要回归扩展 `verify-client-lifecycle.mjs` 和 `TypertBinaryTests`，使用既有公开工厂与生产 runtime。
+
+反向 Context、owned value 和固定事件仍是独立的未提交施工。初步的 handler／回复寿命检查不构成事件、模型与消费者的完整验收。后续沿固定 `$events` 工作流继续，保留每次读取当前 adapter 和借用资源的所有权边界，不另造队列终止策略，也不把选定通知切片当作最终事件合同。本次修正证据记录于 validation.zh.md，不替换此前回执。
