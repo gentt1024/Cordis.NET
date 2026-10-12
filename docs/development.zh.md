@@ -410,3 +410,5 @@ G01 在既有共同声明中采用 `[RemoteUplink] IAsyncEnumerable<T>`。生成
 `a5e5b59` 后的有界修正处理 JS open 前取消、内层 payload 严格准入、真实二进制 codec／类型一致性，以及物理发送阻塞时的 Peer 关闭。主要验证入口为 `verify-client-lifecycle.mjs`、`RemoteCarrierTests` 和 `TypertBinaryTests`；包消费者保留各自的传输／生成验证。此前回执继续绑定原源码；本次修正冻结后的验证另记于 validation.zh.md。
 
 原范围的下一项仍为反向 Context 与 owned value、固定 `$events/$events/result`、浏览器 scoped 消费和标准制品链。直接 Gateway 的默认 Peer 仍须对照固定 `operatorPeer` fallback，nullable Peer 文档不能自行构成适配依据。本修正没有新增公开 API 世代、依赖或历史兼容路径。
+
+修正源码 `8da4cb4` 已完成 Windows 包门禁及同源码的固定客户端、Native AOT caller 和浏览器检查，详见[验证记录](validation.zh.md#remote-载体审查修正2026-10-12)。失败检查点 `300f171` 继续保留。上述原范围开放职责不变。

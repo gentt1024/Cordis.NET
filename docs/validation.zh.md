@@ -417,3 +417,15 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 正常 build／pack 和独立调用者覆盖共享 unary 结果合同、两种 scoped、multipart、typed uplink、引用模型、Settings 及生成式管理。Remote 引用复用已有声明组合与源事实。同一候选另通过[真实浏览器恢复](../verification/remote-connection-2026-10-12/browser-recovery.json)：生成的选定通知经过生产 ASP.NET mux；断线保留插件实例／草稿，失败查询能够恢复，实际撤销才释放实例。
 
 上一条本地回执中的固定 DSH Node unary／mux 及 Windows Native AOT caller 检查，属于各自记录的格式化前源码／包候选。它们是有限证据，不作为最终候选重跑结果。本门禁未执行 Linux、原始 DSH 测试套件或全运行时差分、托管 CI、远端 SourceLink 获取、源码归档构建或 Maker。反向 Context／owned-value、完整固定事件、浏览器 scoped 装配和剩余模型／平台职责继续开放。依赖、上游 pin、包版本和已发布包身份均未改变。本次仅本地实现与验证，未推送、合并、发布或部署。
+
+## Remote 载体审查修正，2026-10-12
+
+正式实现源码为 `8da4cb4f671ef9a654042a16f313275b40b7fe22`，前一个失败检查点为 `300f171bd7892b99d77b7e0a7b2a00e945297e7b`。Windows x64 下 `python scripts/verify.py --package` 已通过，期间源码保持不变：858 项源码测试、47 个外层步骤、149 个生成式 .NET／TS 消费步骤（含预期拒绝）以及 18 个包／符号归档。SourceLink 检查确认编译 C# 字节与 Git 一致。详见[门禁回执](../verification/remote-carrier-corrections-2026-10-12/evidence.json)。
+
+同一冻结源码还通过了 Node 下固定 DSH unary／multipart 与 mux 客户端、严格 TS 生成客户端、独立托管 .NET 及 Windows Native AOT caller。独立探针使用的五个包与随后完整门禁的归档 hash 不同；包内有效载荷和 core-property 内容逐字节相同，关系文件仅有自动生成的 core-property 路径及 ID 差异。回执保留两组归档身份与比较过的包内容 hash。Host／caller 关闭序列化反射，Host 仍为托管程序。[互通／AOT 回执](../verification/remote-carrier-corrections-2026-10-12/interop-and-aot.json) 分别记录包、输入与二进制身份。真实 Chromium 的模块／选定通知恢复也在本源码通过，另见[浏览器回执](../verification/remote-carrier-corrections-2026-10-12/browser-recovery.json)。
+
+F01 原有的 open／cancel 泄漏及 null 取消原因丢失、F02 接受内层额外字段、F03 注解／converter 不一致和 F04 阻塞发送关闭均保留失败证据。首个冻结候选虽通过源码测试，实际 TS 消费者仍发现 Remote 错误未设置队列失败状态；后续隔离诊断又发现 abort 已完成的协议关闭会丢失 1008 状态。两处已在不修改消费者断言的前提下修正。随后 d8f204f 的门禁通过，但独立公开 codec enum 探针又发现字面量类型投影缺口。最终候选增加 enum／const／null 覆盖，并通过同一实际包探针。此前回执与失败日志继续保留原身份。
+
+公共调用继续使用共享 Connection、生成的 `RemoteResult<T>` 和流句柄。修正后的行为为：准入前取消不发送 open，内层 payload 在 lookup 前校验，二进制类型由实际元数据决定，关闭既解除阻塞 I/O，也保留已完成的协议关闭帧。根字节绕过 base64；嵌套对象仍先经 STJ 再提取。没有新增 API 世代或兼容路线。
+
+这只是 Windows 下的有界修正门禁，不代表 Linux、托管 CI、原生 Host 或完整平台验收。反向 Context、owned value、固定完整事件、直接 Gateway operatorPeer fallback、浏览器 scoped 及其他原职责仍开放。本回执不包含 Maker、版本、依赖、上游 pin、推送、合并或发布变更。
