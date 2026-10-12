@@ -57,10 +57,11 @@ public static partial class TypertArtifacts
                 "A Client contribution cannot contain duplicate Remote endpoints.",
                 nameof(contribution));
         var definitions = new StringBuilder(
-            "import type { TypertConnection, RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner } from './cordis-remote.mjs';\n" +
+            "import type { TypertConnection, RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters } from './cordis-remote.mjs';\n" +
             "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
-            "export type { RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner } from './cordis-remote.mjs';\n");
+            "export type { RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters } from './cordis-remote.mjs';\n");
         var methods = new StringBuilder("export interface RemoteClient {\n  dispose(): Promise<void>;\n");
+        var services = new Dictionary<string, StringBuilder>(StringComparer.Ordinal);
         var runtime = new StringBuilder(
             "import { createClient, mountClient } from './cordis-remote.mjs';\n" +
             "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
@@ -68,12 +69,22 @@ public static partial class TypertArtifacts
         var index = 0;
         foreach (var descriptor in contribution.Invocations)
         {
+            if (descriptor.Method == "ctx")
+                throw new ArgumentException(
+                    "A Remote method cannot replace its namespace's calling Context.",
+                    nameof(contribution));
             var fields = new List<string>();
+            var scopedFields = new List<string>();
+            var scopeKey = descriptor.Invocation?.Context ?? descriptor.Scope?.Context;
+            var scopeWire = descriptor.Invocation?.Wire ?? descriptor.Scope?.Wire;
             foreach (var parameter in descriptor.Parameters)
             {
                 var type = "Boundary" + index++;
                 AppendType(definitions, type, parameter.Codec.Schema);
-                fields.Add(Quote(parameter.Wire) + (parameter.AcceptsUndefined ? "?" : "") + ": " + type);
+                var field = Quote(parameter.Wire) + (parameter.AcceptsUndefined ? "?" : "") + ": " + type;
+                fields.Add(field);
+                if (parameter.Wire != scopeWire)
+                    scopedFields.Add(field);
             }
 
             if (descriptor.Invocation is { } receiver)
@@ -101,19 +112,37 @@ public static partial class TypertArtifacts
                     input += " | undefined";
             }
 
+            var returnType = (descriptor.IsStream
+                    ? input is null ? "RemoteStreamHandle<" : "RemoteDuplexHandle<"
+                    : "Promise<RemoteResult<") + result + (input is null ? "" : ", " + input) +
+                (descriptor.IsStream ? ">" : ">>");
             methods
                 .Append("  ")
                 .Append(Quote(descriptor.Endpoint))
                 .Append("(args: { ")
                 .Append(string.Join("; ", fields))
                 .Append(" }, signal?: AbortSignal): ")
-                .Append(
-                    descriptor.IsStream
-                        ? input is null ? "RemoteStreamHandle<" : "RemoteDuplexHandle<"
-                        : "Promise<RemoteResult<")
-                .Append(result)
-                .Append(input is null ? "" : ", " + input)
-                .Append(descriptor.IsStream ? ">;\n" : ">>;\n");
+                .Append(returnType)
+                .Append(";\n");
+            if (!services.TryGetValue(descriptor.Namespace, out var service))
+                services.Add(descriptor.Namespace, service = new());
+            service
+                .Append("    ")
+                .Append(Quote(descriptor.Method))
+                .Append("(args: { ")
+                .Append(string.Join("; ", scopedFields))
+                .Append(" }, signal?: AbortSignal): ")
+                .Append(returnType)
+                .Append(";\n");
+            if (descriptor.Scope is not null && descriptor.Invocation is null)
+                service
+                    .Append("    ")
+                    .Append(Quote(descriptor.Method))
+                    .Append("(args: { ")
+                    .Append(string.Join("; ", fields))
+                    .Append(" }, signal?: AbortSignal): ")
+                    .Append(returnType)
+                    .Append(";\n");
             runtime
                 .Append("  [")
                 .Append(Quote(descriptor.Endpoint))
@@ -121,10 +150,20 @@ public static partial class TypertArtifacts
                 .Append(descriptor.IsStream ? "true" : "false")
                 .Append(", ")
                 .Append(input is null ? "false" : "true")
+                .Append(
+                    scopeKey is null
+                        ? ""
+                        : ", [" + Quote(scopeKey) + ", " + Quote(scopeWire!) + ", " +
+                        (descriptor.Invocation is null ? "true" : "false") + "]")
                 .Append("],\n");
         }
 
         methods.Append("}\nexport declare function createRemote(connection: TypertConnection): RemoteClient;\n");
+        methods.Append("export interface RemoteServices {\n");
+        foreach (var (name, service) in services)
+            methods.Append("  ").Append(Quote(name)).Append(": {\n").Append(service).Append("  };\n");
+        methods.Append(
+            "}\nexport declare function getRemote<K extends keyof RemoteServices>(ctx: RemoteCaller, namespace: K): RemoteServices[K];\n");
         runtime.Append("]); }\n");
         runtime.Append("const namespaceSpecs = [\n");
         foreach (var group in contribution.Invocations.GroupBy(descriptor => descriptor.Namespace))
@@ -139,9 +178,10 @@ public static partial class TypertArtifacts
                             "[" + Quote(descriptor.Method) + ", " + Quote(descriptor.Endpoint) + "]")))
                 .Append("]],\n");
         runtime.Append(
-            "];\nexport function mountRemote(ctx, connection) { return mountClient(ctx, createRemote(connection), namespaceSpecs); }\n");
+            "];\nexport function mountRemote(ctx, connection, adapters) { return mountClient(ctx, createRemote(connection), namespaceSpecs, adapters); }\n" +
+            "export function getRemote(ctx, namespace) { const service = ctx.get('remote.' + namespace); if (!service) throw new Error('Remote namespace is not mounted: ' + namespace); return service; }\n");
         methods.Append(
-            "export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
+            "export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection, adapters?: RemoteContextAdapters): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
         return new(runtime.ToString(), definitions.Append(methods).ToString());
     }
 

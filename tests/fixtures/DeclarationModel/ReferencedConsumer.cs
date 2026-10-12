@@ -44,7 +44,11 @@ var complete = JsonSerializer.Deserialize(
      "Items":[{"external_name":"list","Code":null}],
      "ByName":{"first":{"external_name":"mapped","Code":null},"empty":null},
      "Groups":{"batch":[{"external_name":"grouped","Code":null}]},
-     "Labels":{"present":"yes","empty":null}}
+     "Labels":{"present":"yes","empty":null},
+     "Sequence":[null,{"external_name":"sequence","Code":null}],
+     "Collection":[null,{"external_name":"collection","Code":null}],
+     "ReadOnlyCollection":[null,{"external_name":"readonly","Code":null}],
+     "MutableList":[null,{"external_name":"mutable","Code":null}]}
     """,
     metadata)!;
 Check(
@@ -56,6 +60,17 @@ Check(
     complete.Labels?["present"] == "yes" && complete.Labels["empty"] is null,
     "string dictionary keys, imported values, nested arrays and explicit null");
 var json = JsonSerializer.Serialize(complete, metadata);
+foreach (var (items, name) in new (IEnumerable<ImportedData?>?, string)[]
+         {
+             (complete.Sequence, "sequence"),
+             (complete.Collection, "collection"),
+             (complete.ReadOnlyCollection, "readonly"),
+             (complete.MutableList, "mutable")
+         })
+    Check(
+        items is not null && items.First() is null && items.Last()?.Name == name &&
+        items.Last()?.Count == expectedDefault,
+        "collection interface preserves referenced defaults and nullable elements");
 using var document = JsonDocument.Parse(json);
 Check(
     document.RootElement.GetProperty("External").GetProperty("external_name").GetString() == "first",
@@ -68,6 +83,11 @@ Check(
     document.RootElement.GetProperty("Groups").GetProperty("batch")[0].GetProperty("external_name").GetString() ==
     "grouped",
     "dictionary keys and values survive static serialization");
+foreach (var name in new[] { "Sequence", "Collection", "ReadOnlyCollection", "MutableList" })
+    Check(
+        document.RootElement.GetProperty(name)[0].ValueKind == JsonValueKind.Null &&
+        document.RootElement.GetProperty(name).GetArrayLength() == 2,
+        "collection interface survives static serialization");
 Check(
     ReferencedDataJson.Default.GetTypeInfo(typeof(ImportedData)) is not null,
     "reachable imported type has static metadata");

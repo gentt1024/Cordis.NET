@@ -354,11 +354,24 @@ class StreamHandle {
 export function createClient(connection, methods) {
   const state = new Lifetime();
   const client = {dispose:() => state.dispose()};
-  for (const [endpoint, stream, uplink] of methods) {
-    client[endpoint] = (args, signal) => {
+  for (const [endpoint, stream, uplink, projection] of methods) {
+    client[endpoint] = (args, signal, binding) => {
       if (!state.active) {
         if (stream) throw new Error('The Remote contribution was withdrawn.');
         return Promise.resolve(withdrawn());
+      }
+      if (binding && projection) {
+        const [key, wire, direct] = projection;
+        const adapter = binding.adapters?.getClient(key);
+        const identity = adapter?.identity(binding.caller);
+        if (identity !== undefined) args = {...args, [wire]:identity};
+        else if (!direct) {
+          const error = new Error(!adapter
+            ? 'Remote ' + endpoint + ' has no Client Context adapter for ' + key
+            : 'Remote ' + endpoint + ' requires a ' + key + ' Context.');
+          if (stream) throw error;
+          return Promise.reject(error);
+        }
       }
       if (!connection?.active) throw new Error('Remote ' + endpoint + ' has no active Connection.');
       const combined = AbortSignal.any([state.abort.signal, ...(signal ? [signal] : [])]);
@@ -387,7 +400,7 @@ export function createClient(connection, methods) {
   return client;
 }
 
-export async function mountClient(ctx, remote, namespaceSpecs) {
+export async function mountClient(ctx, remote, namespaceSpecs, adapters) {
   const tableKey = Symbol.for('cordis.net.typert.remoteNamespaces');
   const registry = ctx.root[tableKey] ??= {groups:new Map(), retiring:new Map(), tail:Promise.resolve()};
   const table = registry.groups;
@@ -425,13 +438,22 @@ export async function mountClient(ctx, remote, namespaceSpecs) {
         let group = table.get(key);
         if (!group) {
           const service = Object.create(null);
-          for (const [name, endpoint] of methods) service[name] = remote[endpoint];
+          Object.defineProperties(service, {
+            ctx:{value:ctx.root, configurable:true},
+            [Symbol.for('cordis.tracker')]:{value:{associate:key, property:'ctx'}},
+          });
           group = {service, dispose:ctx.root.provide(key, service)};
           table.set(key, group);
         }
         const names = [];
         installed.push([key, group, names]);
-        for (const [name, endpoint] of methods) { group.service[name] = remote[endpoint]; names.push(name); }
+        for (const [name, endpoint] of methods) {
+          Object.defineProperty(group.service, name, {configurable:true, enumerable:true, get() {
+            const caller = this.ctx;
+            return (args, signal) => remote[endpoint](args, signal, {caller, adapters});
+          }});
+          names.push(name);
+        }
       }
       return {cleanup};
     } catch (error) { return {error, settlement:cleanup()}; }

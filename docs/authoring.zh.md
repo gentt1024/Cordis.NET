@@ -210,7 +210,7 @@ public partial class EchoService
 
 显式 Remote 类可以继承 `Service<TState>`。其 `CreateView` 可以为每位 caller 新建视图并共享 provider 的 State，见[独立作者示例](../tests/fixtures/TypertConsumer/Author.cs)。生成绑定调用该视图。Gateway 检查底层注册及原始 provider 值；新建视图不会使 provider 退役。普通同进程 Service 消费仍直接使用 Core API。
 
-根可空引用标注（例如 `string?` 参数或 `Task<string?>` 结果）由 Roslyn 通过 `TypertCodec.CreateNullable` 传入，因为运行时 JSON 类型元数据会丢失这些标注。codec 增加 null 分支并迁移局部 Schema 引用，保留非空递归子节点。因此生成声明对这些边界暴露 `string | null`。这不代表已完成嵌套泛型空性分析，也不为 Gateway 增加结果 Schema 校验。
+生成的元数据 codec 通过 `TypertCodec.CreateDeclared` 恢复共同声明模型中被 CLR 元数据擦除的空性，包括已支持的集合元素和字典值。查询作用于具体 Schema 路径，保留同一引用类型在不同位置的可空与非空约束。STJ 继续负责命名、转换器与序列化；这不代表支持任意泛型类型，也不为 Gateway 增加结果 Schema 校验。
 
 `TypertCodec` 在首次使用 `Schema` 或 `Decode` 时延迟准备并检查 Schema，可空输入也会执行检查。Decode 校验已支持的原生子集，再反序列化；Encode 使用所提供元数据序列化，不准备或校验结果 Schema。不受支持的 Schema 特性明确失败。客户端投影将 `prefixItems` 保留为 readonly tuple，支持有界可选前缀、嵌套局部引用及无界的类型化或 unknown 尾部。超出前缀的最小长度、有限的尾部长度上限会被拒绝。[tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) 向生成 binding 提供显式 Schema，区分真实闭合 tuple HTTP 调用与仅 codec/投影的变体证据；它不证明 Roslyn 推断 CLR tuple 类型或完整源类型图。
 
@@ -450,3 +450,25 @@ await scoped.ReadAsync();
 对独立 caller，仅有程序集 metadata 的 JSON context 缺少重建 serializer 所需的源码事实，以 `TYPM115` 拒绝；Host 仍可绑定该实际 context。非有限数值的可选默认值保留为作者事实，Host 在参数省略时可使用它。若所选 JSON number handling 无法传输该值，独立 .NET caller 生成以 `TYPM116` 拒绝，不生成默认调用会在序列化时失败的方法。
 
 独立消费者必须将一个作者 DTO 同时用作普通 root 和 Remote 参数／结果，使用真实 HTTP 作者宿主及仅包引用的生成调用者。DTO 行为由既有数据消费者负责，此路检查保存模型映射和传输。泛型 DTO 投影、更广的 Remote／引用模型后端、design-time IDE 和具名 UI 验证继续开放。完成的平台证据仍绑定在[验证记录](validation.zh.md)中，早先批次不证明本次重建。
+
+## 浏览器 scoped Remote 消费
+
+在所属 Cordis Fiber 中挂载一次生成贡献，通过消费方 Context 读取生成的类型化 namespace：
+
+```typescript
+import { mountRemote, getRemote } from './shared.mjs'
+
+const mounted = await mountRemote(owner, connection, contextAdapters)
+const remote = getRemote(agentContext, 'sharedData')
+const result = await remote.scopedRead({ text: 'hello' })
+const document = await remote.read({ suffix: '!' })
+await mounted.dispose()
+```
+
+`getRemote` 读取已有 `remote.sharedData` service，不创建 Connection、registry 或 owner。Cordis tracing 保留消费方 Context，取出方法作为回调也保持该归属。借用的 adapter 来源提供 `getClient(key)`，adapter 提供同步的 `identity(caller)`；每次调用重新读取 adapter 和身份。若现有 Context adapter 所有者同时提供 identity 与 resolve 操作，可以与反向事件复用它。
+
+接收方 scoped 方法填入声明的身份字段，用来选择 Host Context。lookup scoped 方法填入声明的 lookup 参数，不改变接收方。已定义的身份（包括 null）选择 scoped 路线。undefined 或缺少 adapter 只有在方法本来存在直接调用路线时才允许回到直接 lookup；仅接收方 scoped 的方法报告装配失败。直接 lookup 重载仍要求 wire 身份。普通调用和流保留各自的错误合同，生成参数对象保留省略与显式 null 的区别。
+
+挂载贡献拥有方法和取消职责。释放它会拒绝留存回调并结束自己的工作，借用的 Context、adapter 与 Connection 保留各自所有者。namespace 登记继续沿现有挂载队列组合与退役。`ctx` 成员保留给 Cordis tracing。显式 endpoint client 仍用于直接 wire 调用；scoped 应用代码使用上面的 Context service。
+
+普通 DTO/STJ 后端也接收共同 wire 模型已识别的框架 `IEnumerable<T>`、`ICollection<T>`、`IReadOnlyCollection<T>`、`IList<T>`，与已有 list、数组和字符串键字典共用投影。引用元素声明保留默认值与空性。这些是由 STJ 序列化的数据载体，不执行作者自己的 enumerable 实现，也不表示支持任意泛型类。

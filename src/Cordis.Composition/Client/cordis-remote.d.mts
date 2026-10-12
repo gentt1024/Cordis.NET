@@ -23,6 +23,13 @@ export interface RemoteOwner {
   effect(setup: () => Promise<() => Promise<void>>): PromiseLike<unknown> & (() => Promise<void>);
 }
 
+/** A borrowed Cordis Context used to select the current Remote service view. */
+export interface RemoteCaller { get(name: string): unknown; }
+/** Read the current adapter on each invocation; undefined identity means absence, null does not. */
+export interface RemoteContextAdapters {
+  getClient(key: string): {identity(caller: RemoteCaller): unknown} | undefined;
+}
+
 /** Cordis event operations used by the Client; listeners remain owned by their calling Fiber. */
 export interface RemoteEventContext {
   readonly root: object;

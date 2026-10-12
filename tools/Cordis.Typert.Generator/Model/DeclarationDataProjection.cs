@@ -84,8 +84,7 @@ internal sealed class DeclarationDataProjection
                 value => Reference(value, depth + 1));
             if (framework is not null)
             {
-                if (framework.Kind != "collection" || framework.Name is "System.Collections.Generic.List<T>"
-                        or "System.Collections.Generic.IReadOnlyList<T>")
+                if (framework.Kind != "collection" || framework.Arguments.Length == 1)
                     return framework;
                 if (framework.Arguments.Length == 2)
                 {

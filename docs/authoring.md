@@ -210,7 +210,7 @@ The generator emits `EchoServiceTypert.Contribution("IndependentRemote")`, descr
 
 An explicit Remote class may derive from `Service<TState>`. Its `CreateView` can create a fresh caller-bound view sharing the provider's State, as in the [independent author](../tests/fixtures/TypertConsumer/Author.cs). Generated bindings invoke that view. The Gateway checks the underlying registration and original provider value; view allocation does not retire a provider. Ordinary in-process Service consumption still uses the Core API directly.
 
-Root nullable reference annotations, such as a `string?` argument or `Task<string?>` result, are supplied by Roslyn through `TypertCodec.CreateNullable`: runtime JSON type metadata erases these annotations. The codec adds a null branch and relocates local schema references, preserving non-null recursive children. Generated declarations therefore expose `string | null` for these boundaries. This does not claim complete nested generic nullability analysis or add result-schema validation to the Gateway.
+Generated metadata codecs use `TypertCodec.CreateDeclared` to retain nullability from the common declaration model where CLR metadata erases it, including supported collection elements and dictionary values. The query applies to concrete Schema paths and preserves separate nullable and non-null uses of a referenced type. STJ still owns naming, converters and serialization; this does not claim arbitrary generic type support or add result-schema validation to the Gateway.
 
 `TypertCodec` prepares and checks its schema lazily when `Schema` or `Decode` is first used, including nullable input. Decode validates the supported native subset and then deserializes. Encode serializes with the supplied metadata without preparing or validating the result schema. Unsupported schema features fail explicitly. Client projection preserves `prefixItems` as readonly tuples, including bounded optional prefix elements, nested local references, and unbounded typed or unknown tails. A minimum beyond the prefix or a finite tail length limit is rejected. The [tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) supplies an explicit schema to a generated binding and distinguishes the real closed-tuple HTTP call from codec/projection-only variants. It does not demonstrate Roslyn inference of CLR tuple types or the complete source type graph.
 
@@ -450,3 +450,25 @@ Two scoped contracts remain distinct. A method with `RemoteMethod(Context = "...
 For independent callers, a JSON context available only as assembly metadata lacks the source facts needed to reproduce its serializer and is refused with `TYPM115`. The Host may still bind that actual context. A non-finite optional numeric default is retained as an author fact and works for omitted Host arguments. If the selected JSON number handling cannot transmit it, standalone .NET caller generation refuses with `TYPM116`; it does not emit a method whose default call fails during serialization.
 
 The independent consumer must use one authored DTO as an ordinary root and a Remote argument/result, with a real HTTP author host and a package-only generated caller. DTO behavior belongs to the existing data consumers; this route checks saved-model mapping and transport. Generic DTO projection, broader Remote/reference-model backends, design-time IDE and named UI validation remain open. Completed platform evidence remains bound in [validation](validation.md); no earlier batch proves this reconstruction.
+
+## Browser scoped Remote consumption
+
+Mount the generated contribution once in its owning Cordis Fiber. Read the generated typed namespace through the consuming Context:
+
+```typescript
+import { mountRemote, getRemote } from './shared.mjs'
+
+const mounted = await mountRemote(owner, connection, contextAdapters)
+const remote = getRemote(agentContext, 'sharedData')
+const result = await remote.scopedRead({ text: 'hello' })
+const document = await remote.read({ suffix: '!' })
+await mounted.dispose()
+```
+
+`getRemote` reads the existing `remote.sharedData` service; it creates no connection, registry or owner. Cordis tracing retains the consuming Context even when a method is saved as a callback. The borrowed adapter source supplies `getClient(key)` and an adapter's synchronous `identity(caller)`; both adapter and identity are read again on every invocation. It can be the same context-adapter owner used by reverse events when it provides both identity and resolve operations.
+
+A receiver-scoped method supplies the declared identity field to select the Host Context. A lookup-scoped method supplies the declared lookup argument without changing that receiver. A defined identity, including null, selects the scoped route. Undefined or a missing adapter permits direct lookup only when the method also declares that direct route; receiver-only methods report an assembly failure. The direct lookup overload still requires its wire identity. Unary failures and stream failures retain their existing separate contracts. Generated argument objects retain omitted fields and explicit null rather than normalizing them.
+
+The mounted contribution owns its methods and cancellation. Disposing it rejects retained callbacks and ends its work, while the borrowed Context, adapters and Connection keep their own owners. Namespace registrations continue to compose and retire through the existing mount queue. The `ctx` member is reserved for Cordis tracing. The explicit endpoint client remains available for direct wire calls; scoped application code uses the Context service above.
+
+The ordinary DTO/STJ backend also accepts the framework `IEnumerable<T>`, `ICollection<T>`, `IReadOnlyCollection<T>` and `IList<T>` projections already recognized by the common wire model, alongside lists, arrays and string-key dictionaries. Referenced element declarations retain defaults and nullability. These are data carriers serialized by STJ, not execution of an author's enumerable implementation or arbitrary generic classes.

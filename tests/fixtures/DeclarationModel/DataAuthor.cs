@@ -169,6 +169,30 @@ public sealed class DataWireCollision
 
 public sealed class ReferencedData
 {
+    public IEnumerable<ImportedData?>? Sequence
+    {
+        get;
+        set;
+    }
+
+    public ICollection<ImportedData?>? Collection
+    {
+        get;
+        set;
+    }
+
+    public IReadOnlyCollection<ImportedData?>? ReadOnlyCollection
+    {
+        get;
+        set;
+    }
+
+    public IList<ImportedData?>? MutableList
+    {
+        get;
+        set;
+    }
+
     public Dictionary<string, ImportedData?>? ByName
     {
         get;

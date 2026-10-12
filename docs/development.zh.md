@@ -438,3 +438,11 @@ Chief 对 `f0d38f5` 的审查保留既有事件／owned-value 结构，但指出
 修正后回到原有浏览器 scoped、其余后端与平台职责，不重开此前已关闭问题，也不根据这些探针宣称其余职责完成。本次不改变依赖、包版本、上游 pin、Maker，也不合并或发布。
 
 修正候选 `2a5a6e4` 已完成两端默认包门禁及真实浏览器反向 scoped 事件调用，E01／E02／E03 有修前失败与修后通过证据。直接 operatorPeer fallback 和字符串字典投影也在同一候选获得验证。具体身份与例外见[验证记录](validation.zh.md#事件审查operator-peer-与声明空性2026-10-12)。后续原有职责仍包括出站浏览器 scoped facade、其余模型后端、完整 Peer／scope-targeting 与具名平台接入；不重查全部历史，也不将检查点视作新一代模型。
+
+### 出站浏览器与集合后端续建，2026-10-12
+
+事件修正审查点 `9ae967c` 已推送，实现及两平台证据继续绑定 `2a5a6e4`。独立审查 prompt 固定该身份，工作分支继续推进。
+
+当前将已有接收方／lookup descriptor 接入生成浏览器挂载，通过 Cordis Context tracing 在每次调用读取当前 adapter。`getRemote(caller, namespace)` 为现有 service 提供类型化读取，不创建另一套所有者或显式身份合同。共享包消费者覆盖两种 scoped 语义、直接 lookup fallback、null/undefined、留存回调、流和贡献替换。浏览器驱动可选择反向事件或出站 scoped 消费。首轮出站包／浏览器探针在纠正夹具误用 Context 释放后通过；最终冻结证据另行记录。
+
+普通数据后端现在接收共同 wire 投影已处理的另外四种框架集合接口。现有引用模型消费者验证默认值、可空元素、序列化及真实 Remote 调用，包括引用变化后重新生成和原有拒绝场景。旧后端在包构建处的拒绝证据保留。本批不关闭任意泛型类、完整 Peer／scope-targeting 及剩余具名平台／后端职责。不增加依赖、模型代际、包版本或 upstream pin。

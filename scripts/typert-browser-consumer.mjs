@@ -4,14 +4,18 @@ import { createConnection } from 'node:net'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const [address, directory] = process.argv.slice(2)
+const [address, directory, mode = 'events'] = process.argv.slice(2)
+if (!['events', 'outbound'].includes(mode)) throw new Error('Expected events or outbound mode')
+const outbound = mode === 'outbound'
 const host = new URL(address)
 if (host.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(host.hostname)) throw new Error('Expected the local package consumer Host')
 const output = resolve(directory)
 const assets = new Map([
-  ['/Client.js', resolve(output, 'compiled/Client.js')],
-  ['/management.mjs', resolve(output, 'compiled/management.mjs')],
-  ['/events.mjs', resolve(output, 'compiled/events.mjs')],
+  ['/Client.js', resolve(output, outbound ? 'compiled/SharedClient.js' : 'compiled/Client.js')],
+  ...(outbound ? [['/shared.mjs', resolve(output, 'compiled/shared.mjs')]] : [
+    ['/management.mjs', resolve(output, 'compiled/management.mjs')],
+    ['/events.mjs', resolve(output, 'compiled/events.mjs')],
+  ]),
   ['/cordis-remote.mjs', resolve(output, 'compiled/cordis-remote.mjs')],
   ['/cordis-context.mjs', resolve(output, 'cordis-context.mjs')],
 ])
@@ -19,7 +23,7 @@ for (const file of assets.values()) await readFile(file)
 const page = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Remote scoped package consumer</title>
 <button id="run">Run scoped checks</button><pre id="result">Ready</pre>
 <script type="module">
-import { scopedEvents } from '/Client.js'
+import { ${outbound ? 'scopedCalls' : 'scopedEvents'} } from '/Client.js'
 import { Context } from '/cordis-context.mjs'
 import { TypertConnection } from '/cordis-remote.mjs'
 const button = document.querySelector('#run'), result = document.querySelector('#result')
@@ -30,8 +34,10 @@ button.onclick = async () => {
     return fetch(input, {...init, headers})
   }, url => { url.searchParams.set('consumer', 'consumer-policy'); return new WebSocket(url) })
   try {
-    await scopedEvents(location.origin, connection, () => new Context())
-    result.textContent = 'PASS generated package events: current adapter, borrowed Context, next/undefined/null, owned reply and cancelled-handler settlement'
+    await ${outbound ? 'scopedCalls(connection, () => new Context())' : 'scopedEvents(location.origin, connection, () => new Context())'}
+    result.textContent = ${JSON.stringify(outbound
+      ? 'PASS generated outbound scoped: receiver and lookup, current adapter and identity, null/undefined, stream and withdrawal'
+      : 'PASS generated package events: current adapter, borrowed Context, next/undefined/null, owned reply and cancelled-handler settlement')}
   } catch (error) { result.textContent = 'FAIL ' + error.stack }
   finally { await connection.dispose() }
 }
@@ -61,7 +67,8 @@ server.on('upgrade', (request, socket, head) => {
   socket.on('close', () => { sockets.delete(socket); upstream.destroy() })
   upstream.on('connect', () => {
     upstream.write(request.method + ' ' + request.url + ' HTTP/' + request.httpVersion + '\r\n' +
-      request.rawHeaders.reduce((text, value, index, headers) => index % 2 ? text : text + value + ': ' + headers[index + 1] + '\r\n', '') + '\r\n')
+      request.rawHeaders.reduce((text, value, index, headers) => index % 2 ? text : text + value + ': ' + headers[index + 1] + '\r\n', '') +
+      (outbound ? 'authorization: consumer-policy\r\n' : '') + '\r\n')
     if (head.length) upstream.write(head)
     socket.pipe(upstream).pipe(socket)
   })

@@ -212,3 +212,9 @@ Peer 关闭先中止自有物理 I/O 并取消寿命，再等待发送锁与自�
 STJ 运行时元数据丢失泛型引用参数的空性。生成式 Host、事件及独立 .NET codec 使用 `TypertCodec.CreateDeclared(metadata, query)`，在导出的 Schema 路径上应用现有共同声明的 null 准入事实。Schema 仍懒加载；属性命名、converter 与序列化仍由 STJ 提供。query 是生成代码，不是保存格式或第二套 Schema 权威。显式 Schema 的 `Create` 继续服务真正的手写 codec。可空字典值不会使同一声明的另一处必填对象也变为可空；TS 发射保留联合类型与非空引用交集。
 
 事件输出文件名采用委托的完整限定身份；不同 namespace 可以使用同名委托，生成公开类与事件 key 不变。固定 DSH 的 `openWireStream` 在观察事件前归还 `$events` 不使用的上行。Gateway 沿用这一所有权规则，mux 迭代器即使尚未读取也会关闭实际 inbox。归还失败与事件观察独立结算，不放宽普通业务上行的协议／溢出拒绝，也不关闭 sibling 流。
+
+## 出站浏览器 Context 投影，2026-10-12
+
+固定 `packages/api/gateway/src/client/index.ts` 的 `invokeMethod`、`prepareInvocation`、`RemoteNamespaceService` 决定 scoped 选择：通过 Cordis tracing 取得消费方 Context，查询当前 adapter，区分 undefined 与 null，仅在本来具有直接 descriptor 时允许直接 fallback。原生生成浏览器挂载现在从已有 invocation descriptor 取得接收方与 lookup 两种投影。类型化 `getRemote(ctx, namespace)` 只是 `ctx.get('remote.' + namespace)` 的声明便利入口；命名参数对象保留现有 .NET 生成 wire 命名和省略语义。不增加身份 registry、传输、模型格式或兼容分支。此前只挂载普通 endpoint 函数、没有消费方 Context 投影，是未完成切片，不是目标合同。
+
+普通数据后端的框架集合接口现在复用共同声明中的框架投影。有序 JSON 数组表示、元素空性及引用事实与 Remote 后端共用；具体 .NET 接口选择属于 STJ 数据载体适配。执行任意 enumerable、作者泛型类和其他被拒绝的数据形状仍是独立工作。

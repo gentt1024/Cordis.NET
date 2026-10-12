@@ -10,6 +10,38 @@ await using var client = new ReferencedClient(connection);
 var expected = int.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
 var value = new ReferencedData
 {
+    Sequence =
+    [
+        null, new ImportedData
+        {
+            Name = "sequence",
+            Code = null
+        }
+    ],
+    Collection =
+    [
+        null, new ImportedData
+        {
+            Name = "collection",
+            Code = null
+        }
+    ],
+    ReadOnlyCollection =
+    [
+        null, new ImportedData
+        {
+            Name = "readonly",
+            Code = null
+        }
+    ],
+    MutableList =
+    [
+        null, new ImportedData
+        {
+            Name = "mutable",
+            Code = null
+        }
+    ],
     ByName = new()
     {
         ["empty"] = null,
@@ -36,6 +68,15 @@ var value = new ReferencedData
 };
 var result = await client.EchoAsync(value);
 if (!result.Ok) throw result.Error;
+foreach (var items in new[]
+         {
+             result.Value.Sequence,
+             result.Value.Collection,
+             result.Value.ReadOnlyCollection,
+             result.Value.MutableList
+         })
+    if (items is null || items.Count() != 2 || items.First() is not null || items.Last()?.Count != expected)
+        throw new Exception("Referenced nullable collection did not survive the generated HTTP call.");
 if (result.Value.External.Count != expected || result.Value.External.Name != "referenced" ||
     result.Value.External.Code is not null || result.Value.External.Note is not null ||
     result.Value.Items?.Single().Note != "external-default" ||
