@@ -32,7 +32,7 @@ public sealed class RemoteEventsGatewayTests
                 .Range(0, 3)
                 .Select(_ => TypertRemoteEvents.AwaitResult<JsonElement>(
                     ctx.Events.WaterfallWith(
-                        ctx,
+                        Scope.Target(ctx, ctx),
                         "selected",
                         () => Task.FromResult<object?>(Json("{}")),
                         ctx,

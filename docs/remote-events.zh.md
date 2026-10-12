@@ -37,7 +37,7 @@ var decision = await DecisionRequestedTypert.InvokeAsync(
     caller, agent, request, localContinuation, cancellationToken);
 ```
 
-业务调用传 subject，不传 wire 身份。转发绑定从 subject 得到 Context 与 `agentId`，核对 receiver 就是该 subject，只发送已声明的 JSON 数据。过滤、continuation 和源所有权继续由现有 Cordis 机制承担。
+业务调用传 subject，不传 wire 身份。生成的调用以 `Scope.Target(agent, agent)` 作为路由 receiver，subject 留在类型化参数中。转发绑定从 subject 得到 Context 与 `agentId`，核对 carrier 的 key 与该 subject 是同一对象，只发送已声明的 JSON 数据。过滤、continuation 和源所有权继续由现有 Cordis 机制承担。
 
 ## C# 监听
 

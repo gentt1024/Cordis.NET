@@ -472,3 +472,22 @@ A receiver-scoped method supplies the declared identity field to select the Host
 The mounted contribution owns its methods and cancellation. Disposing it rejects retained callbacks and ends its work, while the borrowed Context, adapters and Connection keep their own owners. Namespace registrations continue to compose and retire through the existing mount queue. The `ctx` member is reserved for Cordis tracing. The explicit endpoint client remains available for direct wire calls; scoped application code uses the Context service above.
 
 The ordinary DTO/STJ backend also accepts the framework `IEnumerable<T>`, `ICollection<T>`, `IReadOnlyCollection<T>` and `IList<T>` projections already recognized by the common wire model, alongside lists, arrays and string-key dictionaries. Referenced element declarations retain defaults and nullability. These are data carriers serialized by STJ, not execution of an author's enumerable implementation or arbitrary generic classes.
+
+## Registration scopes and Peer event routing
+
+Inside the owner's Cordis execution domain, create a registration scope and route an event to its opaque key:
+
+```csharp
+await using var scoped = Scope.Create(owner, subject);
+scoped.Context.On("app/changed", (_, args) => {
+    Observe(args[0]);
+    return Undefined.Value;
+});
+owner.Events.EmitWith(Scope.Target(subject, subject), "app/changed", change);
+```
+
+The subject may implement `IEventFilter`; its filter is retained by the carrier. A carrier exposes no subject properties. Pass the actual subject in event arguments when the listener needs it. Generated Remote waterfall helpers do this automatically; their public invocation signature is unchanged.
+
+`Scope.Of(context)` reads the nearest inherited tag. Supply `parent` to `Scope.Create` to bind routing ancestry, or keep the handle from `Scope.BindParent(key, parent)` when controlled reparenting is needed. Routing parents do not transfer ownership. `DisposeAsync` waits for owned cleanup, including a prior `DisposeRawAsync` call used by an ordered composite effect.
+
+Remote methods use `TypertInvocation.Current!.Peer!` for the admitted Peer and register through `peer.Context`. A child scope with `parent: peer` routes upward to those Peer listeners. Do not dispose the borrowed Peer Context. A socket, logical stream or caller does not own the shared Connection's Peer, and no request argument is needed to identify it. The same mechanism serves the direct Gateway's owner-bound fallback.

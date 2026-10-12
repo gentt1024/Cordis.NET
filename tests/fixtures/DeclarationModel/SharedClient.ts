@@ -115,6 +115,9 @@ export async function scopedCalls(origin: string, socketOrigin: string, createCo
   }
   try {
     const service = getRemote(caller, 'sharedData')
+    equal(await service.peerRouting({}),
+      { ok: true, value: 'global:peer,peer:peer,global:child,peer:child,child:child,global:none' },
+      'Host operator Peer did not preserve scope-targeted listener routing')
     const read = service.read
     equal(await service.scopedRead({}), { ok: true, value: 'selected:default' }, 'Receiver Context was not selected')
     equal(await read({}), { ok: true, value: 'root:doc-1!' }, 'Lookup projection changed the Host receiver')

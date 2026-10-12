@@ -5,18 +5,11 @@ namespace Cordis.Composition;
 /// <summary>The operator identity and registration scope owned by a Host Connection.</summary>
 public sealed class TypertPeer
 {
-    private readonly Fiber scope;
+    private readonly Scope scope;
 
     internal TypertPeer(Context owner)
     {
-        scope = owner.Plugin(
-            new Plugin<object?>
-            {
-                Name = "remote-peer",
-                Apply = (_, _) =>
-                {
-                }
-            });
+        scope = Scope.Create(owner, this);
         Context = scope.Context;
     }
 
@@ -32,9 +25,9 @@ public sealed class TypertPeer
         get;
     }
 
-    internal async ValueTask DisposeAsync() => await Context.RunAsync(async _ => await scope.DisposeAsync());
+    internal ValueTask DisposeAsync() => scope.DisposeAsync();
 
-    internal bool Active => scope.State == FiberState.Active;
+    internal bool Active => scope.Active;
 }
 
 /// <summary>Host ownership of the operator Peer. Sockets borrow it; the Gateway remains the dispatch authority.</summary>

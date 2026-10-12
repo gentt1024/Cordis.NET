@@ -232,3 +232,13 @@ STJ 运行时元数据丢失泛型引用参数的空性。生成式 Host、事�
 Chief 对 `9ae967c` 的审查发现，只给复用的 STJ `$ref` 根部增加空性约束，会丢失嵌套泛型的不同空性。生成查询现在返回 `TypertNullabilityInfo(Id, Nullable)`，标识在单个 codec 内区分完整声明使用位置。延迟导出按原始 Schema 位置与声明标识投影 STJ 图，重写本地引用并复用已经投影的组合，使递归图终止。这不增加保存模型版本、wire 字段或另一套序列化器。作者沿用现有 Remote 声明，消费者重新生成。
 
 始终忽略的成员，以及不参与作者 STJ 合同的字段，不再贡献属性空性。条件忽略继续是序列化规则。存在歧义的属性映射保留序列化器规则，不再由最后遍历的声明覆盖。共同模型仍将这些成员保留为分析事实。STJ 负责属性命名、转换器、序列化和必填成员策略；声明泛型空性补充 CLR 元数据擦除的事实。这纠正了此前仅处理引用根部的适配，不表示支持任意泛型作者代码执行或任意转换器重建。
+
+### Scope 身份与 Peer 路由，2026-10-12
+
+固定 DSH 的 `packages/core/scope/src/index.ts` 与 `packages/client/connection/src/operator-peer.ts` 决定行为：子 Fiber 拥有注册；其 Context 继承不透明身份；事件按身份及路由父链准入，与 Fiber 祖先关系无关。Composition 中的 `Scope`、`Scoped<T>`、`ScopeParentBinding` 表达这些职责。Core 的 `IEventFilter` 在现有分发器中表达上游以 symbol 提供的 receiver 过滤器。弱引用身份表替代 symbol 标签与 WeakMap；锁保护父链写入及环检查。不增加依赖、模型格式或 wire 身份。
+
+`Scope.Target(subject, key)` 捕获 subject 当前的过滤器，允许无标签监听者，以及 key 本身或其祖先标签的监听者。后代不准入；现有 Global 监听选项仍跳过过滤。null key 表示无路由标签，与 JSON null 或 Remote Undefined 无关。`IsCarrier` 区分无标签载体和普通 receiver。父链只绑定一次；只有原 binding 句柄可以重绑，拒绝成环，调用方仍须保证没有保留旧父级下产生的东西。
+
+`DisposeRawAsync` 使用普通 Fiber disposer。`DisposeAsync` 还等待 `Fiber.WaitAsync`，使并发释放等待已由 raw 入口启动的清理。它复用原生生命周期工作，不增加所有者或调度器。Peer 以自身为 scope key，Connection／fallback 所有权及 socket 借用关系保持不变。生成的 waterfall 调用改用以 subject 为 key 的载体，保留 subject 的基础过滤器，并把 subject 留在参数中。转发核对载体 key 与 subject 的对象身份。临时的原始 subject receiver 路径退出；消费者重新生成。
+
+这完成上述原生路由机制，不代表 scope store／layer 导出、所有反向 Context adapter 或全部 Peer 互操作完成。具体候选的执行结果及平台限制见验证记录。

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using Cordis;
 using Cordis.Composition;
 
 [assembly: TypertContext("shared:receiver", typeof(int))]
@@ -139,6 +140,33 @@ public partial class SharedRemote
 
     [RemoteMethod("peer")]
     public Task<string> PeerAsync() => Task.FromResult(TypertInvocation.Current!.Peer!.Id);
+
+    [RemoteMethod("peerRouting")]
+    public async Task<string> PeerRoutingAsync()
+    {
+        var invocation = TypertInvocation.Current!;
+        var owner = invocation.Context;
+        var peer = invocation.Peer!;
+        await using var child = Scope.Create(owner, new object(), peer);
+        await using var other = Scope.Create(owner, new object());
+        var seen = new List<string>();
+        await using var global = Listen(owner, "global");
+        await using var selected = Listen(peer.Context, "peer");
+        await using var nested = Listen(child.Context, "child");
+        await using var sibling = Listen(other.Context, "other");
+        owner.Events.EmitWith(Scope.Target(owner, peer), "consumer/peer-routing", "peer");
+        owner.Events.EmitWith(Scope.Target(owner, Scope.Of(child.Context)), "consumer/peer-routing", "child");
+        owner.Events.EmitWith(Scope.Target(owner, null), "consumer/peer-routing", "none");
+        return string.Join(",", seen);
+
+        EffectHandle Listen(Context context, string name) => context.On(
+            "consumer/peer-routing",
+            (_, args) =>
+            {
+                seen.Add(name + ":" + args[0]);
+                return Undefined.Value;
+            });
+    }
 
     [RemoteMethod("hold", Stream = true)]
     public async IAsyncEnumerable<string> HoldAsync(

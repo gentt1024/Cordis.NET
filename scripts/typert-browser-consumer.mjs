@@ -36,7 +36,7 @@ button.onclick = async () => {
   try {
     await ${outbound ? "scopedCalls(location.origin, location.origin.replace('http:', 'ws:') + '/remote/remote.mux', () => new Context())" : 'scopedEvents(location.origin, connection, () => new Context())'}
     result.textContent = ${JSON.stringify(outbound
-      ? 'PASS generated outbound scoped: receiver and lookup, current adapter and identity, null/undefined, stream and withdrawal'
+      ? 'PASS generated outbound scoped: Peer routing, receiver and lookup, current adapter and identity, null/undefined, stream and withdrawal'
       : 'PASS generated package events: current adapter, borrowed Context, next/undefined/null, owned reply and cancelled-handler settlement')}
   } catch (error) { result.textContent = 'FAIL ' + error.stack }
   finally { await connection.dispose() }

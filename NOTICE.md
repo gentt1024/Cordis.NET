@@ -36,3 +36,7 @@ Gateway client, mux and lossless-JSON input behavior. The .NET carrier and Gatew
 also implement the fixed unary envelope, mux frames and unary attachment workflow.
 The original MIT notices remain in `LICENSES/`. Bounded cross-end evidence is
 recorded in `docs/validation.md`; this is not a whole-product wire compatibility claim.
+
+`Cordis.Composition.Scope` and Peer registration routing adapt the fixed DSH
+`packages/core/scope` and `packages/client/connection/src/operator-peer.ts`.
+Their MIT notices remain in `LICENSES/deepseek-harness.LICENSE`.

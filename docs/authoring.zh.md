@@ -472,3 +472,22 @@ await mounted.dispose()
 挂载贡献拥有方法和取消职责。释放它会拒绝留存回调并结束自己的工作，借用的 Context、adapter 与 Connection 保留各自所有者。namespace 登记继续沿现有挂载队列组合与退役。`ctx` 成员保留给 Cordis tracing。显式 endpoint client 仍用于直接 wire 调用；scoped 应用代码使用上面的 Context service。
 
 普通 DTO/STJ 后端也接收共同 wire 模型已识别的框架 `IEnumerable<T>`、`ICollection<T>`、`IReadOnlyCollection<T>`、`IList<T>`，与已有 list、数组和字符串键字典共用投影。引用元素声明保留默认值与空性。这些是由 STJ 序列化的数据载体，不执行作者自己的 enumerable 实现，也不表示支持任意泛型类。
+
+## 注册 scope 与 Peer 事件路由
+
+在所有者的 Cordis 执行域内创建注册 scope，并向其不透明 key 分发事件：
+
+```csharp
+await using var scoped = Scope.Create(owner, subject);
+scoped.Context.On("app/changed", (_, args) => {
+    Observe(args[0]);
+    return Undefined.Value;
+});
+owner.Events.EmitWith(Scope.Target(subject, subject), "app/changed", change);
+```
+
+subject 可以实现 `IEventFilter`，载体保留其过滤器。载体不暴露 subject 属性；监听者需要真实 subject 时，将它放入事件参数。生成的 Remote waterfall helper 自动处理这一点，公开调用签名不变。
+
+`Scope.Of(context)` 读取最近的继承标签。向 `Scope.Create` 提供 `parent` 可以绑定路由祖先；需要受控重绑时，保留 `Scope.BindParent(key, parent)` 返回的句柄。路由父链不转移所有权。`DisposeAsync` 等待所属清理，包括有序复合 effect 先前通过 `DisposeRawAsync` 启动的清理。
+
+Remote 方法通过 `TypertInvocation.Current!.Peer!` 取得准入后的 Peer，并通过 `peer.Context` 注册。以 `parent: peer` 创建的子 scope 会向上路由到这些 Peer 监听者。不要释放借用的 Peer Context。socket、逻辑流和调用方都不拥有共享 Connection 的 Peer，也不需要用请求参数指定它。直接 Gateway 调用中由所有者持有的 fallback 使用同一机制。

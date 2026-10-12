@@ -180,7 +180,7 @@ public sealed class EventGenerator : IIncrementalGenerator
                 .Append(
                     ">> next, global::System.Threading.CancellationToken signal = default) => global::Cordis.Composition.TypertRemoteEvents.AwaitResult<")
                 .Append(result)
-                .Append(">(caller.Events.WaterfallWith(agent, ")
+                .Append(">(caller.Events.WaterfallWith(global::Cordis.Composition.Scope.Target(agent, agent), ")
                 .Append(name)
                 .Append(", () => BoxNext(next), agent, request, signal));\n")
                 .Append(

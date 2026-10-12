@@ -474,4 +474,10 @@ Chief 对 `9ae967c` 的审查关闭 E02/E03，通过 N01/N02 保留 E01。两个
 
 保存模型的 DTO/client target 现在在 restore 后首次设计时构建中提供生成 Compile 及语言服务命令行输入。设计时输出与普通 build/pack 分开；两者使用相同后端、显式引用输入及 Clean 所有权。既有包消费者负责回归、实际 STJ 编译及随后 Remote 调用；引用消费者另查首次生成、引用事实变化和过期输出拒绝。本候选验证与已推送 S01/S02 检查点 `9243d3a` 分开，不表示实际 IDE、具名 UI 平台或全部后端已经完成。
 
-下一项 Peer 对照已有具体落点：固定 `packages/client/connection/src/operator-peer.ts` 以 Peer 自身为 key 创建 scope；`packages/core/scope/src/index.ts` 提供继承标签、身份／祖先事件路由、原过滤器保留及等待清理完成。原生 `TypertPeer.Context` 当前只有 Fiber 所有权，没有 scope key；Core 事件分发当前仅过滤 Context 和 Service receiver。应先补齐共同路由职责，再关闭 Peer scope-targeting，不能增加 RPC 身份参数或从 Fiber 祖先关系猜测路由。本发现不重开共同声明模型。
+下一项 Peer 对照已有具体落点：固定 `packages/client/connection/src/operator-peer.ts` 以 Peer 自身为 key 创建 scope；`packages/core/scope/src/index.ts` 提供继承标签、身份／祖先事件路由、原过滤器保留及等待清理完成。该检查点的原生 `TypertPeer.Context` 只有 Fiber 所有权，没有 scope key；Core 事件分发仅过滤 Context 和 Service receiver。后续 scope 工作补齐这一共同路由职责，不能增加 RPC 身份参数或从 Fiber 祖先关系猜测路由。本发现不重开共同声明模型。
+
+## Chief 收口与 Peer 续建，2026-10-12
+
+Chief 对已推送 `9243d3a` 的审查关闭 S01/S02，保留 N01/N02 及此前事件／流问题的关闭结论。其独立证据是 JS 和真实固定 Cordis 探针，不是重跑 .NET 包、ASP.NET 或浏览器。原环境失败与同源码同包补完在验证记录中继续分列。本地 `09c2c11` design-time 工作保留自己的收据及完整运行 test-map 未完成边界。
+
+后续实现将固定 scope 标签与路由载体接入现有 Core 分发、Peer 和生成的 waterfall。`ScopeTests` 主责原生身份／祖先／过滤／静止清理行为；现有 Peer 测试主责 Connection／fallback 隔离及撤销。现有生成式 Remote 事件测试保护 subject 过滤器。独立共享 DTO／Remote 包消费者调用一个不接收身份参数的方法，分发 Peer、子 scope 和无标签事件；.NET 与 TS 消费同一结果。其现有浏览器入口验证同一 Host 路由。这不证明浏览器侧 scope 实现或全部 Peer 工作流。scope store／layer、更多引用后端、真实 IDE／具名平台及最终冻结跨平台门禁仍是原有职责，不随本批隐式关闭。

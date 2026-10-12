@@ -235,6 +235,8 @@ Cordis.Core: Cordis.IConfigurationPlugin :  [] flags=Public, ClassSemanticsMask,
   Method Cordis.PluginConfiguration CaptureConfiguration() attrs= params= return=Nullable/Nullable
 Cordis.Core: Cordis.IContextualService :  [] flags=Public, ClassSemanticsMask, Abstract, BeforeFieldInit attrs=
   Method System.Object ForContext(Cordis.Context) attrs= params=caller:NotNull/NotNull  return=NotNull/NotNull
+Cordis.Core: Cordis.IEventFilter :  [] flags=Public, ClassSemanticsMask, Abstract, BeforeFieldInit attrs=
+  Method Boolean Filter(Cordis.Context) attrs= params=listener:NotNull/NotNull  return=NotNull/NotNull
 Cordis.Core: Cordis.ILogExporter :  [] flags=Public, ClassSemanticsMask, Abstract, BeforeFieldInit attrs=
   Property Int32 Level attrs= NotNull/Unknown get=True set=False init=False
   Property System.Collections.Generic.IReadOnlyDictionary`2[System.String,System.Int32] Levels attrs= Nullable/Unknown<NotNull/NotNull,NotNull/NotNull> get=True set=False init=False
@@ -1460,6 +1462,21 @@ Cordis.Composition: Cordis.Composition.RemoteStreamHandle`2 : System.Object [Sys
   Method Void Send(TInput) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.RemoteUplinkAttribute : System.Attribute [] flags=Public, Sealed, BeforeFieldInit attrs=[System.AttributeUsageAttribute((System.AttributeTargets)2048, Inherited = False)]
   Constructor Void .ctor() attrs= params=
+Cordis.Composition: Cordis.Composition.Scope : System.Object [System.IAsyncDisposable] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean IsCarrier(System.Object) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.Scope Create(Cordis.Context, System.Object, System.Object) attrs= params=owner:NotNull/NotNull ;key:NotNull/NotNull ;parent:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
+  Method Cordis.Composition.ScopeParentBinding BindParent(System.Object, System.Object) attrs= params=key:NotNull/NotNull ;parent:NotNull/NotNull  return=NotNull/NotNull
+  Method Cordis.Composition.Scoped`1[T] Target[T](T, System.Object) attrs= params=subject:NotNull/NotNull ;key:Nullable/Nullable  return=NotNull/NotNull<NotNull/NotNull> constraints=T:ReferenceTypeConstraint:
+  Property Cordis.Context Context attrs= NotNull/Unknown get=True set=False init=False
+  Method System.Collections.Generic.IReadOnlyList`1[System.Object] ChainOf(System.Object) attrs= params=key:Nullable/Nullable  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Object CarrierKeyOf(System.Object) attrs= params=value:Nullable/Nullable  return=Nullable/Nullable
+  Method System.Object Of(Cordis.Context) attrs= params=context:NotNull/NotNull  return=Nullable/Nullable
+  Method System.Object ParentOf(System.Object) attrs= params=key:NotNull/NotNull  return=Nullable/Nullable
+  Method System.Threading.Tasks.ValueTask DisposeAsync() attrs= params= return=NotNull/NotNull
+  Method System.Threading.Tasks.ValueTask DisposeRawAsync() attrs= params= return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.ScopeParentBinding : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Void Rebind(System.Object) attrs= params=parent:NotNull/NotNull  return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.Scoped`1 : System.Object [Cordis.IEventFilter] flags=Public, Sealed, BeforeFieldInit attrs= constraints=T:ReferenceTypeConstraint:
 Cordis.Composition: Cordis.Composition.SettingsConflictException : System.Exception [System.Runtime.Serialization.ISerializable] flags=Public, Sealed, BeforeFieldInit attrs=
   Property Double Actual attrs= NotNull/Unknown get=True set=False init=False
   Property Double Expected attrs= NotNull/Unknown get=True set=False init=False

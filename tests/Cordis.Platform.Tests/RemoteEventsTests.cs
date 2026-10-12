@@ -9,7 +9,10 @@ using Xunit;
 
 namespace Cordis.Platform.Tests;
 
-public sealed record EventAgent(Context Context, string Id);
+public sealed record EventAgent(Context Context, string Id) : IEventFilter
+{
+    public bool Filter(Context listener) => Context.Filter?.Invoke(listener) ?? true;
+}
 
 public sealed record EventQuestion(string Question);
 
@@ -45,7 +48,7 @@ public sealed class RemoteEventsTests
     {
         await using var host = new Context();
         await using var clientRoot = new Context();
-        var subject = new EventAgent(host, "agent-1");
+        var subject = new EventAgent(host.Extend(), "agent-1");
         TypertHostConnection connection = null!;
         await host.RunAsync(ctx =>
         {
@@ -84,6 +87,7 @@ public sealed class RemoteEventsTests
         await using var events = new TypertRemoteEventsClient(clientRoot, registryClient, carrier);
         var ready = Signal();
         var entered = Signal();
+        var excludedReachedHandler = Signal();
         var handlerReleased = Signal();
         var cancelled = Signal();
         var released = Signal();
@@ -126,6 +130,25 @@ public sealed class RemoteEventsTests
         try
         {
             await ready.Task.WaitAsync(Limit);
+            if (result == "next")
+                await host.RunAsync(async ctx =>
+                {
+                    subject.Context.Filter = _ => false;
+                    var pending = ApprovalEventTypert.InvokeAsync(
+                        ctx,
+                        subject,
+                        new("excluded"),
+                        () => Task.FromResult(new RemoteOptional<string?>("fallback")),
+                        request.Token);
+                    await Task.WhenAny(pending, excludedReachedHandler.Task).WaitAsync(Limit);
+                    Assert.False(
+                        excludedReachedHandler.Task.IsCompleted,
+                        "Excluded subject reached the Remote handler.");
+                    var excluded = await pending;
+                    Assert.Equal("fallback", excluded.Value);
+                    Assert.Equal(0, resolveCount);
+                    subject.Context.Filter = _ => true;
+                });
             await host.RunAsync(ctx =>
             {
                 outcome = ApprovalEventTypert.InvokeAsync(
@@ -192,6 +215,8 @@ public sealed class RemoteEventsTests
             CancellationToken signal)
         {
             Assert.Same(clientRoot, agent);
+            if (value.Question == "excluded")
+                excludedReachedHandler.TrySetResult();
             Assert.Equal("allow?", value.Question);
             using var registration = signal.Register(() => cancelled.TrySetResult());
             entered.TrySetResult();

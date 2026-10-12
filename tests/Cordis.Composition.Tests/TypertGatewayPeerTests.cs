@@ -47,7 +47,36 @@ public sealed class TypertGatewayPeerTests
         var explicitCall = await connection.InvokeAsync("peer/read", Empty);
         Assert.True(explicitCall.Ok);
         Assert.Same(connection.Peer, service.Last);
+        var routed = new List<string>();
+        await root.RunAsync(ctx =>
+        {
+            fallback.Context.On(
+                "peer/routed",
+                (_, _) =>
+                {
+                    routed.Add("fallback");
+                    return Undefined.Value;
+                });
+            connection.Peer.Context.On(
+                "peer/routed",
+                (_, _) =>
+                {
+                    routed.Add("connection");
+                    return Undefined.Value;
+                });
+            ctx.Events.EmitWith(Scope.Target(ctx, connection.Peer), "peer/routed");
+            Assert.Equal(["connection"], routed);
+            ctx.Events.EmitWith(Scope.Target(ctx, fallback), "peer/routed");
+            Assert.Equal(["connection", "fallback"], routed);
+            return Task.CompletedTask;
+        });
         await connection.DisposeAsync();
+        await root.RunAsync(ctx =>
+        {
+            ctx.Events.EmitWith(Scope.Target(ctx, connection.Peer), "peer/routed");
+            Assert.Equal(["connection", "fallback"], routed);
+            return Task.CompletedTask;
+        });
         Assert.Equal(0, releases);
         await root.RunAsync(async _ => await scope.DisposeAsync());
         Assert.Equal(1, releases);
