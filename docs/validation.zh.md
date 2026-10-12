@@ -487,3 +487,18 @@ Windows x64 源码测试通过 883 项；四阶段格式检查在 277 个 C# 文
 真实内置浏览器直接消费这批包生成的原样资产，通过同一 scoped／准备边界消费者。[回执](../verification/client-preparation-2026-10-12/evidence.json)记录原始失败、补完检查、包和测试身份；[浏览器回执](../verification/client-preparation-2026-10-12/browser.json)绑定源码、资产与截图。Linux、静态 AOT、托管 CI、远端 SourceLink 获取、完整 DSH 原始测试套件及完整 Context／Peer 矩阵未在本批重跑。本次收口未推送、合并或发布。
 
 另一个先行包探针确认下一作者体验缺口：首次设计时 Compile 缺少生成 DTO／客户端输入，随后普通 build 会生成两者并编译消费者。这是 MSBuild 输入证据，不是实时 IDE 验收，也不计作最终包验收。[开发记录](development.zh.md)的 D-MODEL／D-WIRE 保留当前剩余出口。
+
+## 首次设计时模型消费，2026-10-12
+
+实现检查点 `09c2c11f9a511cc3f5ccccaab7302db0b7d7a8e0` 使保存模型的 DTO 与 client 在 restore 后首次设计时 `CoreCompile` 前生成。包 target 使用独立设计时输出和相同模型／引用后端；普通 build/pack、增量时间戳及 Clean 沿用原有所有者。引用 XML 文档也进入设计时作者 compilation。供打包使用的源码模型提取仍属于普通构建。本批没有公开模型格式、依赖或协议变化。
+
+主要回归位于 `scripts/typert_declaration_consumer.py`，通过独立包消费者执行。相同首次设计时输入断言在此前 `dfee948` 包上因缺少生成输入而失败。新冻结包通过 Compile/CscCommandLineArgs 准入、实际引用生成 DTO、client 和 STJ metadata 的 C# 编译、普通 pack、Clean／冷构建及既有真实 Remote 调用。显式引用模型消费者另通过 data/client 首次生成、引用事实变化、重新生成后真实调用、冲突／缺失引用拒绝和过期设计时输出删除。.NET 生成时 PATH 不含 Node，调用者不引用作者实现。
+
+[验证凭据](../verification/design-time-2026-10-12/evidence.json) 绑定源码、全部 18 个包 hash、实际消费者报告及失败证据。本候选**没有取得一次不间断的默认门禁全绿**：
+
+- 冻结源码执行默认 `scripts/verify.py` 入口，使用独立输出目录保留上一批记录。build 成功；882 项测试通过，1 项在准备 `PackIncompatibleAsync` fixture 时因 `Process.Start("dotnet")` 遇到 WinError 5 失败，尚未进入 `Known_incompatible_peers_are_refused_before_build_even_when_not_selected(enabled: False)` 的产品断言。
+- 随后原样重跑该测试方法，两种参数均通过。原失败 TRX 保持原貌，子进程启动失败的根因仍未解决。
+- 后续默认 JIT、模块、CLI、API、可选参数和空白检查在相同源码上单独执行并通过。`test-map` 未在这份有失败的完整 TRX 上完成；没有构造拼接 TRX 或替代的成功完整门禁报告。
+- 两组定向消费者均在冻结最终包批次通过。更早的引用探针也独立遇到过一次 dotnet 启动拒绝；该失败及成功重试与最终包执行分别保留。
+
+本证据为 Windows x64 / SDK 10.0.111。本候选没有执行完整 `--package` 门禁、符号／debug 消费、真实浏览器、Linux、Native AOT、托管 CI、实际 IDE 交互或具名 UI 平台验收；MSBuild 设计时证据不覆盖这些边界。其余引用 Schema/TS 后端与 Peer/scope-targeting 仍未完成。前一组 S01/S02 审查固定在已推送 `9243d3a`，本地续建结果不改变其证据。
