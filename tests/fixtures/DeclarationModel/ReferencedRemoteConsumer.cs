@@ -42,4 +42,24 @@ if (result.Value.External.Count != expected || result.Value.External.Name != "re
     result.Value.ByName?["reference"]?.Name != "dictionary" || !result.Value.ByName.ContainsKey("empty") ||
     result.Value.ByName["empty"] is not null)
     throw new Exception("Referenced declaration facts did not survive the generated HTTP call.");
+value.Groups = new Dictionary<string, ImportedData[]>
+{
+    ["invalid"] = [null!]
+};
+var invalid = await client.EchoAsync(value);
+if (invalid.Ok || invalid.Error.Code != "gateway/input-invalid")
+    throw new Exception(
+        "A nullable dictionary value weakened a separate non-null array element of the same declaration.");
+using var response = await http.PostAsync(
+    new Uri(new Uri(args[0]), "/remote/referencedData/echo"),
+    new StringContent(
+        """{"type":"client-request","rpcId":"required-null","method":"referencedData/echo","payload":{"args":{"value":{"External":null}}}}""",
+        System.Text.Encoding.UTF8,
+        "application/json"));
+response.EnsureSuccessStatusCode();
+using var required = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+var requiredResult = required.RootElement.GetProperty("result");
+if (requiredResult.GetProperty("ok").GetBoolean() ||
+    requiredResult.GetProperty("error").GetProperty("code").GetString() != "gateway/input-invalid")
+    throw new Exception("A nullable dictionary value weakened a required non-null object of the same declaration.");
 Console.WriteLine("referenced Remote package caller passed: " + expected);

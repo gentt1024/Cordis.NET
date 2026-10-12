@@ -11,6 +11,7 @@ using TypertConnection = Cordis.Composition.TypertConnection;
 using System.Text.Json;
 using IndependentManagement.Manager;
 using IndependentManagement.Notifications;
+using IndependentManagement.Collections;
 using RemoteError = Cordis.Composition.RemoteError;
 
 using var http = new HttpClient
@@ -24,6 +25,9 @@ await using var manager = new PluginManagerClient(connection);
 await using var notifications = new EventObservation(connection);
 using var observation = new CancellationTokenSource();
 await notifications.StartAsync(observation.Token);
+using (var emitted = await http.PostAsync(new Uri(address, "/control/collection-events"), null))
+    emitted.EnsureSuccessStatusCode();
+await notifications.Collections.Task.WaitAsync(TimeSpan.FromSeconds(10));
 await using var events = notifications.Read().GetAsyncEnumerator();
 var plugins = (await manager.ListPluginsAsync()).Value;
 var worker = plugins.Single(row => row.EntryId == "root:worker");
@@ -434,6 +438,13 @@ sealed class EventObservation : IAsyncDisposable
     private readonly TypertRemoteEventsClient client;
     private readonly Channel<ObservedEvent> queue = Channel.CreateUnbounded<ObservedEvent>();
     private Task? pump;
+    private int collectionCount;
+
+    public TaskCompletionSource Collections
+    {
+        get;
+    } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public EventObservation(TypertConnection connection) => client = new(owner, new TypertRegistry(owner), connection);
 
     public async Task StartAsync(CancellationToken token = default)
@@ -441,6 +452,20 @@ sealed class EventObservation : IAsyncDisposable
         var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await owner.RunAsync(ctx =>
         {
+            CollectionEvent.On(
+                client,
+                ctx,
+                (values, labels, required) =>
+                {
+                    if (collectionCount == 0 && (values?.Count != 2 || values[0] != "text" || values[1] is not null ||
+                            !labels.ContainsKey("empty") || labels["empty"] is not null ||
+                            required.Single() != "required"))
+                        Collections.TrySetException(new Exception("Saved event listener lost nullable elements."));
+                    else if (collectionCount == 1 && (values is not null || labels.Count != 0 || required.Count != 0))
+                        Collections.TrySetException(new Exception("Saved event listener lost nullable root."));
+                    else if (++collectionCount == 2)
+                        Collections.TrySetResult();
+                });
             ChangedEvent.On(client, ctx, _ => queue.Writer.TryWrite(new("plugin-manager/changed", [])));
             PluginInstallStateEventTypert.On(client, ctx, value => Publish("plugin-manager/install-state", value));
             PluginInstallLogEventTypert.On(client, ctx, value => Publish("plugin-manager/install-log", value));

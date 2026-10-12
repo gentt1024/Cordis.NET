@@ -17,6 +17,55 @@ public sealed class RemoteCarrierTests
 {
     private static readonly TimeSpan Limit = TimeSpan.FromSeconds(5);
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Event_stream_returns_unused_uplink_without_stopping_observers_or_siblings(bool overflow)
+    {
+        await using var root = new Context();
+        await using var connection = await Connect(root, new CarrierService(), events: true);
+        await using var app = Server(connection);
+        await app.StartAsync();
+        using var socket = new ClientWebSocket();
+        await socket.ConnectAsync(
+            new UriBuilder(app.Urls.Single() + "/remote/remote.mux")
+            {
+                Scheme = "ws"
+            }.Uri,
+            CancellationToken.None);
+        await Send("{\"type\":\"open\",\"streamId\":\"events\",\"endpoint\":\"$events\",\"payload\":{\"args\":{}}}");
+        using var ready = await Read(socket).WaitAsync(Limit);
+        Assert.Equal("ready", ready.RootElement.GetProperty("value").GetProperty("type").GetString());
+        if (!overflow)
+            await Send("{\"type\":\"end\",\"streamId\":\"events\"}");
+        await Send(
+            "{\"type\":\"item\",\"streamId\":\"events\",\"value\":\"" + new string('x', overflow ? 262144 : 1) + "\"}");
+        // The sibling reply fences the preceding input frames through the same physical receive loop.
+        await Send(
+            "{\"type\":\"open\",\"streamId\":\"sibling\",\"endpoint\":\"carrier/watch\",\"payload\":{\"args\":{\"id\":1}}}");
+        using var sibling = await Read(socket).WaitAsync(Limit);
+        Assert.Equal("sibling", sibling.RootElement.GetProperty("streamId").GetString());
+        Assert.Equal("item", sibling.RootElement.GetProperty("type").GetString());
+        using var end = await Read(socket).WaitAsync(Limit);
+        Assert.Equal("end", end.RootElement.GetProperty("type").GetString());
+        await root.RunAsync(ctx =>
+        {
+            ctx.Emit("carrier/changed", 7);
+            return Task.CompletedTask;
+        });
+        using var notification = await Read(socket).WaitAsync(Limit);
+        Assert.Equal("events", notification.RootElement.GetProperty("streamId").GetString());
+        Assert.Equal("carrier/changed", notification.RootElement.GetProperty("value").GetProperty("event").GetString());
+        Assert.Equal(7, notification.RootElement.GetProperty("value").GetProperty("args")[0].GetInt32());
+        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "done", CancellationToken.None);
+
+        Task Send(string frame) => socket.SendAsync(
+            Encoding.UTF8.GetBytes(frame),
+            WebSocketMessageType.Text,
+            true,
+            CancellationToken.None);
+    }
+
     [Fact]
     public async Task Both_carriers_reject_invalid_payload_before_lookup_and_business()
     {
@@ -143,7 +192,7 @@ public sealed class RemoteCarrierTests
         return app;
     }
 
-    private static async Task<TypertHostConnection> Connect(Context root, CarrierService service)
+    private static async Task<TypertHostConnection> Connect(Context root, CarrierService service, bool events = false)
     {
         TypertHostConnection result = null!;
         await root.RunAsync(owner =>
@@ -186,7 +235,13 @@ public sealed class RemoteCarrierTests
                         return ValueTask.FromResult(value);
                     }));
             owner.Provide("carrier", service);
-            result = new(owner, new TypertGateway(owner, registry));
+            var gateway = new TypertGateway(owner, registry);
+            if (events)
+                gateway.RegisterRemoteEvents(
+                    owner,
+                    TypertRemoteEvents.FromCordis(owner, [new("carrier/changed", [codec])]),
+                    new("test-home"));
+            result = new(owner, gateway);
             return Task.CompletedTask;
         });
         return result;

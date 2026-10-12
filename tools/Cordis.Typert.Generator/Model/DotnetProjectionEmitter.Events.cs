@@ -74,6 +74,6 @@ internal sealed partial class DotnetProjectionEmitter
                 .Append(", listener);\n");
         }
 
-        return output.Append("}\n").ToString();
+        return output.Append(emitter.nullabilityHelpers).Append("}\n").ToString();
     }
 }

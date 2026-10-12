@@ -208,7 +208,15 @@ public static partial class TypertArtifacts
                 if (node.TryGetProperty(union, out var choices))
                     return string.Join(" | ", choices.EnumerateArray().Select(child => Render(child, native)));
             if (node.TryGetProperty("allOf", out var requirements))
-                return string.Join(" & ", requirements.EnumerateArray().Select(child => Render(child, native)));
+                return string.Join(
+                    " & ",
+                    requirements.EnumerateArray().Select(child => "(" + Render(child, native) + ")"));
+            if (node.EnumerateObject().Count() == 1 && node.TryGetProperty("not", out var excluded) &&
+                excluded.ValueKind == JsonValueKind.Object && excluded.EnumerateObject().Count() == 1 &&
+                excluded.TryGetProperty("type", out var excludedType) &&
+                excludedType.ValueKind == JsonValueKind.String &&
+                excludedType.GetString() == "null")
+                return "{}";
             if (TypertBinaryResult.IsBinary(native) &&
                 !(node.TryGetProperty("type", out var nullKind) && nullKind.ValueKind == JsonValueKind.String &&
                     nullKind.GetString() == "null"))

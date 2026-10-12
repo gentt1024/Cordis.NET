@@ -345,11 +345,11 @@ internal sealed class CordisRemoteMux(
             }
         }
 
-        public async IAsyncEnumerable<JsonElement> ReadUplink(
+        public IAsyncEnumerable<JsonElement> ReadUplink() => new Uplink(this);
+
+        private async IAsyncEnumerable<JsonElement> ReadInput(
             [EnumeratorCancellation] CancellationToken token = default)
         {
-            if (Interlocked.Exchange(ref consumed, 1) != 0)
-                throw new InvalidOperationException("A Remote stream has one uplink consumer.");
             try
             {
                 while (await input.Reader.WaitToReadAsync(token))
@@ -369,6 +369,31 @@ internal sealed class CordisRemoteMux(
             finally
             {
                 CloseInput();
+            }
+        }
+
+        private sealed class Uplink(Call owner) : IAsyncEnumerable<JsonElement>
+        {
+            public IAsyncEnumerator<JsonElement> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+            {
+                if (Interlocked.Exchange(ref owner.consumed, 1) != 0)
+                    throw new InvalidOperationException("A Remote stream has one uplink consumer.");
+                return new InputIterator(
+                    owner,
+                    owner.ReadInput(cancellationToken).GetAsyncEnumerator(cancellationToken));
+            }
+        }
+
+        private sealed class InputIterator(Call owner, IAsyncEnumerator<JsonElement> source)
+            : IAsyncEnumerator<JsonElement>
+        {
+            public JsonElement Current => source.Current;
+            public ValueTask<bool> MoveNextAsync() => source.MoveNextAsync();
+
+            public ValueTask DisposeAsync()
+            {
+                owner.CloseInput();
+                return source.DisposeAsync();
             }
         }
 

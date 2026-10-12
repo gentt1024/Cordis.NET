@@ -181,6 +181,8 @@ public sealed class RemoteGenerator : IIncrementalGenerator
         var unary = new StringBuilder();
         var streams = new StringBuilder();
         var streamHelpers = new StringBuilder();
+        var nullabilityHelpers = new StringBuilder();
+        var nullabilityIndex = 0;
         foreach (var invocation in contract.Methods)
         {
             if (!symbols.TryGetValue(invocation.Facts.Id, out var method))
@@ -202,12 +204,20 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                         named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T
                             ? named.TypeArguments[0]
                             : symbol.WithNullableAnnotation(NullableAnnotation.NotAnnotated);
-                return "global::Cordis.Composition.TypertCodec." +
-                    (!disallowNull && symbol.IsReferenceType && reference.Nullability == "Annotated"
-                        ? "CreateNullable"
-                        : "Create") +
+                var query = "__CordisNullability" + nullabilityIndex++;
+                var declared = disallowNull
+                    ? reference with
+                    {
+                        Nullability = "NotAnnotated"
+                    }
+                    : reference;
+                if (disallowNull && reference.Kind == "named" && model.Declarations.Any(value =>
+                        value.Id == reference.Name && value.MetadataName == "System.Nullable`1"))
+                    declared = reference.Arguments[0];
+                nullabilityHelpers.Append(NullabilityProjection.Declaration(declared, model, contextReference, query));
+                return "global::Cordis.Composition.TypertCodec.CreateDeclared" +
                     "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" + TypeName(symbol) + ">)" +
-                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
+                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " + query + ", " +
                     Literal(symbol.ToDisplayString()) + ")";
             }
 
@@ -382,6 +392,7 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                                new global::System.Collections.Generic.Dictionary<string, global::Cordis.Composition.TypertUnaryInvoker> { {{unary}} },
                                new global::System.Collections.Generic.Dictionary<string, global::Cordis.Composition.TypertStreamInvoker> { {{streams}} });
                            {{streamHelpers}}
+                           {{nullabilityHelpers}}
                        }
                        """;
         output.AddSource(type.ToDisplayString().Replace('.', '_') + ".Remote.g.cs", source);

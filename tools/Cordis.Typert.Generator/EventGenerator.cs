@@ -54,7 +54,9 @@ public sealed class EventGenerator : IIncrementalGenerator
                                 "Published event declaration drift: " + string.Join("; ", differences));
                     }
 
-                    output.AddSource(symbol.Name + ".Events.g.cs", Emit(symbol, compilation, model, contract));
+                    output.AddSource(
+                        symbol.ToDisplayString() + ".Events.g.cs",
+                        Emit(symbol, compilation, model, contract));
                 }
                 catch (Exception error)
                 {
@@ -69,6 +71,9 @@ public sealed class EventGenerator : IIncrementalGenerator
         DeclarationModelDocument model,
         RemoteEventContract contract)
     {
+        var nullabilityHelpers = new StringBuilder();
+        var nullabilityIndex = 0;
+
         string Type(DeclarationReference reference) => RemoteGenerator
             .Resolve(reference, compilation, model)
             .ToDisplayString(
@@ -85,14 +90,15 @@ public sealed class EventGenerator : IIncrementalGenerator
                     Codec(reference.Arguments[0]) + ")";
             var type = Type(reference);
             var native = RemoteGenerator.Resolve(reference, compilation, model);
-            var factory = native.IsReferenceType && reference.Nullability == "Annotated" ? "CreateNullable" : "Create";
+            var query = "__CordisNullability" + nullabilityIndex++;
+            nullabilityHelpers.Append(NullabilityProjection.Declaration(reference, model, contract.JsonContext, query));
             var runtimeType = native
                 .WithNullableAnnotation(NullableAnnotation.NotAnnotated)
                 .ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             var metadataType = native.IsReferenceType ? runtimeType : type;
-            return "global::Cordis.Composition.TypertCodec." + factory +
+            return "global::Cordis.Composition.TypertCodec.CreateDeclared" +
                 "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" + metadataType + ">)" +
-                Type(contract.JsonContext) + ".Default.GetTypeInfo(typeof(" + runtimeType + "))!)";
+                Type(contract.JsonContext) + ".Default.GetTypeInfo(typeof(" + runtimeType + "))!, " + query + ")";
         }
 
         var name = SymbolDisplay.FormatLiteral(contract.Name, true);
@@ -183,6 +189,6 @@ public sealed class EventGenerator : IIncrementalGenerator
                 .Append(">> next) => await next();\n");
         }
 
-        return output.Append("}\n").ToString();
+        return output.Append(nullabilityHelpers).Append("}\n").ToString();
     }
 }

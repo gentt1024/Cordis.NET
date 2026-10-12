@@ -57,6 +57,9 @@ The typed waterfall listener returns `RemoteEventResult<T>`. Its continuation ma
 
 The existing `emit-dotnet` command also accepts a selected event name or delegate metadata name in `--service`. `CordisTypertClientModel`, `CordisTypertService`, `CordisTypertClientNamespace` and `CordisTypertClientName` generate the corresponding typed `On` helper and standalone data from the saved common model before compilation. Backend serializer restrictions still apply; a Host serializer that cannot be reproduced is not silently replaced with a different policy.
 
+
+Collection element nullability comes from the event declaration, including `List<string?>?` and `Dictionary<string, T?>`. Authors register ordinary CLR metadata (`typeof(List<string>)`) in their JSON context; they do not hand-author a second schema. Generated source listeners, saved-model listeners and TS listeners use those same facts. Non-null elements still reject null. Namespace-qualified delegate identities permit unrelated same-name event delegates.
+
 ## Listen in TypeScript
 
 ```ts

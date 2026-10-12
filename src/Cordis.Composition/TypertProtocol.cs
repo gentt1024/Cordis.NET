@@ -296,7 +296,11 @@ public abstract partial class TypertCodec
         writer.WriteEndObject();
     }
 
-    private sealed class TypedCodec<T>(JsonTypeInfo<T> metadata, string symbol, JsonElement? explicitSchema)
+    private sealed class TypedCodec<T>(
+        JsonTypeInfo<T> metadata,
+        string symbol,
+        JsonElement? explicitSchema,
+        TypertNullability? nullability = null)
         : TypertCodec
     {
         private JsonElement? schema;
@@ -321,7 +325,10 @@ public abstract partial class TypertCodec
             var node = metadata.GetJsonSchemaAsNode(
                 new JsonSchemaExporterOptions
                 {
-                    TreatNullObliviousAsNonNullable = true
+                    TreatNullObliviousAsNonNullable = true,
+                    TransformSchemaNode = nullability is null
+                        ? null
+                        : (context, node) => AnnotateNullability(node, nullability(context.Path))
                 });
             using var document = JsonDocument.Parse(node.ToJsonString());
             return document.RootElement.Clone();

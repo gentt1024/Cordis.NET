@@ -428,3 +428,11 @@ Chief 对 `c3db1f9` 的审查关闭 R01／R02，并保持 F02／F04 关闭。独
 ### 类型化事件消费检查点，2026-10-12
 
 实现 `299c597` 已贯通选定的共同模型 → 生成式 Host／监听 → Connection／Gateway → 反向 Context → handler／回复 → 释放链路。标准管理／模块改用类型化事件，原通知 Remote／导出已移除。事件源撤销时会结算全部已接收 waterfall，包括尚未交给 Gateway 的排队调用。严格声明消费由声明自身引入所需标准库，独立 TS 驱动在新目录内准备实际 Context。Windows／Linux 完整包门禁和保留独立身份的浏览器恢复结果见[验证记录](validation.zh.md#类型化-remote-事件与反向-context2026-10-12)。后续从此检查点继续，保留 Chief 对 R01／R02 及 F02／F04 的关闭结论。下一组原有职责包括直接 Gateway 的 operatorPeer fallback、浏览器 scoped 消费、其余模型后端和具名平台接入。此次收尾没有新增依赖或待裁决的公共合同取舍。
+
+### 事件审查与声明空性检查点，2026-10-12
+
+Chief 对 `f0d38f5` 的审查保留既有事件／owned-value 结构，但指出 E01（嵌套事件空性）、E02（同名委托输出碰撞）与 E03（未归还事件上行）。三项均已在本地修前复现。正在推进的 `0a722f6` operatorPeer／字典候选也在 Windows 与 Linux 的真实引用模型 Remote 调用处遇到同源的泛型空性失败；两次门禁保持失败，不能被其中已通过的源码测试（Windows 875，Linux 872 加三项具名 Windows 专用跳过）覆盖。
+
+修正将现有共同声明事实接入懒加载 codec 导出，采用完整限定事件输出名，并在 `$events` 归还输入时关闭载体拥有的 inbox。不增加保存模型或线格式。`CreateDeclared` 是共享的生成代码边界；显式 Schema 的 `Create` 保留独立的手写 codec 用途。验证入口为 `EventDeclarationTests`、`RemoteCarrierTests`、`verify-typert-dotnet.py --data-references-only` 与 `--management-only`，随后执行冻结候选的完整包门禁。包夹具在冷／增量构建中编译同名委托，从保存模型重新生成独立监听，并执行严格 TS 与真实 .NET／TS 事件调用。源码 `On` 经 loopback ASP.NET 验证。此前未变化的证据继续保留原候选身份。
+
+修正后回到原有浏览器 scoped、其余后端与平台职责，不重开此前已关闭问题，也不根据这些探针宣称其余职责完成。本次不改变依赖、包版本、上游 pin、Maker，也不合并或发布。

@@ -28,25 +28,36 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
             raise RuntimeError("The package must contain the actual standard PluginManager model.")
     contracts = []
     contract_feed = source / "author-feed"
+    event_author, event_project = project("EventAuthor",
+        '<AssemblyName>IndependentEvents.Author</AssemblyName><PackageId>IndependentEvents.Author</PackageId>'
+        '<Version>1.0.0-alpha</Version>', composition,
+        '<ItemGroup><CordisTypertModelRoot Include="Cordis.Platform.Tests.EventAlpha.Changed"/>'
+        '<CordisTypertModelRoot Include="Cordis.Platform.Tests.EventBeta.Changed"/></ItemGroup>')
+    shutil.copyfile(root / "tests/fixtures/EventDeclarations/Author.cs", event_author / "Author.cs")
+    run("event-author-pack", [dotnet, "pack", event_project, "-c", "Release", "-o", contract_feed])
+    run("event-author-incremental", [dotnet, "build", event_project, "-c", "Release"])
+    event_model = (event_author / "obj/Release/net10.0/cordis-typert/IndependentEvents.Author.cordis.model.json").read_bytes()
     for service, name, namespace in (
         ("pluginManager", "PluginManagerClient", "IndependentManagement.Manager"),
         ("plugin-manager/changed", "ChangedEvent", "IndependentManagement.Notifications"),
+        ("alpha/changed", "CollectionEvent", "IndependentManagement.Collections"),
     ):
-        package_id = "IndependentManagement." + ("Manager" if service == "pluginManager" else "Notifications") + ".Contracts"
-        folder, path = project("ManagementContracts" if service == "pluginManager" else "NotificationContracts",
+        package_id = "IndependentManagement." + ("Manager" if service == "pluginManager" else "Collections" if service == "alpha/changed" else "Notifications") + ".Contracts"
+        folder, path = project("ManagementContracts" if service == "pluginManager" else "CollectionContracts" if service == "alpha/changed" else "NotificationContracts",
             f'<PackageId>{package_id}</PackageId><Version>1.0.0-alpha</Version><GenerateDocumentationFile>true</GenerateDocumentationFile>'
             f'<CordisTypertService>{service}</CordisTypertService>'
             f'<CordisTypertClientModel>{model_name}</CordisTypertClientModel>'
             f'<CordisTypertClientNamespace>{namespace}</CordisTypertClientNamespace>'
             f'<CordisTypertClientName>{name}</CordisTypertClientName>', composition,
             f'<ItemGroup><None Include="{model_name}" Pack="true" PackagePath="cordis/typert/"/></ItemGroup>')
-        (folder / model_name).write_bytes(model_bytes)
+        (folder / model_name).write_bytes(event_model if service == "alpha/changed" else model_bytes)
         run("standard-" + service.replace("/", "-") + "-client-pack", [dotnet, "pack", path, "-c", "Release", "-o", contract_feed])
         contracts.append(f'<PackageReference Include="{package_id}" Version="1.0.0-alpha"/>')
     host, host_project = project("ManagementHost", '<OutputType>Exe</OutputType>', composition +
         f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>'
         f'<PackageReference Include="Cordis.NET.Extensions" Version="{version}"/>'
-        '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
+        '<FrameworkReference Include="Microsoft.AspNetCore.App"/>'
+        '<PackageReference Include="IndependentEvents.Author" Version="1.0.0-alpha"/>')
     shutil.copyfile(root / "tests/fixtures/ManagementDotnet/Host.cs", host / "Program.cs")
     run("standard-management-host-build", [dotnet, "build", host_project, "-c", "Release"])
     references = composition + ''.join(contracts)

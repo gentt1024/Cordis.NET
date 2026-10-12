@@ -12,6 +12,8 @@ internal sealed partial class DotnetProjectionEmitter
     private readonly Dictionary<string, NativeTypeDeclaration> declarations;
     private readonly HashSet<string> reachable = new(StringComparer.Ordinal);
     private readonly StringBuilder output = new();
+    private readonly StringBuilder nullabilityHelpers = new();
+    private int nullabilityIndex;
 
     private DotnetProjectionEmitter(RemoteProjection model, string client) : this(model.Types, client)
     {
@@ -494,6 +496,7 @@ internal sealed partial class DotnetProjectionEmitter
             EmitCall(service, method, scoped: false);
         if (service.Methods.Any(method => method.Context is not null || method.Scope is not null))
             EmitScopedClient(service);
+        output.Append(nullabilityHelpers);
         output.AppendLine("}");
     }
 
@@ -605,9 +608,9 @@ internal sealed partial class DotnetProjectionEmitter
                 ", nullable: " + (Nullable(type) ? "true" : "false") + ")";
         }
 
-        return "global::Cordis.Composition.TypertCodec." +
-            (Nullable(type) && type.Kind != "nullable" ? "CreateNullable" : "Create") +
-            "(" + metadata + ")";
+        var query = "__CordisNullability" + nullabilityIndex++;
+        nullabilityHelpers.Append(NullabilityProjection.Native(type, declarations, query));
+        return "global::Cordis.Composition.TypertCodec.CreateDeclared(" + metadata + ", " + query + ")";
     }
 
     private void EmitScopedClient(NativeService service)

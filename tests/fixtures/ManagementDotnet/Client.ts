@@ -33,6 +33,20 @@ export async function run(origin: string, createContext: () => EventOwner) {
   const notifications = await observe(connection, createContext)
   const reader = notifications.reader
   const remotes = [manager, notifications]
+  const nullableSample: Parameters<EventListeners['alpha/changed']> = [[null], {empty: null}, ['required']]
+  // @ts-expect-error The third argument still has non-null elements.
+  const invalidRequired: Parameters<EventListeners['alpha/changed']>[2] = [null]
+  void nullableSample; void invalidRequired
+  const emitted = await fetch(origin + '/control/collection-events', {method: 'POST'})
+  assert(emitted.ok, 'Collection event fixture did not emit')
+  const firstCollection = await next(reader)
+  assert(firstCollection.event === 'alpha/changed' && firstCollection.args[0]?.[0] === 'text' &&
+    firstCollection.args[0][1] === null && firstCollection.args[1].empty === null &&
+    firstCollection.args[2][0] === 'required', 'Generated TS listener lost nullable elements')
+  const secondCollection = await next(reader)
+  assert(secondCollection.event === 'alpha/changed' && secondCollection.args[0] === null &&
+    Object.keys(secondCollection.args[1]).length === 0 && secondCollection.args[2].length === 0,
+    'Generated TS listener lost nullable root')
   try {
     const plugins = accepted(await manager['pluginManager/listPlugins']({}))
     const worker = plugins.find(row => row.entryId === 'root:worker')
@@ -148,6 +162,7 @@ async function observe(connection: TypertConnection, createContext: () => EventO
   let failure: { error: unknown } | undefined
   const publish = (frame: Notification): void => { values.push(frame); wake?.() }
   client.on(owner, 'plugin-manager/changed', value => publish({event:'plugin-manager/changed',args:[value]}))
+  client.on(owner, 'alpha/changed', (values, labels, required) => publish({event:'alpha/changed',args:[values, labels, required]}))
   client.on(owner, 'plugin-manager/install-log', value => publish({event:'plugin-manager/install-log',args:[value]}))
   client.on(owner, 'plugin-manager/install-state', value => publish({event:'plugin-manager/install-state',args:[value]}))
   const controller = new AbortController()

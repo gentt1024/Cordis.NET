@@ -57,6 +57,9 @@ await events.RunAsync(host => OnReady(host.Home), generationCancellation);
 
 现有 `emit-dotnet` 的 `--service` 也接受选定事件名或委托元数据名。`CordisTypertClientModel`、`CordisTypertService`、`CordisTypertClientNamespace` 和 `CordisTypertClientName` 在编译前从保存的共同模型生成类型化 `On` 帮助类及独立数据。后端序列化限制仍然适用，不能复现的 Host serializer 不会被悄悄替换为另一种策略。
 
+
+集合元素空性来自事件声明，包括 `List<string?>?` 和 `Dictionary<string, T?>`。作者在 JSON context 注册普通 CLR 元数据（`typeof(List<string>)`），不另写一份 Schema。源码生成监听、保存模型生成监听和 TS 监听使用同一组事实；非空元素仍拒绝 null。委托采用 namespace 限定身份，互不相关的同名事件委托可以共存。
+
 ## TypeScript 监听
 
 ```ts

@@ -206,3 +206,9 @@ Peer 关闭先中止自有物理 I/O 并取消寿命，再等待发送锁与自�
 事件路径使用固定 `$events`／`$events/result`、ready／emit／waterfall／cancel 帧及 `agent`／`agentId` 身份。公开委托在现有声明模型中保留事件事实，生成式 Host 描述与 .NET／TS 监听解释同一声明。C# 将 TS 的 receiver／request 形状表达为类型化 subject、request、同结果类型 next 及取消参数。Host 装配从 subject 得到身份，正常调用不传 wire 身份。客户端 `RemoteEventResult<T>` 将内部 continuation 标记与 undefined（`RemoteOptional<T>`）、null 分开。这是 CLR 结果类型适配，不改变 wire outcome。
 
 反向 resolver 与 owned release 保持同步，每次调用读取当前 adapter。borrowed Context 保持借用，owned Context 即使遇到取消也存活至 handler 和回复结算。源撤销结束观察；清理失败仍归现有 Fiber，可拒绝替换。待决 waterfall 跨观察者断线保留；旧 client 身份不能结算当前交付，已完成回复保持幂等。标准通知消费者直接迁移到类型化事件监听，旧通知 Remote 退出。作者声明、选择与寿命边界见[Remote 事件](remote-events.zh.md)。本候选验证与此前队列／集合修正分别记录。
+
+### 声明空性与事件未使用输入，2026-10-12
+
+STJ 运行时元数据丢失泛型引用参数的空性。生成式 Host、事件及独立 .NET codec 使用 `TypertCodec.CreateDeclared(metadata, query)`，在导出的 Schema 路径上应用现有共同声明的 null 准入事实。Schema 仍懒加载；属性命名、converter 与序列化仍由 STJ 提供。query 是生成代码，不是保存格式或第二套 Schema 权威。显式 Schema 的 `Create` 继续服务真正的手写 codec。可空字典值不会使同一声明的另一处必填对象也变为可空；TS 发射保留联合类型与非空引用交集。
+
+事件输出文件名采用委托的完整限定身份；不同 namespace 可以使用同名委托，生成公开类与事件 key 不变。固定 DSH 的 `openWireStream` 在观察事件前归还 `$events` 不使用的上行。Gateway 沿用这一所有权规则，mux 迭代器即使尚未读取也会关闭实际 inbox。归还失败与事件观察独立结算，不放宽普通业务上行的协议／溢出拒绝，也不关闭 sibling 流。

@@ -65,6 +65,8 @@ var buildDecisions = new ConcurrentDictionary<string, BuildDecision>(StringCompa
 EffectHandle events = null!;
 TypertRemoteEventDefinition[] selectedEvents =
 [
+    Cordis.Platform.Tests.EventAlpha.ChangedTypert.Definition,
+    Cordis.Platform.Tests.EventBeta.ChangedTypert.Definition,
     PluginManagerChangedEventTypert.Definition,
     PluginInstallStateEventTypert.Definition,
     PluginInstallLogEventTypert.Definition,
@@ -127,6 +129,32 @@ await session.Context.RunAsync(owner =>
     owner.Provide("connection", remoteConnection);
     return Task.CompletedTask;
 });
+server.MapPost(
+    "/control/collection-events",
+    async () =>
+    {
+        await session.Context.RunAsync(context =>
+        {
+            context.Emit(
+                "alpha/changed",
+                new List<string?>
+                {
+                    "text",
+                    null
+                },
+                new Dictionary<string, string?>
+                {
+                    ["empty"] = null
+                },
+                new List<string>
+                {
+                    "required"
+                });
+            context.Emit("alpha/changed", null, new Dictionary<string, string?>(), new List<string>());
+            return Task.CompletedTask;
+        });
+        return Results.Ok();
+    });
 server.UseWebSockets();
 server.Use(async (http, next) =>
 {

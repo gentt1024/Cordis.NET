@@ -212,6 +212,8 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
     {
         if (endpoint == TypertEventProtocol.Stream)
         {
+            if (uplink is not null)
+                _ = ReleaseUnusedUplinkAsync(uplink);
             await foreach (var frame in ReadRemoteEventsAsync(arguments, cancellationToken))
                 yield return frame;
             yield break;
@@ -363,6 +365,18 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
 
         if (failure is not null)
             yield return TypertRemoteResult.Failure(failure);
+    }
+
+    private static async Task ReleaseUnusedUplinkAsync(IAsyncEnumerable<JsonElement> source)
+    {
+        try
+        {
+            await source.GetAsyncEnumerator().DisposeAsync();
+        }
+        catch (Exception)
+        {
+            // Fixed releaseUplink settles independently of the event observer.
+        }
     }
 
     private static async IAsyncEnumerable<JsonElement> EmptyUplink()
