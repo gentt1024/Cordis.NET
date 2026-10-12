@@ -186,3 +186,11 @@ Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对�
 Host Connection 拥有默认 operator Peer，socket 在该作用域登记并借用它。客户端或逻辑流退出不关闭共享 Connection 和兄弟流。安装任务继续由管理服务拥有。STJ 元数据识别类型为 `byte[]` 的字段并提取 multipart 附件；其内部 base64 JSON 表示不发送到标准 unary 线上。附件路径保留对象键和数组索引，空数组仍是二进制分片。固定浏览器 Connection 代码在 Node 下执行，以及生成式 .NET/TS 包消费者，已通过这条有限路径。这些是本地实现结果，不是完整平台验收。
 
 Remote 客户端 CLI/MSBuild 已通过既有声明 composition 接收显式引用模型。独立生成 DTO 必须具有默认值等源事实，仅 metadata 会被拒绝。包消费者检查正常 build/pack、引用变化、缺失拒绝和 Clean。Typed uplink 使用带标记的作者参数、共同声明模型和类型化发送／半关闭句柄。根空性与受支持的嵌套集合空性保留；显式 optional 值区分缺失与 null。反向 Context/owned-value 处理及完整 Peer/事件语义仍未完成。当前下行实现和通过的夹具不能反过来定义这些目标或成为另造协议的依据。不保留旧试验客户端的兼容路线。
+
+### Remote 载体准入与二进制元数据，2026-10-12
+
+Remote 内层 payload 仅包含 `args` 自有字段，其值必须为 JSON 对象。HTTP 外层封套保留固定上游允许额外字段的规则；mux 帧校验独立处理。无效内层 payload 在 lookup 或业务准备前产生 `gateway/internal`。JS 流先准备本地参数，再于取得载体前和就绪后分别检查取消，因此不会向 Host 发送 `open` 或补偿性 `cancel`。
+
+Unary 附件提取与生成的 TypeScript 结果类型共同使用实际 STJ 元数据。内置 `byte[]` converter 提供二进制能力；schema 的 `contentEncoding: base64` 注解不提供这种能力。属性／类型 converter 保留作者定义的表示。输入与 mux item 继续使用既有 JSON codec。根字节直接快照为附件；嵌套对象仍先经 STJ 再提取，以保留作者 converter 和序列化规则，避免第二次读取属性。这项内部转换仍有分配成本，不是第二种 wire 格式。
+
+Peer 关闭先中止自有物理 I/O 并取消寿命，再等待发送锁与自有泵结算。协议拒绝在没有挂起发送时可以发送关闭帧。物理请求释放资源前加入同一次停止操作。逻辑取消仍保留其他调用和借用的 Peer；没有引入远端释放确认或清理超时。

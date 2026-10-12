@@ -177,6 +177,8 @@ public abstract partial class TypertCodec
     /// <summary>Encode a unary result, extracting typed byte arrays into binary attachments.</summary>
     public virtual TypertRemoteResult EncodeResult(object? value) => TypertRemoteResult.Success(Encode(value));
 
+    internal virtual JsonTypeInfo? ResultMetadata => null;
+
     /// <summary>Create an AOT-compatible codec from source-generated JSON metadata and an optional explicit schema.</summary>
     /// <remarks>
     /// The optional schema is cloned at creation. Without it, Schema is exported from metadata on first access.
@@ -220,6 +222,7 @@ public abstract partial class TypertCodec
 
         public override JsonElement Encode(object? value) => inner.Encode(value);
         public override TypertRemoteResult EncodeResult(object? value) => inner.EncodeResult(value);
+        internal override JsonTypeInfo? ResultMetadata => inner.ResultMetadata;
 
         private JsonElement ExportSchema()
         {
@@ -309,7 +312,9 @@ public abstract partial class TypertCodec
         public override JsonElement Encode(object? value) => JsonSerializer.SerializeToElement((T)value!, metadata);
 
         public override TypertRemoteResult EncodeResult(object? value) =>
-            TypertBinaryResult.Encode(Encode(value), metadata);
+            TypertBinaryResult.Encode((T)value!, metadata);
+
+        internal override JsonTypeInfo ResultMetadata => metadata;
 
         private JsonElement ExportSchema()
         {

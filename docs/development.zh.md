@@ -404,3 +404,9 @@ G01 在既有共同声明中采用 `[RemoteUplink] IAsyncEnumerable<T>`。生成
 本地源码 `4881e08` 已完成 [Windows 包门禁](validation.zh.md#共享-remote-connection-包门禁2026-10-12)，源码／包身份与同源码的浏览器恢复结果分别记录。G01 已接通上述类型化作者／输入／客户端链。此结果更新此前门禁进行中的状态，不重分类早先失败或 AOT／互通候选。正常引用模型消费、共享载体及 typed uplink 是当前路线，没有保留历史 fallback。
 
 接续固定事件工作流：`$events`、`$events/result`、每次读取的 `agent` adapter 和 `agentId` 帧。resolver／release 保持同步；取消后 owned 解析值仍须存活至 handler 与回复结算，borrowed Context 保持借用。现有 `remoteNotifications/watch` 是需要随消费者迁移的选定 emit 切片，不是完整事件目标合同。不得将固定字段替换为通用 Context-key wire，也不得在真实事件消费接通前将私有作者探针固化为公开接口。
+
+### 载体审查修正，2026-10-12
+
+`a5e5b59` 后的有界修正处理 JS open 前取消、内层 payload 严格准入、真实二进制 codec／类型一致性，以及物理发送阻塞时的 Peer 关闭。主要验证入口为 `verify-client-lifecycle.mjs`、`RemoteCarrierTests` 和 `TypertBinaryTests`；包消费者保留各自的传输／生成验证。此前回执继续绑定原源码；本次修正冻结后的验证另记于 validation.zh.md。
+
+原范围的下一项仍为反向 Context 与 owned value、固定 `$events/$events/result`、浏览器 scoped 消费和标准制品链。直接 Gateway 的默认 Peer 仍须对照固定 `operatorPeer` fallback，nullable Peer 文档不能自行构成适配依据。本修正没有新增公开 API 世代、依赖或历史兼容路径。

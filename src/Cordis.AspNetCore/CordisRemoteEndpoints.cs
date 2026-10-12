@@ -96,12 +96,18 @@ public static class CordisRemoteEndpoints
                     return;
                 }
 
-                var arguments = root.TryGetProperty("payload", out var payload) &&
-                    payload.ValueKind == JsonValueKind.Object &&
-                    payload.TryGetProperty("args", out var args)
-                        ? args
-                        : default;
-                await Write(http, rpcId, await connection.InvokeAsync(endpoint, arguments, http.RequestAborted));
+                TypertRemoteResult result;
+                try
+                {
+                    var arguments = Arguments(root.TryGetProperty("payload", out var payload) ? payload : default);
+                    result = await connection.InvokeAsync(endpoint, arguments, http.RequestAborted);
+                }
+                catch (Exception error)
+                {
+                    result = TypertRemoteResult.Failure(error);
+                }
+
+                await Write(http, rpcId, result);
             }
         }
 
@@ -190,5 +196,14 @@ public static class CordisRemoteEndpoints
             http.Response.ContentType = multipart.Headers.ContentType!.ToString();
             await multipart.CopyToAsync(http.Response.Body, http.RequestAborted);
         }
+    }
+
+    internal static JsonElement Arguments(JsonElement payload)
+    {
+        if (payload.ValueKind != JsonValueKind.Object ||
+            payload.EnumerateObject().Any(field => field.Name != "args") ||
+            !payload.TryGetProperty("args", out var args) || args.ValueKind != JsonValueKind.Object)
+            throw new InvalidOperationException("Remote payload must contain exactly one plain-object args field.");
+        return args;
     }
 }

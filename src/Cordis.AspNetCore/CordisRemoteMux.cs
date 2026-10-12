@@ -21,6 +21,7 @@ internal sealed class CordisRemoteMux(
     private readonly Dictionary<string, Call> calls = [];
     private readonly HashSet<Task> pendingCalls = [];
     private WebSocket? socket;
+    private Task? stopping;
 
     public async Task RunAsync()
     {
@@ -110,16 +111,12 @@ internal sealed class CordisRemoteMux(
                 if (calls.ContainsKey(streamId) || !frame.TryGetProperty("endpoint", out var endpoint) ||
                     endpoint.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(endpoint.GetString()))
                     throw new JsonException("Invalid or duplicate Remote open.");
-                var args = frame.TryGetProperty("payload", out var payload) &&
-                    payload.ValueKind == JsonValueKind.Object &&
-                    payload.TryGetProperty("args", out var arguments)
-                        ? arguments.Clone()
-                        : default;
+                var payload = frame.GetProperty("payload").Clone();
                 var call = new Call(lifetime.Token, endpoint.GetString()!);
                 pendingCalls.RemoveWhere(task => task.IsCompleted);
                 pendingCalls.Add(call.Completion);
                 calls.Add(streamId, call);
-                call.Start(() => PumpAsync(streamId, endpoint.GetString()!, args, call));
+                call.Start(() => PumpAsync(streamId, endpoint.GetString()!, payload, call));
             }
             else if (calls.TryGetValue(streamId, out var call))
             {
@@ -133,12 +130,13 @@ internal sealed class CordisRemoteMux(
         }
     }
 
-    private async Task PumpAsync(string id, string endpoint, JsonElement arguments, Call call)
+    private async Task PumpAsync(string id, string endpoint, JsonElement payload, Call call)
     {
         try
         {
             if (!await authorize(http, endpoint))
                 throw new RemoteError("gateway/forbidden", "Remote endpoint is not authorized.");
+            var arguments = CordisRemoteEndpoints.Arguments(payload);
             await foreach (var item in connection.StreamAsync(endpoint, arguments, call.Token, call.ReadUplink()))
             {
                 if (call.Token.IsCancellationRequested)
@@ -225,6 +223,7 @@ internal sealed class CordisRemoteMux(
         await sends.WaitAsync(lifetime.Token);
         try
         {
+            lifetime.Token.ThrowIfCancellationRequested();
             await socket!.SendAsync(buffer.ToArray().AsMemory(), WebSocketMessageType.Text, true, lifetime.Token);
         }
         finally
@@ -235,9 +234,20 @@ internal sealed class CordisRemoteMux(
 
     private async ValueTask CloseAsync(WebSocketCloseStatus status, string reason)
     {
-        await sends.WaitAsync(CancellationToken.None);
+        var acquired = sends.Wait(0);
         try
         {
+            // Owner shutdown breaks pending physical I/O before joining it. An idle
+            // protocol close can still send its status without waiting for a peer reply.
+            if (!acquired || status == WebSocketCloseStatus.EndpointUnavailable)
+                socket?.Abort();
+            await lifetime.CancelAsync();
+            if (!acquired)
+            {
+                await sends.WaitAsync(CancellationToken.None);
+                acquired = true;
+            }
+
             if (socket?.State is WebSocketState.Open or WebSocketState.CloseReceived)
                 await socket.CloseOutputAsync(status, reason, http.RequestAborted);
         }
@@ -247,22 +257,39 @@ internal sealed class CordisRemoteMux(
         }
         finally
         {
-            sends.Release();
-            await lifetime.CancelAsync();
+            if (acquired)
+                sends.Release();
         }
     }
 
-    public ValueTask DisposeAsync()
+    private Task StopAsync()
     {
+        lock (gate)
+            return stopping ??= StopCoreAsync();
+    }
+
+    private async Task StopCoreAsync()
+    {
+        await CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "peer left");
+        Task[] pending;
+        lock (gate)
+            pending = pendingCalls.ToArray();
+        await Task.WhenAll(pending);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // EffectHandle's repeated public disposal does not join an earlier owner cleanup.
+        // Keep the physical resources alive until that cleanup releases the send gate.
+        await StopAsync();
         socket?.Dispose();
         lifetime.Dispose();
         sends.Dispose();
-        return ValueTask.CompletedTask;
     }
 
     private sealed class PeerBinding(CordisRemoteMux owner) : IAsyncDisposable
     {
-        public ValueTask DisposeAsync() => owner.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "peer left");
+        public ValueTask DisposeAsync() => new(owner.StopAsync());
     }
 
     private sealed class Call(CancellationToken token, string endpoint) : IDisposable

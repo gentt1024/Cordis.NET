@@ -9,8 +9,36 @@ public sealed record TypertBinaryAttachment(IReadOnlyList<JsonElement> Path, Rea
 
 internal static class TypertBinaryResult
 {
-    internal static TypertRemoteResult Encode(JsonElement value, JsonTypeInfo metadata)
+    internal static bool IsBinary(JsonTypeInfo? metadata) =>
+        metadata?.Type == typeof(byte[]) && ReferenceEquals(
+            metadata.Converter,
+            JsonMetadataServices.ByteArrayConverter);
+
+    internal static JsonTypeInfo? Property(JsonTypeInfo? metadata, string name)
     {
+        if (metadata?.Kind == JsonTypeInfoKind.Dictionary && metadata.ElementType is { } elementType)
+            return metadata.Options.GetTypeInfo(elementType);
+        var property = metadata?.Kind == JsonTypeInfoKind.Object
+            ? metadata.Properties.FirstOrDefault(property => property.Name == name)
+            : null;
+        return property is { CustomConverter: null }
+            ? metadata!.Options.GetTypeInfo(property.PropertyType)
+            : null;
+    }
+
+    internal static TypertRemoteResult Encode<T>(T native, JsonTypeInfo<T> metadata)
+    {
+        // Root bytes need no JSON/base64 intermediate. Snapshot them just as serialization would.
+        if (IsBinary(metadata) && native is byte[] bytes)
+        {
+            var placeholder = JsonSerializer.SerializeToElement<string?>(null, TypertJson.Default.String);
+            return TypertRemoteResult.Success(placeholder) with
+            {
+                Attachments = [new([], bytes.ToArray())]
+            };
+        }
+
+        var value = JsonSerializer.SerializeToElement(native, metadata);
         var attachments = new List<TypertBinaryAttachment>();
         using var buffer = new MemoryStream();
         using (var writer = new Utf8JsonWriter(buffer))
@@ -41,7 +69,7 @@ internal static class TypertBinaryResult
             return;
         }
 
-        if (metadata.Type == typeof(byte[]))
+        if (IsBinary(metadata))
         {
             attachments.Add(new(path.ToArray(), value.GetBytesFromBase64()));
             writer.WriteNullValue();
@@ -54,13 +82,13 @@ internal static class TypertBinaryResult
             foreach (var field in value.EnumerateObject())
             {
                 writer.WritePropertyName(field.Name);
-                var property = metadata.Properties.FirstOrDefault(property => property.Name == field.Name);
-                if (property is null || property.CustomConverter is not null)
+                var property = Property(metadata, field.Name);
+                if (property is null)
                     field.Value.WriteTo(writer);
                 else
                 {
                     path.Add(Segment(JsonValue.Create(field.Name)!));
-                    Write(writer, field.Value, metadata.Options.GetTypeInfo(property.PropertyType), path, attachments);
+                    Write(writer, field.Value, property, path, attachments);
                     path.RemoveAt(path.Count - 1);
                 }
             }

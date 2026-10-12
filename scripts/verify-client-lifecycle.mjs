@@ -225,3 +225,62 @@ await closing
 await closingNotifications.dispose()
 await closingModules.dispose()
 console.log('PASS close fences new operations and joins asynchronous withdrawal')
+
+// Carrier admission: cancellation before open must have no Host-visible effect.
+const unobserved = []
+const observeRejection = error => unobserved.push(error)
+process.on('unhandledRejection', observeRejection)
+try {
+  for (const mode of ['pre-aborted', 'pre-aborted-null', 'immediate-dispose', 'connecting']) {
+    const frames = []
+    class ControlledSocket extends EventTarget {
+      send(text) { frames.push(JSON.parse(text)) }
+      close() { this.dispatchEvent(new Event('close')) }
+      receive(frame) { this.dispatchEvent(new MessageEvent('message', {data: JSON.stringify(frame)})) }
+    }
+    const socket = new ControlledSocket()
+    const connection = new TypertConnection('http://localhost/remote', fetch, () => socket)
+    const remote = createRemote(connection)
+    const sibling = remote['remoteNotifications/watch']({})
+    try {
+      if (mode !== 'connecting') {
+        socket.dispatchEvent(new Event('open'))
+        await until(() => frames.length === 1, 'Sibling open reached the ready carrier')
+      }
+      const controller = new AbortController()
+      const reason = mode === 'pre-aborted-null' ? null : new Error('cancel before wire admission')
+      if (mode.startsWith('pre-aborted')) controller.abort(reason)
+      const cancelled = remote['remoteNotifications/watch']({}, controller.signal)
+      if (mode === 'immediate-dispose') await cancelled.dispose()
+      else {
+        if (mode === 'connecting') controller.abort(reason)
+        await assert.rejects(cancelled[Symbol.asyncIterator]().next(), error => error === reason)
+      }
+      if (mode === 'connecting') {
+        socket.dispatchEvent(new Event('open'))
+        await until(() => frames.length !== 0, 'Sibling survives connection preparation')
+      }
+      assert.deepEqual(frames.map(frame => frame.type), ['open'], mode + ': cancelled stream sent frames')
+      const item = sibling[Symbol.asyncIterator]().next()
+      socket.receive({type:'item', streamId:frames[0].streamId, value:{kind:'ready'}})
+      assert.deepEqual(await item, {done:false, value:{kind:'ready'}})
+    } finally { await remote.dispose(); await connection.dispose() }
+  }
+  let connections = 0
+  const freshConnection = new TypertConnection('http://localhost/remote', fetch, () => { connections++; throw new Error('unexpected carrier') })
+  const fresh = createRemote(freshConnection)
+  const reason = new Error('already cancelled')
+  const signal = AbortSignal.abort(reason)
+  try {
+    const call = fresh['remoteNotifications/watch']({}, signal)
+    await assert.rejects(call[Symbol.asyncIterator]().next(), error => error === reason)
+    assert.equal(connections, 0, 'Pre-cancelled call must not acquire a carrier')
+    const invalid = {}; invalid.self = invalid
+    const invalidCall = fresh['remoteNotifications/watch'](invalid, signal)
+    await assert.rejects(invalidCall[Symbol.asyncIterator]().next(), error => error instanceof TypeError)
+    assert.equal(connections, 0, 'Local preparation failure must precede cancellation and carrier creation')
+  } finally { await fresh.dispose(); await freshConnection.dispose() }
+  await delay(0)
+  assert.deepEqual(unobserved, [], 'Cancelled carrier admission leaked a rejection')
+} finally { process.off('unhandledRejection', observeRejection) }
+console.log('PASS pre-abort, immediate dispose and connecting cancellation send zero open frames and preserve siblings')

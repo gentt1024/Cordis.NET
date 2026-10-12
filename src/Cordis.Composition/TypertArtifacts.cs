@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Cordis.Composition;
 
@@ -86,7 +87,11 @@ public static class TypertArtifacts
             if (ReferenceEquals(descriptor.Result, TypertCodec.Void))
                 definitions.Append("export type ").Append(result).Append(" = undefined;\n");
             else
-                AppendType(definitions, result, descriptor.Result.Schema, binaryResult: !descriptor.IsStream);
+                AppendType(
+                    definitions,
+                    result,
+                    descriptor.Result.Schema,
+                    descriptor.IsStream ? null : descriptor.Result.ResultMetadata);
             string? input = null;
             if (descriptor.Uplink is { } uplink)
             {
@@ -142,18 +147,23 @@ public static class TypertArtifacts
 
     private static string Quote(string value) => JsonSerializer.Serialize(value, TypertJson.Default.String);
 
-    private static void AppendType(StringBuilder output, string name, JsonElement schema, bool binaryResult = false)
+    private static void AppendType(StringBuilder output, string name, JsonElement schema, JsonTypeInfo? metadata = null)
     {
-        var refs = new Dictionary<string, string>(StringComparer.Ordinal)
+        var refs = new Dictionary<(string, JsonTypeInfo?), string>()
         {
-            ["#"] = name
+            [("#", metadata)] = name
         };
-        var pending = new Queue<(string Name, JsonElement Schema)>();
-        pending.Enqueue((name, schema));
+        var pending = new Queue<(string Name, JsonElement Schema, JsonTypeInfo? Metadata)>();
+        pending.Enqueue((name, schema, metadata));
         while (pending.TryDequeue(out var type))
-            output.Append("export type ").Append(type.Name).Append(" = ").Append(Render(type.Schema)).Append(";\n");
+            output
+                .Append("export type ")
+                .Append(type.Name)
+                .Append(" = ")
+                .Append(Render(type.Schema, type.Metadata))
+                .Append(";\n");
 
-        string Render(JsonElement node)
+        string Render(JsonElement node, JsonTypeInfo? native)
         {
             if (node.ValueKind == JsonValueKind.True)
                 return "unknown";
@@ -164,7 +174,7 @@ public static class TypertArtifacts
             if (node.TryGetProperty("$ref", out var reference))
             {
                 var path = reference.GetString()!;
-                if (refs.TryGetValue(path, out var known))
+                if (refs.TryGetValue((path, native), out var known))
                     return known;
                 if (!path.StartsWith("#/", StringComparison.Ordinal))
                     throw new NotSupportedException("Only local schema references are supported.");
@@ -180,30 +190,31 @@ public static class TypertArtifacts
                 }
 
                 var alias = name + "Ref" + refs.Count;
-                refs.Add(path, alias);
-                pending.Enqueue((alias, target));
+                refs.Add((path, native), alias);
+                pending.Enqueue((alias, target, native));
                 return alias;
             }
 
-            if (binaryResult && node.TryGetProperty("contentEncoding", out var encoding) &&
-                encoding.GetString() == "base64")
-                return node.TryGetProperty("type", out var binaryKind) && binaryKind.ValueKind == JsonValueKind.Array &&
-                    binaryKind.EnumerateArray().Any(value => value.GetString() == "null")
-                        ? "Uint8Array | null"
-                        : "Uint8Array";
             if (node.TryGetProperty("enum", out var values))
                 return string.Join(" | ", values.EnumerateArray().Select(value => value.GetRawText()));
             if (node.TryGetProperty("const", out var constant))
                 return constant.GetRawText();
             foreach (var union in new[] { "anyOf", "oneOf" })
                 if (node.TryGetProperty(union, out var choices))
-                    return string.Join(" | ", choices.EnumerateArray().Select(Render));
+                    return string.Join(" | ", choices.EnumerateArray().Select(child => Render(child, native)));
             if (node.TryGetProperty("allOf", out var requirements))
-                return string.Join(" & ", requirements.EnumerateArray().Select(Render));
+                return string.Join(" & ", requirements.EnumerateArray().Select(child => Render(child, native)));
+            if (TypertBinaryResult.IsBinary(native) &&
+                !(node.TryGetProperty("type", out var nullKind) && nullKind.ValueKind == JsonValueKind.String &&
+                    nullKind.GetString() == "null"))
+                return node.TryGetProperty("type", out var binaryKind) && binaryKind.ValueKind == JsonValueKind.Array &&
+                    binaryKind.EnumerateArray().Any(value => value.GetString() == "null")
+                        ? "Uint8Array | null"
+                        : "Uint8Array";
             if (!node.TryGetProperty("type", out var kind))
             {
                 if (node.TryGetProperty("properties", out _))
-                    return ObjectType(node);
+                    return ObjectType(node, native);
                 if (node
                     .EnumerateObject()
                     .All(property => property.Name is "description" or "title" or "$schema" or "$id"))
@@ -222,17 +233,20 @@ public static class TypertArtifacts
                     "integer" or "number" => "number",
                     "boolean" => "boolean",
                     "null" => "null",
-                    "array" => ArrayType(node),
-                    "object" => ObjectType(node),
+                    "array" => ArrayType(node, native),
+                    "object" => ObjectType(node, native),
                     _ => throw new NotSupportedException("Unsupported schema type " + value),
                 }));
         }
 
-        string ArrayType(JsonElement node)
+        string ArrayType(JsonElement node, JsonTypeInfo? native)
         {
+            var element = native?.Kind == JsonTypeInfoKind.Enumerable && native.ElementType is { } elementType
+                ? native.Options.GetTypeInfo(elementType)
+                : null;
             var hasItems = node.TryGetProperty("items", out var items);
             if (!node.TryGetProperty("prefixItems", out var prefix))
-                return "ReadonlyArray<" + (hasItems ? Render(items) : "unknown") + ">";
+                return "ReadonlyArray<" + (hasItems ? Render(items, element) : "unknown") + ">";
             var count = prefix.GetArrayLength();
             var minimum = node.TryGetProperty("minItems", out var minItems) ? minItems.GetInt32() : 0;
             int? maximum = node.TryGetProperty("maxItems", out var maxItems) ? maxItems.GetInt32() : null;
@@ -244,14 +258,15 @@ public static class TypertArtifacts
             var length = maximum ?? count;
             var elements = Enumerable
                 .Range(0, length)
-                .Select(index => index < minimum ? Render(prefix[index]) : "(" + Render(prefix[index]) + ")?")
+                .Select(index =>
+                    index < minimum ? Render(prefix[index], element) : "(" + Render(prefix[index], element) + ")?")
                 .ToList();
             if (maximum is null)
-                elements.Add("...Array<" + (hasItems ? Render(items) : "unknown") + ">");
+                elements.Add("...Array<" + (hasItems ? Render(items, element) : "unknown") + ">");
             return "readonly [" + string.Join(", ", elements) + "]";
         }
 
-        string ObjectType(JsonElement node)
+        string ObjectType(JsonElement node, JsonTypeInfo? native)
         {
             var required = node.TryGetProperty("required", out var requiredFields)
                 ? requiredFields.EnumerateArray().Select(field => field.GetString()!).ToHashSet(StringComparer.Ordinal)
@@ -261,12 +276,17 @@ public static class TypertArtifacts
                     .EnumerateObject()
                     .Select(field =>
                         "readonly " + Quote(field.Name) + (required.Contains(field.Name) ? "" : "?") + ": " +
-                        Render(field.Value))
+                        Render(field.Value, TypertBinaryResult.Property(native, field.Name)))
                     .ToList()
                 : [];
             if (node.TryGetProperty("additionalProperties", out var additional) &&
                 additional.ValueKind != JsonValueKind.False)
-                fields.Add("readonly [key: string]: " + Render(additional));
+                fields.Add(
+                    "readonly [key: string]: " + Render(
+                        additional,
+                        native?.Kind == JsonTypeInfoKind.Dictionary && native.ElementType is { } elementType
+                            ? native.Options.GetTypeInfo(elementType)
+                            : null));
             return "{ " + string.Join("; ", fields) + " }";
         }
     }

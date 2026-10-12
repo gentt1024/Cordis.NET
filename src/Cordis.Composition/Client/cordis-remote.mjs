@@ -163,17 +163,18 @@ export class TypertConnection {
 class Inbox {
   values = [];
   terminal = false;
+  failed = false;
   error;
   wake;
 
   push(value) { if (!this.terminal) { this.values.push(value); this.wake?.(); } }
   end(error) { if (!this.terminal) { this.terminal = true; this.error = error; this.wake?.(); } }
-  fail(error) { this.values.length = 0; this.error = error; this.terminal = true; this.wake?.(); }
+  fail(error) { this.values.length = 0; this.error = error; this.failed = true; this.terminal = true; this.wake?.(); }
   async next() {
     while (!this.values.length && !this.terminal) await new Promise(resolve => { this.wake = resolve; });
     this.wake = undefined;
     if (this.values.length) return {done:false, value:this.values.shift()};
-    if (this.error) throw this.error;
+    if (this.failed) throw this.error;
     return {done:true, value:undefined};
   }
 }
@@ -182,6 +183,7 @@ class Mux {
   failed = false;
   #socket;
   #ready;
+  #connect;
   #calls = new Map();
   #pumps = new Set();
   #complete;
@@ -191,18 +193,22 @@ class Mux {
     const url = new URL(base);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.pathname = url.pathname.replace(/\/$/, '') + '/remote.mux';
-    this.#socket = createSocket(url);
-    this.#ready = new Promise((resolve, reject) => {
-      this.#socket.addEventListener('open', resolve, {once:true});
-      this.#socket.addEventListener('error', () => reject(new RemoteStreamCarrierError('Remote socket failed.')), {once:true});
-      this.#socket.addEventListener('close', () => reject(new RemoteStreamCarrierError('Remote socket closed.')), {once:true});
-    });
-    this.#ready.catch(error => this.#fail(error));
-    this.#socket.addEventListener('message', event => {
-      try { this.#dispatch(event.data); }
-      catch (error) { this.#fail(new RemoteStreamCarrierError('Invalid Remote frame.', error)); }
-    });
-    this.#socket.addEventListener('close', () => this.#fail(new RemoteStreamCarrierError('Remote socket closed.')));
+    this.#connect = () => {
+      if (this.#ready) return this.#ready;
+      this.#socket = createSocket(url);
+      this.#ready = new Promise((resolve, reject) => {
+        this.#socket.addEventListener('open', resolve, {once:true});
+        this.#socket.addEventListener('error', () => reject(new RemoteStreamCarrierError('Remote socket failed.')), {once:true});
+        this.#socket.addEventListener('close', () => reject(new RemoteStreamCarrierError('Remote socket closed.')), {once:true});
+      });
+      this.#ready.catch(error => this.#fail(error));
+      this.#socket.addEventListener('message', event => {
+        try { this.#dispatch(event.data); }
+        catch (error) { this.#fail(new RemoteStreamCarrierError('Invalid Remote frame.', error)); }
+      });
+      this.#socket.addEventListener('close', () => this.#fail(new RemoteStreamCarrierError('Remote socket closed.')));
+      return this.#ready;
+    };
     const abort = () => this.#fail(new RemoteStreamCarrierError('Remote Connection closed.'));
     signal.addEventListener('abort', abort, {once:true});
     this.completion.then(() => signal.removeEventListener('abort', abort));
@@ -228,12 +234,14 @@ class Mux {
       try {
         // Serialize before touching the carrier so local failures retain their identity.
         const open = JSON.stringify({type:'open', streamId, endpoint, payload:{args}});
+        combined.throwIfAborted();
         const cancelled = new Promise((_, reject) => {
           cancel = () => reject(combined.reason);
           combined.addEventListener('abort', cancel, {once:true});
           if (combined.aborted) cancel();
         });
-        await Promise.race([this.#ready, cancelled]);
+        await Promise.race([this.#connect(), cancelled]);
+        combined.throwIfAborted();
         if (this.failed) throw new RemoteStreamCarrierError('Remote socket is no longer active.');
         this.#send(open);
         opened = true;
@@ -304,7 +312,7 @@ class Mux {
     if (this.failed) return;
     this.failed = true;
     for (const call of this.#calls.values()) { call.closeInput(); call.inbox.fail(error); call.terminal(); }
-    this.#socket.close();
+    this.#socket?.close();
     Promise.allSettled(this.#pumps).then(this.#complete);
   }
 }
