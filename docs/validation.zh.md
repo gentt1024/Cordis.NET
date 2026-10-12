@@ -439,3 +439,15 @@ F01 原有的 open／cancel 泄漏及 null 取消原因丢失、F02 接受内层
 公共用法不变。Host 可以在上行仍打开时终止双向流：end／RemoteError 保留缓冲项，物理失败保留 carrier 类别。关闭输入不再制造拒绝。集合结果 codec 转发其委托编码使用的元数据，包括 nullable 集合；Optional codec 保留纯 JSON 结果编码。四个格式化阶段对 261 个 C# 文件达成一致，双语文档检查通过。新工作树首次客户端模块构建缺少依赖的问题，通过安装既有 lockfile 解决，没有修改依赖。
 
 未提交的反向 Context／owned value／固定事件施工及其初步寿命测试仍单独记录。本候选没有新增 Native AOT、真实浏览器、原始 DSH 套件、全运行时差分、托管 CI、远端 SourceLink 获取、源码归档或 Maker 证据。版本、依赖、上游 pin 未变，未推送、合并、发布或部署。
+
+## 类型化 Remote 事件与反向 Context，2026-10-12
+
+冻结源码 `299c59704e0b33a142ac929063e4ddc7af280e33` 已在 Windows x64 和 WSL Ubuntu 24.04 x64、SDK 10.0.111 下通过 `python scripts/verify.py --package`。Windows 源码测试 872 项通过；Linux 869 项通过，另有 3 项 Windows 专用进程场景具名未执行。两个干净检出的源码在验证期间均未变化，各完成 47 个外层步骤和 18 个包／符号归档检查。独立的 [Windows](../verification/remote-events-2026-10-12/windows.json) 与 [Linux](../verification/remote-events-2026-10-12/linux.json) 回执记录实际源码清单、TRX 和归档哈希。两者使用相同的 Git 源码身份，包字节及本地源码清单分别保留。
+
+[事件回执](../verification/remote-events-2026-10-12/evidence.json) 覆盖共同委托事实、生成式 Host 选择与类型化监听、固定 `$events`／`$events/result`、每次读取当前 agent 反向解析及 owned／borrowed 结算。17 个 Gateway 场景保护协议与源所有权，包括修前确实失败的排队撤销回归。6 个真实 ASP.NET／.NET 场景消费生成声明，区分 next、undefined 和 null，并在 handler／回复未结束时检查取消与 Connection 释放。独立包消费者从包内共同模型生成类型化事件监听，实际运行 .NET／TS 管理调用；TS 还检查反向 Context、当前 adapter 查询和 owned 释放。CLR 多入口保留独立的严格 TS 声明消费。生成消费记录中的预期拒绝不计入源码测试数量。
+
+[真实浏览器恢复回执](../verification/remote-events-2026-10-12/browser-recovery.json) 属于 `35da718`，其生产文件在 `299c597` 中未变。实际生成事件模块经过生产 ASP.NET mux：断线保留插件实例／草稿，状态查询失败后恢复，图撤销释放插件。夹具提供状态／目录响应，因此不据此认定浏览器 scoped／owned 已验收，也不将它写成包宿主验证。最终提交仅让独立消费脚本自行准备实际 vendored Context，消除对已缓存客户端产物的依赖；浏览器观测不改记为另一次执行。
+
+排队撤销、过期包清单数量、disposable 类型库引用缺失、浏览器夹具准入和消费缓存依赖的失败证据与最终候选分开保留。另有一次 Windows 构建因仍在运行的诊断测试锁住输出 DLL 而失败，后续候选使用独立输出。没有放宽断言来保留旧通知协议。[Remote 事件](remote-events.zh.md) 说明当前公共路线和已移除的通知服务／导出。撤销修正检查点的四阶段格式化一致；最终构建执行 C# 风格检查，事件中英文文档已加入文档检查器。
+
+本批完成的是选定的固定事件消费链，不代表所有 Typert／平台职责完成。直接 Gateway 的 operatorPeer fallback、浏览器 scoped 消费、其余模型后端和具名平台接入继续留在原范围。此次没有新增 Native AOT、完整固定 DSH 套件／差分、托管 CI、远端 SourceLink 取回、源码归档或 Maker 证据。此前修正回执保留原身份。版本、依赖和上游 pin 未变；本次验证不包含合并、发布或部署。

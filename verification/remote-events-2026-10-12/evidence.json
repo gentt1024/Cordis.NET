@@ -1,0 +1,90 @@
+{
+  "reviewedBase": "c3db1f96cb09a984d35c64830b25141b03d58515",
+  "upstream": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "sourceCommit": "299c59704e0b33a142ac929063e4ddc7af280e33",
+  "sourceTree": "281ef70e1e31f5495d82f292456093cc3df3f9dc",
+  "scope": "Common-model event delegates, generated Host selection and typed listeners, fixed $events/$events/result, current reverse agent Context resolution, owned/borrowed settlement and standard .NET/TS consumption.",
+  "commits": [
+    {
+      "commit": "5c8ff12985fd413f43e1cf0eacd810a888de66f6",
+      "change": "Connect event authoring, generation, runtime and consumers."
+    },
+    {
+      "commit": "ccc4ded3bd7109342d7bf746b8180c5543a7d8b1",
+      "change": "Settle queued source invocations on withdrawal; update the package service inventory."
+    },
+    {
+      "commit": "35da71844de0f26209588966444fcec55c8ea069",
+      "change": "Declare the disposable standard lib and admit the selected event endpoint in the browser fixture."
+    },
+    {
+      "commit": "299c59704e0b33a142ac929063e4ddc7af280e33",
+      "change": "Make actual Context preparation independent of cached client output."
+    }
+  ],
+  "retained": "One common declaration model, current Registry adapters, existing Connection and Cordis events, configuration/management operations and installation task lifetimes. No new dependency, model format generation or compatibility path.",
+  "publicUse": "Declare a RemoteEvent delegate, select its generated Definition or Forward projection once on the Host, and use generated typed On listeners. Business InvokeAsync passes its subject; callers do not supply agentId. RemoteEventResult<T> distinguishes continuation from business undefined and null.",
+  "retired": [
+    "RemoteNotifications service",
+    "remoteNotifications/watch",
+    "standard notifications module export",
+    "handwritten notification observer consumption"
+  ],
+  "primaryVerification": [
+    "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs",
+    "tests/Cordis.Platform.Tests/RemoteEventsTests.cs",
+    "scripts/typert_management_consumer.py",
+    "scripts/typert-management-client-consumer.mjs",
+    "scripts/verify-client-lifecycle.mjs",
+    "clients/modules/examples/recovery.html"
+  ],
+  "failedEvidence": [
+    {
+      "source": "5c8ff12",
+      "observation": "Queued waterfall withdrawal left two of three calls pending; the added regression timed out before repair.",
+      "logSha256": "00ebda28b59283aa5784d1b7dcc0f22b754a6e668415e77f92a57a599029938e"
+    },
+    {
+      "source": "5c8ff12",
+      "observation": "An overlapping diagnostic test locked Windows output DLLs during the first build attempt. Subsequent runs used independent outputs or waited for the owner to exit.",
+      "logSha256": "867d37ed9038e01880d2c5062dc08a62ae821888f088d0ce301b04ccc9646649"
+    },
+    {
+      "source": "5c8ff12",
+      "observation": "Package inspection retained the old three-service count after the notification Remote was removed.",
+      "logSha256": "ca793b0817b90caab7154f92be027bee4a1655e27347703fc9d91f3cd757978f"
+    },
+    {
+      "source": "ccc4ded",
+      "observation": "The strict independent CLR multi-entry TS consumer rejected Symbol.dispose without a declaration-owned standard-lib reference.",
+      "logSha256": "a8d03f8bdc23e7a0085cadef9a18a1f4fa15ffd6ab7c3d24eade5eca26190945"
+    },
+    {
+      "source": "35da718",
+      "observation": "A clean Linux consumer could not import a cached client bundle. The driver now bundles the actual vendored Context in its isolated output.",
+      "logSha256": "80a1403269192c050d0d39f7470e8d05ab1062dd25d2ed2ccbb6ac661d03cc48"
+    }
+  ],
+  "focusedEvidence": {
+    "gatewayCasesAfterRepair": 17,
+    "gatewayLogSha256": "15caf06c9dec5d3b814e7f2dbbb6f65841446d06c6377d52d18f6c51b24c7b31",
+    "loopbackTypedClientCases": 6,
+    "loopbackLogSha256": "840914c393187d4825441f10074b05baf33db008d15d787f872eee9d16167c95",
+    "cleanManagementConsumerLogSha256": "0dcc1ccb30f9305f5376893980fa6539b778ef5df5ca228b3488277b99df038e",
+    "strictEs2022DeclarationLogSha256": "18c2f2654ba4066d9821ec196faea54c2d39540d2e63cae27b443f1b6cd3cf8a"
+  },
+  "browser": {
+    "receipt": "browser-recovery.json",
+    "actualSource": "35da71844de0f26209588966444fcec55c8ea069",
+    "productionFilesUnchangedInFinalCandidate": true,
+    "boundary": "Real recovery/withdrawal UI only. The final change is solely the independent verification driver; the browser result is not relabelled as a new execution."
+  },
+  "format": {
+    "checkpoint": "withdrawal repair before the browser fixture admission edit",
+    "fourStagesAgreed": true,
+    "csharpFiles": 272,
+    "logSha256": "c6f1bc3c8233e4f1f33e89cf9f4ed9c1b8e113cad5132494bae68c63e4ccab52"
+  },
+  "remaining": "Direct Gateway operatorPeer fallback, browser scoped consumption, remaining model backends and named platform integrations remain open. This batch adds no Native AOT, hosted CI, whole fixed-DSH suite/differential, remote SourceLink retrieval, source archive or Maker execution.",
+  "previousReceipt": "verification/remote-queue-collections-2026-10-12/evidence.json"
+}

@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "35da71844de0f26209588966444fcec55c8ea069",
+  "sourceTree": "336aad5d271929df740775f359f2d8b79c108c88",
+  "status": "passed",
+  "execution": "Codex in-app browser; click Run recovery checks on the actual local recovery page and observe its rendered result.",
+  "observed": "PASS real scripts + generated notifications: disconnect retains instance/draft; failed query recovers; actual withdrawal disposes",
+  "host": "Production ASP.NET mux in the repository browser fixture, built from the same source via ProjectReference; generated standard event module and bundled client modules.",
+  "checks": [
+    "fixed $events readiness before state/graph handshake",
+    "disconnect retains plugin instance and unsaved draft",
+    "failed state query recovers without remount",
+    "actual graph withdrawal disposes the plugin"
+  ],
+  "boundary": "The fixture supplies state/catalog HTTP data and proxies mux frames unchanged. This is actual browser event recovery, not browser scoped/owned interaction, a packaged browser Host, Native AOT or complete application acceptance.",
+  "inputSha256": {
+    "clients/modules/examples/recovery.html": "8890984471d4618733d1c309468e6c4922da60adcb792463fb4621c1a5ce4518",
+    "tests/fixtures/ClientModuleBrowser/Host.cs": "834675f9798288c2cd382a0bd221cbb3ddf43dbee69d621945f2ae911dac882d",
+    "artifacts/events-browser/host/bin/Release/net10.0/BrowserHost.dll": "a251466ecf8a91b9e609884ccc0fb72b220dd3cfe1d525d720335e4ceb7b89e6",
+    "artifacts/events-browser/runtime/client.mjs": "19bf77da1cc6ce64ebb275c3c371af24c18fddd67d3054205dd83714678b1d1e",
+    "artifacts/events-browser/runtime/cordis-remote.mjs": "e3754ef22db6043144a0314fdf6209f7180fdb7a78b01d10037062e25aadbac1",
+    "artifacts/events-browser/runtime/events.mjs": "8dae0e76feef32072f77037c05741cbfd70ba91b2bd129ff178db0a261972e6b"
+  },
+  "precedingFailure": {
+    "source": "ccc4ded3bd7109342d7bf746b8180c5543a7d8b1",
+    "observed": "FAIL Error: Notification ready and state query",
+    "cause": "The fixture admission policy omitted $events; 35da718 admits the selected fixed event endpoint without changing production authorization."
+  }
+}
