@@ -127,6 +127,7 @@ if (args.Contains("--serve"))
     await root.RunAsync(owner =>
     {
         remoteConnection = new(owner, gateway);
+        owner.Provide("connection", remoteConnection);
         return Task.CompletedTask;
     });
     app.UseWebSockets();

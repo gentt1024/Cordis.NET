@@ -300,6 +300,7 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         composition + '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>',
         '<ItemGroup><CordisTypertModelRoot Include="IndependentDeclarations.ReferencedData"/>'
         '<CordisTypertModelRoot Include="IndependentDeclarations.ReferencedHiddenData"/>'
+        '<CordisTypertModelRoot Include="IndependentDeclarations.NonStringDictionaryData"/>'
         '<CordisTypertModelRoot Include="IndependentDeclarations.DataExternal"/></ItemGroup>')
     shutil.copyfile(fixtures / "DataAuthor.cs", author / "DataAuthor.cs")
     shutil.copyfile(fixtures / "ReferencedRemote.cs", author / "ReferencedRemote.cs")
@@ -438,6 +439,7 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         ("reference-root", "IndependentDeclarations.External.UnrelatedData", [reference_input.name], "explicitly selected declaration root"),
         ("reference-generic", "IndependentDeclarations.DataExternal", [reference_input.name], "Generic data declarations require a further projection"),
         ("private-json-include", "IndependentDeclarations.ReferencedHiddenData", [reference_input.name], "TYPM202"),
+        ("dictionary-key", "IndependentDeclarations.NonStringDictionaryData", [reference_input.name], "Data dictionaries require non-null string keys"),
     ):
         roots.write_text(root_name + "\n", encoding="utf-8")
         references.write_text(''.join(name + "\n" for name in selected_references), encoding="utf-8")

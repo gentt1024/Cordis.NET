@@ -16,6 +16,7 @@ await root.RunAsync(owner =>
     owner.Provide("referencedData", new ReferencedRemote());
     registry.Register(owner, ReferencedRemoteTypert.Contribution("referenced-provider"));
     connection = new(owner, new TypertGateway(owner, registry));
+    owner.Provide("connection", connection);
     return Task.CompletedTask;
 });
 var builder = WebApplication.CreateSlimBuilder();

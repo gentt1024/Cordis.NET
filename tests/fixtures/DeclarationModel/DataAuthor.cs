@@ -169,6 +169,24 @@ public sealed class DataWireCollision
 
 public sealed class ReferencedData
 {
+    public Dictionary<string, ImportedData?>? ByName
+    {
+        get;
+        set;
+    }
+
+    public IReadOnlyDictionary<string, ImportedData[]>? Groups
+    {
+        get;
+        set;
+    }
+
+    public IDictionary<string, string?>? Labels
+    {
+        get;
+        set;
+    }
+
     public required ImportedData External
     {
         get;
@@ -185,6 +203,15 @@ public sealed class ReferencedData
 public sealed class ReferencedHiddenData
 {
     public ImportedHiddenData? Value
+    {
+        get;
+        set;
+    }
+}
+
+public sealed class NonStringDictionaryData
+{
+    public Dictionary<int, string>? Values
     {
         get;
         set;

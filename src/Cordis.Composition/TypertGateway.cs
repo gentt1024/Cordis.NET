@@ -45,7 +45,7 @@ public sealed record TypertInvocation(Context Context, string Endpoint, Cancella
     public IAsyncEnumerable<T> ReadUplink<T>() =>
         (Input ?? throw new InvalidOperationException("This invocation has no stream input.")).Take<T>();
 
-    /// <summary>The admitted Host operator, absent for an in-process Gateway call without a Connection.</summary>
+    /// <summary>The admitted operator. Gateway calls use the current Host Connection or an owned in-process scope.</summary>
     public TypertPeer? Peer
     {
         get;
@@ -105,6 +105,11 @@ public sealed record TypertRemoteResult(bool Ok, JsonElement? Value, TypertRemot
 /// </remarks>
 public sealed partial class TypertGateway(Context caller, TypertRegistry registry)
 {
+    private TypertPeer? inProcessOperator;
+
+    private TypertPeer OperatorPeer() => caller.Get<TypertHostConnection>("connection", strict: false)?.Peer ??
+        (inProcessOperator ??= new TypertPeer(caller));
+
     /// <summary>Invoke one unary method with exact arguments and current service and provider registrations.</summary>
     /// <remarks>
     /// The native adapter checks registration generations after successful provider resolution and before
@@ -150,7 +155,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                 using (TypertInvocation.Enter(
                            new(prepared.Receiver, endpoint, cancellationToken)
                            {
-                               Peer = peer
+                               Peer = peer ?? OperatorPeer()
                            }))
                 {
                     try
@@ -227,6 +232,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                 if (!prepared.Descriptor.IsStream ||
                     !prepared.Binding.Streams.TryGetValue(prepared.Descriptor.Method, out var invoke))
                     throw Fault("gateway/signature-invalid", endpoint, "This endpoint has no active stream binding.");
+                peer ??= OperatorPeer();
                 input = new(
                     uplink ?? EmptyUplink(),
                     value => prepared.Descriptor.Uplink is { } codec

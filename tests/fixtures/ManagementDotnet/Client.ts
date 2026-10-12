@@ -169,7 +169,7 @@ async function observe(connection: TypertConnection, createContext: () => EventO
   return {reader, async dispose() {controller.abort(); await client.dispose(); await pump; await owner.fiber.dispose()} }
 }
 
-async function scopedEvents(origin: string, connection: TypertConnection, createContext: () => EventOwner) {
+export async function scopedEvents(origin: string, connection: TypertConnection, createContext: () => EventOwner) {
   const owner = createContext()
   let resolves = 0, releases = 0, adapterReads = 0
   const releaseCount = (): number => releases

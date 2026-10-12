@@ -280,6 +280,7 @@ await installedRoot.RunAsync(async context =>
     await context.RunAsync(owner =>
     {
         remoteConnection = new(owner, gateway);
+        owner.Provide("connection", remoteConnection);
         return Task.CompletedTask;
     });
     app.UseWebSockets();

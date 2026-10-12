@@ -17,6 +17,7 @@ await root.RunAsync(owner =>
         TypertRemoteEvents.FromCordis(owner, [ClientModulesChangedEventTypert.Definition]),
         new TypertRemoteEventHost(""));
     connection = new(owner, gateway);
+    owner.Provide("connection", connection);
     return Task.CompletedTask;
 });
 var builder = WebApplication.CreateSlimBuilder();

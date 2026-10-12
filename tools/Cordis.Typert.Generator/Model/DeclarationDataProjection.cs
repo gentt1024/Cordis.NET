@@ -82,10 +82,20 @@ internal sealed class DeclarationDataProjection
                 type,
                 reference,
                 value => Reference(value, depth + 1));
-            if (framework is not null &&
-                (framework.Kind != "collection" || framework.Name is "System.Collections.Generic.List<T>"
-                    or "System.Collections.Generic.IReadOnlyList<T>"))
-                return framework;
+            if (framework is not null)
+            {
+                if (framework.Kind != "collection" || framework.Name is "System.Collections.Generic.List<T>"
+                        or "System.Collections.Generic.IReadOnlyList<T>")
+                    return framework;
+                if (framework.Arguments.Length == 2)
+                {
+                    if (reference.Arguments[0] is not
+                        { Kind: "primitive", Name: "System_String", Nullability: "NotAnnotated" })
+                        throw Refuse(type.Id, "Data dictionaries require non-null string keys.");
+                    return framework;
+                }
+            }
+
             throw Refuse(
                 type.Id,
                 "External data declarations require referenced-model composition; only the declared framework data types are supported.");

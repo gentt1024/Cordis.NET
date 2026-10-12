@@ -124,6 +124,7 @@ TypertHostConnection remoteConnection = null!;
 await session.Context.RunAsync(owner =>
 {
     remoteConnection = new(owner, gateway);
+    owner.Provide("connection", remoteConnection);
     return Task.CompletedTask;
 });
 server.UseWebSockets();

@@ -41,12 +41,20 @@ foreach (var invalid in invalidInputs)
 var complete = JsonSerializer.Deserialize(
     """
     {"External":{"external_name":"first","Code":null,"Next":{"external_name":"second","Code":"code"}},
-     "Items":[{"external_name":"list","Code":null}]}
+     "Items":[{"external_name":"list","Code":null}],
+     "ByName":{"first":{"external_name":"mapped","Code":null},"empty":null},
+     "Groups":{"batch":[{"external_name":"grouped","Code":null}]},
+     "Labels":{"present":"yes","empty":null}}
     """,
     metadata)!;
 Check(
     complete.External.Next?.Name == "second" && complete.Items?.Single().Name == "list",
     "recursive imported objects and list elements");
+Check(
+    complete.ByName?["first"]?.Name == "mapped" && complete.ByName.ContainsKey("empty") &&
+    complete.ByName["empty"] is null && complete.Groups?["batch"].Single().Name == "grouped" &&
+    complete.Labels?["present"] == "yes" && complete.Labels["empty"] is null,
+    "string dictionary keys, imported values, nested arrays and explicit null");
 var json = JsonSerializer.Serialize(complete, metadata);
 using var document = JsonDocument.Parse(json);
 Check(
@@ -55,6 +63,11 @@ Check(
 Check(
     JsonSerializer.Deserialize(json, metadata)!.External.Next?.Name == "second",
     "cross-model static metadata round trip");
+Check(
+    document.RootElement.GetProperty("ByName").GetProperty("empty").ValueKind == JsonValueKind.Null &&
+    document.RootElement.GetProperty("Groups").GetProperty("batch")[0].GetProperty("external_name").GetString() ==
+    "grouped",
+    "dictionary keys and values survive static serialization");
 Check(
     ReferencedDataJson.Default.GetTypeInfo(typeof(ImportedData)) is not null,
     "reachable imported type has static metadata");

@@ -16,6 +16,10 @@ Cordis.NET 以[上游文档](upstream.zh.md)所述、DeepSeek Harness 锁定的 
 
 ## 上游忠实性要求
 
+直接 Gateway 调用遵循固定 `packages/api/gateway/src/index.ts` 的 `operatorPeer()`：载体已准入的 Peer 优先；否则读取当前 `connection` 服务，没有 Connection 时才延迟创建并复用 Gateway Context 拥有的 Peer。原生宿主构造 `TypertHostConnection` 后，通过 `owner.Provide("connection", connection)` 使用普通 Cordis 服务所有权发布，并共同负责撤销注册和释放 Connection。流在开始时确定 Peer，在迭代和清理期间保持该身份；后续调用会观察替换或撤销。原先直接调用没有 Peer 是移植缺口，不是平台适配。这项修正不代表剩余丰富 Peer／scope-targeting 工作流完成。
+
+普通数据后端通过既有共同声明组合与共享框架投影支持 `Dictionary<string,T>`、`IDictionary<string,T>` 和 `IReadOnlyDictionary<string,T>`。JSON 对象键保持字符串，不推断数值键转换。值保留声明的空性、默认值和引用声明身份。这是有界的静态 DTO／STJ 投影，不执行泛型作者代码，也不代表任意 CLR 集合均已支持。
+
 Cordis.NET 是固定 DSH 基线及仓库已确认通用应用基础设施的忠实、地道的 .NET port。仓库历次试验设计不构成另一套独立框架规范，也不自动形成长期兼容义务。规范依据是固定上游行为、已确认的仓库范围，以及有具体平台需要支持的 .NET 适配。
 
 当前代码、API 快照、生成客户端和测试都应据此校正。签名曾进入 main、随旧版本公开或通过旧测试，不能单独成为保留错误移植的理由。确认错误后，应直接修正并迁移消费者；兼容路径必须有独立的消费职责或兼容承诺依据。持久数据与 Git 历史的保全应单独处理，不等同于保留被取代的运行接口。这一原则不要求逐行翻译 TypeScript，也不授权重写已经满足合同的机制。

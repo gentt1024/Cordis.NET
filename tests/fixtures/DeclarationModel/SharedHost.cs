@@ -70,6 +70,7 @@ TypertHostConnection remoteConnection = null!;
 await context.RunAsync(owner =>
 {
     remoteConnection = new(owner, new TypertGateway(context, registry));
+    owner.Provide("connection", remoteConnection);
     return Task.CompletedTask;
 });
 server.UseWebSockets();

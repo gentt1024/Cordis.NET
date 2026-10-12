@@ -43,6 +43,8 @@ public sealed class TypertHostConnection : IAsyncDisposable
     private readonly TypertGateway gateway;
 
     /// <summary>Create inside the owner's Cordis execution domain.</summary>
+    /// <remarks>Publish as the Context service "connection" to let direct Gateway calls borrow this operator.
+    /// The host owns service withdrawal and Connection disposal; direct calls do not dispose either.</remarks>
     public TypertHostConnection(Context owner, TypertGateway gateway)
     {
         ArgumentNullException.ThrowIfNull(owner);
