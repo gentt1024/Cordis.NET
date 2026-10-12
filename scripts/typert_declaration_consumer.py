@@ -7,6 +7,22 @@ from xml.sax.saxutils import escape
 import zipfile
 
 
+def design_time_sources(label, project, dotnet, run, names):
+    command = [dotnet, "msbuild", project, "-restore", "-t:Compile", "-p:Configuration=Release",
+        "-p:DesignTimeBuild=true", "-p:SkipCompilerExecution=true", "-p:ProvideCommandLineArgs=true",
+        "-getItem:Compile,CscCommandLineArgs"]
+    result = run(label, command).decode("utf-8-sig")
+    items = json.loads(result[result.index('{'):])["Items"]
+    sources = [project.parent / value["Identity"] for value in items["Compile"]
+        if value["Identity"].replace('\\', '/').endswith(tuple(names))]
+    assert sorted(path.name for path in sources) == sorted(names), "First design-time build omitted generated types"
+    arguments = {value["Identity"].replace('\\', '/') for value in items["CscCommandLineArgs"]}
+    for path in sources:
+        assert path.is_file()
+        assert any(value.endswith(path.name) for value in arguments), "Generated input missing from language-service command"
+    return sources
+
+
 def verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted):
     fixtures = root / "tests/fixtures/DeclarationModel"
     external_setup = pack_external_data(fixtures, feed, dotnet, composition, run, project)
@@ -325,6 +341,8 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     main_identity = json.loads(primary_input.read_text(encoding="utf-8"))["contractIdentity"]
     reference_identity = json.loads(reference_input.read_text(encoding="utf-8"))["contractIdentity"]
     original_reference = reference_input.read_bytes()
+    design_data = design_time_sources("referenced-data-first-design-time", contracts_project, dotnet, run,
+        ["ReferencedDataJson.Data.g.cs"])[0]
     run("referenced-data-contracts-pack", [dotnet, "pack", contracts_project, "-c", "Release", "-o", feed])
     generated = contracts / "obj/Release/net10.0/cordis-typert/ReferencedDataJson.Data.g.cs"
     owned = [generated] + [generated.parent / name for name in ("data-roots.rsp", "data-reference-models.rsp")]
@@ -357,6 +375,8 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         '<ItemGroup><CordisTypertClientReferenceModel Include="' + external_model.name + '"/></ItemGroup>')
     shutil.copyfile(model, remote / model.name)
     shutil.copyfile(external_model, remote / external_model.name)
+    design_remote = design_time_sources("referenced-remote-first-design-time", remote_project, dotnet, run,
+        ["ReferencedClient.Generated.g.cs"])[0]
     run("referenced-remote-contracts-pack", [dotnet, "pack", remote_project, "-c", "Release", "-o", feed])
     remote_source = remote / "obj/Release/net10.0/cordis-typert/ReferencedClient.Generated.g.cs"
     remote_first = remote_source.read_bytes()
@@ -409,12 +429,15 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     finally:
         remote_project.write_bytes(remote_project_bytes)
     run("referenced-remote-failed-clean", [dotnet, "clean", remote_project, "-c", "Release"])
-    assert not remote_source.exists() and not (remote_source.parent / "client-reference-models.rsp").exists()
+    assert not remote_source.exists() and not design_remote.exists() and not (remote_source.parent / "client-reference-models.rsp").exists()
     run("referenced-remote-cold-build", [dotnet, "build", remote_project, "-c", "Release"])
     assert changed_identity.encode() in remote_source.read_bytes()
     assert changed_identity != reference_identity
     reference_input.write_bytes(changed_reference)
     assert json.loads(primary_input.read_text(encoding="utf-8"))["contractIdentity"] == main_identity
+    design_time_sources("referenced-data-changed-design-time", contracts_project, dotnet, run,
+        ["ReferencedDataJson.Data.g.cs"])
+    assert changed_identity.encode() in design_data.read_bytes() and reference_identity.encode() not in design_data.read_bytes()
     run("referenced-data-reference-change-build", [dotnet, "build", contracts_project, "-c", "Release"])
     changed_projection = generated.read_bytes()
     assert changed_projection != first_source and changed_identity.encode() in changed_projection
@@ -457,6 +480,9 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
             ('<CordisTypertDataReferenceModel Include="' + external_model.name + '"/>').encode(), b''))
         rejected = run("referenced-data-msbuild-missing-model", [dotnet, "build", contracts_project, "-c", "Release"], True)
         assert b"External data declarations require referenced-model composition" in rejected and not generated.exists()
+        rejected = run("referenced-data-design-time-missing-model", [dotnet, "msbuild", contracts_project,
+            "-t:Compile", "-p:Configuration=Release", "-p:DesignTimeBuild=true", "-p:SkipCompilerExecution=true"], True)
+        assert b"External data declarations require referenced-model composition" in rejected and not design_data.exists()
     finally:
         contracts_project.write_bytes(project_bytes)
     run("referenced-data-failed-build-clean", [dotnet, "clean", contracts_project, "-c", "Release"])
@@ -473,6 +499,7 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         "sourceAuthoredConflict": True, "referenceChangeRegeneratedAndConsumed": True,
         "remoteBuildPackAndHttpInvocation": True, "remoteMissingReferenceRejected": True,
         "remoteReferenceChangeConsumedThroughNewPackage": True,
+        "firstDesignTimeDataAndRemoteInputs": True, "designTimeReferenceRefreshAndRefusal": True,
         "cleanAndFailedBuildRemovedOwnedOutputs": True, "refusals": refusals
     }, indent=2) + "\n", encoding="utf-8")
 
@@ -669,11 +696,25 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
         '<CordisTypertClientNamespace>IndependentDeclarations.Wire</CordisTypertClientNamespace>'
         '<CordisTypertClientName>SharedClient</CordisTypertClientName>', composition, contract_items)
     shutil.copyfile(model, contracts / model.name)
+    (contracts / "UseGenerated.cs").write_text(
+        'public static class UseGenerated { '
+        'public static System.Type Client => typeof(IndependentDeclarations.Wire.SharedClient); '
+        'public static string Encode(IndependentDeclarations.Data.SharedData value) => '
+        'System.Text.Json.JsonSerializer.Serialize(value, IndependentDeclarations.Data.OrdinaryDataJson.Default.SharedData); }\n',
+        encoding="utf-8")
+    design_sources = design_time_sources("ordinary-data-first-design-time", contracts_project, dotnet, run,
+        ["OrdinaryDataJson.Data.g.cs", "SharedClient.Generated.g.cs"])
+    run("ordinary-data-design-time-compile", [dotnet, "msbuild", contracts_project, "-t:Compile",
+        "-p:Configuration=Release", "-p:DesignTimeBuild=true", "-p:SkipCompilerExecution=false"])
     run("ordinary-data-contracts-pack", [dotnet, "pack", contracts_project, "-c", "Release", "-o", feed])
     generated = contracts / "obj/Release/net10.0/cordis-typert/OrdinaryDataJson.Data.g.cs"
     response = generated.parent / "data-roots.rsp"
     client_source = generated.parent / "SharedClient.Generated.g.cs"
     owned_sources = [generated, client_source]
+    for design_source in design_sources:
+        normal_source = next(path for path in owned_sources if path.name == design_source.name)
+        assert design_source.resolve() != normal_source.resolve(), "Design-time and build write the same output"
+        assert design_source.read_bytes() == normal_source.read_bytes(), "Design-time and build projected different facts"
     hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in owned_sources}
     stamps = {path.name: path.stat().st_mtime_ns for path in owned_sources}
     run("ordinary-data-contracts-incremental", [dotnet, "build", contracts_project, "-c", "Release"])
@@ -681,7 +722,7 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
         assert path.stat().st_mtime_ns == stamps[path.name]
         assert hashlib.sha256(path.read_bytes()).hexdigest() == hashes[path.name]
     run("ordinary-data-contracts-clean", [dotnet, "clean", contracts_project, "-c", "Release"])
-    assert not any(path.exists() for path in owned_sources + [response]), "Clean retained generated data/client input/output"
+    assert not any(path.exists() for path in owned_sources + design_sources + [response]), "Clean retained generated data/client input/output"
     run("ordinary-data-contracts-cold-rebuild", [dotnet, "build", contracts_project, "-c", "Release"])
     for path in owned_sources:
         assert hashlib.sha256(path.read_bytes()).hexdigest() == hashes[path.name]
@@ -771,6 +812,7 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
         "sameAuthoredDtoOrdinaryRootAndRemoteBoundary": True,
         "serializerNamesAppliedOnlyByProjection": True,
         "incrementalTimestampAndColdRebuild": True,
+        "firstDesignTimeInputsAndActualCompilation": True,
         "cleanAndRefusalRemovedOwnedSource": True,
         "refusals": refusals
     }, indent=2) + "\n", encoding="utf-8")

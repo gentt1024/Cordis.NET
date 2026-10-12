@@ -88,6 +88,8 @@ DSH-enabled NuGet 宿主应显式将 `ProfileLaunch.CompatibilityPackageName` �
 
 ## 证据
 
+保存模型的 DTO 和 client 生成也在 MSBuild 设计时构建的 `CoreCompile` 前执行，使用相同共同模型后端和显式引用模型，通过独立输出目录避免语言服务生成写入普通 build/pack 产物。这是 .NET 编译输入适配：STJ 必须在输入 compilation 中看到生成声明；不增加第二套模型权威或回退解析器。打包所需的源码模型提取仍属于普通构建，source generator 继续分析实时作者 compilation。MSBuild 语言服务输入检查与实际 IDE、UI 平台验收分别记录。
+
 配置 watch 注册从最近存在的规范父目录开始，与固定 HMR watcher 一致。目标父目录已存在时，原生监听不包含子目录，对应 DSH depth 为零；无关 SDK 工作子目录不应进入该 watch 的事件缓冲或元数据解析。祖先缺失时，FileSystemWatcher 需要递归监听：布尔深度无法精确表达 DSH 的有限正整数深度，这一较宽的原生边界明确保留。原生缓冲溢出保留原 warning/error，再通过正常串行队列刷新，补读已丢通知。这是 FileSystemWatcher 的必要适配；固定 DSH 对运行期 watcher 错误只警告。其他原生错误保留诊断，已关闭 watch 不接受新刷新。
 
 配置 watch 事件首先匹配规范化事件路径，与固定 HMR watcher 一致。匹配的修改、删除及祖先目录创建无需读取变化文件的属性，直接排队刷新。原生别名解析保留为后备路径；失败通过现有 warning/error 通道报告原异常，后续事件仍可恢复。rename 的两个路径分别处理。初始注册仍拒绝不可访问路径，已关闭的 watch 忽略排队事件。

@@ -469,3 +469,9 @@ Chief 对 `9ae967c` 的审查关闭 E02/E03，通过 N01/N02 保留 E01。两个
 ### 选定 Client 准备边界收口，2026-10-12
 
 实现 `dfee948` 通过既有生成包／浏览器消费者关闭 S01/S02，并保持 N01/N02 关闭。[验证记录](validation.zh.md#选定-client-调用准备2026-10-12)区分 Git 启动失败、成功的源码清单符号检查及同包剩余检查。上方当前 D-MODEL／D-WIRE 表替换旧的整项待完成状态。下一作者出口是首次设计时生成，独立探针已复现普通 build 前缺少生成 Compile 输入。其余引用后端、Peer／scope-targeting 和具名平台消费者保留各自出口；不重建模型，也未选入新依赖。
+
+## 设计时续建，2026-10-12
+
+保存模型的 DTO/client target 现在在 restore 后首次设计时构建中提供生成 Compile 及语言服务命令行输入。设计时输出与普通 build/pack 分开；两者使用相同后端、显式引用输入及 Clean 所有权。既有包消费者负责回归、实际 STJ 编译及随后 Remote 调用；引用消费者另查首次生成、引用事实变化和过期输出拒绝。本候选验证与已推送 S01/S02 检查点 `9243d3a` 分开，不表示实际 IDE、具名 UI 平台或全部后端已经完成。
+
+下一项 Peer 对照已有具体落点：固定 `packages/client/connection/src/operator-peer.ts` 以 Peer 自身为 key 创建 scope；`packages/core/scope/src/index.ts` 提供继承标签、身份／祖先事件路由、原过滤器保留及等待清理完成。原生 `TypertPeer.Context` 当前只有 Fiber 所有权，没有 scope key；Core 事件分发当前仅过滤 Context 和 Service receiver。应先补齐共同路由职责，再关闭 Peer scope-targeting，不能增加 RPC 身份参数或从 Fiber 祖先关系猜测路由。本发现不重开共同声明模型。

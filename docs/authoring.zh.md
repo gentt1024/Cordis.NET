@@ -294,7 +294,7 @@ await connection.dispose();
 
 CLI 对应 `emit-dotnet --reference-models references.rsp`，响应文件每行一个模型路径。Remote 选择仍限于主模型；外部源声明按完整 assembly-qualified 身份解析，复用普通数据发射的 composition。metadata 签名不保留初始化值，不能替代源模型。定义缺失或冲突时拒绝生成并删除旧客户端输出。引用是构建输入，响应文件和生成源码均归 `Clean` 管理。独立调用者消费生成的合同包，不加载 Provider 程序集。
 
-target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。生成源码由 `Clean` 管理；相同输入的增量输出保持字节和时间戳。消费者门禁以这条显式启用的命令行构建路径为边界；IDE/design-time 首次构建仍需单独证据。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
+target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。同一组属性也在 restore 后首次设计时构建中生成语言服务输入，无需先跑普通 build。设计时投影写入 `CordisTypertOutputDirectory` 的 `design-time` 子目录，普通 build/pack 使用常规输出；两者消费相同的显式模型和引用输入。`Clean` 清理两组生成文件；相同输入的增量输出保持字节和时间戳。供打包使用的源码模型提取仍属于普通构建；实时 source generator 读取当前作者 compilation。MSBuild 设计时输入与实际编译器检查不等于实际 IDE 交互或具名 UI 平台验收。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
 
 可空 float/decimal 常量初始化值保留作者类型与默认值。缺少 JSON 成员时保留初始化值，显式 null 则替换它。调用者 DTO 与生成的辅助类型共享所选目标 namespace。名称冲突会在编译前被拒绝，诊断标明双方来源，例如 `CordisTypertClientName` 为 `DemoClient` 时的 `DemoClient`。应选择不同的 DTO 或 client 名称；emitter 不会静默重命名公开类型，拒绝投影时会删除其此前生成的输出。
 
