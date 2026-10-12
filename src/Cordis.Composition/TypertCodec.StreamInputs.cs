@@ -108,6 +108,7 @@ public abstract partial class TypertCodec
         public override object? Decode(JsonElement value) => Inner.Decode(value);
         public override JsonElement Encode(object? value) => Inner.Encode(value);
         public override TypertRemoteResult EncodeResult(object? value) => Inner.EncodeResult(value);
+        internal override JsonTypeInfo? ResultMetadata => Inner.ResultMetadata;
 
         private JsonElement ExportSchema()
         {

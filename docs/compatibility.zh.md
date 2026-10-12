@@ -189,6 +189,8 @@ Remote 客户端 CLI/MSBuild 已通过既有声明 composition 接收显式引�
 
 ### Remote 载体准入与二进制元数据，2026-10-12
 
+owner 关闭上行时，按固定 `ClientUplinkQueue.close()` 清空待发送输入，并以正常完成唤醒读取者，不替换下行结局。远端 end/error 保留已缓冲的业务项；物理载体失败丢弃它们，但保留 carrier 错误。真实 null/undefined 拒绝原因仍是失败。委托结果编码的集合 codec 同时委托其序列化元数据，包括 nullable 包装。Optional codec 保留既有的纯 JSON 结果编码，不承诺附件。
+
 Remote 内层 payload 仅包含 `args` 自有字段，其值必须为 JSON 对象。HTTP 外层封套保留固定上游允许额外字段的规则；mux 帧校验独立处理。无效内层 payload 在 lookup 或业务准备前产生 `gateway/internal`。JS 流先准备本地参数，再于取得载体前和就绪后分别检查取消，因此不会向 Host 发送 `open` 或补偿性 `cancel`。
 
 Unary 附件提取与生成的 TypeScript 结果类型共同使用实际 STJ 元数据。内置 `byte[]` converter 提供二进制能力；schema 的 `contentEncoding: base64` 注解不提供这种能力。属性／类型 converter 保留作者定义的表示。编码字节上的 enum／const 约束投影为二进制结果类型，null 分支继续保留。输入与 mux item 继续使用既有 JSON codec。根字节直接快照为附件；嵌套对象仍先经 STJ 再提取，以保留作者 converter 和序列化规则，避免第二次读取属性。这项内部转换仍有分配成本，不是第二种 wire 格式。

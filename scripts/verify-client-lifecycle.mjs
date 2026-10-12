@@ -284,3 +284,56 @@ try {
   assert.deepEqual(unobserved, [], 'Cancelled carrier admission leaked a rejection')
 } finally { process.off('unhandledRejection', observeRejection) }
 console.log('PASS pre-abort, immediate dispose and connecting cancellation send zero open frames and preserve siblings')
+
+// Remote termination owns the downlink result even while the uplink waits for input.
+const { createClient, RemoteError, RemoteStreamCarrierError } = await import(pathToFileURL(resolve(runtime, 'cordis-remote.mjs')).href)
+const terminalFailures = []
+for (const input of ['waiting', 'ended', 'downlink-only']) {
+  for (const terminal of ['end', 'error', 'carrier']) {
+    const frames = []
+    class ControlledSocket extends EventTarget {
+      send(text) { frames.push(JSON.parse(text)) }
+      close() { this.dispatchEvent(new Event('close')) }
+      receive(frame) { this.dispatchEvent(new MessageEvent('message', {data: JSON.stringify(frame)})) }
+    }
+    const socket = new ControlledSocket()
+    const connection = new TypertConnection('http://localhost/remote', fetch, () => socket)
+    const remote = createClient(connection, [['probe/duplex', true, input !== 'downlink-only'], ['probe/sibling', true, false]])
+    const call = remote['probe/duplex']({})
+    const sibling = remote['probe/sibling']({})
+    try {
+      socket.dispatchEvent(new Event('open'))
+      await until(() => frames.filter(frame => frame.type === 'open').length === 2, 'Both streams opened')
+      const id = frames.find(frame => frame.endpoint === 'probe/duplex').streamId
+      const siblingId = frames.find(frame => frame.endpoint === 'probe/sibling').streamId
+      if (input === 'ended') {
+        call.end()
+        await until(() => frames.some(frame => frame.streamId === id && frame.type === 'end'), 'Input half-close sent')
+      }
+      socket.receive({type:'item', streamId:id, value:42})
+      if (terminal === 'carrier') socket.close()
+      else if (terminal === 'end') socket.receive({type:'end', streamId:id})
+      else socket.receive({type:'error', streamId:id, error:{code:'probe/rejected', message:'Rejected', details:{field:'name'}}})
+      // Let the waiting input pump settle before the first consumer read.
+      await delay(0)
+      const reader = call[Symbol.asyncIterator]()
+      if (terminal === 'carrier') {
+        await assert.rejects(reader.next(), error => error instanceof RemoteStreamCarrierError)
+      } else {
+        assert.deepEqual(await reader.next(), {done:false, value:42})
+        if (terminal === 'end') assert.deepEqual(await reader.next(), {done:true, value:undefined})
+        else await assert.rejects(reader.next(), error => {
+          assert.ok(error instanceof RemoteError)
+          assert.equal(error.code, 'probe/rejected')
+          assert.deepEqual(error.details, {field:'name'})
+          return true
+        })
+        socket.receive({type:'item', streamId:siblingId, value:7})
+        assert.deepEqual(await sibling[Symbol.asyncIterator]().next(), {done:false, value:7})
+      }
+    } catch (error) { terminalFailures.push({input, terminal, error}) }
+    finally { await remote.dispose(); await connection.dispose() }
+  }
+}
+assert.deepEqual(terminalFailures, [], 'Input closure replaced the downlink terminal result')
+console.log('PASS delayed downlink preserves items, RemoteError details and carrier failures across uplink termination')

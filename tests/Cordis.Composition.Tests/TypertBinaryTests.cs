@@ -90,6 +90,50 @@ public sealed class TypertBinaryTests
         Assert.Contains("export type Boundary0 = " + type + ";", Declaration(codec));
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void Collection_factories_keep_result_attachments_and_client_types_consistent(bool dictionary, bool nullable)
+    {
+        byte[] bytes = [1, 2, 3];
+        using var schema = JsonDocument.Parse("""{"type":"string","contentEncoding":"base64"}""");
+        var item = TypertCodec.Create(BinaryJson.Default.ByteArray, schema: schema.RootElement);
+        var wrapped = dictionary
+            ? TypertCodec.CreateDictionary(BinaryJson.Default.DictionaryStringByteArray, item, nullable: nullable)
+            : TypertCodec.CreateSequence(BinaryJson.Default.ByteArrayArray, item, nullable: nullable);
+        var direct = dictionary
+            ? TypertCodec.Create(BinaryJson.Default.DictionaryStringByteArray)
+            : TypertCodec.Create(BinaryJson.Default.ByteArrayArray);
+        object value = dictionary
+            ? new Dictionary<string, byte[]>
+            {
+                ["data"] = bytes
+            }
+            : new byte[][] { bytes };
+        foreach (var codec in new[] { direct, wrapped })
+        {
+            var result = codec.EncodeResult(value);
+            var attachment = Assert.Single(result.Attachments);
+            Assert.Equal(bytes, attachment.Bytes.ToArray());
+            Assert.Single(attachment.Path);
+            if (dictionary)
+                Assert.Equal("data", attachment.Path[0].GetString());
+            else
+                Assert.Equal(0, attachment.Path[0].GetInt32());
+            Assert.Contains(dictionary ? "[key: string]: Uint8Array" : "ReadonlyArray<Uint8Array>", Declaration(codec));
+        }
+
+        if (nullable)
+        {
+            Assert.Contains(" | null", Declaration(wrapped));
+            var result = wrapped.EncodeResult(null);
+            Assert.Equal(JsonValueKind.Null, result.Value!.Value.ValueKind);
+            Assert.Empty(result.Attachments);
+        }
+    }
+
     private static string Declaration(TypertCodec codec) => TypertArtifacts.GenerateClient(
             new TypertContribution("binary", [new("binary#read", "binary", "binary", "read", [], codec)]))
         .Declaration;
@@ -114,6 +158,8 @@ internal sealed class HexBytesConverter : JsonConverter<byte[]>
 
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(byte[]))]
+[JsonSerializable(typeof(byte[][]))]
+[JsonSerializable(typeof(Dictionary<string, byte[]>))]
 [JsonSerializable(typeof(BinaryRecord))]
 [JsonSerializable(typeof(BinaryLabel))]
 internal partial class BinaryJson : JsonSerializerContext;

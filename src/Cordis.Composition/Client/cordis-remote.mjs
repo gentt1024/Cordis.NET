@@ -170,6 +170,7 @@ class Inbox {
   push(value) { if (!this.terminal) { this.values.push(value); this.wake?.(); } }
   end(error) { if (!this.terminal) { this.terminal = true; this.failed = error !== undefined; this.error = error; this.wake?.(); } }
   fail(error) { this.values.length = 0; this.error = error; this.failed = true; this.terminal = true; this.wake?.(); }
+  close() { this.values.length = 0; this.end(); }
   async next() {
     while (!this.values.length && !this.terminal) await new Promise(resolve => { this.wake = resolve; });
     this.wake = undefined;
@@ -224,7 +225,7 @@ class Mux {
     const ended = new Promise(resolve => { terminal = resolve; });
     const input = new Inbox();
     let inputClosed = false;
-    const closeInput = () => { inputClosed = true; input.fail(); };
+    const closeInput = () => { inputClosed = true; input.close(); };
     const call = {inbox, terminal, remoteTerminal:false, closeInput};
     this.#calls.set(streamId, call);
     const work = (async () => {
