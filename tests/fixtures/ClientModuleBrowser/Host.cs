@@ -27,7 +27,7 @@ server.UseWebSockets();
 server.MapCordisRemote(
     "/remote",
     connection,
-    (_, endpoint) => Task.FromResult(endpoint is "remote.mux" or "$events/result"));
+    (_, endpoint) => Task.FromResult(endpoint is "remote.mux" or "$events" or "$events/result"));
 server.MapPost(
     "/changed",
     () => root.RunAsync(owner =>

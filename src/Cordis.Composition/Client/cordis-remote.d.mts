@@ -1,3 +1,4 @@
+/// <reference lib="esnext.disposable" />
 export declare class RemoteError extends Error {
   readonly isDSHRemoteError: true;
   readonly code: string;
