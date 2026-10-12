@@ -120,6 +120,8 @@ export async function scopedCalls(connection: TypertConnection, createContext: (
       void service.scopedRead({ receiverId: 7 })
       // @ts-expect-error string lookup identities cannot become numbers
       void read({ documentId: 7 })
+      // @ts-expect-error an empty scoped overload must not admit a mistyped direct identity
+      void service.watch({ documentId: 7 })
     }
   } finally { await mounted.dispose(); await owner.fiber.dispose() }
 }

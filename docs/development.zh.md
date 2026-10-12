@@ -446,3 +446,5 @@ Chief 对 `f0d38f5` 的审查保留既有事件／owned-value 结构，但指出
 当前将已有接收方／lookup descriptor 接入生成浏览器挂载，通过 Cordis Context tracing 在每次调用读取当前 adapter。`getRemote(caller, namespace)` 为现有 service 提供类型化读取，不创建另一套所有者或显式身份合同。共享包消费者覆盖两种 scoped 语义、直接 lookup fallback、null/undefined、留存回调、流和贡献替换。浏览器驱动可选择反向事件或出站 scoped 消费。首轮出站包／浏览器探针在纠正夹具误用 Context 释放后通过；最终冻结证据另行记录。
 
 普通数据后端现在接收共同 wire 投影已处理的另外四种框架集合接口。现有引用模型消费者验证默认值、可空元素、序列化及真实 Remote 调用，包括引用变化后重新生成和原有拒绝场景。旧后端在包构建处的拒绝证据保留。本批不关闭任意泛型类、完整 Peer／scope-targeting 及剩余具名平台／后端职责。不增加依赖、模型代际、包版本或 upstream pin。
+
+严格消费探针发现 TypeScript `{}` 会让错误类型的显式 lookup 身份通过空 scoped 重载。生成的空参数对象现统一采用 `Record<string, never>`，覆盖 endpoint 与 Context service 签名；负例并入现有共享包消费者。此前 `270eaf3` 的验证继续保留自己的身份，不能证明后续修正。

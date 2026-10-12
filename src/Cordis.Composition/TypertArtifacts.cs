@@ -119,9 +119,9 @@ public static partial class TypertArtifacts
             methods
                 .Append("  ")
                 .Append(Quote(descriptor.Endpoint))
-                .Append("(args: { ")
-                .Append(string.Join("; ", fields))
-                .Append(" }, signal?: AbortSignal): ")
+                .Append("(args: ")
+                .Append(Arguments(fields))
+                .Append(", signal?: AbortSignal): ")
                 .Append(returnType)
                 .Append(";\n");
             if (!services.TryGetValue(descriptor.Namespace, out var service))
@@ -129,18 +129,18 @@ public static partial class TypertArtifacts
             service
                 .Append("    ")
                 .Append(Quote(descriptor.Method))
-                .Append("(args: { ")
-                .Append(string.Join("; ", scopedFields))
-                .Append(" }, signal?: AbortSignal): ")
+                .Append("(args: ")
+                .Append(Arguments(scopedFields))
+                .Append(", signal?: AbortSignal): ")
                 .Append(returnType)
                 .Append(";\n");
             if (descriptor.Scope is not null && descriptor.Invocation is null)
                 service
                     .Append("    ")
                     .Append(Quote(descriptor.Method))
-                    .Append("(args: { ")
-                    .Append(string.Join("; ", fields))
-                    .Append(" }, signal?: AbortSignal): ")
+                    .Append("(args: ")
+                    .Append(Arguments(fields))
+                    .Append(", signal?: AbortSignal): ")
                     .Append(returnType)
                     .Append(";\n");
             runtime
@@ -184,6 +184,9 @@ public static partial class TypertArtifacts
             "export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection, adapters?: RemoteContextAdapters): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
         return new(runtime.ToString(), definitions.Append(methods).ToString());
     }
+
+    private static string Arguments(List<string> fields) =>
+        fields.Count == 0 ? "Record<string, never>" : "{ " + string.Join("; ", fields) + " }";
 
     private static string Quote(string value) => JsonSerializer.Serialize(value, TypertJson.Default.String);
 
