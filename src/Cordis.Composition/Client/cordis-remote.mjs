@@ -442,8 +442,7 @@ export async function mountClient(ctx, remote, namespaceSpecs, adapters) {
             ctx:{value:ctx.root, configurable:true},
             [Symbol.for('cordis.tracker')]:{value:{associate:key, property:'ctx'}},
           });
-          group = {service, dispose:ctx.root.provide(key, service)};
-          table.set(key, group);
+          group = {service, dispose:undefined};
         }
         const names = [];
         installed.push([key, group, names]);
@@ -453,6 +452,10 @@ export async function mountClient(ctx, remote, namespaceSpecs, adapters) {
             return (args, signal) => remote[endpoint](args, signal, {caller, adapters});
           }});
           names.push(name);
+        }
+        if (!group.dispose) {
+          group.dispose = ctx.root.provide(key, group.service);
+          table.set(key, group);
         }
       }
       return {cleanup};

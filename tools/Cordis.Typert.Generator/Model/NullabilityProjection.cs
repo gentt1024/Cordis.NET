@@ -23,14 +23,14 @@ internal sealed class NullabilityProjection
     {
         var graph = new NullabilityProjection();
         var types = model.Declarations.ToDictionary(type => type.Id, StringComparer.Ordinal);
-        var naming = context is not null && types.TryGetValue(context.Name, out var serializer)
-            ? DeclarationAttributeProjection.Named(
-                    DeclarationAttributeProjection.Attribute(
-                        serializer.Attributes,
-                        DeclarationAttributeProjection.JsonPrefix + "JsonSourceGenerationOptionsAttribute"),
-                    "PropertyNamingPolicy")
-                ?.Json ?? "0"
-            : "0";
+        var options = context is not null && types.TryGetValue(context.Name, out var serializer)
+            ? DeclarationAttributeProjection.Attribute(
+                serializer.Attributes,
+                DeclarationAttributeProjection.JsonPrefix + "JsonSourceGenerationOptionsAttribute")
+            : null;
+        var naming = DeclarationAttributeProjection.Named(options, "PropertyNamingPolicy")?.Json ?? "0";
+        var includeFields =
+            DeclarationAttributeProjection.Boolean(DeclarationAttributeProjection.Named(options, "IncludeFields"));
         Read(root);
         return graph.Emit(method);
 
@@ -73,10 +73,21 @@ internal sealed class NullabilityProjection
                         Nullable = null
                     };
                 else
+                {
+                    var ambiguous = new HashSet<string>(StringComparer.Ordinal);
                     foreach (var member in type.Members.Where(member => member.Kind is "property" or "field" &&
                                  member.Type is not null &&
                                  !member.Modifiers.Contains("static", StringComparer.Ordinal)))
                     {
+                        var attributes = DeclarationAttributeProjection.Wire(member.Attributes);
+                        if (Ignored(attributes))
+                            continue;
+                        var included = attributes.Any(attribute =>
+                            attribute.Name == DeclarationAttributeProjection.JsonPrefix + "JsonIncludeAttribute");
+                        if (member.Kind == "field"
+                                ? !included && (!includeFields || member.Accessibility != "Public")
+                                : !included && member.Getter != "Public" && member.Setter != "Public")
+                            continue;
                         var name = DeclarationWireProjection.MemberName(
                             member.Name,
                             DeclarationAttributeProjection.Native(
@@ -98,8 +109,9 @@ internal sealed class NullabilityProjection
                             {
                                 Nullability = "NotAnnotated"
                             };
-                        properties[name] = Read(value);
+                        AddProperty(properties, ambiguous, name, Read(value));
                     }
+                }
             }
 
             graph.nodes[id] = node;
@@ -133,8 +145,12 @@ internal sealed class NullabilityProjection
                     ItemKey = reference.Arguments.Length == 2 ? "additionalProperties" : "items"
                 };
             else if (reference.Kind == "named" && types.TryGetValue(reference.Name, out var type))
+            {
+                var ambiguous = new HashSet<string>(StringComparer.Ordinal);
                 foreach (var member in type.Members)
                 {
+                    if (Ignored(member.Attributes))
+                        continue;
                     var value = member.Type;
                     if (member.Attributes.Any(attribute =>
                             attribute.Name == "System.Diagnostics.CodeAnalysis.AllowNullAttribute"))
@@ -148,8 +164,9 @@ internal sealed class NullabilityProjection
                         {
                             Nullability = "NotAnnotated"
                         };
-                    properties[member.WireName] = Read(value);
+                    AddProperty(properties, ambiguous, member.WireName, Read(value));
                 }
+            }
 
             graph.nodes[id] = node;
             return id;
@@ -161,14 +178,33 @@ internal sealed class NullabilityProjection
         kind == "nullable" || annotation == "Annotated" ? true :
         annotation == "None" ? null : false;
 
+    private static bool Ignored(NativeAttribute[] attributes)
+    {
+        var attribute = attributes.FirstOrDefault(value =>
+            value.Name == DeclarationAttributeProjection.JsonPrefix + "JsonIgnoreAttribute");
+        return attribute is not null &&
+            (attribute.NamedArguments.FirstOrDefault(value => value.Name == "Condition")?.Value.Json is null or "1");
+    }
+
+    private static void AddProperty(Dictionary<string, int> properties, HashSet<string> ambiguous, string name, int id)
+    {
+        if (ambiguous.Contains(name))
+            return;
+        if (!properties.TryAdd(name, id))
+        {
+            properties.Remove(name);
+            ambiguous.Add(name);
+        }
+    }
+
     private string Emit(string method)
     {
         if (nodes.All(node => node!.Properties.Count == 0 && node.Item is null))
-            return "private static bool? " + method +
-                "(global::System.ReadOnlySpan<string> path) => path.IsEmpty ? (bool?)" +
-                (nodes[0]!.Nullable is { } value ? value ? "true" : "false" : "null") + " : null;\n";
+            return "private static global::Cordis.Composition.TypertNullabilityInfo? " + method +
+                "(global::System.ReadOnlySpan<string> path) => path.IsEmpty ? new global::Cordis.Composition.TypertNullabilityInfo(0, " +
+                (nodes[0]!.Nullable is { } value ? value ? "true" : "false" : "null") + ") : null;\n";
         var code = new StringBuilder(
-            "private static bool? " + method +
+            "private static global::Cordis.Composition.TypertNullabilityInfo? " + method +
             "(global::System.ReadOnlySpan<string> path) {\nint state = 0;\nfor (int i = 0; i < path.Length; i++) {\nswitch (state) {\n");
         for (var id = 0;id < nodes.Count;id++)
         {
@@ -197,10 +233,11 @@ internal sealed class NullabilityProjection
             }
         }
 
-        code.Append("default: return null;\n}\n}\nreturn state switch {\n");
+        code.Append(
+            "default: return null;\n}\n}\nreturn new global::Cordis.Composition.TypertNullabilityInfo(state, state switch {\n");
         for (var id = 0;id < nodes.Count;id++)
             if (nodes[id]!.Nullable is { } nullable)
                 code.Append(id).Append(" => ").Append(nullable ? "true" : "false").Append(",\n");
-        return code.Append("_ => null };\n}\n").ToString();
+        return code.Append("_ => (bool?)null });\n}\n").ToString();
     }
 }

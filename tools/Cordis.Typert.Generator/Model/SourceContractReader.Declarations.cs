@@ -21,6 +21,15 @@ internal sealed partial class SourceContractReader
         bool allowEmpty = false,
         IReadOnlyDictionary<string, NativeXmlDocumentation>? referenceDocumentation = null)
     {
+        foreach (var tree in compilation
+                     .SyntaxTrees.Where(tree => tree.Options.DocumentationMode == DocumentationMode.None)
+                     .ToArray())
+            compilation = compilation.ReplaceSyntaxTree(
+                tree,
+                CSharpSyntaxTree.ParseText(
+                    tree.GetText(),
+                    ((CSharpParseOptions)tree.Options).WithDocumentationMode(DocumentationMode.Parse),
+                    tree.FilePath));
         var parseErrors = compilation
             .GetParseDiagnostics()
             .Where(value => value.Severity == DiagnosticSeverity.Error)

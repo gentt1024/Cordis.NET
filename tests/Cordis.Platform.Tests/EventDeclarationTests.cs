@@ -1,15 +1,48 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using Cordis.AspNetCore;
 using Cordis.Composition;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Cordis.Platform.Tests
 {
-    public sealed class EventDeclarationTests
+    public sealed class EventDeclarationTests(ITestOutputHelper output)
     {
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void Nested_collection_nullability_is_independent_of_export_order(bool strictFirst, bool invalid)
+        {
+            var codec = EventAlpha.NestedTypert.Definition.Args[strictFirst ? 1 : 0];
+            output.WriteLine(codec.Schema.GetRawText());
+            using var json = JsonDocument.Parse(
+                invalid
+                    ? """{"Loose":[[null]],"Strict":[[null]]}"""
+                    : """{"Loose":[[null]],"Strict":[["required"]]}""");
+            if (invalid)
+                Assert.Throws<JsonException>(() => codec.Decode(json.RootElement));
+            else
+                Assert.NotNull(codec.Decode(json.RootElement));
+        }
+
+        [Fact]
+        public void Ignored_member_does_not_override_the_active_json_member()
+        {
+            var ordinary = TypertCodec.Create(IgnoredDeclarationsJson.Default.IgnoredShadowsNullable);
+            var generated = EventAlpha.IgnoredShadowTypert.Definition.Args[0];
+            var encoded = generated.Encode(new IgnoredShadowsNullable());
+            output.WriteLine(generated.Schema.GetRawText());
+            Assert.Equal(JsonValueKind.Null, encoded.GetProperty("value").ValueKind);
+            Assert.Null(Assert.IsType<IgnoredShadowsNullable>(ordinary.Decode(encoded)).AActual);
+            Assert.Null(Assert.IsType<IgnoredShadowsNullable>(generated.Decode(encoded)).AActual);
+        }
+
         [Fact]
         public async Task Generated_event_codecs_and_source_listener_preserve_root_and_element_nullability()
         {
@@ -114,4 +147,30 @@ namespace Cordis.Platform.Tests
             }
         }
     }
+
+    public sealed class IgnoredShadowsNullable
+    {
+        [JsonPropertyName("value")]
+        public string? AActual
+        {
+            get;
+            set;
+        }
+
+        [JsonIgnore, JsonPropertyName("value")]
+        public string ZIgnored
+        {
+            get;
+            set;
+        } = "ignored";
+    }
+
+    [JsonSerializable(typeof(IgnoredShadowsNullable))]
+    public partial class IgnoredDeclarationsJson : JsonSerializerContext;
+}
+
+namespace Cordis.Platform.Tests.EventAlpha
+{
+    [RemoteEvent("alpha/ignored-shadow", typeof(IgnoredDeclarationsJson))]
+    public delegate void IgnoredShadow(IgnoredShadowsNullable value);
 }

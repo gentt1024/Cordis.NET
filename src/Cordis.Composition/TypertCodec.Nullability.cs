@@ -3,8 +3,13 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Cordis.Composition;
 
-/// <summary>Declared null admission at an exported JSON Schema path; null keeps the serializer's own rule.</summary>
-public delegate bool? TypertNullability(ReadOnlySpan<string> schemaPath);
+/// <summary>A declaration use within one codec's graph, including its null admission.</summary>
+/// <param name="Id">Stable within this query; different nested declarations have different identities.</param>
+/// <param name="Nullable">Null keeps the serializer's own null admission.</param>
+public readonly record struct TypertNullabilityInfo(int Id, bool? Nullable);
+
+/// <summary>Declaration use at a JSON Schema path; null leaves an unmapped serializer contract unchanged.</summary>
+public delegate TypertNullabilityInfo? TypertNullability(ReadOnlySpan<string> schemaPath);
 
 public abstract partial class TypertCodec
 {
@@ -25,33 +30,98 @@ public abstract partial class TypertCodec
             nullability);
     }
 
+    private static JsonNode ProjectNullability(JsonNode root, TypertNullability query)
+    {
+        var projected = new Dictionary<(string Source, int? Declaration), string>();
+        return Visit(root, "#", "#", []);
+
+        JsonNode Visit(JsonNode source, string sourcePath, string outputPath, string[] path)
+        {
+            if (source is not JsonObject schema)
+                return source.DeepClone();
+            if (schema["$ref"] is JsonValue reference)
+            {
+                var pointer = reference.GetValue<string>();
+                var target = root;
+                if (pointer != "#")
+                {
+                    if (!pointer.StartsWith("#/", StringComparison.Ordinal))
+                        throw new NotSupportedException("A declared schema requires local references.");
+                    foreach (var part in pointer[2..].Split('/'))
+                    {
+                        var name = part
+                            .Replace("~1", "/", StringComparison.Ordinal)
+                            .Replace("~0", "~", StringComparison.Ordinal);
+                        target = target is JsonArray array
+                            ? array[int.Parse(name, System.Globalization.CultureInfo.InvariantCulture)]!
+                            : target[name]!;
+                    }
+                }
+
+                var resolved = Visit(target, pointer, outputPath, path);
+                if (resolved is JsonObject result)
+                    foreach (var sibling in schema.Where(field => field.Key != "$ref"))
+                        result[sibling.Key] = sibling.Value?.DeepClone();
+                return resolved;
+            }
+
+            var declaration = query(path);
+            var key = (sourcePath, declaration?.Id);
+            if (projected.TryGetValue(key, out var previous))
+                return new JsonObject
+                {
+                    ["$ref"] = previous
+                };
+            projected.Add(key, outputPath);
+            var copy = (JsonObject)schema.DeepClone();
+            foreach (var field in schema)
+            {
+                var sourceChild = Pointer(sourcePath, field.Key);
+                var outputChild = Pointer(outputPath, field.Key);
+                var childPath = path.Append(field.Key).ToArray();
+                if (field.Key is "properties" or "$defs" or "definitions" && field.Value is JsonObject members)
+                {
+                    var children = new JsonObject();
+                    foreach (var member in members)
+                        children[member.Key] = Visit(
+                            member.Value!,
+                            Pointer(sourceChild, member.Key),
+                            Pointer(outputChild, member.Key),
+                            childPath.Append(member.Key).ToArray());
+                    copy[field.Key] = children;
+                }
+                else if (field.Key is "items" or "additionalProperties" or "not" && field.Value is { } child)
+                    copy[field.Key] = Visit(child, sourceChild, outputChild, childPath);
+                else if (field.Key is "allOf" or "anyOf" or "oneOf" or "prefixItems" &&
+                         field.Value is JsonArray alternatives)
+                {
+                    var children = new JsonArray();
+                    for (var index = 0;index < alternatives.Count;index++)
+                    {
+                        var name = index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        children.Add(
+                            Visit(
+                                alternatives[index]!,
+                                Pointer(sourceChild, name),
+                                Pointer(outputChild, name),
+                                childPath.Append(name).ToArray()));
+                    }
+
+                    copy[field.Key] = children;
+                }
+            }
+
+            return AnnotateNullability(copy, declaration?.Nullable);
+        }
+
+        static string Pointer(string parent, string name) => parent + "/" +
+            name.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal);
+    }
+
     private static JsonNode AnnotateNullability(JsonNode node, bool? nullable)
     {
         if (nullable is null || node is not JsonObject schema)
             return node;
-        if (schema.ContainsKey("$ref"))
-            return nullable.Value
-                ? new JsonObject
-                {
-                    ["anyOf"] = new JsonArray(
-                        node,
-                        new JsonObject
-                        {
-                            ["type"] = "null"
-                        })
-                }
-                : new JsonObject
-                {
-                    ["allOf"] = new JsonArray(
-                        node,
-                        new JsonObject
-                        {
-                            ["not"] = new JsonObject
-                            {
-                                ["type"] = "null"
-                            }
-                        })
-                };
         if (schema["type"] is JsonArray types)
         {
             for (var i = types.Count - 1;i >= 0;i--)

@@ -118,7 +118,7 @@ Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 P
 
 ### 原生 Typert 合同与传输
 
-本次续建提供 Roslyn 作者生成器、编译器无关 descriptor、System.Text.Json 元数据 codec 与 Schema、Fiber 拥有的 registry、显式 artifact resolver 的 Loader 集成、Gateway，以及生成的 TypeScript 模块/声明制品。生成器在 `Cordis.NET.Composition` 的 analyzer 目录内交付。这覆盖显式声明的原生 Remote 边界，不等同于固定 TypeScript 编译器的完整源类型图。显式 JSON 元数据及其命名、成员空性与必需字段选项定义原生数据合同。Roslyn 通过 `TypertCodec.CreateNullable` 补入运行时丢失的根可空引用标注；其可空 Schema 投影保留非空递归子节点。结果保留固定调用语义，不增加 Schema 准入。公开声明与包消费者见[作者指南](authoring.zh.md#2026-10-09-模块导出与生成式-remote-合同)。
+本次续建提供 Roslyn 作者生成器、编译器无关 descriptor、System.Text.Json 元数据 codec 与 Schema、Fiber 拥有的 registry、显式 artifact resolver 的 Loader 集成、Gateway，以及生成的 TypeScript 模块/声明制品。生成器在 `Cordis.NET.Composition` 的 analyzer 目录内交付。这覆盖显式声明的原生 Remote 边界，不等同于固定 TypeScript 编译器的完整源类型图。显式 JSON 元数据及其命名、成员空性与必需字段选项定义原生数据合同。生成 codec 通过 `TypertCodec.CreateDeclared` 补入运行时丢失的声明空性，区分嵌套与递归使用位置。结果保留固定调用语义，不增加 Schema 准入。公开声明与包消费者见[作者指南](authoring.zh.md#2026-10-09-模块导出与生成式-remote-合同)。
 
 `IClrTypertModule` 从插件工厂所在的同一已加载 CLR bundle 导出贡献。Typert 导入按 owner Fiber 激活期缓存。在动态模块代际边界，候选准备完成后、退役 provider 前，暂停受影响的精确 Loader 请求；仅在路由提交或确认旧 provider 恢复后恢复。暂停撤销相应登记、失效制品缓存并脱离旧导入；其他贡献者保持登记身份和 owner。旧导入晚到也不能登记进恢复后的新代。这样释放 loader 对旧生成 delegate 与 CLR 序列化类型的引用；仅有类型名相同，不能让旧贡献适配替换后的新程序集。登记有效性同时阻止撤销后的旧调用。Registry 元数据不代替 Cordis 服务权威或产品政策。
 
@@ -218,3 +218,9 @@ STJ 运行时元数据丢失泛型引用参数的空性。生成式 Host、事�
 固定 `packages/api/gateway/src/client/index.ts` 的 `invokeMethod`、`prepareInvocation`、`RemoteNamespaceService` 决定 scoped 选择：通过 Cordis tracing 取得消费方 Context，查询当前 adapter，区分 undefined 与 null，仅在本来具有直接 descriptor 时允许直接 fallback。原生生成浏览器挂载现在从已有 invocation descriptor 取得接收方与 lookup 两种投影。类型化 `getRemote(ctx, namespace)` 只是 `ctx.get('remote.' + namespace)` 的声明便利入口；命名参数对象保留现有 .NET 生成 wire 命名和省略语义。不增加身份 registry、传输、模型格式或兼容分支。此前只挂载普通 endpoint 函数、没有消费方 Context 投影，是未完成切片，不是目标合同。
 
 普通数据后端的框架集合接口现在复用共同声明中的框架投影。有序 JSON 数组表示、元素空性及引用事实与 Remote 后端共用；具体 .NET 接口选择属于 STJ 数据载体适配。执行任意 enumerable、作者泛型类和其他被拒绝的数据形状仍是独立工作。
+
+### 声明使用位置与 Schema 引用，2026-10-12
+
+Chief 对 `9ae967c` 的审查发现，只给复用的 STJ `$ref` 根部增加空性约束，会丢失嵌套泛型的不同空性。生成查询现在返回 `TypertNullabilityInfo(Id, Nullable)`，标识在单个 codec 内区分完整声明使用位置。延迟导出按原始 Schema 位置与声明标识投影 STJ 图，重写本地引用并复用已经投影的组合，使递归图终止。这不增加保存模型版本、wire 字段或另一套序列化器。作者沿用现有 Remote 声明，消费者重新生成。
+
+始终忽略的成员，以及不参与作者 STJ 合同的字段，不再贡献属性空性。条件忽略继续是序列化规则。存在歧义的属性映射保留序列化器规则，不再由最后遍历的声明覆盖。共同模型仍将这些成员保留为分析事实。STJ 负责属性命名、转换器、序列化和必填成员策略；声明泛型空性补充 CLR 元数据擦除的事实。这纠正了此前仅处理引用根部的适配，不表示支持任意泛型作者代码执行或任意转换器重建。

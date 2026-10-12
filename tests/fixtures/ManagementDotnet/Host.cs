@@ -66,6 +66,7 @@ EffectHandle events = null!;
 TypertRemoteEventDefinition[] selectedEvents =
 [
     Cordis.Platform.Tests.EventAlpha.ChangedTypert.Definition,
+    Cordis.Platform.Tests.EventAlpha.NestedTypert.Definition,
     Cordis.Platform.Tests.EventBeta.ChangedTypert.Definition,
     PluginManagerChangedEventTypert.Definition,
     PluginInstallStateEventTypert.Definition,
@@ -151,6 +152,18 @@ server.MapPost(
                     "required"
                 });
             context.Emit("alpha/changed", null, new Dictionary<string, string?>(), new List<string>());
+            context.Emit(
+                "alpha/nested",
+                new Cordis.Platform.Tests.LooseFirst
+                {
+                    Loose = [[null]],
+                    Strict = [["required"]]
+                },
+                new Cordis.Platform.Tests.StrictFirst
+                {
+                    Loose = [[null]],
+                    Strict = [["required"]]
+                });
             return Task.CompletedTask;
         });
         return Results.Ok();

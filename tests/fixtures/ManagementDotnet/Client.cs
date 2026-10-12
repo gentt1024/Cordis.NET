@@ -12,6 +12,7 @@ using System.Text.Json;
 using IndependentManagement.Manager;
 using IndependentManagement.Notifications;
 using IndependentManagement.Collections;
+using IndependentManagement.Nested;
 using RemoteError = Cordis.Composition.RemoteError;
 
 using var http = new HttpClient
@@ -28,6 +29,8 @@ await notifications.StartAsync(observation.Token);
 using (var emitted = await http.PostAsync(new Uri(address, "/control/collection-events"), null))
     emitted.EnsureSuccessStatusCode();
 await notifications.Collections.Task.WaitAsync(TimeSpan.FromSeconds(10));
+await notifications.Nested.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
 await using var events = notifications.Read().GetAsyncEnumerator();
 var plugins = (await manager.ListPluginsAsync()).Value;
 var worker = plugins.Single(row => row.EntryId == "root:worker");
@@ -445,6 +448,11 @@ sealed class EventObservation : IAsyncDisposable
         get;
     } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    public TaskCompletionSource Nested
+    {
+        get;
+    } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public EventObservation(TypertConnection connection) => client = new(owner, new TypertRegistry(owner), connection);
 
     public async Task StartAsync(CancellationToken token = default)
@@ -452,6 +460,18 @@ sealed class EventObservation : IAsyncDisposable
         var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await owner.RunAsync(ctx =>
         {
+            NestedEvent.On(
+                client,
+                ctx,
+                (loose, strict) =>
+                {
+                    if (loose.Loose.Single().Single() is not null || strict.Loose.Single().Single() is not null ||
+                        loose.Strict.Single().Single() != "required" || strict.Strict.Single().Single() != "required")
+                        Nested.TrySetException(
+                            new Exception("Saved event listener lost nested declaration nullability."));
+                    else
+                        Nested.TrySetResult();
+                });
             CollectionEvent.On(
                 client,
                 ctx,

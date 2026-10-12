@@ -32,25 +32,28 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
         '<AssemblyName>IndependentEvents.Author</AssemblyName><PackageId>IndependentEvents.Author</PackageId>'
         '<Version>1.0.0-alpha</Version>', composition,
         '<ItemGroup><CordisTypertModelRoot Include="Cordis.Platform.Tests.EventAlpha.Changed"/>'
+        '<CordisTypertModelRoot Include="Cordis.Platform.Tests.EventAlpha.Nested"/>'
         '<CordisTypertModelRoot Include="Cordis.Platform.Tests.EventBeta.Changed"/></ItemGroup>')
     shutil.copyfile(root / "tests/fixtures/EventDeclarations/Author.cs", event_author / "Author.cs")
     run("event-author-pack", [dotnet, "pack", event_project, "-c", "Release", "-o", contract_feed])
     run("event-author-incremental", [dotnet, "build", event_project, "-c", "Release"])
     event_model = (event_author / "obj/Release/net10.0/cordis-typert/IndependentEvents.Author.cordis.model.json").read_bytes()
-    for service, name, namespace in (
-        ("pluginManager", "PluginManagerClient", "IndependentManagement.Manager"),
-        ("plugin-manager/changed", "ChangedEvent", "IndependentManagement.Notifications"),
-        ("alpha/changed", "CollectionEvent", "IndependentManagement.Collections"),
+    for service, name, group, source_model in (
+        ("pluginManager", "PluginManagerClient", "Manager", model_bytes),
+        ("plugin-manager/changed", "ChangedEvent", "Notifications", model_bytes),
+        ("alpha/changed", "CollectionEvent", "Collections", event_model),
+        ("alpha/nested", "NestedEvent", "Nested", event_model),
     ):
-        package_id = "IndependentManagement." + ("Manager" if service == "pluginManager" else "Collections" if service == "alpha/changed" else "Notifications") + ".Contracts"
-        folder, path = project("ManagementContracts" if service == "pluginManager" else "CollectionContracts" if service == "alpha/changed" else "NotificationContracts",
+        namespace = "IndependentManagement." + group
+        package_id = namespace + ".Contracts"
+        folder, path = project(group + "Contracts",
             f'<PackageId>{package_id}</PackageId><Version>1.0.0-alpha</Version><GenerateDocumentationFile>true</GenerateDocumentationFile>'
             f'<CordisTypertService>{service}</CordisTypertService>'
             f'<CordisTypertClientModel>{model_name}</CordisTypertClientModel>'
             f'<CordisTypertClientNamespace>{namespace}</CordisTypertClientNamespace>'
             f'<CordisTypertClientName>{name}</CordisTypertClientName>', composition,
             f'<ItemGroup><None Include="{model_name}" Pack="true" PackagePath="cordis/typert/"/></ItemGroup>')
-        (folder / model_name).write_bytes(event_model if service == "alpha/changed" else model_bytes)
+        (folder / model_name).write_bytes(source_model)
         run("standard-" + service.replace("/", "-") + "-client-pack", [dotnet, "pack", path, "-c", "Release", "-o", contract_feed])
         contracts.append(f'<PackageReference Include="{package_id}" Version="1.0.0-alpha"/>')
     host, host_project = project("ManagementHost", '<OutputType>Exe</OutputType>', composition +

@@ -275,6 +275,7 @@ internal sealed partial class DotnetProjectionEmitter
         {
             if (dataCarrier)
                 output.AppendLine("    public " + name + "() { }");
+            output.AppendLine("    /// <summary>Initialize the projected data carrier.</summary>");
             Docs(type.Documentation, "    ", "constructor");
             if (constructor.JsonConstructor)
                 output.AppendLine("    [JsonConstructor]");

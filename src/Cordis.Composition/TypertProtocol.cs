@@ -325,11 +325,10 @@ public abstract partial class TypertCodec
             var node = metadata.GetJsonSchemaAsNode(
                 new JsonSchemaExporterOptions
                 {
-                    TreatNullObliviousAsNonNullable = true,
-                    TransformSchemaNode = nullability is null
-                        ? null
-                        : (context, node) => AnnotateNullability(node, nullability(context.Path))
+                    TreatNullObliviousAsNonNullable = true
                 });
+            if (nullability is not null)
+                node = ProjectNullability(node, nullability);
             using var document = JsonDocument.Parse(node.ToJsonString());
             return document.RootElement.Clone();
         }

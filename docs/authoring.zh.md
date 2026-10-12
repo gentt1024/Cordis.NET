@@ -210,7 +210,7 @@ public partial class EchoService
 
 显式 Remote 类可以继承 `Service<TState>`。其 `CreateView` 可以为每位 caller 新建视图并共享 provider 的 State，见[独立作者示例](../tests/fixtures/TypertConsumer/Author.cs)。生成绑定调用该视图。Gateway 检查底层注册及原始 provider 值；新建视图不会使 provider 退役。普通同进程 Service 消费仍直接使用 Core API。
 
-生成的元数据 codec 通过 `TypertCodec.CreateDeclared` 恢复共同声明模型中被 CLR 元数据擦除的空性，包括已支持的集合元素和字典值。查询作用于具体 Schema 路径，保留同一引用类型在不同位置的可空与非空约束。STJ 继续负责命名、转换器与序列化；这不代表支持任意泛型类型，也不为 Gateway 增加结果 Schema 校验。
+生成的元数据 codec 通过 `TypertCodec.CreateDeclared` 恢复共同声明模型中被 CLR 元数据擦除的空性，包括已支持的集合元素和字典值。生成查询在具体 Schema 路径标识完整声明使用位置，即使 STJ 复用引用，也能区分嵌套可空与非空约束。始终忽略的成员不覆盖有效 JSON 属性。作者无需添加新注解。STJ 继续负责命名、转换器与序列化；这不代表支持任意泛型类型，也不为 Gateway 增加结果 Schema 校验。
 
 `TypertCodec` 在首次使用 `Schema` 或 `Decode` 时延迟准备并检查 Schema，可空输入也会执行检查。Decode 校验已支持的原生子集，再反序列化；Encode 使用所提供元数据序列化，不准备或校验结果 Schema。不受支持的 Schema 特性明确失败。客户端投影将 `prefixItems` 保留为 readonly tuple，支持有界可选前缀、嵌套局部引用及无界的类型化或 unknown 尾部。超出前缀的最小长度、有限的尾部长度上限会被拒绝。[tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) 向生成 binding 提供显式 Schema，区分真实闭合 tuple HTTP 调用与仅 codec/投影的变体证据；它不证明 Roslyn 推断 CLR tuple 类型或完整源类型图。
 

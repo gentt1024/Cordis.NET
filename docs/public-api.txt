@@ -1834,9 +1834,18 @@ Cordis.Composition: Cordis.Composition.TypertMemberModel : System.Object [System
   Method Void Deconstruct(System.String ByRef, System.String ByRef, System.String ByRef) attrs= params=Kind:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Name:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Signature:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertNullability : System.MulticastDelegate [System.ICloneable,System.Runtime.Serialization.ISerializable] flags=Public, Sealed attrs=
   Method System.IAsyncResult BeginInvoke(System.ReadOnlySpan`1[System.String], System.AsyncCallback, System.Object) attrs= params=schemaPath:NotNull/NotNull<NotNull/NotNull> ;callback:Unknown/Unknown ;object:Unknown/Unknown  return=Unknown/Unknown
-  Method System.Nullable`1[System.Boolean] EndInvoke(System.IAsyncResult) attrs= params=result:Unknown/Unknown  return=Nullable/Nullable
-  Method System.Nullable`1[System.Boolean] Invoke(System.ReadOnlySpan`1[System.String]) attrs= params=schemaPath:NotNull/NotNull<NotNull/NotNull>  return=Nullable/Nullable
+  Method System.Nullable`1[Cordis.Composition.TypertNullabilityInfo] EndInvoke(System.IAsyncResult) attrs= params=result:Unknown/Unknown  return=Nullable/Nullable
+  Method System.Nullable`1[Cordis.Composition.TypertNullabilityInfo] Invoke(System.ReadOnlySpan`1[System.String]) attrs= params=schemaPath:NotNull/NotNull<NotNull/NotNull>  return=Nullable/Nullable
   Constructor Void .ctor(System.Object, IntPtr) attrs= params=object:Unknown/Unknown ;method:NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertNullabilityInfo : System.ValueType [System.IEquatable`1[Cordis.Composition.TypertNullabilityInfo]] flags=Public, SequentialLayout, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.TypertNullabilityInfo) attrs= params=other:NotNull/NotNull  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= params=obj:Unknown/Unknown  return=NotNull/NotNull
+  Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
+  Property Int32 Id attrs= NotNull/NotNull get=True set=True init=True
+  Property System.Nullable`1[System.Boolean] Nullable attrs= Nullable/Nullable get=True set=True init=True
+  Method System.String ToString() attrs= params= return=Unknown/Unknown
+  Constructor Void .ctor(Int32, System.Nullable`1[System.Boolean]) attrs= params=Id:NotNull/NotNull ;Nullable:Nullable/Nullable
+  Method Void Deconstruct(Int32 ByRef, System.Nullable`1[System.Boolean] ByRef) attrs= params=Id:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Nullable:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertObjectModel : System.Object [System.IEquatable`1[Cordis.Composition.TypertObjectModel]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.TypertObjectModel) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
