@@ -1,0 +1,20 @@
+{
+  "sourceCommit": "2a5a6e4bc86156416a2cbef2fc7b1c234f74f9a8",
+  "sourceTree": "47e6a1fdd7e24955c21970b2e4daab827449cf75",
+  "status": "passed",
+  "surface": "Windows Codex in-app browser",
+  "host": "Fresh ManagementHost process from the Windows frozen package consumer; fresh isolated profile.",
+  "driver": "scripts/typert-browser-consumer.mjs",
+  "consumer": "tests/fixtures/ManagementDotnet/Client.ts::scopedEvents",
+  "result": "PASS generated package events: current adapter, borrowed Context, next/undefined/null, owned reply and cancelled-handler settlement",
+  "artifactsSha256": {
+    "ManagementHost/bin/Release/net10.0/ManagementHost.dll": "df0dbdc6e42772625be231762ec1e3dd9279d79efa4e8d6cb1a3943e0ebc134e",
+    "ManagementTypescript/compiled/Client.js": "0833dd89561618f1757ad5054a227f98ed4988f7b9748296fac6f6384d5e5b98",
+    "ManagementTypescript/compiled/events.mjs": "381f0c225c112121c57352649d9a2febd8e6df3737940bbbd4fefce3b2c3aead",
+    "ManagementTypescript/compiled/cordis-remote.mjs": "e3754ef22db6043144a0314fdf6209f7180fdb7a78b01d10037062e25aadbac1",
+    "ManagementTypescript/cordis-context.mjs": "8d39bf59e00a2dbc0f14d49cead11565f31af9fb26892cab294eaf53e23b7822"
+  },
+  "screenshotSha256": "f86778cb6b5dfdd5a34e1cf28c3fc584ddd21835ca7203de10067a2a8f366c88",
+  "detailScreenshotSha256": "22fd484745400deefbb71d2c0f18b873b298a780102dd0235ceaf7f8bad4473e",
+  "boundary": "Reverse Context/owned-value event consumption only. Does not establish an outbound browser scoped facade, every event or Peer workflow, UI framework integration, AOT or whole fixed-DSH wire interoperability."
+}

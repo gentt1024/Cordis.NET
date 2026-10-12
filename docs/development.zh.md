@@ -436,3 +436,5 @@ Chief 对 `f0d38f5` 的审查保留既有事件／owned-value 结构，但指出
 修正将现有共同声明事实接入懒加载 codec 导出，采用完整限定事件输出名，并在 `$events` 归还输入时关闭载体拥有的 inbox。不增加保存模型或线格式。`CreateDeclared` 是共享的生成代码边界；显式 Schema 的 `Create` 保留独立的手写 codec 用途。验证入口为 `EventDeclarationTests`、`RemoteCarrierTests`、`verify-typert-dotnet.py --data-references-only` 与 `--management-only`，随后执行冻结候选的完整包门禁。包夹具在冷／增量构建中编译同名委托，从保存模型重新生成独立监听，并执行严格 TS 与真实 .NET／TS 事件调用。源码 `On` 经 loopback ASP.NET 验证。此前未变化的证据继续保留原候选身份。
 
 修正后回到原有浏览器 scoped、其余后端与平台职责，不重开此前已关闭问题，也不根据这些探针宣称其余职责完成。本次不改变依赖、包版本、上游 pin、Maker，也不合并或发布。
+
+修正候选 `2a5a6e4` 已完成两端默认包门禁及真实浏览器反向 scoped 事件调用，E01／E02／E03 有修前失败与修后通过证据。直接 operatorPeer fallback 和字符串字典投影也在同一候选获得验证。具体身份与例外见[验证记录](validation.zh.md#事件审查operator-peer-与声明空性2026-10-12)。后续原有职责仍包括出站浏览器 scoped facade、其余模型后端、完整 Peer／scope-targeting 与具名平台接入；不重查全部历史，也不将检查点视作新一代模型。

@@ -451,3 +451,15 @@ F01 原有的 open／cancel 泄漏及 null 取消原因丢失、F02 接受内层
 排队撤销、过期包清单数量、disposable 类型库引用缺失、浏览器夹具准入和消费缓存依赖的失败证据与最终候选分开保留。另有一次 Windows 构建因仍在运行的诊断测试锁住输出 DLL 而失败，后续候选使用独立输出。没有放宽断言来保留旧通知协议。[Remote 事件](remote-events.zh.md) 说明当前公共路线和已移除的通知服务／导出。撤销修正检查点的四阶段格式化一致；最终构建执行 C# 风格检查，事件中英文文档已加入文档检查器。
 
 本批完成的是选定的固定事件消费链，不代表所有 Typert／平台职责完成。直接 Gateway 的 operatorPeer fallback、浏览器 scoped 消费、其余模型后端和具名平台接入继续留在原范围。此次没有新增 Native AOT、完整固定 DSH 套件／差分、托管 CI、远端 SourceLink 取回、源码归档或 Maker 证据。此前修正回执保留原身份。版本、依赖和上游 pin 未变；本次验证不包含合并、发布或部署。
+
+## 事件审查、operator Peer 与声明空性，2026-10-12
+
+正式实现／验证源码为 `2a5a6e4bc86156416a2cbef2fc7b1c234f74f9a8`，tree 为 `47e6a1fdd7e24955c21970b2e4daab827449cf75`。它承接 `0a722f6`，处理 Chief 对 `f0d38f5` 的审查。[回执](../verification/events-nullability-2026-10-12/evidence.json)记录实际改动、修前失败、两端包哈希与剩余边界。
+
+E01、E02、E03 均已复现并修正：声明集合空性进入懒加载的 Host／事件／独立 codec 与 TS 投影；合法同名事件委托使用完整限定输出名；归还 `$events` 未使用的输入时，即使尚未读取也会关闭实际载体 inbox，同时保留观察者与 sibling。源码 `On`、保存模型 `On`、严格 TS 与实际包调用验证了生成合同。普通业务上行的 end／overflow 拒绝、当前 adapter、continuation／undefined／null、owned 结算和操作寿命继续受到回归保护。此前建设的直接 Gateway operatorPeer fallback 与字符串 key 数据字典也包含在本次验证候选中。
+
+两端默认 `python scripts/verify.py --package` 均完成 47 步，使用 SDK 10.0.111，各检查 18 个包／符号包。Windows 878 项通过；Linux 875 项通过，同样三项 Windows 进程场景具名跳过。源码哈希均未变化。Linux checkout 唯一未跟踪项为指向锁定 Node 工具的目录符号链接；回执保留 `workingTreeClean: false` 并说明原因。它不是源码修改或缓存的应用客户端；独立消费者仍重新打包固定 Context。
+
+新的 Windows 包 Host 与真实应用内浏览器通过共享 scoped 事件消费者：每次查询当前 adapter、borrowed Context、next／undefined／null、回复结算后的 owned 释放，以及取消后的 handler 结算。[浏览器回执](../verification/events-nullability-2026-10-12/browser-scoped.json)标识实际生成模块与 Host DLL。它证明反向事件路径，不代表出站浏览器 scoped facade 已完成。验证后已关闭临时页面与 Host。
+
+原 `0a722f6` 的 Windows／Linux 门禁仍保留真实可空字典 Remote 调用失败。最终候选首轮 Windows 尝试因 NuGet TLS／漏洞数据不可用而在锁定 restore 处失败。另有明确标记的离线定向复验将 NU1900 保留为警告，不计作完整门禁；连接恢复后，默认 Windows 门禁未使用该例外而通过。277 个 C# 文件的四阶段格式检查收敛；公共 API 增量为生成代码所需的声明空性 codec 入口及查询委托。本批不宣称新增 AOT、托管 CI、完整 DSH 差分／互通、SourceLink 远端获取、源码包、具名 UI 或 Maker 验收。
