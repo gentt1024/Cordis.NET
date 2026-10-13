@@ -2,7 +2,7 @@ import { createRemote, TypertConnection, type RemoteClient } from 'settings-clie
 import { SettingsFormModel, settingsNumberField, type SettingsFormPathOp, type SettingsFormScopeSnapshot } from './vendor/form-model'
 
 type DescribeValue = Extract<Awaited<ReturnType<RemoteClient['settings/describe']>>, { ok: true }>['value']
-type LiveView = DescribeValue['namespaces'][number]
+type LiveView = NonNullable<DescribeValue['namespaces']>[number]
 
 function objectValue(value: unknown): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('Settings form requires an object')
@@ -26,7 +26,7 @@ export class LiveSettingsScope {
   async refresh(): Promise<LiveView> {
     const result = await this.remote['settings/describe']({})
     if (!result.ok) throw result.error
-    const view = result.value.namespaces.find(row => row.ns === 'worker')
+    const view = result.value.namespaces?.find(row => row.ns === 'worker')
     if (view === undefined) throw new Error('Settings namespace unavailable')
     this.snapshot = {
       status: 'ready', value: objectValue(view.value), base: view.base, user: view.user,

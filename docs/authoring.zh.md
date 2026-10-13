@@ -108,10 +108,11 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 两条导出是独立合同：`ToSchemastery` 生成浏览器表单的 uid/refs envelope，`ToJsonSchema` 生成 JSON Schema 2020-12 声明并明确标注 runtime 限制。标准 Settings describe 响应包含选择的 live schema，移除 hidden 属性，保留脱敏后的安全默认值，并移除 secret 默认值和 required 元数据；完整配置导出需要宿主独立授权。激活前的 `ConfigurationSchemaDiscovery.DiscoverAsync` 接收显式 resolver，读取原生 group/include 源，无须启动 Context，也不写入 include fallback 文件。import/capture 属于受信作者代码；validator、Apply、raw 表达式和 lazy builder 不执行。
 
-示例的 primitive live 视图要求宿主显式选择字段并指定隐藏字段。不要直接把 raw 配置读取暴露成浏览器 Settings 响应。传输只演示 loopback；部署宿主负责认证、授权、请求限制及自身政策。保留的 DSH 表单模型暂存草稿，通过真实宿主保存。SET-only 不支持继承 reset，也不把多字段保存拆成连续写入。在仓库根目录构建运行：
+示例的 primitive live 视图要求宿主显式选择字段并指定隐藏字段。不要直接把 raw 配置读取暴露成浏览器 Settings 响应。loopback 宿主使用既有 ASP.NET Core Remote adapter 和共享 Connection；部署宿主负责认证、授权、请求限制及自身政策。Settings 生成命令同时输出生成包装及其共享运行时／类型声明。保留的 DSH 表单模型暂存草稿，通过真实宿主保存。SET-only 不支持继承 reset，也不把多字段保存拆成连续写入。在仓库根目录构建运行：
 
 ```console
 npm ci --prefix reference --ignore-scripts
+dotnet run --project examples/Probes/Probes.csproj -c Release -- --settings-client artifacts/settings-client
 node reference/node_modules/typescript/bin/tsc -p examples/Probes/client/tsconfig.json
 node scripts/build-application-client.mjs artifacts/application-client
 dotnet run --project examples/Probes/Probes.csproj -c Release -- --application-host http://127.0.0.1:17639/ artifacts/application-client

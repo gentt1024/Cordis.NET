@@ -44,7 +44,7 @@ REQUIRED_SUITES = (
     "Cordis.Composition.Tests.ClientArtifactTests",
     "Cordis.Extensions.Tests.ConfigurationSessionTests",
 )
-PACKAGE_IDS = ("Cordis.NET.Core", "Cordis.NET.Composition", "Cordis.NET.Extensions")
+PACKAGE_IDS = ("Cordis.NET.Core", "Cordis.NET.Composition", "Cordis.NET.Extensions", "Cordis.NET.AspNetCore")
 SUCCESS_MESSAGE = b"probe authoring scenario passed"
 
 

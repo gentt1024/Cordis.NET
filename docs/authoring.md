@@ -108,10 +108,11 @@ Declare application metadata with `descriptor.WithMetadata(new ConfigurationMeta
 
 The two exports are separate contracts: `ToSchemastery` produces the browser form's uid/refs envelope, while `ToJsonSchema` produces a JSON Schema 2020-12 declaration with explicit runtime limitations. The standard Settings describe response includes the selected live schema with hidden properties omitted, safe defaults preserved, and secret defaults and required metadata removed; the full configuration export requires separate host authorization. For discovery before activation, `ConfigurationSchemaDiscovery.DiscoverAsync` uses an explicit resolver and reads native group/include sources without starting a Context or writing fallback include files. Import/capture are trusted code; validators, Apply, raw expressions and lazy builders remain unexecuted.
 
-The example's primitive live view requires explicit host selection and hidden fields. Do not expose a raw configuration read as a browser settings response. Its transport is loopback-only demonstration code; deployed hosts provide authentication, authorization, request limits and their policy. The retained DSH form model stages drafts and saves through the real host. SET-only does not support inherited reset or splitting multi-field saves into sequential writes. Build and run from the repository root:
+The example's primitive live view requires explicit host selection and hidden fields. Do not expose a raw configuration read as a browser settings response. Its loopback host uses the existing ASP.NET Core Remote adapter and shared Connection; deployed hosts provide authentication, authorization, request limits and their policy. The Settings generation command writes both the generated wrapper and its shared runtime/type declarations. The retained DSH form model stages drafts and saves through the real host. SET-only does not support inherited reset or splitting multi-field saves into sequential writes. Build and run from the repository root:
 
 ```console
 npm ci --prefix reference --ignore-scripts
+dotnet run --project examples/Probes/Probes.csproj -c Release -- --settings-client artifacts/settings-client
 node reference/node_modules/typescript/bin/tsc -p examples/Probes/client/tsconfig.json
 node scripts/build-application-client.mjs artifacts/application-client
 dotnet run --project examples/Probes/Probes.csproj -c Release -- --application-host http://127.0.0.1:17639/ artifacts/application-client

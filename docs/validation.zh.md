@@ -544,6 +544,14 @@ Windows x64 源码测试通过 883 项；四阶段格式检查在 277 个 C# 文
 
 Linux Native AOT 覆盖 conformance、指定静态／HTTP 消费者及既有生成式管理／投影／Settings caller。显式引用 DTO caller 和动态 Host 仍是 JIT。本批执行选定固定端互操作检查，未运行原始 DSH 源码套件或托管 CI。不据此重新证明所有 scoped／事件浏览器路径、实际 IDE 或具名 UI 集成，也不关闭 scope store／layer 或全部序列化／类型后端。既有模型、scoped 与所有权职责继续在[开发记录](development.zh.md)维护。
 
+## Probes 标准客户端与宿主修正，2026-10-13
+
+[CI 运行 38405914024](https://github.com/gentt1024/Cordis.NET/actions/runs/38405914024) 为分支 `e6b366af90a50b6287a5ccaac7325b5d858b3f30` 检出临时合并提交 `8f04cc1113a6ed3ef8b8bb4cb6c2ec02ae0ada37`。两平台均通过主包／AOT 验证及五项配置故障注入，八个上游分片全部通过。随后 authoring 在 Probes 客户端的严格 TypeScript 检查失败：导出命令遗漏了生成 Settings 包装所导入的共享运行时和声明。补齐这些文件后，又暴露出未处理的可省略 namespace 列表，以及实际调用时示例宿主仍使用旧 args-only 封套的问题。
+
+Probes 现在输出既有共享运行时，收窄生成合同中的可省略列表，并使用既有 ASP.NET Core Remote adapter 与 Host Connection。独立包消费者引用同一集成包。没有放宽库协议、共同模型或断言，固定 DSH form-model／store 源码保持不变。Windows 定向补完通过严格类型、实际正向消费、四项应用负向控制、CLR 部署、源码 JIT／AOT 和隔离包 JIT／AOT 消费，场景输出一致。两份修改的 C# 文件通过四阶段格式检查，双语文档检查通过。最初的 TypeScript 与 HTTP 400 失败和成功补完分别保留。
+
+包消费使用既有本地开发 feed，不是新冻结检出提交的包。这是本地 authoring 证据，不代表完整双平台 CI 或真实浏览器验证。上一轮失败 CI 及其中通过的阶段保留原临时合并提交身份；该轮 HMR 未复发，但历史超时原因仍未证实。
+
 ## Draft PR 作者验证选择器修正，2026-10-13
 
 [CI 运行 38375206795](https://github.com/gentt1024/Cordis.NET/actions/runs/38375206795) 实际检出 PR 临时合并提交 `018537bf4368f2790616769ce7f3bce2ac84e8a0`，由分支 `4f2e2685499490dc77499f2dee98ef23a3a792e7` 与 main `3342a967f4e57206bec272684a40a437fc051b77` 组成。Windows 和 Ubuntu 的 `verify.py --aot --package` 均通过，上游源码执行交由八个全部通过的分片。随后 authoring 门禁在注入 revision-fence 缺陷之前失败：选择器仍匹配不含 `settings is null` 的旧条件。两个完整 CI 任务均未通过。此前的 HMR 超时本轮未复发，但其原因仍未证实。
