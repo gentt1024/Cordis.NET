@@ -28,6 +28,12 @@ public sealed class SelectedConstructor
 
 public sealed class DirectionalData
 {
+    public JsonElement OptionalJson
+    {
+        get;
+        set;
+    }
+
     [JsonRequired, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Count
     {

@@ -46,6 +46,8 @@ export async function run(origin: string) {
     if (!required.ok || required.value.Name !== 'provided' || !selected.ok || selected.value.Name !== 'selected' ||
         !optional.ok || optional.value.Name !== 'constructor-default') throw new Error('Constructor contract changed')
     checkOutput(await client['webContract/direction'](valid))
+    const explicitNull = await client['webContract/direction']({ value: { ...valid.value, OptionalJson: null } })
+    if (!explicitNull.ok || explicitNull.value.Count !== 1) throw new Error('Explicit JSON null was collapsed into omission')
     const before = await client['webContract/calls']({})
     for (const [endpoint, input] of [
       ['webContract/revision', { expectedRevision: null }],

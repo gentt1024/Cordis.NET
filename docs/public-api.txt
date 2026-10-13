@@ -356,6 +356,11 @@ Cordis.Core: Cordis.TrackedObject : System.Object [Cordis.IContextualService] fl
 Cordis.Core: Cordis.Undefined : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
   Property Cordis.Undefined Value attrs= NotNull/Unknown get=True set=False init=False
   Method System.String ToString() attrs= params= return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.AnonymousEntries`1 : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs= constraints=T:None:
+  Property Boolean IsEmpty attrs= NotNull/Unknown get=True set=False init=False
+  Method System.Action Append(T) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
+  Property System.Collections.Generic.IEnumerable`1[T] Values attrs= NotNull/Unknown<Nullable/Nullable> get=True set=False init=False
+  Constructor Void .ctor() attrs= params=
 Cordis.Composition: Cordis.Composition.ApplicationBoot : System.Object [] flags=Public, Abstract, Sealed, BeforeFieldInit attrs=
   Property System.Collections.Generic.IReadOnlySet`1[System.String] DshRequiredEntries attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
   Method System.Threading.Tasks.Task`1[Cordis.Composition.Include] MountAsync(Cordis.Composition.Loader, System.String, System.Collections.Generic.List`1[Cordis.Composition.EntryOptions]) attrs= params=loader:NotNull/NotNull ;configurationPath:NotNull/NotNull ;patches:Nullable/Nullable<NotNull/NotNull> optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
@@ -930,6 +935,8 @@ Cordis.Composition: Cordis.Composition.IProfilePackageToolchain :  [] flags=Publ
   Method System.Threading.Tasks.Task`1[Cordis.Composition.PackageInspection] InspectAsync(Cordis.Composition.PackageRequest, System.Threading.CancellationToken) attrs= params=request:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[Cordis.Composition.PreparedPackage] PrepareAsync(Cordis.Composition.PackageInspection, Boolean, System.Action`1[System.String], System.Threading.CancellationToken) attrs= params=inspection:NotNull/NotNull ;buildApproved:NotNull/NotNull ;output:NotNull/NotNull<NotNull/NotNull> ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Method System.Threading.Tasks.Task`1[System.Collections.Generic.IReadOnlyList`1[System.String]] VersionsAsync(System.String, System.String, System.Threading.CancellationToken) attrs= params=name:NotNull/NotNull ;source:NotNull/NotNull ;cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull<NotNull/NotNull>>
+Cordis.Composition: Cordis.Composition.IScopeLayer :  [] flags=Public, ClassSemanticsMask, Abstract, BeforeFieldInit attrs=
+  Property Boolean IsEmpty attrs= NotNull/Unknown get=True set=False init=False
 Cordis.Composition: Cordis.Composition.ISettingsProvider :  [] flags=Public, ClassSemanticsMask, Abstract, BeforeFieldInit attrs=
   Method System.Threading.Tasks.Task MutateAsync(System.String, System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.SettingsPathOp], System.Nullable`1[System.Double]) attrs= params=ns:NotNull/NotNull ;ops:NotNull/NotNull<NotNull/NotNull> ;expectedRevision:Nullable/NotNull optional=null [System.Diagnostics.CodeAnalysis.DisallowNullAttribute()],[System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
   Method System.Threading.Tasks.Task ReplaceAsync(System.String, System.Text.Json.JsonElement, System.Nullable`1[System.Double]) attrs= params=ns:NotNull/NotNull ;section:NotNull/NotNull ;expectedRevision:Nullable/NotNull optional=null [System.Diagnostics.CodeAnalysis.DisallowNullAttribute()],[System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
@@ -993,6 +1000,15 @@ Cordis.Composition: Cordis.Composition.Loader : Cordis.Composition.EntryTree [] 
   Method System.Threading.Tasks.Task ReplacePluginAsync(Cordis.IPlugin, Cordis.IPlugin) attrs= params=previous:NotNull/NotNull ;replacement:NotNull/NotNull  return=NotNull/NotNull
   Method System.Threading.Tasks.Task ReplacePluginsAsync(System.Collections.Generic.IReadOnlyDictionary`2[Cordis.IPlugin,Cordis.IPlugin]) attrs= params=replacements:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull>  return=NotNull/NotNull
   Constructor Void .ctor(Cordis.Context, Cordis.Composition.IModuleResolver, System.Uri, Cordis.Composition.IExpressionEvaluator, System.Action`1[System.Exception]) attrs= params=context:NotNull/NotNull ;resolver:NotNull/NotNull ;baseUri:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()];expressionEvaluator:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()];diagnostic:Nullable/Nullable<NotNull/NotNull> optional=null [System.Runtime.InteropServices.OptionalAttribute()]
+Cordis.Composition: Cordis.Composition.NamedEntries`1 : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs= constraints=T:None:
+  Method Boolean ContainsKey(System.String) attrs= params=name:NotNull/NotNull  return=NotNull/NotNull
+  Property Boolean IsEmpty attrs= NotNull/Unknown get=True set=False init=False
+  Method Boolean TryGetValue(System.String, T ByRef) attrs= params=name:NotNull/NotNull ;value:Nullable/Nullable [System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute((Boolean)False)],[System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+  Method System.Action Insert(System.String, T) attrs= params=name:NotNull/NotNull ;value:Nullable/Nullable  return=NotNull/NotNull
+  Property System.Collections.Generic.IEnumerable`1[System.Collections.Generic.KeyValuePair`2[System.String,T]] Entries attrs= NotNull/Unknown<NotNull/NotNull<NotNull/NotNull,Nullable/Nullable>> get=True set=False init=False
+  Property System.Collections.Generic.IEnumerable`1[System.String] Keys attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False
+  Property System.Collections.Generic.IEnumerable`1[T] Values attrs= NotNull/Unknown<Nullable/Nullable> get=True set=False init=False
+  Constructor Void .ctor(System.Func`2[System.String,System.Exception]) attrs= params=duplicateError:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull>
 Cordis.Composition: Cordis.Composition.PackageChange : System.Object [System.IEquatable`1[Cordis.Composition.PackageChange]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.PackageChange) attrs= params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= params=obj:Nullable/Nullable  return=NotNull/NotNull
@@ -1476,6 +1492,13 @@ Cordis.Composition: Cordis.Composition.Scope : System.Object [System.IAsyncDispo
   Method System.Threading.Tasks.ValueTask DisposeRawAsync() attrs= params= return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.ScopeParentBinding : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Void Rebind(System.Object) attrs= params=parent:NotNull/NotNull  return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.ScopedLayers`1 : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs= constraints=TLayer:ReferenceTypeConstraint:Cordis.Composition.IScopeLayer
+  Method Cordis.EffectHandle Effect(Cordis.Context, System.Func`2[TLayer,System.Action], System.String, Boolean) attrs= params=context:NotNull/NotNull ;action:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull> ;label:NotNull/NotNull ;notify:NotNull/NotNull optional=true [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
+  Method System.Collections.Generic.IReadOnlyList`1[TLayer] ChainLayers(System.Object) attrs= params=scope:Nullable/Nullable  return=NotNull/NotNull<NotNull/NotNull>
+  Method System.Collections.Generic.OrderedDictionary`2[System.String,TValue] Merge[TValue](System.Object, System.Func`2[TLayer,Cordis.Composition.NamedEntries`1[TValue]]) attrs= params=scope:Nullable/Nullable ;pick:NotNull/NotNull<NotNull/NotNull,NotNull/NotNull<Nullable/Nullable>>  return=NotNull/NotNull<NotNull/NotNull,Nullable/Nullable> constraints=TValue:None:
+  Property TLayer Global attrs= NotNull/Unknown get=True set=False init=False
+  Method TLayer Peek(System.Object) attrs= params=scope:Nullable/Nullable  return=Nullable/Nullable
+  Constructor Void .ctor(System.Func`2[System.Object,TLayer], System.Action) attrs= params=createLayer:NotNull/NotNull<Nullable/Nullable,NotNull/NotNull> ;onChange:NotNull/NotNull
 Cordis.Composition: Cordis.Composition.Scoped`1 : System.Object [Cordis.IEventFilter] flags=Public, Sealed, BeforeFieldInit attrs= constraints=T:ReferenceTypeConstraint:
 Cordis.Composition: Cordis.Composition.SettingsConflictException : System.Exception [System.Runtime.Serialization.ISerializable] flags=Public, Sealed, BeforeFieldInit attrs=
   Property Double Actual attrs= NotNull/Unknown get=True set=False init=False

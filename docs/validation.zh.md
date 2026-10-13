@@ -543,3 +543,13 @@ Windows x64 源码测试通过 883 项；四阶段格式检查在 277 个 C# 文
 `9be3b92` 的首次全新 Linux 门禁因未安装锁定 npm 依赖而停止；失败回执与随后完整重跑分开保留。早期开发夹具／格式检查失败及浏览器红例也保留。一次 Linux 浏览器辅助启动在 READY 前超时，随后其临时 Host 路径已不存在，不计作浏览器运行；最终浏览器证据使用 Windows 候选包。
 
 Linux Native AOT 覆盖 conformance、指定静态／HTTP 消费者及既有生成式管理／投影／Settings caller。显式引用 DTO caller 和动态 Host 仍是 JIT。本批执行选定固定端互操作检查，未运行原始 DSH 源码套件或托管 CI。不据此重新证明所有 scoped／事件浏览器路径、实际 IDE 或具名 UI 集成，也不关闭 scope store／layer 或全部序列化／类型后端。既有模型、scoped 与所有权职责继续在[开发记录](development.zh.md)维护。
+
+## 有方向合同收口检查点，2026-10-13
+
+冻结源码 `45ee050b44b05236141836b3980707b7a944cf92` 修正 WEB01–WEB03 和 FETCH01，包含引用程序集 accessor 空性。Windows 门禁停在一项 HMR reconciliation 超时：891 项通过、一项失败。同一编译产物的 HMR 测试类单独运行三项均通过。全量超时尚未归因，不能视为完整通过，也不能认定是文件监控环境失败。该轮 Windows 门禁尚未运行打包阶段。
+
+同源码的 Linux 包／AOT 门禁通过运行测试、test-map、JIT／AOT conformance、打包、符号、静态消费者、CLR 部署和选定固定客户端互操作，随后在独立数值 caller 的旧空结果夹具处失败。作者实际写出四个数值字段，夹具却返回空对象。`b79bf390e3f2fd7728f884ede7da068f9df38eca` 仅修正该消费者：单独保留输入默认初始化检查，并明确拒绝不完整结果。复用同批 Linux 包，修正后的数值 JIT／AOT caller 通过；补完随后暴露 Settings unset 的生产回归：方向输入编码试图序列化 JsonElement.Undefined，而未保留其声明的省略规则。这两轮失败门禁都不计为完整通过。
+
+真实 Chromium 使用冻结 `45ee050` 的 Linux 生成包 Host 与客户端制品，在 Windows 运行，通过默认、原生、绑定和箭头 fetch。这只证明上述构建／运行平台组合，不是 Windows 构建包或后续候选的证据。实际 HTTP 调用、输入拒绝和取消原因均通过；临时 Host 与转发代理已经关闭。
+
+后续工作修正 Undefined 省略，并补齐固定上游 scope store／layer。ScopeStoreTests 主责存储语义，共享 .NET／TS 包 caller 验证 Peer 和子 scope 注册。新 worktree 验证最初因未还原 TypeScript 依赖停止；按锁文件安装后，同批包的共享 .NET／TS 调用通过。一次客户端构建选到了另一套已安装 SDK；指定锁定 SDK 后通过，没有修改 global.json。这些属于开发检查，不是冻结候选验收。新生产代码仍需自己的完整门禁与浏览器证据，不能自动继承此前绿色切片。

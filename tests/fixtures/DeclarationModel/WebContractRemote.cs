@@ -48,6 +48,7 @@ public partial class WebContractRemote
         return Task.FromResult(
             new DirectionalData
             {
+                Count = value.OptionalJson.ValueKind == System.Text.Json.JsonValueKind.Null ? 1 : 0,
                 OutputNullable = null!
             });
     }

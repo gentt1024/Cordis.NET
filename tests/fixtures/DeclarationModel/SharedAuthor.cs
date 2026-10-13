@@ -168,6 +168,47 @@ public partial class SharedRemote
             });
     }
 
+    [RemoteMethod("scopeLayers")]
+    public async Task<string> ScopeLayersAsync()
+    {
+        var invocation = TypertInvocation.Current!;
+        var owner = invocation.Context;
+        var peer = invocation.Peer!;
+        var layers = new ScopedLayers<ChoiceLayer>(
+            _ => new(),
+            () =>
+            {
+            });
+        await using var global = layers.Effect(
+            owner,
+            layer => layer.Choices.Insert("theme", "global"),
+            "global-choice");
+        await using var selected = layers.Effect(
+            peer.Context,
+            layer => layer.Choices.Insert("theme", "peer"),
+            "peer-choice");
+        var childKey = new object();
+        await using var child = Scope.Create(owner, childKey, peer);
+        layers.Effect(child.Context, layer => layer.Choices.Insert("theme", "child"), "child-choice");
+        var nested = layers.Merge(childKey, layer => layer.Choices)["theme"];
+        await child.DisposeAsync();
+        if (layers.Peek(childKey) is not null)
+            throw new InvalidOperationException("The child contribution outlived its owner.");
+        var inherited = layers.Merge(childKey, layer => layer.Choices)["theme"];
+        await selected.DisposeAsync();
+        return nested + ">" + inherited + ">" + layers.Merge(childKey, layer => layer.Choices)["theme"];
+    }
+
+    private sealed class ChoiceLayer : IScopeLayer
+    {
+        public NamedEntries<string> Choices
+        {
+            get;
+        } = new(name => new InvalidOperationException("Duplicate choice: " + name));
+
+        public bool IsEmpty => Choices.IsEmpty;
+    }
+
     [RemoteMethod("hold", Stream = true)]
     public async IAsyncEnumerable<string> HoldAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)

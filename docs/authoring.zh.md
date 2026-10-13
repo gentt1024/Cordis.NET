@@ -521,3 +521,27 @@ Remote 方法通过 `TypertInvocation.Current!.Peer!` 取得准入后的 Peer，
 `new TypertConnection(base)` 与 `new TypertConnection(base, globalThis.fetch)` 都使用标准 Connection。绑定函数和箭头 override 继续受支持；消费者不需要手动绑定原生函数来补偿库内调用方式。
 
 生成的 .NET 方法自动使用相同的方向合同。必填的零值／默认值可以正常传入，即使作者写出结果时会忽略这些值，输入编码仍会发送它们。返回 DTO 接受作者允许的 null 和省略的默认字段；无需通过覆盖序列化选项补偿方向差异。
+
+可选 JsonElement 字段在作者声明条件省略时，可以用 Undefined 表示省略。显式 JSON null 是已提供的值。例如 Settings unset 操作不赋值 Value；set 操作则赋予 JSON 值，并继续接受现有表单校验。
+
+### 按 Scope 分层的贡献注册表
+
+同时从注册 Context 获取可见性与清理所有权。一个注册表可以在同一层保留多个表：
+
+```csharp
+sealed class MenuLayer : IScopeLayer
+{
+    public NamedEntries<string> Commands { get; } =
+        new(name => new InvalidOperationException($"Duplicate command: {name}"));
+    public AnonymousEntries<string> Hints { get; } = new();
+    public bool IsEmpty => Commands.IsEmpty && Hints.IsEmpty;
+}
+
+var layers = new ScopedLayers<MenuLayer>(_ => new(), NotifyChanged);
+var registration = layers.Effect(caller,
+    layer => layer.Commands.Insert("refresh", "Refresh"), "refresh-command");
+var visible = layers.Merge(Scope.Of(caller), layer => layer.Commands);
+await registration.DisposeAsync();
+```
+
+在所有者的 Cordis 执行域内注册。返回的 EffectHandle 同时归 caller 所有，显式释放可选且幂等。值保持借用。Peek 只读取一个 scope 自己的贡献，ChainLayers 读取继承覆盖层。读取不创建层。具名与匿名视图在非空表代际内保持实时；清空后的代际不跟随后续注册。Remote 方法可以使用当前 Peer Context，无需显式身份参数。

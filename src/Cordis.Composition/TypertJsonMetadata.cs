@@ -41,7 +41,12 @@ internal static class TypertJsonMetadata
                     {
                         if (property.Get is null)
                             continue;
-                        property.ShouldSerialize = null;
+                        var shouldSerialize = property.ShouldSerialize;
+                        property.ShouldSerialize = property.PropertyType == typeof(JsonElement) && !property.IsRequired
+                            ? (owner, value) => value is not JsonElement { ValueKind: JsonValueKind.Undefined } ||
+                                (shouldSerialize?.Invoke(owner, value) ??
+                                    metadata.Options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingDefault)
+                            : null;
                         property.IsGetNullable = property.IsSetNullable;
                     }
                     else

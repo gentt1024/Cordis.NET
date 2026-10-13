@@ -43,7 +43,8 @@ catch (JsonException)
 
 if (JsonSerializer.Deserialize("{\"text\":\"yes\"}", metadata)!.Text != "yes")
     throw new Exception("Nullable DTO metadata decode failed.");
-var numericMetadata = (JsonTypeInfo<NumericDefaults>)NumericDefaultsClientJson.Default.GetTypeInfo(typeof(NumericDefaults))!;
+var numericMetadata =
+    (JsonTypeInfo<NumericDefaults>)NumericDefaultsClientJson.Default.GetTypeInfo(typeof(NumericDefaults))!;
 var initialized = JsonSerializer.Deserialize("{}", numericMetadata)!;
 if (initialized.Ratio != 1.25f || initialized.Amount != 0.1m ||
     initialized.EmptyRatio is not null || initialized.EmptyAmount is not null)

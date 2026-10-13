@@ -241,7 +241,7 @@ Chief 对 `9ae967c` 的审查发现，只给复用的 STJ `$ref` 根部增加空
 
 `DisposeRawAsync` 使用普通 Fiber disposer。`DisposeAsync` 还等待 `Fiber.WaitAsync`，使并发释放等待已由 raw 入口启动的清理。它复用原生生命周期工作，不增加所有者或调度器。Peer 以自身为 scope key，Connection／fallback 所有权及 socket 借用关系保持不变。生成的 waterfall 调用改用以 subject 为 key 的载体，保留 subject 的基础过滤器，并把 subject 留在参数中。按固定 `packages/api/remotes/src/index.ts`，转发先在载体没有 key 时调用 `next()`（包括普通 receiver）；有 key 时，必须在投影前确认 subject 类型正确且与 key 是同一对象。临时的原始 subject receiver 路径退出；消费者重新生成。
 
-这完成上述原生路由机制，不代表 scope store／layer 导出、所有反向 Context adapter 或全部 Peer 互操作完成。具体候选的执行结果及平台限制见验证记录。
+这完成上述原生路由机制，不代表所有反向 Context adapter 或全部 Peer 互操作完成。scope store／layer 导出见下文。具体候选的执行结果及平台限制见验证记录。
 
 ### Scoped 事件 subject 身份，2026-10-13
 
@@ -259,6 +259,12 @@ JSON Schema 2020-12 definitions 描述受支持的 STJ 线类型，不构成第�
 
 结果投影遵循 getter 的 MaybeNull／NotNull，以及成员 JsonIgnore 和全局 DefaultIgnoreCondition 的条件写出规则。JsonRequired 不承诺条件写出时一定出现该字段。运行 descriptor 路线从现有 STJ metadata 派生相应结果投影，输入 Schema 与 Encode 继续各司其职。不可静态解释的 ShouldSerialize 谓词只使对应输出字段的存在性不确定；生成时不会执行该谓词。显式提供的 codec Schema 仍是作者提供的合同。生成代码支撑记录 TypertNullabilityInfo 补充 GetterNullable 与 SetterNullable 显式标记。声明读取器已经保留 accessor 属性；投影统一处理属性上的写法与程序集中的 getter 返回值／setter 参数写法。CreateDeclared 通过原有 resolver 和私有 serializer options 副本应用差异，不修改作者 Context、不替换 converter、不关闭空性检查，也不建立第二个 Schema 权威。这修正了 .NET 10 源生成器只在 property 上读取标记所导致的引用程序集差异。保存模型版本不变；消费者从当前声明重新生成。
 
-生成的 .NET 客户端按接收方输入合同编码参数，按发送方输出合同解码结果。私有序列化元数据保留 converter 和命名规则，移除 DTO 输入上的输出忽略规则，以及结果上的输入必填和 setter 规则；参数封套继续保留可选参数省略规则。`TypertCodec.EncodeInput` 与 `DecodeOutput` 将这两个方向提供给生成式事件和上行消费；Host 的 `Decode` 与 `Encode` 继续承担读入／写出。这些是同一声明的用途投影，不增加线类型或兼容路径。
+生成的 .NET 客户端按接收方输入合同编码参数，按发送方输出合同解码结果。私有序列化元数据保留 converter 和命名规则，移除 DTO 输入上的输出忽略规则，以及结果上的输入必填和 setter 规则。可选 JsonElement 成员对 Undefined 保留作者的省略规则，因为 Undefined 不是 JSON 值；显式 JSON null 仍然发送。参数封套继续保留可选参数省略规则。`TypertCodec.EncodeInput` 与 `DecodeOutput` 将这两个方向提供给生成式事件和上行消费；Host 的 `Decode` 与 `Encode` 继续承担读入／写出。这些是同一声明的用途投影，不增加线类型或兼容路径。
 
 固定 DSH `packages/client/connection/src/client/rpc.ts` 将 fetch override 作为局部 callable 调用。Connection 采用相同方式，避免显式传入原生 fetch 时错误地绑定 Connection 接收者。现有构造时默认函数捕获与绑定、取消、错误和所有权保持。默认、原生、绑定和箭头函数都经过同一传输路径。
+
+### Scope 注册存储，2026-10-13
+
+固定 `packages/core/scope/src/store.ts` 提供 NamedEntries、AnonymousEntries 和 ScopedLayers。原生类型保持插入顺序、精确且幂等的撤销、借用值、非空表代际内的实时迭代，以及该代际清空后的分离。内部链表实现 JavaScript Map 迭代器的变更行为，普通 .NET 字典枚举器不能提供这种行为。Scope key 沿用现有 Scope 的引用身份。TryGetValue 区分名称缺失与存入的 null；Merge 返回平台 OrderedDictionary，作为独立的有序副本。
+
+ScopedLayers 从传入的注册 Context 获取可见性和清理所有权。读取不创建覆盖层；Peek 只读精确 scope，ChainLayers 与 Merge 按路由父级从远到近处理。现有 Context effect 在 onChange 前收集撤销，遵循 notify:false，且仅在整个聚合为空时回收 scoped layer。它返回原有 EffectHandle，不增加寿命所有者或 RPC 身份参数。ScopeStoreTests 主责存储语义；共享生成包消费者验证这些能力在已准入 Peer 和子 scope 中的使用。

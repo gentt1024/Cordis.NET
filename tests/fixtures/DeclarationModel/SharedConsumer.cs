@@ -123,6 +123,9 @@ foreach (var malformed in new[]
 
 var peer = (await client.PeerAsync()).Value;
 Check(
+    (await client.ScopeLayersAsync()).Value == "child>peer>global",
+    "scope layers follow the Peer and reclaim disposed contributions");
+Check(
     (await client.PeerRoutingAsync()).Value == "global:peer,peer:peer,global:child,peer:child,child:child,global:none",
     "operator Peer scope routes only matching and ancestor listeners");
 await using (var first = await client.HoldAsync())

@@ -521,3 +521,27 @@ A DTO may have different input and result shapes without a second declaration. `
 `new TypertConnection(base)` and `new TypertConnection(base, globalThis.fetch)` both use the standard Connection. Bound functions and arrow overrides remain supported; consumers do not need to bind a native function to compensate for the library's call site.
 
 Generated .NET methods use the same directional contracts automatically. Pass required zero/default values normally; input encoding includes them even when the author omits them when writing results. Returned DTOs accept the author's permitted nulls and omitted default fields. Do not override serializer options to compensate for these directions.
+
+For optional JsonElement fields, Undefined can represent omission when the author declares conditional omission. Explicit JSON null is a present value. For example, a Settings unset operation leaves Value undefined; a set operation assigns a JSON value and still undergoes the existing form validation.
+
+### Scope-aware contribution registries
+
+Use the registration Context for both visibility and cleanup. A registry can keep several tables in one layer:
+
+```csharp
+sealed class MenuLayer : IScopeLayer
+{
+    public NamedEntries<string> Commands { get; } =
+        new(name => new InvalidOperationException($"Duplicate command: {name}"));
+    public AnonymousEntries<string> Hints { get; } = new();
+    public bool IsEmpty => Commands.IsEmpty && Hints.IsEmpty;
+}
+
+var layers = new ScopedLayers<MenuLayer>(_ => new(), NotifyChanged);
+var registration = layers.Effect(caller,
+    layer => layer.Commands.Insert("refresh", "Refresh"), "refresh-command");
+var visible = layers.Merge(Scope.Of(caller), layer => layer.Commands);
+await registration.DisposeAsync();
+```
+
+Run registration in the owner's Cordis execution domain. The returned EffectHandle is also owned by caller; explicit disposal is optional and idempotent. Values remain borrowed. Use Peek for only one scope's own contributions, and ChainLayers for inherited overlays. Reads never create layers. Named and anonymous views remain live while their table generation is nonempty; a drained generation does not follow later registrations. A Remote method can use its current Peer Context without accepting an explicit identity argument.

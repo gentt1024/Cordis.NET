@@ -115,6 +115,8 @@ export async function scopedCalls(origin: string, socketOrigin: string, createCo
   }
   try {
     const service = getRemote(caller, 'sharedData')
+    equal(await service.scopeLayers({}), { ok: true, value: 'child>peer>global' },
+      'Scope layer package consumption lost Peer inheritance or owner cleanup')
     equal(await service.peerRouting({}),
       { ok: true, value: 'global:peer,peer:peer,global:child,peer:child,child:child,global:none' },
       'Host operator Peer did not preserve scope-targeted listener routing')
