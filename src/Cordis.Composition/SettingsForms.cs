@@ -7,6 +7,9 @@ namespace Cordis.Composition;
 /// <summary>The ordinary Settings service consumed by the standard Remote controller.</summary>
 public interface ISettingsProvider
 {
+    /// <summary>Prepare the provider-owned settings document and return its local path.</summary>
+    Task<string> PrepareDocumentAsync();
+
     /// <summary>Read one coherent redacted form snapshot.</summary>
     Task<SettingsDescribeSnapshot> DescribeAsync();
 
@@ -100,6 +103,15 @@ public sealed class SettingsForms : Service, ISettingsProvider
 
     /// <summary>Whether the host owns a local configuration document.</summary>
     public bool HasDocument => state.HasDocument;
+
+    /// <inheritdoc />
+    public Task<string> PrepareDocumentAsync()
+    {
+        ObjectDisposedException.ThrowIf(state.Closed, this);
+        if (!HasDocument)
+            throw new InvalidOperationException("This Settings owner has no local configuration document.");
+        return Task.FromResult(state.Operations.PatchPath);
+    }
 
     /// <summary>Register one plugin instance's page policy. Policy changes notify without changing its configuration revision.</summary>
     public Action Configure(bool autoGenerate = true, Fiber? owner = null)

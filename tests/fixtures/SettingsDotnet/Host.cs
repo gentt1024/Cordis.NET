@@ -51,6 +51,7 @@ var launch = new ProfileLaunch(profile, home, [], bundles);
 var configuration = Path.Combine(profileDirectory, "cordis.yml");
 await File.WriteAllTextAsync(configuration, "[]\n");
 TypertRegistry registry = null!;
+var openedDocuments = 0;
 await using var session = await ProfileSession.StartAsync(
     configuration,
     launch,
@@ -60,6 +61,16 @@ await using var session = await ProfileSession.StartAsync(
     {
         registry = new TypertRegistry(context);
         context.Provide("typert", registry);
+        context.Provide(
+            "fixture.openDocument",
+            (Func<string, CancellationToken, Task>)((path, signal) =>
+            {
+                signal.ThrowIfCancellationRequested();
+                if (path != profile.UserLayer.Source)
+                    throw new InvalidOperationException("Settings opened a different configuration authority.");
+                Interlocked.Increment(ref openedDocuments);
+                return Task.CompletedTask;
+            }));
         return Task.CompletedTask;
     },
     diagnostic: _ => Console.Error.WriteLine("Profile lifecycle reported an error."));
@@ -92,6 +103,15 @@ await session.Context.RunAsync(owner =>
 app.UseWebSockets();
 app.MapCordisRemote("/remote", remoteConnection, (_, _) => Task.FromResult(true));
 app.MapPost("/control/{command}", (string command) => controls.ExecuteAsync(command));
+app.MapPost(
+    "/control/assert-document-opened",
+    () =>
+    {
+        if (Volatile.Read(ref openedDocuments) != 1)
+            throw new InvalidOperationException(
+                "The generated Settings call did not reach the host opener exactly once.");
+        return Results.Ok();
+    });
 app.MapPost(
     "/control/stop",
     () =>
@@ -349,6 +369,8 @@ internal sealed class FixtureControls(
 
 internal abstract class ForwardingProvider(ISettingsProvider inner) : ISettingsProvider
 {
+    public Task<string> PrepareDocumentAsync() => Inner.PrepareDocumentAsync();
+
     protected ISettingsProvider Inner
     {
         get;

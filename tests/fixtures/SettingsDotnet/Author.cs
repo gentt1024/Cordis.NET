@@ -21,8 +21,15 @@ public sealed class Second : IClrPluginModule
 }
 
 [RemoteService("settingsController", typeof(AuthorSettingsJson), Namespace = "settings")]
-public sealed partial class SettingsRemote(Context context) : SettingsController(context)
+public sealed partial class SettingsRemote(Context context) : SettingsController(
+    context,
+    context.Get<Func<string, CancellationToken, Task>>("fixture.openDocument")!)
 {
+    [RemoteMethod("openSettingsDocument")]
+    public new Task<SettingsDocumentOpenValue> OpenSettingsDocumentAsync(
+        CancellationToken cancellationToken = default) =>
+        base.OpenSettingsDocumentAsync(cancellationToken);
+
     [RemoteMethod("describe")]
     public new Task<SettingsDescribeValue> DescribeAsync() => base.DescribeAsync();
 
@@ -61,6 +68,7 @@ public sealed record EntryConfig(
     RespectNullableAnnotations = true,
     RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(SettingsDescribeValue))]
+[JsonSerializable(typeof(SettingsDocumentOpenValue))]
 [JsonSerializable(typeof(SettingsNamespaceView))]
 [JsonSerializable(typeof(IReadOnlyList<SettingsPathOp>))]
 [JsonSerializable(typeof(JsonElement))]

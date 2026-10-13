@@ -13,6 +13,7 @@ using IndependentManagement.Manager;
 using IndependentManagement.Notifications;
 using IndependentManagement.Collections;
 using IndependentManagement.Nested;
+using SettingsClient = IndependentManagement.Settings.SettingsClient;
 using RemoteError = Cordis.Composition.RemoteError;
 
 using var http = new HttpClient
@@ -23,6 +24,12 @@ http.DefaultRequestHeaders.Authorization = new("consumer-policy");
 var address = new Uri(args.Single());
 await using var connection = new TypertConnection(http, new Uri(address, "/remote"));
 await using var manager = new PluginManagerClient(connection);
+await using var settings = new SettingsClient(connection);
+Assert((await settings.DescribeAsync()).Value.HasDocument, "Standard Settings lost its document capability.");
+Assert((await settings.OpenSettingsDocumentAsync()).Value.Opened, "The Settings document was not accepted.");
+Assert(
+    await http.GetStringAsync(new Uri(address, "/control/opened-documents")) == "1",
+    "The generated Settings call did not reach the current opener exactly once.");
 await using var notifications = new EventObservation(connection);
 using var observation = new CancellationTokenSource();
 await notifications.StartAsync(observation.Token);

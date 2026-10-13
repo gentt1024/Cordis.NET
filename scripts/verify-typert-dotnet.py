@@ -34,6 +34,13 @@ def main():
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = options.output.resolve()
+    if not options.saved_remote_only:
+        dependencies = root / "clients/modules/node_modules"
+        if shutil.which("node") is None or not all((dependencies / name / "package.json").is_file()
+                for name in ("typescript", "esbuild")):
+            parser.error("This consumer check needs Node and the locked client tools; run npm ci --prefix clients/modules first.")
+    if output.exists() and any(output.iterdir()):
+        parser.error("Output must be empty. Preserve the previous evidence and select a new --output directory.")
     output.mkdir(parents=True, exist_ok=True)
     source = Path(tempfile.mkdtemp(prefix="cordis-settings-dotnet-"))
     assert not source.is_relative_to(root)
@@ -158,7 +165,7 @@ def main():
             if value["metadataName"] == "IndependentSettings.SettingsRemote")
         assert settings_remote["id"] in authored["roots"]
         assert {value["name"] for value in settings_remote["members"] if value["kind"] == "Ordinary"} == \
-            {"DescribeAsync", "UpdateAsync", "ReplaceAsync", "MutateAsync"}
+            {"DescribeAsync", "UpdateAsync", "ReplaceAsync", "MutateAsync", "OpenSettingsDocumentAsync"}
         assert authored["compilation"]["assemblyName"] == "IndependentSettings.Provider"
         assert authored["compilation"]["nullable"] == "Enable"
         assert {"RELEASE", "NET10_0"}.issubset(authored["compilation"]["defines"])

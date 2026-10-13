@@ -1,5 +1,6 @@
 import { createRemote as createManagementRemote, TypertConnection, RemoteError, type RemoteResult } from './management.mjs'
 import { createEvents, type EventListeners } from './events.mjs'
+import { createRemote as createSettingsRemote } from './settings.mjs'
 import type { RemoteEventContext } from './cordis-remote.mjs'
 import { RemoteStreamCarrierError, typertOwnedValue } from './cordis-remote.mjs'
 type Notification = { [K in keyof EventListeners]: { event: K; args: Parameters<EventListeners[K]> } }[keyof EventListeners]
@@ -30,9 +31,10 @@ export async function run(origin: string, createContext: () => EventOwner) {
   const connection = new TypertConnection(origin + '/remote', fetcher, url => { url.searchParams.set('consumer', 'consumer-policy'); return new WebSocket(url) })
   await scopedEvents(origin, connection, createContext)
   const manager = createManagementRemote(connection)
+  const settings = createSettingsRemote(connection)
   const notifications = await observe(connection, createContext)
   const reader = notifications.reader
-  const remotes = [manager, notifications]
+  const remotes = [manager, settings, notifications]
   const nullableSample: Parameters<EventListeners['alpha/changed']> = [[null], {empty: null}, ['required']]
   // @ts-expect-error The third argument still has non-null elements.
   const invalidRequired: Parameters<EventListeners['alpha/changed']>[2] = [null]
@@ -48,6 +50,10 @@ export async function run(origin: string, createContext: () => EventOwner) {
     Object.keys(secondCollection.args[1]).length === 0 && secondCollection.args[2].length === 0,
     'Generated TS listener lost nullable root')
   try {
+    assert(accepted(await settings['settings/describe']({})).hasDocument, 'Standard Settings lost its document capability')
+    assert(accepted(await settings['settings/openSettingsDocument']({})).opened, 'Standard Settings did not accept document opening')
+    assert(await (await fetch(origin + '/control/opened-documents')).json() === 1,
+      'Generated TS document call did not reach the current host opener exactly once')
     const plugins = accepted(await manager['pluginManager/listPlugins']({}))
     const worker = plugins.find(row => row.entryId === 'root:worker')
     assert(worker?.enabled && worker.patchId === 'worker' && worker.readOnlyReason == null, 'Generated inventory lost the writable profile entry')
@@ -188,6 +194,9 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
   const owner = createContext()
   let resolves = 0, releases = 0, adapterReads = 0
   const releaseCount = (): number => releases
+  let firstReleased!: () => void, secondReleased!: () => void
+  const firstRelease = new Promise<void>(resolve => {firstReleased=resolve})
+  const secondRelease = new Promise<void>(resolve => {secondReleased=resolve})
   let owned = false
   const events = createEvents(owner, connection, {getClient(key) {
     assert(key === 'agent', 'Fixed agent adapter key changed')
@@ -195,7 +204,11 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
     return { resolve(identity) {
       assert(identity === 'agent-1', 'Host subject identity was not projected')
       resolves++
-      return owned ? typertOwnedValue(owner, () => {releases++}) : owner
+      return owned ? typertOwnedValue(owner, () => {
+        releases++
+        if (releases === 1) firstReleased()
+        if (releases === 2) secondReleased()
+      }) : owner
     }}
   }})
   let settle!: () => void
@@ -228,6 +241,7 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
     owned = true
     const absent = object(await (await ask('undefined')).json())
     assert(absent.hasValue === false, 'Undefined was converted to null or continuation')
+    await firstRelease
     await fetch(origin + '/control/hold-event-reply', {method:'POST'})
     const answered = ask('null')
     await fetch(origin + '/control/wait-event-reply', {method:'POST'})
@@ -235,6 +249,7 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
     await fetch(origin + '/control/release-event-reply', {method:'POST'})
     const nil = object(await (await answered).json())
     assert(nil.hasValue === true && nil.value === null, 'Explicit null was lost')
+    await secondRelease
     const abort = new AbortController()
     const pending = ask('hold', abort.signal).catch((error: unknown) => error)
     await entry

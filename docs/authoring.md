@@ -545,3 +545,15 @@ await registration.DisposeAsync();
 ```
 
 Run registration in the owner's Cordis execution domain. The returned EffectHandle is also owned by caller; explicit disposal is optional and idempotent. Values remain borrowed. Use Peek for only one scope's own contributions, and ChainLayers for inherited overlays. Reads never create layers. Named and anonymous views remain live while their table generation is nonempty; a drained generation does not follow later registrations. A Remote method can use its current Peer Context without accepting an explicit identity argument.
+
+### Open the Settings document
+
+Mount SettingsForms over the session's ConfigurationOperations and SettingsController over the same Context. The default controller opens the provider's document on the host desktop. An embedded host can pass its own `Func<string, CancellationToken, Task>` as the controller's second constructor argument. That function receives the actual provider path, not a copy of redacted form data.
+
+The generated .NET call is `await settingsClient.OpenSettingsDocumentAsync(cancellationToken: token)`. The standard TS call is:
+
+```ts
+const result = await settings['settings/openSettingsDocument']({})
+```
+
+Both return the ordinary RemoteResult with `{ opened: true }` on accepted handoff. Check `hasDocument` when presenting the action, and handle failure like other Settings operations. The managed application example exposes this host action; it does not download a document to the browser. Document opening does not bypass Gateway authorization or grant permission to edit arbitrary paths.

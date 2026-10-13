@@ -55,6 +55,8 @@ await using var session = await ProfileSession.StartAsync(
             }
         }));
 var managerContracts = PluginManagerTypert.Contribution("Cordis.Independent.Management");
+var settingsContracts = SettingsControllerTypert.Contribution("Cordis.Independent.Settings");
+var openedDocuments = 0;
 var registry = new TypertRegistry(session.Context);
 var gateway = new TypertGateway(session.Context, registry);
 var denied = new ConcurrentDictionary<string, bool>(StringComparer.Ordinal);
@@ -75,6 +77,18 @@ TypertRemoteEventDefinition[] selectedEvents =
 ];
 await session.Context.RunAsync(context =>
 {
+    new SettingsForms(context, session.ConfigurationOperations);
+    new SettingsController(
+        context,
+        (path, signal) =>
+        {
+            signal.ThrowIfCancellationRequested();
+            if (path != Path.Combine(profile, "cordis.patch.yml"))
+                throw new InvalidOperationException("The Settings document left its configuration authority.");
+            Interlocked.Increment(ref openedDocuments);
+            return Task.CompletedTask;
+        });
+    registry.Register(context, settingsContracts);
     new PluginManager(
         context,
         session.ConfigurationOperations,
@@ -229,12 +243,21 @@ server.MapCordisRemote(
     (http, _) => Task.FromResult(
         (http.Request.Headers.Authorization == "consumer-policy" ||
             http.Request.Query["consumer"] == "consumer-policy")));
-foreach (var pair in new[] { (Name: "management", Contract: managerContracts) })
+foreach (var pair in new[]
+         {
+             (Name: "management", Contract: managerContracts), (Name: "settings", Contract: settingsContracts)
+         })
 {
     var artifact = TypertArtifacts.GenerateClient(pair.Contract);
     server.MapGet("/client-runtime/" + pair.Name + ".mjs", () => Results.Text(artifact.Module, "text/javascript"));
     server.MapGet("/client-runtime/" + pair.Name + ".d.ts", () => Results.Text(artifact.Declaration, "text/plain"));
 }
+
+server.MapGet(
+    "/control/opened-documents",
+    () => Results.Text(
+        Volatile.Read(ref openedDocuments).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        "application/json"));
 
 server.MapPost(
     "/control/deny",

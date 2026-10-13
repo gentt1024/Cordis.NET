@@ -40,6 +40,7 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
     event_model = (event_author / "obj/Release/net10.0/cordis-typert/IndependentEvents.Author.cordis.model.json").read_bytes()
     for service, name, group, source_model in (
         ("pluginManager", "PluginManagerClient", "Manager", model_bytes),
+        ("settingsController", "SettingsClient", "Settings", model_bytes),
         ("plugin-manager/changed", "ChangedEvent", "Notifications", model_bytes),
         ("alpha/changed", "CollectionEvent", "Collections", event_model),
         ("alpha/nested", "NestedEvent", "Nested", event_model),

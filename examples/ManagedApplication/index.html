@@ -13,6 +13,7 @@
 <form id="enable"><label>Bundle <input name="target" value="example-provider" required></label><label><input name="enabled" type="checkbox" checked>Enabled</label><button>Apply selection</button></form>
 <form id="settings"><label>Entry <input name="entry" value="example.managedplugin" required></label><label>View <select name="scope"><option value="settings">Settings</option><option value="configuration">Configuration</option></select></label><button>Read settings or configuration</button></form>
 <pre id="schema"></pre><pre id="current"></pre>
+<button id="open-settings-document" disabled>Open settings document on host</button>
 <form id="edit"><label>Ordered operations <textarea name="operations" rows="4" cols="70">[{"op":"set","path":["limit"],"value":2}]</textarea></label><button>Apply</button></form>
 <button id="disconnect">Disconnect</button><button id="reconnect">Reconnect</button>
 <button id="development">Read development builds</button><pre id="builds"></pre>
@@ -39,6 +40,7 @@ let client, view, entry, mode
 let subscriptions = [], ownerQueue = Promise.resolve(), disposed = false
 const show = value => { document.querySelector('#result').textContent = JSON.stringify(value, null, 2) }
 async function closeOwner() {
+  document.querySelector('#open-settings-document').disabled = true
   for (const unsubscribe of subscriptions.splice(0)) unsubscribe()
   const previous = client
   client = undefined
@@ -82,7 +84,9 @@ async function settings() {
   entry = document.querySelector('#settings').elements.entry.value
   mode = document.querySelector('#settings').elements.scope.value
   if (mode === 'configuration' && !entry.startsWith('root:')) entry = 'root:' + entry
-  view = mode === 'settings' ? accepted(await settingsRemote['settings/describe']({})).namespaces.find(row => row.ns === entry) : await client.readConfiguration(entry)
+  const snapshot = mode === 'settings' ? accepted(await settingsRemote['settings/describe']({})) : undefined
+  document.querySelector('#open-settings-document').disabled = !snapshot?.hasDocument
+  view = snapshot ? snapshot.namespaces.find(row => row.ns === entry) : await client.readConfiguration(entry)
   if (!view) throw new Error('No live settings namespace with that entry id')
   document.querySelector('#current').textContent = JSON.stringify(view,null,2)
   document.querySelector('#schema').textContent = JSON.stringify(mode === 'settings' ? view.schema : await client.readConfigurationSchema(entry),null,2)
@@ -136,6 +140,10 @@ async function inventory(owner = pluginManager) {
   catch(error){show({error:error.message})}
 }
 document.querySelector('#inventory').onclick = () => inventory()
+document.querySelector('#open-settings-document').onclick = async () => {
+  try { show(accepted(await settingsRemote['settings/openSettingsDocument']({}))) }
+  catch(error){show({error:error.message})}
+}
 document.querySelector('#disconnect').onclick = () => {
   ownerQueue = ownerQueue.then(async () => { await closeOwner(); document.querySelector('#connection').textContent='closed' })
     .catch(error => show({error:error.message}))

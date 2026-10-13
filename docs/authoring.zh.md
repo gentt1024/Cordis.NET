@@ -545,3 +545,15 @@ await registration.DisposeAsync();
 ```
 
 在所有者的 Cordis 执行域内注册。返回的 EffectHandle 同时归 caller 所有，显式释放可选且幂等。值保持借用。Peek 只读取一个 scope 自己的贡献，ChainLayers 读取继承覆盖层。读取不创建层。具名与匿名视图在非空表代际内保持实时；清空后的代际不跟随后续注册。Remote 方法可以使用当前 Peer Context，无需显式身份参数。
+
+### 打开 Settings 文档
+
+在同一 Context 上挂载使用会话 ConfigurationOperations 的 SettingsForms 和 SettingsController。默认 Controller 在宿主桌面打开 provider 的文档。嵌入式宿主可将自己的 `Func<string, CancellationToken, Task>` 作为 Controller 第二个构造器参数。函数收到的是实际 provider 路径，不是脱敏表单数据的副本。
+
+生成的 .NET 调用为 `await settingsClient.OpenSettingsDocumentAsync(cancellationToken: token)`；标准 TS 调用为：
+
+```ts
+const result = await settings['settings/openSettingsDocument']({})
+```
+
+两者沿普通 RemoteResult 返回已接纳的 `{ opened: true }`。展示操作时检查 `hasDocument`，像其他 Settings 操作一样处理失败。托管应用示例展示此宿主操作，不将文档下载到浏览器。文档打开不绕过 Gateway 授权，也不提供编辑任意路径的权限。

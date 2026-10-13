@@ -86,7 +86,7 @@ public sealed partial class PluginConfigurationOperations(
         new(StringComparer.Ordinal);
 
     private string ManifestPath => Path.Combine(launch.Profile.Directory, "package.json");
-    private string PatchPath => launch.Profile.UserLayer.Source;
+    internal string PatchPath => launch.Profile.UserLayer.Source;
 
     /// <summary>Host lifecycle queue for mutations. ProfileSession supplies its queue even without automatic watching; null means startup-only configuration.</summary>
     public Func<Func<Task>, Task>? RunExclusiveAsync

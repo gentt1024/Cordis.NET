@@ -324,7 +324,10 @@ await installedRoot.RunAsync(async context =>
     var staleCall = gateway.InvokeAsync("first/Wait", arguments.RootElement);
     await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
     var typedTarget = args[2];
-    var affectedRequests = new[] { "nuget:independentmultientry", "nuget:independentmultientry/second" };
+    var affectedRequests = new[]
+    {
+        "nuget:independentmultientry", "nuget:independentmultientry/second", "nuget:independentmultientry/native"
+    };
     await using var typedHmr = new HmrCoordinator();
     var installedAssembly = Path.Combine(toolchain.Bundles["IndependentMultiEntry"], "IndependentMultiEntry.dll");
     typedHmr.RegisterModule(
@@ -345,6 +348,10 @@ await installedRoot.RunAsync(async context =>
                             typedTarget,
                             "IndependentMultiEntry.dll",
                             "IndependentMultiEntry.Second"),
+                        ["nuget:independentmultientry/native"] = new(
+                            typedTarget,
+                            "IndependentMultiEntry.dll",
+                            "IndependentBundle.NativeEntry"),
                     },
                     async pairs =>
                     {

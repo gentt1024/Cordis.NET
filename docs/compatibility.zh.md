@@ -268,3 +268,9 @@ JSON Schema 2020-12 definitions 描述受支持的 STJ 线类型，不构成第�
 固定 `packages/core/scope/src/store.ts` 提供 NamedEntries、AnonymousEntries 和 ScopedLayers。原生类型保持插入顺序、精确且幂等的撤销、借用值、非空表代际内的实时迭代，以及该代际清空后的分离。内部链表实现 JavaScript Map 迭代器的变更行为，普通 .NET 字典枚举器不能提供这种行为。Scope key 沿用现有 Scope 的引用身份。TryGetValue 区分名称缺失与存入的 null；Merge 返回平台 OrderedDictionary，作为独立的有序副本。
 
 ScopedLayers 从传入的注册 Context 获取可见性和清理所有权。读取不创建覆盖层；Peek 只读精确 scope，ChainLayers 与 Merge 按路由父级从远到近处理。现有 Context effect 在 onChange 前收集撤销，遵循 notify:false，且仅在整个聚合为空时回收 scoped layer。它返回原有 EffectHandle，不增加寿命所有者或 RPC 身份参数。ScopeStoreTests 主责存储语义；共享生成包消费者验证这些能力在已准入 Peer 和子 scope 中的使用。
+
+### Settings 文档交接，2026-10-13
+
+固定 `packages/api/settings-controller/src/index.ts`、`packages/settings/settings/src/index.ts` 和 `packages/boot/config-editor/src/index.ts` 定义此流程。ISettingsProvider.PrepareDocumentAsync 返回提供者的文档；SettingsForms 返回现有 profile 用户补丁路径，不写入镜像，也不创建文件。SettingsController 在取消检查前解析当前 provider，准备后再次检查取消，将准备／打开失败分类为 gateway/internal 或 gateway/cancelled。注入的打开器接受文档后，并发取消不改写成功结果。结果始终为 opened:true；C# 没有布尔字面量类型，因此载体使用 bool。
+
+可选构造器委托是宿主文本编辑器集成，对应上游 openTextFile。默认使用 ProcessStartInfo.ArgumentList，不经命令 shell：Windows 调用 Explorer，WSL 转换路径后调用 Explorer，macOS 使用 open -t，桌面 Linux 使用 xdg-open。Windows 目标保留非 ASCII 原文并转义 Explorer 分隔符；委派退出码 1 在未取消时视为接受。取消结束所拥有的启动进程，不关闭已经接收文档的编辑器。不新增依赖或第二个配置所有者。无桌面宿主可以提供自己的打开器；桌面不可用时继续返回可诊断失败。

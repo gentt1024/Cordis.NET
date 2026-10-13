@@ -20,6 +20,9 @@ await mirror.LoadAsync();
 var initial = mirror.View ?? throw new InvalidOperationException("Describe did not publish a complete view.");
 VerifyView(initial);
 Assert(initial.Namespaces.All(row => row.Revision == 0), "New Settings owner did not start at revision zero.");
+var opened = await remote.OpenSettingsDocumentAsync();
+Assert(opened.Ok && opened.Value.Opened, "The generated Settings client failed to open the provider document.");
+await Control("assert-document-opened");
 
 var serialized = JsonSerializer.Serialize(initial, SettingsClientJson.Default.SettingsDescribeValue);
 using (var document = JsonDocument.Parse(serialized))

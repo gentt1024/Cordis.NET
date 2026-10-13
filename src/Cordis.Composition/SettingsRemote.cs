@@ -9,12 +9,14 @@ namespace Cordis.Composition;
 public partial class SettingsController
 {
     private readonly Context context;
+    private readonly Func<string, CancellationToken, Task> openTextFile;
 
     /// <summary>Publish the controller independently of its optional Settings provider.</summary>
-    public SettingsController(Context context)
+    public SettingsController(Context context, Func<string, CancellationToken, Task>? openTextFile = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         this.context = context;
+        this.openTextFile = openTextFile ?? SettingsDocumentOpener.OpenAsync;
         context.Provide("settingsController", this);
     }
 
@@ -28,6 +30,47 @@ public partial class SettingsController
     /// <summary>Read redacted layered forms and numeric revisions from the current provider.</summary>
     [RemoteMethod("describe")]
     public Task<SettingsDescribeValue> DescribeAsync() => DescribeAsync(Provider());
+
+    /// <summary>Prepare the provider-owned document and hand it to the host's native text opener.</summary>
+    [RemoteMethod("openSettingsDocument")]
+    public async Task<SettingsDocumentOpenValue> OpenSettingsDocumentAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var provider = Provider();
+        if (cancellationToken.IsCancellationRequested)
+            throw new RemoteError("gateway/cancelled", "settings document open was aborted");
+        string path;
+        try
+        {
+            path = await provider.PrepareDocumentAsync();
+        }
+        catch (Exception error)
+        {
+            throw cancellationToken.IsCancellationRequested
+                ? new RemoteError(
+                    "gateway/cancelled",
+                    "settings document preparation was aborted",
+                    innerException: error)
+                : new RemoteError(
+                    "gateway/internal",
+                    "settings document preparation failed: " + error.Message,
+                    innerException: error);
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+            throw new RemoteError("gateway/cancelled", "settings document open was aborted");
+        try
+        {
+            await openTextFile(path, cancellationToken);
+            return new(true);
+        }
+        catch (Exception error)
+        {
+            throw cancellationToken.IsCancellationRequested
+                ? new RemoteError("gateway/cancelled", "settings document open was aborted", innerException: error)
+                : new RemoteError("gateway/internal", "path open failed: " + error.Message, innerException: error);
+        }
+    }
 
     private async Task<SettingsDescribeValue> DescribeAsync(ISettingsProvider provider)
     {
@@ -139,9 +182,14 @@ public partial class SettingsController
     RespectNullableAnnotations = true,
     RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(SettingsDescribeValue))]
+[JsonSerializable(typeof(SettingsDocumentOpenValue))]
 [JsonSerializable(typeof(SettingsNamespaceView))]
 [JsonSerializable(typeof(IReadOnlyList<SettingsPathOp>))]
 [JsonSerializable(typeof(JsonElement))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(double))]
 public partial class SettingsJson : JsonSerializerContext;
+
+/// <summary>Confirmation that the host opener accepted the settings document.</summary>
+/// <param name="Opened">True after the opener accepts the path.</param>
+public sealed record SettingsDocumentOpenValue(bool Opened);
