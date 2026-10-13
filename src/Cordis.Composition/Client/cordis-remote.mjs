@@ -122,7 +122,7 @@ export class TypertConnection {
   #lifetime = new Lifetime();
   #mux;
 
-  constructor(base, fetcher = fetch, createSocket = url => new WebSocket(url)) {
+  constructor(base, fetcher = globalThis.fetch.bind(globalThis), createSocket = url => new WebSocket(url)) {
     this.#base = new URL(base);
     this.#fetcher = fetcher;
     this.#createSocket = createSocket;

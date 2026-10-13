@@ -30,6 +30,7 @@ if (diagnostics.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(
 }))
 assert.equal(program.emit().emitSkipped, false)
 await mkdir(resolve(output, 'compiled'), { recursive: true })
+await copyFile(resolve(root, 'tests/fixtures/DeclarationModel/ReferencedWebClient.html'), resolve(output, 'compiled/index.html'))
 for (const name of ['remote.mjs', 'cordis-remote.mjs'])
   await copyFile(resolve(output, name), resolve(output, 'compiled', name))
 const { run } = await import(pathToFileURL(resolve(output, 'compiled/ReferencedWebClient.js')).href)

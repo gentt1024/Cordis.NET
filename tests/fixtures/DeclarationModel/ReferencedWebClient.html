@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Referenced model package consumer</title>
+<h1>Referenced model package consumer</h1>
+<p>Generated package assets call an actual .NET Host through the default Connection.</p>
+<button id="run">Run package calls</button>
+<pre id="status">Ready</pre>
+<script type="module">
+  import { run } from './ReferencedWebClient.js'
+  const status = document.querySelector('#status')
+  document.querySelector('#run').onclick = async () => {
+    status.textContent = 'Running'
+    try {
+      await run(location.origin, 11)
+      status.textContent = 'PASS referenced model package browser caller\nWire names, required/null boundaries, recursive references, collections, dictionaries, Host defaults and rejected invalid input.'
+    } catch (error) {
+      status.textContent = 'FAIL ' + error.stack
+    }
+  }
+</script>
