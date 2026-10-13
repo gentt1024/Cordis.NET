@@ -404,7 +404,8 @@ def main():
     finally:
         (output / "results.json").write_text(json.dumps({"status": status, "steps": steps, "independentSourceDirectory": str(source),
             "providerImplementationReferencedByCaller": provider_referenced, "packageReferencesOnly": True,
-            "nodeCommands": [], "managementTypeScriptCommands": management_node_commands,
+            "dotnetGenerationRequiresNode": False, "managementTypeScriptCommands": management_node_commands,
+            "referencedWebEvidence": "referenced-web-evidence.json" if (output / "referenced-web-evidence.json").exists() else None,
             "aotRequested": options.aot, "declarationsOnly": options.declarations_only,
             "managementOnly": options.management_only, "dataReferencesOnly": options.data_references_only,
             "savedRemoteOnly": options.saved_remote_only}, indent=2) + "\n", encoding="utf-8")

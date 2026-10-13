@@ -246,3 +246,9 @@ This completes these native routing mechanisms, not the scope store/layer export
 ### Scoped event subject identity, 2026-10-13
 
 Fixed agent dispatch nests its subject inside the event payload before Cordis traces direct arguments. Generated native waterfall calls now carry one value tuple containing the subject, request and cancellation token. The selected forwarder checks the key against that tuple's original subject before projection. This preserves an `IContextualService` subject even when its ordinary caller view is a new object. Core tracing remains unchanged. The former three-direct-argument layout is removed; regenerate event helpers. Public helper signatures, model facts and wire payloads are unchanged.
+
+## Saved-model web artifact adaptation, 2026-10-13
+
+Fixed `packages/typert/generator/src/workspace.ts` runs analysis before `FaceModelEmitter`, then verifies that the package exports the generated runtime and declaration files. The native saved-model web route follows that responsibility: explicit primary/reference declarations feed static JSON Schema and the shared TS emitter; ordinary MSBuild build/pack delivers the artifacts. The client never loads the Provider implementation. Host bindings still execute the real registered Service.
+
+JSON Schema 2020-12 definitions describe the supported STJ wire shapes; they are not a second saved declaration model. The artifact comments identify source models without promising compatibility with earlier experimental outputs. CLR constructor/accessor execution is outside this static backend, so initializer facts are not emitted as runtime defaults. The real Host remains authoritative for execution. Unsupported policy/shape projections fail and remove owned output; runtime-supported behavior is not made unavailable merely because this backend is incomplete. See [authoring](authoring.md) for the bounded public inputs and remaining refusals.

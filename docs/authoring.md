@@ -395,6 +395,26 @@ The equivalent CLI accepts `emit-dotnet-data ... --reference-models reference-mo
 
 The target invokes `emit-dotnet-data` before `CoreCompile`, using the same supported JSON projection as the Remote caller. Each build reads the primary and reference model contents; unchanged generated output retains its bytes and timestamp. Generation failure removes stale source, and `Clean` removes generated source and owned response files. Missing members retain supported constant defaults; explicit null remains distinct. These generated data carriers do not replay authored constructor or accessor behavior. Referenced DTOs use the same bounded public class/property subset as local DTOs; composition does not enable generic DTOs, inheritance, custom converters or other refused shapes. Extraction records `TYPM202` on a source type whose non-public instance data member has explicit `JsonInclude` but falls outside the public analysis surface. Projection rejects that type, including through a reference model, rather than silently dropping the JSON member; unrelated declarations remain usable.
 
+A saved Remote model can also produce web artifacts without loading the Provider assembly:
+
+```xml
+<PropertyGroup>
+  <CordisTypertWebModel>Example.cordis.model.json</CordisTypertWebModel>
+  <CordisTypertService>example</CordisTypertService>
+</PropertyGroup>
+<ItemGroup>
+  <CordisTypertWebReferenceModel Include="Shared.cordis.model.json" />
+</ItemGroup>
+```
+
+Normal build emits `remote.schema.json`, `remote.mjs`, `remote.d.mts` and the existing `cordis-remote` runtime pair into `$(CordisTypertOutputDirectory)web/`. Pack includes these files under `cordis/typert/web/`; deliver that directory together. `emit-web --model Example.cordis.model.json --service example --reference-models references.rsp --output web` is the equivalent compiler command. It owns those five named files in its output directory. Failed generation removes them; Clean also removes the response file. The web target does not generate C# IDE inputs.
+
+Import `createRemote` and `TypertConnection` from `remote.mjs`, construct a Connection for the Host's Remote address, then call the generated endpoint methods. The methods use the existing `RemoteResult`, streams, cancellation and borrowed Connection contract. The emitter is shared with runtime-descriptor generation; the saved-model route obtains its types directly from common declarations and explicit referenced source models. It does not load or execute author code, and it adds no wire protocol or model format.
+
+The Schema file is a JSON Schema 2020-12 definition catalog. Select `#/$defs/<escaped namespace/method/arguments>` for a complete argument object, or the `parameters/<wire>`, `result` and optional `uplink` definitions. Escape `/` as `~1` and `~` as `~0` in a definition key. Local recursive references remain within this document. Artifact comments record the input identities; unchanged outputs retain their timestamps. Declaration initializers are not advertised as Host defaults: constructors and accessors are not executed by this backend.
+
+This backend currently accepts ordinary closed public DTO classes/records, supported scalar types, recursive references, arrays, framework collection interfaces and string-key dictionaries. It preserves wire names, required/nullable fields and supported serializer inclusion options. It rejects unsupported serializer policies, custom converters, polymorphism, data inheritance, applied generic DTOs, non-string dictionary keys, multidimensional arrays and binary attachment metadata. Event artifact generation and broader saved-model backends remain separate work. A refusal is not a completion claim; runtime bindings and the existing runtime artifact emitter retain their established support.
+
 Re-extract declaration models with the current compiler and rebuild maintained consumers. Inputs missing the required structured references or provenance, and obsolete model inputs, are rejected rather than converted. A saved artifact's identity validates its saved facts; it cannot recover omissions, prove every authored JSON configuration or establish correspondence to an arbitrary DLL. There is one current contract, with no historical format reader or versioned Remote compatibility route.
 
 To generate a direct unary client from the same declaration artifact, select both the DTO and its marked service in the author project:

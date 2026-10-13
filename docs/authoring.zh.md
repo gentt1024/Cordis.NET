@@ -395,6 +395,26 @@ dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-mod
 
 target 在 `CoreCompile` 前调用 `emit-dotnet-data`，复用 Remote caller 支持的 JSON 投影。每次构建读取主模型与引用模型内容；生成结果不变时保持字节和时间戳。生成失败删除旧源码，`Clean` 删除生成源码及所属响应文件。成员省略保留受支持的常量默认值；显式 null 仍有独立含义。生成的数据 carrier 不重放作者构造器或 accessor 行为。引用 DTO 与本地 DTO 使用相同的有界公开 class/property 子集；组合不开放泛型 DTO、继承、自定义 converter 或其他已拒绝形状。若源类型的非公开实例数据成员显式标记 `JsonInclude`，却不在公开分析范围内，提取器会为所属类型记录 `TYPM202`。投影拒绝该类型，包括从引用模型到达它的情况，不再静默丢弃 JSON 成员；无关声明仍可使用。
 
+保存的 Remote 模型也可以在不加载 Provider 程序集的情况下生成 Web 制品：
+
+```xml
+<PropertyGroup>
+  <CordisTypertWebModel>Example.cordis.model.json</CordisTypertWebModel>
+  <CordisTypertService>example</CordisTypertService>
+</PropertyGroup>
+<ItemGroup>
+  <CordisTypertWebReferenceModel Include="Shared.cordis.model.json" />
+</ItemGroup>
+```
+
+正常 build 将 `remote.schema.json`、`remote.mjs`、`remote.d.mts` 和现有 `cordis-remote` runtime 两个文件生成到 `$(CordisTypertOutputDirectory)web/`。pack 将它们放在 `cordis/typert/web/`；交付时一起携带该目录。对应 compiler 命令是 `emit-web --model Example.cordis.model.json --service example --reference-models references.rsp --output web`。它拥有输出目录中这五个具名文件；生成失败删除它们，Clean 还会删除响应文件。Web target 不生成 C# IDE 输入。
+
+从 `remote.mjs` 导入 `createRemote` 和 `TypertConnection`，为 Host 的 Remote 地址建立 Connection，再调用生成的 endpoint 方法。方法沿用现有 `RemoteResult`、流、取消及借用 Connection 的合同。发射器与运行时 descriptor 生成共用；保存模型路线直接从共同声明和显式引用源模型取得类型，不加载或执行作者代码，不新增线协议或模型格式。
+
+Schema 文件是 JSON Schema 2020-12 定义目录。完整参数对象位于 `#/$defs/<转义后的 namespace/method/arguments>`，也可以选择 `parameters/<wire>`、`result` 和可选 `uplink` 定义。定义 key 中 `/` 转义为 `~1`，`~` 转义为 `~0`。递归引用仍在同一文档内。制品注释记录输入身份；输出不变时保留时间戳。声明初始化值不被宣称为 Host 默认值：该后端不执行构造器或 accessor。
+
+当前后端接受普通闭合公开 DTO class/record、受支持的标量、递归引用、数组、框架集合接口和 string-key 字典，保留 wire 名称、required/nullable 字段及受支持的序列化包含选项。不支持的 serializer policy、自定义 converter、多态、数据继承、应用泛型 DTO、非 string 字典 key、多维数组和 binary attachment metadata 会明确拒绝。事件制品和更广的保存模型后端仍是独立工作。拒绝不等于完成；运行绑定及既有运行时制品发射器保留已成立的支持面。
+
 使用当前 compiler 重新提取声明模型，并重新构建受维护消费者。缺失必需结构化引用或来源事实的输入，以及旧模型输入，直接拒绝，不进行转换。保存制品的身份只验证已保存事实，不能补回遗漏、证明所有作者 JSON 配置或建立与任意 DLL 的对应关系。当前只有一个合同，不保留历史格式 reader 或版本化 Remote 兼容路线。
 
 要从同一声明制品生成直接 unary 客户端，在作者项目中同时选择 DTO 和其标记的 service：

@@ -371,8 +371,10 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         '<CordisTypertService>referencedData</CordisTypertService>'
         '<CordisTypertClientModel>' + model.name + '</CordisTypertClientModel>'
         '<CordisTypertClientNamespace>IndependentDeclarations.RemoteReference</CordisTypertClientNamespace>'
-        '<CordisTypertClientName>ReferencedClient</CordisTypertClientName>', composition,
-        '<ItemGroup><CordisTypertClientReferenceModel Include="' + external_model.name + '"/></ItemGroup>')
+        '<CordisTypertClientName>ReferencedClient</CordisTypertClientName>'
+        '<CordisTypertWebModel>' + model.name + '</CordisTypertWebModel>', composition,
+        '<ItemGroup><CordisTypertClientReferenceModel Include="' + external_model.name + '"/>'
+        '<CordisTypertWebReferenceModel Include="' + external_model.name + '"/></ItemGroup>')
     shutil.copyfile(model, remote / model.name)
     shutil.copyfile(external_model, remote / external_model.name)
     design_remote = design_time_sources("referenced-remote-first-design-time", remote_project, dotnet, run,
@@ -402,6 +404,31 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
             assert not list((remote_caller / "bin").rglob(assembly)), "Remote Caller acquired author implementation"
     remote_call("referenced-remote-caller", 11)
 
+    web_steps = []
+    def web_call(label, package_version):
+        web = output / label
+        web.mkdir()
+        with zipfile.ZipFile(feed / ("IndependentReferenced.Remote." + package_version + ".nupkg")) as archive:
+            for name in ("remote.schema.json", "remote.mjs", "remote.d.mts", "cordis-remote.mjs", "cordis-remote.d.mts"):
+                (web / name).write_bytes(archive.read("cordis/typert/web/" + name))
+        assert not list(web.rglob("*.dll")), "Web client acquired a Provider assembly"
+        node = shutil.which("node")
+        assert node, "Node is required for the independent TypeScript consumer"
+        with hosted(label + "-host", [dotnet, remote_host / "bin/Release/net10.0/ReferencedRemoteHost.dll"]) as address:
+            result = subprocess.run([node, str(root / "scripts/typert-referenced-web-consumer.mjs"),
+                address, str(web)], capture_output=True, timeout=90)
+        (output / (label + ".log")).write_bytes(result.stdout + result.stderr)
+        web_steps.append({"name": label, "exitCode": result.returncode, "packageVersion": package_version,
+            "assets": {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in web.glob("*.m*")}})
+        (output / "referenced-web-evidence.json").write_text(json.dumps(web_steps, indent=2) + "\n", encoding="utf-8")
+        assert result.returncode == 0, (result.stdout + result.stderr).decode("utf-8", "replace")
+    web_call("referenced-web-caller", "1.0.0-alpha")
+    web_directory = remote_source.parent / "web"
+    web_files = [web_directory / name for name in ("remote.schema.json", "remote.mjs", "remote.d.mts", "cordis-remote.mjs", "cordis-remote.d.mts")]
+    web_stamps = [path.stat().st_mtime_ns for path in web_files]
+    run("referenced-web-incremental", [dotnet, "build", remote_project, "-c", "Release"])
+    assert [path.stat().st_mtime_ns for path in web_files] == web_stamps
+
     external_source = external / "External.cs"
     original_source = external_source.read_bytes()
     try:
@@ -420,6 +447,25 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     remote_caller_project.write_bytes(remote_caller_project.read_bytes().replace(b'Version="1.0.0-alpha"', b'Version="1.0.1-alpha"'))
     run("referenced-remote-changed-caller-build", [dotnet, "build", remote_caller_project, "-c", "Release"])
     remote_call("referenced-remote-changed-caller", 12)
+    web_call("referenced-web-changed-caller", "1.0.1-alpha")
+    for path in web_files[:3]:
+        assert changed_identity.encode() in path.read_bytes() and reference_identity.encode() not in path.read_bytes()
+    web_project_bytes = remote_project.read_bytes()
+    (remote / "original-reference.json").write_bytes(original_reference)
+    for label, replacement, diagnostic in (
+        ("missing", b"", b"TYPM114"),
+        ("conflict", ('<CordisTypertWebReferenceModel Include="' + external_model.name + '"/>'
+            '<CordisTypertWebReferenceModel Include="original-reference.json"/>').encode(), b"Conflicting source definitions"),
+    ):
+        try:
+            remote_project.write_bytes(web_project_bytes.replace(
+                ('<CordisTypertWebReferenceModel Include="' + external_model.name + '"/>').encode(), replacement))
+            rejected = run("referenced-web-" + label, [dotnet, "build", remote_project, "-c", "Release"], True)
+            assert diagnostic in rejected and not any(path.exists() for path in web_files)
+        finally:
+            remote_project.write_bytes(web_project_bytes)
+        run("referenced-web-" + label + "-recovery", [dotnet, "build", remote_project, "-c", "Release"])
+        assert all(path.exists() for path in web_files)
     remote_project_bytes = remote_project.read_bytes()
     try:
         remote_project.write_bytes(remote_project_bytes.replace(
@@ -430,8 +476,10 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         remote_project.write_bytes(remote_project_bytes)
     run("referenced-remote-failed-clean", [dotnet, "clean", remote_project, "-c", "Release"])
     assert not remote_source.exists() and not design_remote.exists() and not (remote_source.parent / "client-reference-models.rsp").exists()
+    assert not any(path.exists() for path in web_files)
     run("referenced-remote-cold-build", [dotnet, "build", remote_project, "-c", "Release"])
     assert changed_identity.encode() in remote_source.read_bytes()
+    assert all(path.exists() for path in web_files)
     assert changed_identity != reference_identity
     reference_input.write_bytes(changed_reference)
     assert json.loads(primary_input.read_text(encoding="utf-8"))["contractIdentity"] == main_identity

@@ -246,3 +246,9 @@ Chief 对 `9ae967c` 的审查发现，只给复用的 STJ `$ref` 根部增加空
 ### Scoped 事件 subject 身份，2026-10-13
 
 固定 agent dispatch 在 Cordis 对直接参数做 tracing 前，将 subject 放入事件 payload。原生生成式 waterfall 现在以一个值元组承载 subject、request 和取消令牌；选定转发器在投影前，用其中的原始 subject 与 key 比较。即使 `IContextualService` 的普通 caller view 是新对象，也保留该 subject 身份。Core tracing 不变。旧的三个直接参数布局已退出，事件 helper 需重新生成；公开 helper 签名、模型事实和 wire payload 不变。
+
+## 保存模型 Web 制品适配，2026-10-13
+
+固定 `packages/typert/generator/src/workspace.ts` 先执行分析，再调用 `FaceModelEmitter`，并检查包是否导出生成的运行文件和声明文件。.NET 保存模型 Web 路线对应这一职责：显式主模型及引用声明进入静态 JSON Schema 与共用 TS 发射器，再由正常 MSBuild build/pack 交付。客户端不加载 Provider 实现；Host 绑定继续执行实际注册的 Service。
+
+JSON Schema 2020-12 definitions 描述受支持的 STJ 线类型，不构成第二种保存声明模型。制品注释标识源模型，不承诺兼容旧试验输出。CLR 构造器/accessor 执行不属于该静态后端，所以初始化事实不作为运行默认值输出；真实 Host 仍负责执行。不支持的 policy/shape 投影会拒绝并删除所属旧输出；后端尚未完成不缩减已经成立的运行支持。公开输入及剩余拒绝边界见[作者指南](authoring.zh.md)。

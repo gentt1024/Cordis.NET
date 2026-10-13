@@ -10,7 +10,7 @@
     <_CordisTypertProjectionDirectory>$(CordisTypertOutputDirectory)</_CordisTypertProjectionDirectory>
     <_CordisTypertProjectionDirectory Condition="'$(DesignTimeBuild)' == 'true'">$(_CordisTypertDesignTimeDirectory)</_CordisTypertProjectionDirectory>
     <CordisTypertModelPath Condition="'$(CordisTypertModelPath)' == ''">$(CordisTypertOutputDirectory)$(AssemblyName).cordis.model.json</CordisTypertModelPath>
-    <_CordisTypertAuthoredService Condition="'$(CordisTypertClientModel)' == ''">$(CordisTypertService)</_CordisTypertAuthoredService>
+    <_CordisTypertAuthoredService Condition="'$(CordisTypertClientModel)' == '' and '$(CordisTypertWebModel)' == ''">$(CordisTypertService)</_CordisTypertAuthoredService>
     <_CordisTypertModelFiles>$(CordisTypertModelPath);$(CordisTypertOutputDirectory)model-roots.rsp;$(CordisTypertOutputDirectory)model-sources.rsp;$(CordisTypertOutputDirectory)model-references.rsp</_CordisTypertModelFiles>
     <CordisTypertDataNamespace Condition="'$(CordisTypertDataNamespace)' == ''">$(RootNamespace).Data</CordisTypertDataNamespace>
     <CordisTypertDataJsonContext Condition="'$(CordisTypertDataJsonContext)' == ''">DataJson</CordisTypertDataJsonContext>
@@ -20,11 +20,27 @@
     <CordisTypertClientName Condition="'$(CordisTypertClientName)' == ''">RemoteClient</CordisTypertClientName>
     <CordisTypertClientSource>$(_CordisTypertProjectionDirectory)$(CordisTypertClientName).Generated.g.cs</CordisTypertClientSource>
     <_CordisTypertClientFiles>$(CordisTypertClientSource);$(_CordisTypertProjectionDirectory)client-reference-models.rsp</_CordisTypertClientFiles>
+    <CordisTypertWebDirectory>$(CordisTypertOutputDirectory)web/</CordisTypertWebDirectory>
+    <_CordisTypertWebFiles>$(CordisTypertWebDirectory)remote.schema.json;$(CordisTypertWebDirectory)remote.mjs;$(CordisTypertWebDirectory)remote.d.mts;$(CordisTypertWebDirectory)cordis-remote.mjs;$(CordisTypertWebDirectory)cordis-remote.d.mts</_CordisTypertWebFiles>
     <_CordisTypertLanguageVersion Condition="'$(LangVersion)' != ''">$(LangVersion)</_CordisTypertLanguageVersion>
     <_CordisTypertLanguageVersion Condition="'$(_CordisTypertLanguageVersion)' == ''">default</_CordisTypertLanguageVersion>
     <_CordisTypertNullable Condition="'$(Nullable)' != ''">$(Nullable)</_CordisTypertNullable>
     <_CordisTypertNullable Condition="'$(_CordisTypertNullable)' == ''">disable</_CordisTypertNullable>
   </PropertyGroup>
+  <ItemGroup Condition="'$(CordisTypertWebModel)' != ''">
+    <None Include="$(_CordisTypertWebFiles)" Pack="true" PackagePath="cordis/typert/web/" Visible="false" />
+  </ItemGroup>
+  <Target Name="CordisTypertEmitWeb" BeforeTargets="CoreCompile"
+          Condition="'$(CordisTypertWebModel)' != '' and '$(DesignTimeBuild)' != 'true'">
+    <MakeDir Directories="$(CordisTypertOutputDirectory)" />
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)web-reference-models.rsp" Lines="@(CordisTypertWebReferenceModel->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <ItemGroup><FileWrites Include="$(_CordisTypertWebFiles);$(CordisTypertOutputDirectory)web-reference-models.rsp" /></ItemGroup>
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-web --model &quot;$(CordisTypertWebModel)&quot; --service &quot;$(CordisTypertService)&quot; --reference-models &quot;$(CordisTypertOutputDirectory)web-reference-models.rsp&quot; --output &quot;$(CordisTypertWebDirectory)&quot;" />
+  </Target>
+  <Target Name="CordisTypertCleanWeb" BeforeTargets="CoreClean">
+    <Delete Files="$(_CordisTypertWebFiles);$(CordisTypertOutputDirectory)web-reference-models.rsp" />
+  </Target>
   <ItemGroup>
     <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
     <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="CordisTypertAssemblyIdentity" />

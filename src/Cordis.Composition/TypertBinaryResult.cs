@@ -1,3 +1,4 @@
+using static Cordis.Typert.ClientMetadata;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
@@ -9,23 +10,6 @@ public sealed record TypertBinaryAttachment(IReadOnlyList<JsonElement> Path, Rea
 
 internal static class TypertBinaryResult
 {
-    internal static bool IsBinary(JsonTypeInfo? metadata) =>
-        metadata?.Type == typeof(byte[]) && ReferenceEquals(
-            metadata.Converter,
-            JsonMetadataServices.ByteArrayConverter);
-
-    internal static JsonTypeInfo? Property(JsonTypeInfo? metadata, string name)
-    {
-        if (metadata?.Kind == JsonTypeInfoKind.Dictionary && metadata.ElementType is { } elementType)
-            return metadata.Options.GetTypeInfo(elementType);
-        var property = metadata?.Kind == JsonTypeInfoKind.Object
-            ? metadata.Properties.FirstOrDefault(property => property.Name == name)
-            : null;
-        return property is { CustomConverter: null }
-            ? metadata!.Options.GetTypeInfo(property.PropertyType)
-            : null;
-    }
-
     internal static TypertRemoteResult Encode<T>(T native, JsonTypeInfo<T> metadata)
     {
         // Root bytes need no JSON/base64 intermediate. Snapshot them just as serialization would.
