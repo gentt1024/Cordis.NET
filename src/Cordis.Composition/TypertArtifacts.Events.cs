@@ -15,31 +15,33 @@ public static partial class TypertArtifacts
         var index = 0;
         foreach (var item in events)
         {
-            string Type(TypertCodec codec)
+            string Type(TypertCodec codec, bool output = false)
             {
                 var name = "EventData" + index++;
-                AppendType(types, name, codec.Schema);
+                AppendType(types, name, output ? codec.ResultSchema : codec.Schema);
                 return name + (codec.AcceptsUndefined ? " | undefined" : "");
             }
 
             listeners.Append(Quote(item.Event)).Append(": (");
             if (item.Request is { } request)
             {
-                var data = Type(request);
+                var data = Type(request, output: true);
                 var result = Type(item.Result!);
+                var next = Type(item.Result!, output: true);
                 listeners
                     .Append("this: RemoteEventContext, request: ")
                     .Append(data)
                     .Append(
                         " & {readonly agent: RemoteEventContext; readonly signal: AbortSignal}, next: () => Promise<")
-                    .Append(result)
+                    .Append(next)
                     .Append(">) => Promise<")
                     .Append(result)
                     .Append(">;\n");
             }
             else
                 listeners
-                    .Append(string.Join(", ", item.Args.Select((codec, i) => "arg" + i + ": " + Type(codec))))
+                    .Append(
+                        string.Join(", ", item.Args.Select((codec, i) => "arg" + i + ": " + Type(codec, output: true))))
                     .Append(") => void;\n");
         }
 

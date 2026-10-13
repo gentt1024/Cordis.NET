@@ -136,7 +136,7 @@
     "No static AOT on this candidate",
     "No hosted CI or remote SourceLink retrieval",
     "Browser result is the outbound scoped workflow, not the full reverse Context or Peer scope-targeting matrix",
-    "No Maker modification",
+    "No external applications modification",
     "No new dependency, package version, upstream pin, push, merge, publication or deployment"
   ]
 }

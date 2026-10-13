@@ -87,5 +87,5 @@
       "logSha256": "81ed02862672004d5e2a1cc60ccf879fdf1988581d88ec1d27514e4312866f78"
     }
   ],
-  "remaining": "Outbound browser scoped facade, remaining model backends, full Peer/scope-targeting and named platform integration continue in the original scope. No new Native AOT, hosted CI, whole fixed-DSH suite/differential, remote SourceLink retrieval, source archive or Maker execution. No dependency, package version or upstream pin change, merge, release or deployment."
+  "remaining": "Outbound browser scoped facade, remaining model backends, full Peer/scope-targeting and named platform integration continue in the original scope. No new Native AOT, hosted CI, whole fixed-DSH suite/differential, remote SourceLink retrieval, source archive or external applications execution. No dependency, package version or upstream pin change, merge, release or deployment."
 }

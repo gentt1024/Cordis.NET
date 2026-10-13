@@ -129,7 +129,7 @@ public sealed class EventGenerator : IIncrementalGenerator
                         ",",
                         contract.Parameters.Select((p, i) =>
                             "(" + Type(p.Type) + ")Definition.Args[" + i +
-                            "].Decode((global::System.Text.Json.JsonElement)args[" + i + "]!)!")))
+                            "].DecodeOutput((global::System.Text.Json.JsonElement)args[" + i + "]!)!")))
                 .Append("); return global::Cordis.Undefined.Value; });\n");
         }
         else

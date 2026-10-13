@@ -2682,7 +2682,7 @@
     "Reference update changes a saved initializer/input identity, not the deployed Host default or a tested wire-shape change.",
     "This browser check covers packaged referenced unary data calls using the default Connection; it is not a new exhaustive scoped/event browser matrix.",
     "Live IDE, named UI targets, scope store/layer, and all unsupported model-backend shapes remain open.",
-    "No package version, dependency, behavior pin, Maker, remote branch, merge, publication or deployment changes.",
+    "No package version, dependency, behavior pin, external applications, remote branch, merge, publication or deployment changes.",
     "A Linux browser helper attempt timed out before READY; the temporary Host path was subsequently absent. It is not a browser execution result; final browser evidence uses the Windows gate assets."
   ]
 }

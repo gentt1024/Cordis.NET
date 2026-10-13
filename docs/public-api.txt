@@ -1673,8 +1673,10 @@ Cordis.Composition: Cordis.Composition.TypertCodec : System.Object [] flags=Publ
   Property Cordis.Composition.TypertCodec Void attrs= NotNull/Unknown get=True set=False init=False
   Method Cordis.Composition.TypertRemoteResult EncodeResult(System.Object) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
   Method System.Object Decode(System.Text.Json.JsonElement) attrs= params=value:NotNull/NotNull  return=Nullable/Nullable
+  Method System.Object DecodeOutput(System.Text.Json.JsonElement) attrs= params=value:NotNull/NotNull  return=Nullable/Nullable
   Property System.String TypeSymbol attrs= NotNull/Unknown get=True set=False init=False
   Method System.Text.Json.JsonElement Encode(System.Object) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
+  Method System.Text.Json.JsonElement EncodeInput(System.Object) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
   Property System.Text.Json.JsonElement Schema attrs= NotNull/Unknown get=True set=False init=False
   Method Void ValidateUplinkItem(System.Text.Json.JsonElement) attrs= params=value:NotNull/NotNull  return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertConnection : System.Object [System.IAsyncDisposable] flags=Public, Sealed, BeforeFieldInit attrs=
@@ -1859,7 +1861,9 @@ Cordis.Composition: Cordis.Composition.TypertNullabilityInfo : System.ValueType 
   Method Boolean Equals(System.Object) attrs= params=obj:Unknown/Unknown  return=NotNull/NotNull
   Method Int32 GetHashCode() attrs= params= return=NotNull/NotNull
   Property Int32 Id attrs= NotNull/NotNull get=True set=True init=True
+  Property System.Nullable`1[System.Boolean] GetterNullable attrs= Nullable/Nullable get=True set=True init=True
   Property System.Nullable`1[System.Boolean] Nullable attrs= Nullable/Nullable get=True set=True init=True
+  Property System.Nullable`1[System.Boolean] SetterNullable attrs= Nullable/Nullable get=True set=True init=True
   Method System.String ToString() attrs= params= return=Unknown/Unknown
   Constructor Void .ctor(Int32, System.Nullable`1[System.Boolean]) attrs= params=Id:NotNull/NotNull ;Nullable:Nullable/Nullable
   Method Void Deconstruct(Int32 ByRef, System.Nullable`1[System.Boolean] ByRef) attrs= params=Id:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Nullable:Nullable/Nullable [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull

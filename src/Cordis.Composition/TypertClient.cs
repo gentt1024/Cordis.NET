@@ -30,7 +30,7 @@ public abstract class TypertClient : IAsyncDisposable
                 throw new JsonException("Remote result is missing its declared value.");
             if (!nullableResult && value.ValueKind == JsonValueKind.Null)
                 throw new JsonException("Non-null Remote result cannot be null.");
-            return value.Deserialize(resultType)!;
+            return value.Deserialize(TypertJsonMetadata.ReadOutput(resultType))!;
         },
         cancellationToken);
 
@@ -72,7 +72,9 @@ public abstract class TypertClient : IAsyncDisposable
         using var signal = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, call.Token);
         try
         {
-            var encoded = JsonSerializer.SerializeToElement(arguments, argumentsType);
+            var encoded = JsonSerializer.SerializeToElement(
+                arguments,
+                TypertJsonMetadata.WriteInput(argumentsType, envelope: true));
             var result = await connection.CallAsync(endpoint, encoded, signal.Token).ConfigureAwait(false);
             if (!lifetime.Active)
                 return Withdrawn<T>(endpoint);
@@ -118,7 +120,9 @@ public abstract class TypertClient : IAsyncDisposable
             owner = new StreamOwner(call, signal);
             var stream = connection.Open(
                 endpoint,
-                () => JsonSerializer.SerializeToElement(arguments, argumentsType),
+                () => JsonSerializer.SerializeToElement(
+                    arguments,
+                    TypertJsonMetadata.WriteInput(argumentsType, envelope: true)),
                 signal.Token,
                 owner);
             return new(
@@ -129,7 +133,7 @@ public abstract class TypertClient : IAsyncDisposable
                         throw new JsonException("Remote stream item is missing its declared value.");
                     if (!nullableResult && value.ValueKind == JsonValueKind.Null)
                         throw new JsonException("Non-null Remote stream item cannot be null.");
-                    return value.Deserialize(resultType)!;
+                    return value.Deserialize(TypertJsonMetadata.ReadOutput(resultType))!;
                 },
                 () => lifetime.Active);
         }

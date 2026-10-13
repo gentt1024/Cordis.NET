@@ -7,7 +7,7 @@
   "rid": "win-x64",
   "sdkVersion": "10.0.111",
   "validationCommand": "python scripts/verify.py --package",
-  "scope": "Local Windows x64 JIT and actual generated .NET/TypeScript package consumers. Original DSH source tests/cross-runtime differential, Linux, Native AOT, hosted CI, browser rendering, Maker, source-archive builds and remote SourceLink retrieval were not run for this checkpoint.",
+  "scope": "Local Windows x64 JIT and actual generated .NET/TypeScript package consumers. Original DSH source tests/cross-runtime differential, Linux, Native AOT, hosted CI, browser rendering, external applications, source-archive builds and remote SourceLink retrieval were not run for this checkpoint.",
   "verificationReportSha256": "f3d0b169d853430581afc97dedc150fa8ac80a1d9e91e6e6b865c89080914003",
   "tests": [
     {

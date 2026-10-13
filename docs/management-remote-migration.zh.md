@@ -95,8 +95,7 @@ Composition 在 `cordis/typert/Cordis.Composition.cordis.model.json` 供应选�
 原生宿主状态、完整配置及客户端制品路由继续承担独立职责和授权。
 
 Settings 保持唯一的[数值 revision 合同](settings-contract-migration.zh.md)。
-Maker 适配属于其自己的会话：重新生成客户端、绑定当前宿主授权、订阅后读取快照、保留安装结果未知状态。
-本仓库不修改 Maker，也不为其旧生成代码增加永久兼容路径。
+应用消费者重新生成客户端、绑定当前宿主授权、订阅后读取快照，并保留安装结果未知状态。旧生成代码不构成兼容要求。
 
 共享 Connection 使用固定 unary 封套、unary multipart 附件及文本 WebSocket mux。
 每方法 NDJSON 与生成器内嵌 carrier 已退出。宿主选择的 emit 通知尚未闭环 typed uplink、反向 Context 解析、

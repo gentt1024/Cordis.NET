@@ -6,16 +6,32 @@ namespace Cordis.Composition;
 /// <summary>A declaration use within one codec's graph, including its null admission.</summary>
 /// <param name="Id">Stable within this query; different nested declarations have different identities.</param>
 /// <param name="Nullable">Null keeps the serializer's own null admission.</param>
-public readonly record struct TypertNullabilityInfo(int Id, bool? Nullable);
+public readonly record struct TypertNullabilityInfo(int Id, bool? Nullable)
+{
+    /// <summary>Explicit getter annotation; null preserves the serializer metadata.</summary>
+    public bool? GetterNullable
+    {
+        get;
+        init;
+    }
+
+    /// <summary>Explicit setter annotation; null preserves the serializer metadata.</summary>
+    public bool? SetterNullable
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>Declaration use at a JSON Schema path; null leaves an unmapped serializer contract unchanged.</summary>
 public delegate TypertNullabilityInfo? TypertNullability(ReadOnlySpan<string> schemaPath);
 
 public abstract partial class TypertCodec
 {
-    /// <summary>Create a metadata codec retaining declaration nullability erased from CLR generic arguments.</summary>
-    /// <remarks>The generated query reads common declaration facts, not reflection. Schema is exported lazily;
-    /// metadata still owns names, converters and serialization. Unmapped schema paths keep the exporter rule.</remarks>
+    /// <summary>Create a metadata codec retaining declaration and accessor nullability.</summary>
+    /// <remarks>The generated query reads common declaration facts, not reflection. Explicit accessor annotations
+    /// correct a private metadata copy when needed; the author's context remains unchanged. Schema is exported
+    /// lazily. Metadata owns names and converters; unmapped schema paths keep the exporter rule.</remarks>
     public static TypertCodec CreateDeclared<T>(
         JsonTypeInfo<T> metadata,
         TypertNullability nullability,
@@ -24,7 +40,7 @@ public abstract partial class TypertCodec
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentNullException.ThrowIfNull(nullability);
         return new TypedCodec<T>(
-            metadata,
+            ApplyAccessorNullability(metadata, nullability),
             typeSymbol ?? metadata.Type.FullName ?? metadata.Type.Name,
             null,
             nullability);
@@ -32,7 +48,7 @@ public abstract partial class TypertCodec
 
     private static JsonNode ProjectNullability(JsonNode root, TypertNullability query)
     {
-        var projected = new Dictionary<(string Source, int? Declaration), string>();
+        var projected = new Dictionary<(string Source, int? Declaration, bool? Nullable), string>();
         return Visit(root, "#", "#", []);
 
         JsonNode Visit(JsonNode source, string sourcePath, string outputPath, string[] path)
@@ -66,7 +82,7 @@ public abstract partial class TypertCodec
             }
 
             var declaration = query(path);
-            var key = (sourcePath, declaration?.Id);
+            var key = (sourcePath, declaration?.Id, declaration?.Nullable);
             if (projected.TryGetValue(key, out var previous))
                 return new JsonObject
                 {

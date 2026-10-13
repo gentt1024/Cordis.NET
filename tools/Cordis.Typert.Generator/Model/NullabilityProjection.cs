@@ -9,6 +9,8 @@ internal sealed class NullabilityProjection
     private sealed record Node(
         bool? Nullable,
         Dictionary<string, int> Properties,
+        bool? Getter = null,
+        bool? Setter = null,
         int? Item = null,
         string? ItemKey = null);
 
@@ -34,9 +36,9 @@ internal sealed class NullabilityProjection
         Read(root);
         return graph.Emit(method);
 
-        int Read(DeclarationReference reference)
+        int Read(DeclarationReference reference, bool? getter = null, bool? setter = null)
         {
-            var key = JsonSerializer.Serialize(reference);
+            var key = JsonSerializer.Serialize(reference) + ":" + getter + ":" + setter;
             if (graph.ids.TryGetValue(key, out var found))
                 return found;
             var id = graph.nodes.Count;
@@ -44,7 +46,7 @@ internal sealed class NullabilityProjection
             graph.nodes.Add(null);
             var nullable = Nullable(reference.Kind, reference.Name, reference.Nullability);
             var properties = new Dictionary<string, int>(StringComparer.Ordinal);
-            var node = new Node(nullable, properties);
+            var node = new Node(nullable, properties, getter, setter);
             if (reference.Kind == "array" && reference.Arguments.Length == 1)
                 node = node with
                 {
@@ -79,7 +81,7 @@ internal sealed class NullabilityProjection
                                  member.Type is not null &&
                                  !member.Modifiers.Contains("static", StringComparer.Ordinal)))
                     {
-                        var attributes = DeclarationAttributeProjection.Wire(member.Attributes);
+                        var attributes = DeclarationAttributeProjection.MemberWire(member);
                         if (Ignored(attributes))
                             continue;
                         var included = attributes.Any(attribute =>
@@ -97,19 +99,26 @@ internal sealed class NullabilityProjection
                                     .ToArray()),
                             naming);
                         var value = member.Type!;
-                        if (member.Attributes.Any(attribute =>
+                        if (attributes.Any(attribute =>
                                 attribute.Name == "System.Diagnostics.CodeAnalysis.AllowNullAttribute"))
                             value = value with
                             {
                                 Nullability = "Annotated"
                             };
-                        if (member.Attributes.Any(attribute =>
+                        if (attributes.Any(attribute =>
                                 attribute.Name == "System.Diagnostics.CodeAnalysis.DisallowNullAttribute"))
                             value = value with
                             {
                                 Nullability = "NotAnnotated"
                             };
-                        AddProperty(properties, ambiguous, name, Read(value));
+                        AddProperty(
+                            properties,
+                            ambiguous,
+                            name,
+                            Read(
+                                value,
+                                DeclarationAttributeProjection.AccessorNullable(attributes, getter: true),
+                                DeclarationAttributeProjection.AccessorNullable(attributes, getter: false)));
                     }
                 }
             }
@@ -128,16 +137,20 @@ internal sealed class NullabilityProjection
         Read(root);
         return graph.Emit(method);
 
-        int Read(NativeTypeReference reference)
+        int Read(NativeTypeReference reference, bool? getter = null, bool? setter = null)
         {
-            var key = JsonSerializer.Serialize(reference);
+            var key = JsonSerializer.Serialize(reference) + ":" + getter + ":" + setter;
             if (graph.ids.TryGetValue(key, out var found))
                 return found;
             var id = graph.nodes.Count;
             graph.ids.Add(key, id);
             graph.nodes.Add(null);
             var properties = new Dictionary<string, int>(StringComparer.Ordinal);
-            var node = new Node(Nullable(reference.Kind, reference.Name, reference.Nullability), properties);
+            var node = new Node(
+                Nullable(reference.Kind, reference.Name, reference.Nullability),
+                properties,
+                getter,
+                setter);
             if (reference.Kind is "array" or "collection")
                 node = node with
                 {
@@ -164,7 +177,14 @@ internal sealed class NullabilityProjection
                         {
                             Nullability = "NotAnnotated"
                         };
-                    AddProperty(properties, ambiguous, member.WireName, Read(value));
+                    AddProperty(
+                        properties,
+                        ambiguous,
+                        member.WireName,
+                        Read(
+                            value,
+                            DeclarationAttributeProjection.AccessorNullable(member.Attributes, getter: true),
+                            DeclarationAttributeProjection.AccessorNullable(member.Attributes, getter: false)));
                 }
             }
 
@@ -238,6 +258,14 @@ internal sealed class NullabilityProjection
         for (var id = 0;id < nodes.Count;id++)
             if (nodes[id]!.Nullable is { } nullable)
                 code.Append(id).Append(" => ").Append(nullable ? "true" : "false").Append(",\n");
-        return code.Append("_ => (bool?)null });\n}\n").ToString();
+        code.Append("_ => (bool?)null }) { GetterNullable = state switch {\n");
+        for (var id = 0;id < nodes.Count;id++)
+            if (nodes[id]!.Getter is { } getter)
+                code.Append(id).Append(" => ").Append(getter ? "true" : "false").Append(",\n");
+        code.Append("_ => (bool?)null }, SetterNullable = state switch {\n");
+        for (var id = 0;id < nodes.Count;id++)
+            if (nodes[id]!.Setter is { } setter)
+                code.Append(id).Append(" => ").Append(setter ? "true" : "false").Append(",\n");
+        return code.Append("_ => (bool?)null } };\n}\n").ToString();
     }
 }

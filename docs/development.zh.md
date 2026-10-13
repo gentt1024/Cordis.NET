@@ -136,7 +136,7 @@ B 保留源所有权、raw 不透明性与既有 Session 队列。独立审查�
 | 既有原生管理消费者：PluginManager、ConfigEditor、Settings controller、客户端管理及包构建 | `PluginConfigurationOperations`、`ProfileSession`、Settings 导出、原生 HTTP/SSE endpoint、`DotnetPluginToolchain` | 原路径保留[验证记录](validation.zh.md)的历史证据。新增多 Entry 作者交付也使用实际工具链 | 原生 HTTP 管理仍是明确适配，保留既有状态和生命周期所有者 | 明确平台适配 |
 | 管理消费者迁入生成合同：Settings controller/`ui-settings`、PluginManager/`ui-plugin-manager` 及 API Remotes Client assembly | 生成 Settings 与 PluginManager 复用既有 Profile 操作；Gateway 持有唯一选定通知源 | CLI、维护中的示例、生成 TS／HTTP 和独立 model-only .NET 包调用消费 Settings，见[验证记录](validation.zh.md#标准-settings-与普通模型验证2026-10-11) | 标准 Settings、PluginManager 及宿主选择的 emit 通知已实现。CLI、维护示例及生成 .NET/TS 调用者使用唯一合同，见[管理迁移](management-remote-migration.zh.md)；完整固定 wire 与产品 UI 仍需独立闭环 | 有界生成消费者已实现；最终批次证据绑定其冻结检查点 |
 | 共享 bundle HMR 与原生合同检查：[HMR watcher](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/boot/hmr/src/index.ts#L267)调用 `partialReload`，[替换/恢复](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/boot/hmr/src/index.ts#L406)导入并归一化 Loader 导出，用捕获的配置重注册受影响 Fiber，并等待 Loader 稳定 | 成组 `ClrModuleResolver.ReplaceAsync`、`Loader.ReplacePluginsAsync`、既有 `HmrManager`、live binding/provider 校验 | 独立多 Entry 包消费者覆盖不完整替换拒绝、坏候选、Pending 等待、双 Entry 回滚、保留兄弟入口、最后一次退役及 Remote 恢复。Provider 不匹配与 definition 撤销另有原生证据 | 共享 bundle 替换是既有 HMR 之上的 CLR 适配。这些检查不证明通用同契约替换准入算法 | 已实现且有证据 |
-| 应用能力选择与替换准入：API Remotes 及领域持有的 provider | 宿主组合与应用政策 | 按固定生产所有权定责，没有读取 Maker | Agent/LLM、RSI、FSM Project 接受、权限、basis、receipt、CAS、outbox、Viewer 保护与业务退役仍属产品 | 真正产品专用 |
+| 应用政策与领域持有的 provider | 宿主组合与应用政策 | 范围遵循固定上游所有权 | 领域流程、业务授权、应用持久化与业务退役仍属应用职责 | 应用专用 |
 
 固定生产链已明确：[generator](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator)生成制品，[Typert Loader](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/loader/src/index.ts)供给[registry](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/registry/src/service.ts)，[Gateway](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/index.ts)解析 live 服务。[Remote Client assembly](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/remotes/src/client/index.ts)选择生成的 contribution。[Settings mirror](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-settings/src/client/settings-mirror.ts)和[form](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-settings/src/client/config-form.ts)调用[Settings controller](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/settings-controller/src/index.ts)。[PluginManager Client store](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-plugin-manager/src/client/manager-store.ts)调用[PluginManager](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/boot/plugin-manager/src/index.ts)。这些生产依赖说明原生管理适配为何不能关闭生成合同范围。
 
@@ -154,7 +154,7 @@ Roslyn 还通过 `TypertCodec.CreateNullable` 提供根引用可空注解，因�
 
 两平台独立 Remote NuGet 作者/消费者均通过七步：作者打包、指定编译拒绝、仅包引用 JIT、Client 运行时构建、实际 HTTP 与严格 TypeScript 和固定 Cordis 挂载、静态 Native AOT 发布及 native 执行。独立 CLR 包通过十个阶段，覆盖标准工具链多 Entry 交付、共享程序集/ALC 身份、分别配置、组级失败恢复、带 DTO 变更的成功替换、生成 HTTP 客户端、旧调用拒绝及撤销。八个 Cordis.NET 包与 Greeting 示例的检查/符号/离线消费者及既有 Client 源码路径通过；验证脚本自测在两平台各通过 38 项。详细结果与限制见[验收记录](validation.zh.md#2026-10-09-模块导出与原生-remote-续建)。
 
-后续改动仅添加包括本范围续账在内的文档验收记录；报告验证上述检查点，不证明之后的运行时变更。未关闭行继续保持未关闭，本次验收不宣称整个 Typert 子系统完成。Windows/Linux、静态 JIT/AOT、动态 CLR 和 TypeScript 证据分开记录；不宣称 Native AOT 内动态加载 CLR。未执行 Hosted CI、远端 SourceLink 获取或 Maker 运行。未执行 NuGet 发布、GitHub Release、版本升级或部署。
+后续改动仅添加包括本范围续账在内的文档验收记录；报告验证上述检查点，不证明之后的运行时变更。未关闭行继续保持未关闭，本次验收不宣称整个 Typert 子系统完成。Windows/Linux、静态 JIT/AOT、动态 CLR 和 TypeScript 证据分开记录；不宣称 Native AOT 内动态加载 CLR。未执行 Hosted CI、远端 SourceLink 获取或 外部应用 运行。未执行 NuGet 发布、GitHub Release、版本升级或部署。
 
 ### 既有验收之后的质量续作
 
@@ -293,7 +293,7 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 | T02：跨包身份与外部引用 | 显式引用模型接通普通 DTO/STJ、真实引用 Remote 及 `6356b86` 的打包 Schema／TS；独立 Node／浏览器 caller 不加载 Provider 实现，冲突／缺失引用与重生成检查通过。 | 沿同一声明补齐其余有界序列化／类型及事件后端组合。已完成的普通引用 Web 路线不关闭这些形状。 |
 | T03：运行时、Schema、.NET、TS 消费共同事实 | 共同解释器驱动 Host 绑定、当前保存模型 caller 和类型化事件；已移除重复作者 wire 制品及旧读取器 | 完成各选定分析／目录、Schema 和客户端输出的支持面。运行时 `TypertArtifacts.Contribution` 不等于完整模型后端。使用 `verify-typert-dotnet.py` 与 `verify-typert.py`；不重建已成立模型。 |
 | T04：更丰富的 .NET 方法／数据投影 | optional／default 方法、数组、List、字符串字典及四类框架集合接口已有包证据 | 补齐其余选定方法／数据形状及显式引用消费。拒绝记录当前限制，不等于完成；独立 DTO/STJ 与 Remote 消费者承担验收。 |
-| T05：model-only、pre-CoreCompile 后 STJ、无需 Node／Provider | 独立包覆盖首次 MSBuild 设计时输入及实际 STJ 编译，随后 build/pack、增量／Clean／冷构建生成与漂移拒绝 | 这些检查还在 `28901b9` 的完整 Windows 包门禁中通过；较早 `09c2c11` 的环境失败在验证记录中保留自己的历史身份。实际 IDE 与具名 WPF／Avalonia／Godot .NET／Blazor 消费者仍需调度、视图／Slot 装配、关闭与重新进入证据；SDK／依赖选择须明确说明。 |
+| T05：model-only、pre-CoreCompile 后 STJ、无需 Node／Provider | 独立包覆盖首次 MSBuild 设计时输入及实际 STJ 编译，随后 build/pack、增量／Clean／冷构建生成与漂移拒绝 | 这些检查还在 `28901b9` 的完整 Windows 包门禁中通过；较早 `09c2c11` 的环境失败在验证记录中保留自己的历史身份。正常 C# 构建、生成源码可见性和调试仍是 alpha5 要求。维护者已将 WPF／Avalonia／Godot .NET／Blazor 具名适配从 alpha5 发布阻断后置；调度、视图／Slot 装配、关闭与重新进入证据仍属于后续职责，SDK／依赖选择须明确说明。 |
 
 这些是本轮交付义务，不另造总规划。暂时拒绝是准确开发状态，不是完成。改变要求支持的范围或延期已确认职责，需要列出消费者影响并由维护者裁决。
 
@@ -308,7 +308,7 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 | 固定流协议 | text mux、类型化上下行、半关闭、载体失败及逻辑调用寿命已有有界执行 | 补齐剩余声明 codec 与选定跨端组合；在既有生命周期及包消费者中保留准入／未使用上行控制。 |
 | Context、对象、Peer 与固定事件 | receiver／lookup scoped、反向 agent Context、owned／borrowed 释放、类型化事件及 operatorPeer fallback 已实现。`28901b9` 补齐原生身份／祖先 scope 路由及 Peer key。`707fdde` 通过在 tracing 前嵌入原始 subject 修正 SC01，生成式 .NET／TS 包及浏览器事件消费通过。 | 同一 `28901b9` 包及生成资产已通过真实出站浏览器调用，包含原生 Host Peer 路由；这不代表浏览器侧 scope 实现已获验证。scope store／layer 和剩余具名 Context／Peer 组合保留独立出口。本条 Host 路线不代表完整覆盖。 |
 | 恢复与替换 | 已执行代际撤销、保留回调、重挂载及借用 Connection／Context 边界 | 在同一消费者扩展剩余 scope-targeting 寿命。不确定写入结果不授权重放；安装任务仍属于操作所有者。 |
-| 标准应用与最终交付 | 数值 Settings、生成式管理／事件、CLI 与模块恢复复用配置／operations | 完成 Settings 文档／客户端装配及标准管理 UI 观察。本地准备阶段 PR 说明和 CI 矩阵。最终出口要求同一冻结候选的 Windows/Linux、静态 AOT caller、选定固定一端互通、浏览器、包／符号／SourceLink 及具名平台证据。远端创建 PR、合并、发布须获授权。 |
+| 标准应用与最终交付 | 数值 Settings、生成式管理／事件、CLI 与模块恢复复用配置／operations | 完成 Settings 文档／客户端装配及标准管理 UI 观察。本地准备阶段 PR 说明和 CI 矩阵。最终出口要求同一冻结候选的 Windows/Linux、静态 AOT caller、选定固定一端互通、浏览器及包／符号／SourceLink 证据。具名 UI 适配保留独立后续出口；其后置不延期通用宿主或现有 Web 路线。远端创建 PR、合并、发布须获授权。 |
 
 这里“语义对应”指通过原生所有者实现固定可观察行为；“协议互通”指具名固定上游客户端／传输真实交换所要求的帧、类型和错误。完整通用职责包括剩余原生语义及明确选定的互通边界，单个 unary demo 或措辞变化不能关闭缺口。历史完整 wire 承诺不追溯改写为已经验收。
 
@@ -366,7 +366,7 @@ R02 修复会话只负责该定向修正、验证和交接。其余仓库基础�
 
 选定普通 v2 DTO/STJ 发射、受支持默认值和 .NET downlink 客户端现有真实包消费证据。v1／v2 解释共享源事实，各自制品职责仍明确；嵌套 JSON 策略冲突会被拒绝。既有 Extensions 回归承担不可读兼容数据／数据保护行为，Composition 承担通知清理；包客户端覆盖生成／传输及任务寿命边界。早先失败检查点及原断言继续保留为证据。
 
-从原范围表的开放行继续：其他引用模型后端、保存的 v2 重建 Remote、其余丰富 Remote／owned-value 协议、原生文档及不依赖产品的 UI／Client assembly。本批不推导它们完成。重大公开合同／平台取舍及新增依赖仍需讨论，Maker 适配仍属其自己的会话。本批 Windows JIT 验收不将早先 Linux／AOT 证据延伸到新源码；合并和发布是另行且未授权的行动。
+从原范围表的开放行继续：其他引用模型后端、其余保存模型 Remote 投影、其余丰富 Remote／owned-value 协议、原生文档及不依赖产品的 UI／Client assembly。本批不推导它们完成。重大公开合同／平台取舍及新增依赖仍需讨论，外部应用 适配仍属其自己的会话。本批 Windows JIT 验收不将早先 Linux／AOT 证据延伸到新源码；合并和发布是另行且未授权的行动。
 
 ### 显式引用模型检查点，2026-10-11
 
@@ -440,7 +440,7 @@ Chief 对 `f0d38f5` 的审查保留既有事件／owned-value 结构，但指出
 
 修正将现有共同声明事实接入懒加载 codec 导出，采用完整限定事件输出名，并在 `$events` 归还输入时关闭载体拥有的 inbox。不增加保存模型或线格式。`CreateDeclared` 是共享的生成代码边界；显式 Schema 的 `Create` 保留独立的手写 codec 用途。验证入口为 `EventDeclarationTests`、`RemoteCarrierTests`、`verify-typert-dotnet.py --data-references-only` 与 `--management-only`，随后执行冻结候选的完整包门禁。包夹具在冷／增量构建中编译同名委托，从保存模型重新生成独立监听，并执行严格 TS 与真实 .NET／TS 事件调用。源码 `On` 经 loopback ASP.NET 验证。此前未变化的证据继续保留原候选身份。
 
-修正后回到原有浏览器 scoped、其余后端与平台职责，不重开此前已关闭问题，也不根据这些探针宣称其余职责完成。本次不改变依赖、包版本、上游 pin、Maker，也不合并或发布。
+修正后回到原有浏览器 scoped、其余后端与平台职责，不重开此前已关闭问题，也不根据这些探针宣称其余职责完成。本次不改变依赖、包版本、上游 pin、外部应用，也不合并或发布。
 
 修正候选 `2a5a6e4` 已完成两端默认包门禁及真实浏览器反向 scoped 事件调用，E01／E02／E03 有修前失败与修后通过证据。直接 operatorPeer fallback 和字符串字典投影也在同一候选获得验证。具体身份与例外见[验证记录](validation.zh.md#事件审查operator-peer-与声明空性2026-10-12)。后续原有职责仍包括出站浏览器 scoped facade、其余模型后端、完整 Peer／scope-targeting 与具名平台接入；不重查全部历史，也不将检查点视作新一代模型。
 
@@ -489,3 +489,9 @@ Chief 对已推送 `9243d3a` 的审查关闭 S01/S02，保留 N01/N02 及此前�
 Chief 对固定 `7ca5ac8` 的审查关闭了实现 `707fdde` 的 SC01；这是独立源码、类型及上游审查，不是重新运行记录中的包。嵌套 subject、精确身份准入和既有寿命保持不变，不需要再增加 payload 抽象或兼容解析。
 
 源码 `6356b86` 完成这条有界显式引用 Web 路线：保存模型 `emit-web`、普通 build/pack、共享 TS 发射器及 Connection、独立严格 TS／Node 调用和真实浏览器消费。浏览器验证发现并修正默认原生 fetch 绑定，夹具不注入绕过。冻结源码通过 Windows 包门禁及 Linux 包／AOT 门禁，见[验证记录](validation.zh.md#引用-web-制品与默认浏览器-connection2026-10-13)。未新增模型格式、重复传输、依赖或兼容路径。live IDE、scope store／layer、具名 UI 消费者及其余序列化／类型／后端形状保留独立出口。
+
+### 有方向 Web 合同收口，2026-10-13
+
+WEB01–WEB03 与 FETCH01 保留共同模型、共享 emitter 和 Connection。引用 DTO 夹具通过静态与运行 descriptor 的 TS 客户端及独立 .NET 包客户端，覆盖参数省略/null、构造器必填准入、结果条件省略和 accessor 空性。后者暴露了输入必填零值被省略的问题；私有方向序列化元数据修正此路线及对应事件／上行方向。作者 Context 元数据仍归作者所有。早先序列化和客户端失败保留各自本地证据。聚焦 Composition 回归已通过；最终冻结包／浏览器／平台证据仍待完成。
+
+alpha5 沿上述既有职责继续收口：完成通用应用示例与 Settings 文档／客户端装配；对照固定源码闭合 scope store／layer 消费；通过实际 Prepare/Publish/Validate/Load 包验证稳定 CLR 制品，包含 native／Worker 寿命。具名 UI 适配后置不关闭这些职责。公共内容清理更新当前说明，不修改历史源码／包身份或结果；私有审计保留在仓库外。本检查点不改变版本、上游 pin 或发布身份。

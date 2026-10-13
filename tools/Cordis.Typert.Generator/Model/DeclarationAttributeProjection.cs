@@ -6,6 +6,27 @@ internal static class DeclarationAttributeProjection
 {
     internal const string JsonPrefix = "System.Text.Json.Serialization.";
 
+    internal static NativeAttribute[] MemberWire(DeclarationMember member) => Wire(
+        member
+            .Attributes.Concat(
+                member.ReturnAttributes.Where(value => value.Name is
+                    "System.Diagnostics.CodeAnalysis.MaybeNullAttribute"
+                    or "System.Diagnostics.CodeAnalysis.NotNullAttribute"))
+            .Concat(
+                member.SetterValueAttributes.Where(value => value.Name is
+                    "System.Diagnostics.CodeAnalysis.AllowNullAttribute"
+                    or "System.Diagnostics.CodeAnalysis.DisallowNullAttribute"))
+            .DistinctBy(value => value.Name)
+            .ToArray());
+
+    internal static bool? AccessorNullable(NativeAttribute[] attributes, bool getter)
+    {
+        var allow = "System.Diagnostics.CodeAnalysis." + (getter ? "MaybeNullAttribute" : "AllowNullAttribute");
+        var deny = "System.Diagnostics.CodeAnalysis." + (getter ? "NotNullAttribute" : "DisallowNullAttribute");
+        return attributes.Any(value => value.Name == allow) ? true :
+            attributes.Any(value => value.Name == deny) ? false : null;
+    }
+
     internal static NativeAttribute[] Native(DeclarationAttribute[] attributes) => attributes
         .Select(Checked)
         .Select(attribute =>

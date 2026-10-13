@@ -79,6 +79,8 @@ public abstract partial class TypertCodec
         public override bool AcceptsUndefined => true;
         public override string TypeSymbol => inner.TypeSymbol + " | undefined";
         public override JsonElement Schema => inner.Schema;
+        internal override JsonElement ResultSchema => inner.ResultSchema;
+        internal override TypertNullability? DeclarationQuery => inner.DeclarationQuery;
 
         public override object Decode(JsonElement value)
         {
@@ -93,6 +95,20 @@ public abstract partial class TypertCodec
             var item = (RemoteOptional<T>)value!;
             return item.HasValue ? inner.Encode(item.Value) : default;
         }
+
+        public override JsonElement EncodeInput(object? value)
+        {
+            var item = (RemoteOptional<T>)value!;
+            return item.HasValue ? inner.EncodeInput(item.Value) : default;
+        }
+
+        public override object DecodeOutput(JsonElement value)
+        {
+            _ = inner.ResultSchema;
+            return value.ValueKind == JsonValueKind.Undefined
+                ? RemoteOptional<T>.Undefined
+                : new RemoteOptional<T>((T)inner.DecodeOutput(value)!);
+        }
     }
 
     private sealed class CollectionCodec<T>(
@@ -102,15 +118,47 @@ public abstract partial class TypertCodec
         string symbol) : TypertCodec
     {
         private TypertCodec? inner;
-        private TypertCodec Inner => inner ??= Create(metadata, symbol, ExportSchema());
+
+        private TypertCodec Inner => inner ??= new TypedCodec<T>(
+            DeclarationQuery is { } query ? ApplyAccessorNullability(metadata, query) : metadata,
+            symbol,
+            ExportSchema(),
+            DeclarationQuery);
+
         public override string TypeSymbol => symbol;
         public override JsonElement Schema => Inner.Schema;
         public override object? Decode(JsonElement value) => Inner.Decode(value);
         public override JsonElement Encode(object? value) => Inner.Encode(value);
+        public override JsonElement EncodeInput(object? value) => Inner.EncodeInput(value);
+
+        public override object? DecodeOutput(JsonElement value)
+        {
+            Validate(value, ResultSchema, ResultSchema, 0);
+            return JsonSerializer.Deserialize(
+                value,
+                TypertJsonMetadata.ReadOutput((JsonTypeInfo<T>)Inner.ResultMetadata!));
+        }
+
         public override TypertRemoteResult EncodeResult(object? value) => Inner.EncodeResult(value);
         internal override JsonTypeInfo? ResultMetadata => Inner.ResultMetadata;
+        private JsonElement? resultSchema;
+        internal override JsonElement ResultSchema => resultSchema ??= PrepareSchema(ExportSchema(output: true));
+        internal override TypertNullability? DeclarationQuery => item.DeclarationQuery is null ? null : Query;
 
-        private JsonElement ExportSchema()
+        private TypertNullabilityInfo? Query(ReadOnlySpan<string> path)
+        {
+            if (path.IsEmpty)
+                return new(0, false);
+            var field = kind == JsonTypeInfoKind.Dictionary ? "additionalProperties" : "items";
+            return path[0] == field && item.DeclarationQuery?.Invoke(path[1..]) is { } value
+                ? value with
+                {
+                    Id = value.Id + 1
+                }
+                : null;
+        }
+
+        private JsonElement ExportSchema(bool output = false)
         {
             var field = kind == JsonTypeInfoKind.Dictionary ? "additionalProperties" : "items";
             using var buffer = new MemoryStream();
@@ -119,7 +167,7 @@ public abstract partial class TypertCodec
                 writer.WriteStartObject();
                 writer.WriteString("type", kind == JsonTypeInfoKind.Dictionary ? "object" : "array");
                 writer.WritePropertyName(field);
-                WriteNestedSchema(writer, item.Schema, "#/" + field);
+                WriteNestedSchema(writer, output ? item.ResultSchema : item.Schema, "#/" + field);
                 writer.WriteEndObject();
             }
 

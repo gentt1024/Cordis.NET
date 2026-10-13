@@ -329,7 +329,7 @@ internal sealed class DeclarationRemoteProjection
 
     private NativeMember Member(DeclarationMember facts, string owner)
     {
-        var attributes = Wire(facts.Attributes);
+        var attributes = DeclarationAttributeProjection.MemberWire(facts);
         var write = facts.Setter == "Public" ? facts.InitOnly ? "init" : "set" :
             facts.Kind == "field" && !facts.Modifiers.Contains("readonly", StringComparer.Ordinal) ? "field" : "none";
         var initializer = facts.Initializer;

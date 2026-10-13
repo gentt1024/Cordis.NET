@@ -4,7 +4,7 @@
   "validationSource": "29d7c4a1e2769ad77f53a2df7a5dc0912cf9c5cd",
   "continuationCommit": "85ec46a83c32ec0f51bbc84ac2850fdba3f29415",
   "identicalGitTree": "0c6df899d54067b167e9f31282d75a4aec00c9c1",
-  "scope": "Bounded R01/R02 correction. Windows and WSL Ubuntu 24.04 Linux x64 JIT repository/package gates. Each platform has its own package archive hashes. No new AOT, actual browser, original DSH suite, whole-runtime differential, hosted CI, remote SourceLink retrieval, source archive or Maker execution is claimed.",
+  "scope": "Bounded R01/R02 correction. Windows and WSL Ubuntu 24.04 Linux x64 JIT repository/package gates. Each platform has its own package archive hashes. No new AOT, actual browser, original DSH suite, whole-runtime differential, hosted CI, remote SourceLink retrieval, source archive or external applications execution is claimed.",
   "sourceInventoryIdenticalAcrossPlatforms": true,
   "redEvidence": [
     {

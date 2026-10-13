@@ -7,7 +7,7 @@
   "sdkVersion": "10.0.111",
   "sourceUnchangedDuringGate": true,
   "command": "python scripts/verify.py --package --package-output artifacts/null-array-final-packages",
-  "scope": "Windows x64 JIT and actual package consumers. No Linux, Native AOT, original DSH source or cross-runtime differential, browser, named UI, hosted CI, Maker, source-archive build or remote SourceLink retrieval was executed for this checkpoint.",
+  "scope": "Windows x64 JIT and actual package consumers. No Linux, Native AOT, original DSH source or cross-runtime differential, browser, named UI, hosted CI, external applications, source-archive build or remote SourceLink retrieval was executed for this checkpoint.",
   "verificationReportSha256": "ef83b32b2239dd3e1ddff9005112918a791838b8ef9deeb03b3c5a25ae55be2c",
   "tests": [
     {

@@ -73,7 +73,7 @@ await connection.dispose()
 
 `CordisManagement` 不再发布 `/settings`、`/settings/schema` 或手写 Settings 写路由。浏览器管理客户端不再提供 Settings hash 方法；其 raw 配置方法保留独立用途。维护中的应用示例、CLI、probes 和包消费者均使用生成 Settings 合同。CLI Settings namespace 使用 `worker` 等 profile Entry id，不再使用 `root:worker` 等 runtime 地址；完整配置命令仍使用 runtime 地址。CLI Settings 读取／schema／编辑调用同一生成 controller。
 
-本次不修改 Maker。其所属会话需要重新生成客户端，在草稿中保留数值 revision，正常编辑提交读到的版本，对脱敏表单使用路径 mutate，保留草稿处理冲突，并停止调用移除的手写端点。库不会为 Maker 增设兼容路径。
+应用消费者重新生成客户端，在草稿中保留数值 revision，正常编辑提交读到的版本，对脱敏表单使用路径 mutate，保留草稿处理冲突，并停止调用移除的手写端点。旧生成代码不构成兼容要求。
 
 ## 数据与发布
 

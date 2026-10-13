@@ -1337,7 +1337,7 @@
       "originalReportSha256": "43c27c02df87b27880c2e8276f88216cf6aaf7da41e74d15cacd11f71c3a577e"
     }
   },
-  "evidenceBoundary": "Full Ubuntu 24.04 x64 gates under WSL2 and independent Windows x64 no-Git package proof; exact frozen source and separate package batches. The two full Windows attempts failed different watcher waits; Windows full acceptance remains incomplete. Dynamic CLR Host requires JIT; Native AOT evidence applies to static clients/probes. Node is used by independent TS/reference gates, not the Settings .NET chain. This is not complete Typert, hosted CI, remote SourceLink retrieval, Maker execution, named UI framework validation, publication or dependency-selection acceptance.",
+  "evidenceBoundary": "Full Ubuntu 24.04 x64 gates under WSL2 and independent Windows x64 no-Git package proof; exact frozen source and separate package batches. The two full Windows attempts failed different watcher waits; Windows full acceptance remains incomplete. Dynamic CLR Host requires JIT; Native AOT evidence applies to static clients/probes. Node is used by independent TS/reference gates, not the Settings .NET chain. This is not complete Typert, hosted CI, remote SourceLink retrieval, external applications execution, named UI framework validation, publication or dependency-selection acceptance.",
   "openScope": [
     "Complete authored type graph and referenced-model composition",
     "All model-driven emitters and publication backends",

@@ -292,7 +292,8 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
 
 def pack_external_data(fixtures, feed, dotnet, composition, run, project):
     roots = ''.join('<CordisTypertModelRoot Include="IndependentDeclarations.External.' + name + '"/>'
-        for name in ("ImportedData", "UnrelatedData", "ImportedHiddenData", "Envelope`1"))
+        for name in ("ImportedData", "UnrelatedData", "ImportedHiddenData", "Envelope`1",
+            "RequiredConstructor", "OptionalConstructor", "SelectedConstructor", "DirectionalData"))
     external, external_project = project("DeclarationExternal",
         '<AssemblyName>IndependentDeclarations.External</AssemblyName>'
         '<PackageId>IndependentDeclarations.External</PackageId><Version>1.0.0-alpha</Version>', composition,
@@ -303,9 +304,80 @@ def pack_external_data(fixtures, feed, dotnet, composition, run, project):
     return external, external_project, model
 
 
+def verify_web_contracts(root, feed, output, version, dotnet, composition, run, project, hosted, external_model):
+    fixtures = root / "tests/fixtures/DeclarationModel"
+    node = shutil.which("node")
+    assert node, "Node.js is required for the actual generated Web consumer"
+    web_steps = []
+
+    def web_call(label, address, directory, mode):
+        result = subprocess.run([node, str(root / "scripts/typert-referenced-web-consumer.mjs"),
+            address, str(directory), mode], capture_output=True, timeout=90)
+        (output / (label + ".log")).write_bytes(result.stdout + result.stderr)
+        web_steps.append({"name": label, "exitCode": result.returncode,
+            "assets": {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in directory.glob("*.m*")}})
+        (output / "web-contract-evidence.json").write_text(json.dumps(web_steps, indent=2) + "\n", encoding="utf-8")
+        assert result.returncode == 0, (result.stdout + result.stderr).decode("utf-8", "replace")
+
+    for mode, constant in (("Omitted", ""), ("False", "CTOR_FALSE"), ("True", "CTOR_TRUE")):
+        label = "web-contract-" + mode.lower()
+        package = "IndependentWeb." + mode
+        author, author_project = project("WebAuthor" + mode,
+            f'<AssemblyName>{package}.Provider</AssemblyName><PackageId>{package}.Provider</PackageId>'
+            '<Version>1.0.0-alpha</Version><CordisTypertService>webContract</CordisTypertService>'
+            f'<DefineConstants>$(DefineConstants);{constant}</DefineConstants>',
+            composition + '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>')
+        shutil.copyfile(fixtures / "WebContractRemote.cs", author / "WebContractRemote.cs")
+        run(label + "-author-pack", [dotnet, "pack", author_project, "-c", "Release", "-o", feed])
+        model = author / ("obj/Release/net10.0/cordis-typert/" + package + ".Provider.cordis.model.json")
+        contracts, contracts_project = project("WebContracts" + mode,
+            f'<PackageId>{package}.Web</PackageId><Version>1.0.0-alpha</Version>'
+            '<CordisTypertService>webContract</CordisTypertService>'
+            f'<CordisTypertWebModel>{model.name}</CordisTypertWebModel>'
+            f'<CordisTypertClientModel>{model.name}</CordisTypertClientModel>'
+            '<CordisTypertClientNamespace>IndependentWeb.Caller</CordisTypertClientNamespace>'
+            '<CordisTypertClientName>WebContractClient</CordisTypertClientName>', composition,
+            f'<ItemGroup><CordisTypertWebReferenceModel Include="{external_model.name}"/>'
+            f'<CordisTypertClientReferenceModel Include="{external_model.name}"/></ItemGroup>')
+        shutil.copyfile(model, contracts / model.name)
+        shutil.copyfile(external_model, contracts / external_model.name)
+        run(label + "-web-pack", [dotnet, "pack", contracts_project, "-c", "Release", "-o", feed])
+        web = output / label
+        web.mkdir()
+        with zipfile.ZipFile(feed / (package + ".Web.1.0.0-alpha.nupkg")) as archive:
+            for name in ("remote.schema.json", "remote.mjs", "remote.d.mts", "cordis-remote.mjs", "cordis-remote.d.mts"):
+                (web / name).write_bytes(archive.read("cordis/typert/web/" + name))
+        assets = json.loads((contracts / "obj/project.assets.json").read_text(encoding="utf-8"))
+        assert not any(name.startswith((package + ".Provider/", "IndependentDeclarations.External/"))
+            for name in assets["libraries"]), "Static Web generation acquired author assemblies"
+        host, host_project = project("WebHost" + mode, '<OutputType>Exe</OutputType>',
+            f'<PackageReference Include="{package}.Provider" Version="1.0.0-alpha"/>'
+            f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>'
+            '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
+        shutil.copyfile(fixtures / "WebContractHost.cs", host / "Program.cs")
+        run(label + "-host-build", [dotnet, "build", host_project, "-c", "Release"])
+        caller, caller_project = project("WebCaller" + mode, '<OutputType>Exe</OutputType>',
+            f'<PackageReference Include="{package}.Web" Version="1.0.0-alpha"/>')
+        shutil.copyfile(fixtures / "WebContractConsumer.cs", caller / "Program.cs")
+        run(label + "-caller-build", [dotnet, "build", caller_project, "-c", "Release"])
+        with hosted(label + "-host", [dotnet, host / f"bin/Release/net10.0/WebHost{mode}.dll", web]) as address:
+            web_call(label + "-static-caller", address, web, "contracts")
+            for name in ("cordis-remote.mjs", "cordis-remote.d.mts"):
+                shutil.copyfile(web / name, web / "runtime" / name)
+            web_call(label + "-runtime-caller", address, web / "runtime", "contracts-runtime")
+            run(label + "-dotnet-caller", [dotnet, caller / f"bin/Release/net10.0/WebCaller{mode}.dll", address])
+        schemas = json.loads((web / "host-schemas.json").read_text(encoding="utf-8"))
+        for name in ("required", "selected"):
+            assert "Name" in schemas["stj/" + name]["required"]
+            assert "Name" in schemas["webContract/" + name + "/value"]["required"]
+        assert "Name" not in schemas["stj/optional"].get("required", [])
+        assert "Name" not in schemas["webContract/optional/value"].get("required", [])
+
+
 def verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, external_setup=None):
     fixtures = root / "tests/fixtures/DeclarationModel"
     external, external_project, external_model = external_setup or pack_external_data(fixtures, feed, dotnet, composition, run, project)
+    verify_web_contracts(root, feed, output, version, dotnet, composition, run, project, hosted, external_model)
     sdk = run("referenced-data-selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
     compiler = source / "cache/cordis.net.composition" / version / "tools/net10.0/typert/Cordis.Typert.Compiler.dll"
     roslyn = dotnet.parent / "sdk" / sdk / "Roslyn/bincore"

@@ -11,8 +11,8 @@ const nullName: Input = { External: { external_name: null, Code: null } }
 const wrongDictionary: Input = { External: external, ByName: { invalid: { external_name: 1, Code: null } } }
 void [missing, nullName, wrongDictionary]
 
-export async function run(origin: string, count: number) {
-  const connection = new TypertConnection(origin + '/remote')
+export async function run(origin: string, count: number, fetcher?: typeof fetch) {
+  const connection = new TypertConnection(origin + '/remote', fetcher)
   const client = createRemote(connection)
   try {
     const result = await client['referencedData/echo']({ value: input })
@@ -25,6 +25,15 @@ export async function run(origin: string, count: number) {
     for (const value of [{ External: { external_name: 'bad' } }, { External: { external_name: null, Code: null } }]) {
       const rejected = await connection.call('referencedData/echo', { value })
       if (rejected.ok) throw new Error('Host accepted an input refused by the generated declaration')
+    }
+    const abort = new AbortController()
+    const reason = new Error('Consumer cancelled before send')
+    abort.abort(reason)
+    try {
+      await connection.call('referencedData/echo', { value: input }, abort.signal)
+      throw new Error('Cancelled call completed')
+    } catch (error) {
+      if (error !== reason) throw error
     }
   } finally {
     await client.dispose()

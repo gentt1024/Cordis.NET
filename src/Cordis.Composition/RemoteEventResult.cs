@@ -47,17 +47,17 @@ public static class TypertEventListeners
         {
             var result = await listener(
                 request.Agent,
-                (TRequest)requestCodec.Decode(request.Data)!,
+                (TRequest)requestCodec.DecodeOutput(request.Data)!,
                 Next,
                 request.CancellationToken);
-            return result.HasValue ? resultCodec.Encode(result.Value) : TypertRemoteEventsClient.NextMarker;
+            return result.HasValue ? resultCodec.EncodeInput(result.Value) : TypertRemoteEventsClient.NextMarker;
 
             async Task<RemoteEventResult<TResult>> Next()
             {
                 var raw = await TypertRemoteEventsClient.AwaitAsync(evt.Next());
                 return ReferenceEquals(raw, TypertRemoteEventsClient.NextMarker)
                     ? default(RemoteEventResult<TResult>)
-                    : (TResult)resultCodec.Decode(raw is JsonElement json ? json : default)!;
+                    : (TResult)resultCodec.DecodeOutput(raw is JsonElement json ? json : default)!;
             }
         }
     }

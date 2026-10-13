@@ -7,7 +7,7 @@
   "sdkVersion": "10.0.111",
   "sourceUnchangedDuringGate": true,
   "command": "python scripts/verify.py --package",
-  "scope": "Windows x64 JIT repository and real package consumers. Fixed DSH interop, Native AOT caller and browser results are recorded separately with their actual candidate and package identities. No Linux, hosted CI, remote SourceLink retrieval, source-archive build or Maker execution is claimed.",
+  "scope": "Windows x64 JIT repository and real package consumers. Fixed DSH interop, Native AOT caller and browser results are recorded separately with their actual candidate and package identities. No Linux, hosted CI, remote SourceLink retrieval, source-archive build or external applications execution is claimed.",
   "verificationReportSha256": "b03cafa6839ba75e8b820ce0ec684dba7611127255833b790ca3a50c4e3b0a9d",
   "tests": [
     {

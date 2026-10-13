@@ -511,3 +511,13 @@ subject 可以实现 `IEventFilter`，载体保留其过滤器。载体不暴露
 `Scope.Of(context)` 读取最近的继承标签。向 `Scope.Create` 提供 `parent` 可以绑定路由祖先；需要受控重绑时，保留 `Scope.BindParent(key, parent)` 返回的句柄。路由父链不转移所有权。`DisposeAsync` 等待所属清理，包括有序复合 effect 先前通过 `DisposeRawAsync` 启动的清理。
 
 Remote 方法通过 `TypertInvocation.Current!.Peer!` 取得准入后的 Peer，并通过 `peer.Context` 注册。以 `parent: peer` 创建的子 scope 会向上路由到这些 Peer 监听者。不要释放借用的 Peer Context。socket、逻辑流和调用方都不拥有共享 Connection 的 Peer，也不需要用请求参数指定它。直接 Gateway 调用中由所有者持有的 fallback 使用同一机制。
+
+### 有方向的数据 Web 合同
+
+可省略参数与可空值是独立事实。`[DisallowNull] double? expectedRevision = null!` 接受省略或数值，但拒绝显式 JSON null。生成的 TypeScript 参数为 `expectedRevision?: number`。
+
+同一 DTO 可以有不同的输入与结果形状，无需第二份声明。`[JsonRequired, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int Count { get; set; }` 要求输入包含 Count，输出则允许省略 Count。带 DisallowNull 的可空 getter 仍允许结果为 null，同时拒绝输入 null。使用生成方法的参数和结果类型，不要把一个方向的类型直接复用于两个方向。构造默认值由真实 Host 执行；非可选构造参数必须提供，即使 RespectRequiredConstructorParameters 为 false 或省略。
+
+`new TypertConnection(base)` 与 `new TypertConnection(base, globalThis.fetch)` 都使用标准 Connection。绑定函数和箭头 override 继续受支持；消费者不需要手动绑定原生函数来补偿库内调用方式。
+
+生成的 .NET 方法自动使用相同的方向合同。必填的零值／默认值可以正常传入，即使作者写出结果时会忽略这些值，输入编码仍会发送它们。返回 DTO 接受作者允许的 null 和省略的默认字段；无需通过覆盖序列化选项补偿方向差异。

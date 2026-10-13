@@ -1,9 +1,75 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace IndependentDeclarations.External;
 
 public interface IExternalMarker;
+
+public sealed record RequiredConstructor(string Name);
+
+public sealed record OptionalConstructor(string Name = "constructor-default");
+
+public sealed class SelectedConstructor
+{
+    public SelectedConstructor()
+    {
+    }
+
+    [JsonConstructor]
+    public SelectedConstructor(string name) => Name = name;
+
+    public string Name
+    {
+        get;
+        set;
+    } = "initial";
+}
+
+public sealed class DirectionalData
+{
+    [JsonRequired, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Count
+    {
+        get;
+        set;
+    }
+
+    [JsonRequired, DisallowNull, JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public string? Value
+    {
+        get;
+        set;
+    }
+
+    [JsonRequired]
+    public int GlobalCount
+    {
+        get;
+        set;
+    }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public int Always
+    {
+        get;
+        set;
+    }
+
+    [JsonRequired, MaybeNull, JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public string OutputNullable
+    {
+        get;
+        set;
+    } = "initial";
+
+    [AllowNull]
+    public string InputNullable
+    {
+        get;
+        set;
+    } = "initial";
+}
 
 public sealed class Envelope<T>
 {

@@ -7,7 +7,7 @@
   "sdkVersion": "10.0.111",
   "sourceUnchangedDuringGate": true,
   "command": "python scripts/verify.py --package",
-  "scope": "Windows x64 JIT repository and real package consumers. Browser selected-notification recovery has a separate receipt at the same source commit. Fixed DSH interop and Native AOT caller results remain bound in the earlier local evidence receipt; they are not reruns of this final candidate. No Linux, hosted CI, remote SourceLink retrieval, source-archive build or Maker execution is claimed.",
+  "scope": "Windows x64 JIT repository and real package consumers. Browser selected-notification recovery has a separate receipt at the same source commit. Fixed DSH interop and Native AOT caller results remain bound in the earlier local evidence receipt; they are not reruns of this final candidate. No Linux, hosted CI, remote SourceLink retrieval, source-archive build or external applications execution is claimed.",
   "verificationReportSha256": "7b830be978845c3fdc74f5558776efd8a46f355320a426625995e4f7d4a7a2fb",
   "tests": [
     {

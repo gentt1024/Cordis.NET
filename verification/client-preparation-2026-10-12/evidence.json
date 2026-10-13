@@ -383,7 +383,7 @@
     "Windows x64 checks completed in recorded segments after process-launch failure; no uninterrupted green full-gate run; Linux not rerun on this candidate",
     "No static AOT, hosted CI, remote SourceLink retrieval or full DSH original-source suite on this candidate",
     "Browser evidence is recorded separately; no full Context/Peer matrix",
-    "No dependency, version, pin, Maker, push, merge, publication or deployment change"
+    "No dependency, version, pin, external applications, push, merge, publication or deployment change"
   ],
   "generatedConsumer": {
     "status": "requested-checks-passed",

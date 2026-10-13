@@ -105,7 +105,7 @@ python scripts/check-docs.py
 
 两平台验证器自测均通过。原始报告、源码清单、包哈希、独立审查及实际命令保存于交付证据。Linux 成功 Git checkout 的 324 个原始源码哈希与冻结 ZIP 全部相同；首次 checkout 的两个换行差异使用冻结 bytes 替换，没有语义 Git diff。没有增加全仓 S0 或无关 DSH 套件。
 
-失败保留：Linux 旧 SDK 首次拒绝 restore；无 Git 导出随后通过运行时/AOT 检查，但因没有生成 SourceLink 记录而未通过符号打包。导出符号路径仍未关闭，源码 ZIP 的构建/运行和 Git checkout 的成功符号检查不能关闭该项。Node data URL 错误输出截断导致指定拒绝检查失败，随后独立审查诊断修正并复跑。托管 CI、远端 SourceLink 取源、浏览器 UI 渲染、其他 RID 和 Maker 产品运行均未执行。Settings 仍限定顶层 primitive/live SET-only；完整 schema 导出、reset/多字段、模块图、远程协议和安装工具仍是独立缺口。
+失败保留：Linux 旧 SDK 首次拒绝 restore；无 Git 导出随后通过运行时/AOT 检查，但因没有生成 SourceLink 记录而未通过符号打包。导出符号路径仍未关闭，源码 ZIP 的构建/运行和 Git checkout 的成功符号检查不能关闭该项。Node data URL 错误输出截断导致指定拒绝检查失败，随后独立审查诊断修正并复跑。托管 CI、远端 SourceLink 取源、浏览器 UI 渲染、其他 RID 和 外部应用 产品运行均未执行。Settings 仍限定顶层 primitive/live SET-only；完整 schema 导出、reset/多字段、模块图、远程协议和安装工具仍是独立缺口。
 
 固定上游的语言文件用例在文件系统无法同时保存 `en.json` 与 `EN.json` 时调用 `context.skip()`。验证器将该准确断言及原因记录为跳过，不计为通过；仍拒绝失败、未知跳过和不一致的报告计数。Linux 在大小写敏感文件系统上执行该断言。这个参考侧能力结果与 .NET 测试结果分开记录，没有删除任何上游测试。
 
@@ -191,7 +191,7 @@ python scripts/verify-authoring.py --aot --packages artifacts/upgrade-packages
 
 失败证据仍保留：严格符号检查曾拒绝尚未对应 Git 检查点的源码字节；隔离 Linux 副本最初缺少仓库元数据；多 Entry 脚本曾使用错误的夹具路径大小写。修正后的检查点和 Linux 路径通过了未放宽的门禁。独立审查暴露根可空标注丢失和过强 unary 取消检查，修复后的包行为已在两平台通过。新 TS 正向检查最初要求可变数组，而生成数组为 readonly；修正消费者声明时未改变生产数组合同。
 
-完整源类型分析、丰富 Context/owned-value 投影、Peer/uplink/events、完整二进制 attachment/wire 兼容，以及既有管理消费者迁移，仍列在[原范围对账](development.zh.md#2026-10-09-应用基础设施范围续账)中。不能强制终止任意业务或清理；宿主必须在关闭 Cordis root 前排空活动 Gateway 枚举器。不声明 Native AOT 内动态 CLR 支持。未执行 hosted CI、这些未发布提交的远端 SourceLink 获取、浏览器渲染或 Maker 运行。原始平台报告和源码/包哈希保存在忽略的本地证据中，未提交机器路径。
+完整源类型分析、丰富 Context/owned-value 投影、Peer/uplink/events、完整二进制 attachment/wire 兼容，以及既有管理消费者迁移，仍列在[原范围对账](development.zh.md#2026-10-09-应用基础设施范围续账)中。不能强制终止任意业务或清理；宿主必须在关闭 Cordis root 前排空活动 Gateway 枚举器。不声明 Native AOT 内动态 CLR 支持。未执行 hosted CI、这些未发布提交的远端 SourceLink 获取、浏览器渲染或 外部应用 运行。原始平台报告和源码/包哈希保存在忽略的本地证据中，未提交机器路径。
 
 ```console
 npm ci --prefix reference --ignore-scripts
@@ -212,7 +212,7 @@ python scripts/check-docs.py
 
 锁变更后的最终候选需要重新冻结并运行门禁，不能沿用上述检查点。必须一起读取实际报告中的提交、运行前后源码哈希、精确包哈希与状态。源码 ZIP 从固定 Git blob 导出，另列生成的 no-Git 构建元数据。报告总数、源码执行、差分与包消费者仍属不同证据。独立 CLR 门禁现包括嵌套主程序集、两个入口顺序、私有 native 调用、binary 副本身份/冲突和延迟拒绝对照。Remote 门禁包括真实的显式 Schema 闭合 tuple 调用与四种 definition 稳定的提供者撤销场景；其他 tuple 变体只证明 codec/投影支持。
 
-这些检查不关闭原范围剩余通用行。不表示已执行 hosted CI、远端 SourceLink 获取、Maker、Release、发布或部署。原始报告与私有审查记录不进入跟踪源码；审查交付可包含绑定冻结源码的脱敏证据清单。
+这些检查不关闭原范围剩余通用行。不表示已执行 hosted CI、远端 SourceLink 获取、外部应用、Release、发布或部署。原始报告与私有审查记录不进入跟踪源码；审查交付可包含绑定冻结源码的脱敏证据清单。
 
 
 ## 2026-10-10 CLR 整合与原生 Settings 消费链验证
@@ -233,7 +233,7 @@ python scripts/check-docs.py
 
 失败和中断记录保持原状态。首个生命周期包批次要求物理删除，与已接受稳定保留语义冲突；修正后的消费者曾用同一生产包批次独立复验。较早模型检查点暴露源码/XML conformance、全局 AOT 标志传播到仅构建期的 Compiler/Analyzer，以及仅分析的可选方法夹具误入运行时 analyzer。Settings 夹具曾因未排空 Host 输出而阻塞；排空同一未结束进程即恢复调用，随后修正 reader。`e97d8bf70ce119d33526ac3ca3edfeb685910c22` 两平台运行时/包门禁通过，但作者变异构建复制清单漏了 Compiler/Generator，因此作者门禁失败；最终检查点补齐清单，未改变变异断言。主动停止的旧 Windows 运行和独立自检的错误 SDK 运行不计验收。原始证据私下保留，未覆盖或连同机器路径提交。
 
-仅验收上述本地切片，不代表完整 Typert。独立 authored model 不从有损 descriptor 反推；现有 analyzer 仍通过源事实 conformance 桥生成运行时绑定。丰富类型/引用图组合、全部模型驱动后端、丰富 Context/owned-value、Peer/uplink/events、完整 binary attachment 及剩余生产消费者迁移保持未完成。未提供 Settings base/user、写操作或数值 revision 等价；适配使用原生 string revision。lookup 时序、IDE/design-time 首构建以及 WPF/Avalonia/Godot .NET/Blazor 具名宿主需独立证据。不声明 Native AOT 内动态 CLR 支持。未执行 hosted CI、远端 SourceLink 获取、浏览器呈现或 Maker。DSH pin 和包版本不变；没有新增依赖选型、推送、远端合并、发布、Release 或部署。
+仅验收上述本地切片，不代表完整 Typert。独立 authored model 不从有损 descriptor 反推；现有 analyzer 仍通过源事实 conformance 桥生成运行时绑定。丰富类型/引用图组合、全部模型驱动后端、丰富 Context/owned-value、Peer/uplink/events、完整 binary attachment 及剩余生产消费者迁移保持未完成。未提供 Settings base/user、写操作或数值 revision 等价；适配使用原生 string revision。lookup 时序、IDE/design-time 首构建以及 WPF/Avalonia/Godot .NET/Blazor 具名宿主需独立证据。不声明 Native AOT 内动态 CLR 支持。未执行 hosted CI、远端 SourceLink 获取、浏览器呈现或 外部应用。DSH pin 和包版本不变；没有新增依赖选型、推送、远端合并、发布、Release 或部署。
 
 
 ## Typert 修复验证，2026-10-10
@@ -253,7 +253,7 @@ Windows x64 的 810 项原生测试通过，无失败/跳过；WSL2 Ubuntu 24.04
 
 私有最终收集器在四项门禁命令均退出零后，将 CLR 报告的列表误作对象而失败。证据收集通过校验、复制原制品恢复，没有重跑门禁。回执将这次收集故障及保留日志 hash 与运行结果分别记录。
 
-本次关闭三个确定缺陷及正式验证暴露的 watcher 故障，不关闭[原范围剩余项](development.zh.md#2026-10-10-有界执行完成记录)：完整类型图/后端、更丰富协议及生产消费者工作保持原状态。动态 CLR 仅 JIT。hosted CI、远端 SourceLink、具名 UI 宿主、浏览器呈现和 Maker 未执行。没有新增依赖选型、版本修改、push、远端 merge、发布或部署。后续仅追加文档和脱敏回执，包身份仍为上述源码检查点。
+本次关闭三个确定缺陷及正式验证暴露的 watcher 故障，不关闭[原范围剩余项](development.zh.md#2026-10-10-有界执行完成记录)：完整类型图/后端、更丰富协议及生产消费者工作保持原状态。动态 CLR 仅 JIT。hosted CI、远端 SourceLink、具名 UI 宿主、浏览器呈现和 外部应用 未执行。没有新增依赖选型、版本修改、push、远端 merge、发布或部署。后续仅追加文档和脱敏回执，包身份仍为上述源码检查点。
 
 
 ## Caller view 修复验证，2026-10-10
@@ -273,7 +273,7 @@ Windows x64 的 810 项原生测试通过，无失败/跳过；WSL2 Ubuntu 24.04
 
 运行时检查点的全部 510 个 tracked 文件匹配冻结 Git blob；完整 Linux 门禁保留一致的初始/最终 503 项源码哈希。源码 ZIP SHA-256 为 `805a6d01c8df896e9d565a525b4e4f73086295595caab28c10187808e86f5ead`。四阶段 formatter 对 204 个 C# 文件结论一致。新 Linux 与 Windows 无 Git 包批次分开保留。Windows 实际消费者文件、恢复包和 NuGet 元数据已独立重读。Linux 收集器在任务结束时读取实际配置及恢复包字节，保存哈希匹配保留 feed；其临时消费者/缓存目前已不可访问，未声称事后独立重读源码/缓存。原始报告留在仓库外，回执记录其哈希和上述限制。
 
-本轮关闭已复现的 F1 Service 视图缺陷，Windows 全量门禁仍开放。[原范围剩余项](development.zh.md#2026-10-10-有界执行完成记录)、固定 DSH pin、包版本和公共 API snapshot 不变。动态 CLR 仍仅适用于 JIT。未执行 hosted CI、远端 SourceLink 获取、具名 UI Host、浏览器渲染或 Maker；没有新增依赖、推送、远端合并、发布或部署。后续文档/回执提交与已验证的运行时检查点分别记录。
+本轮关闭已复现的 F1 Service 视图缺陷，Windows 全量门禁仍开放。[原范围剩余项](development.zh.md#2026-10-10-有界执行完成记录)、固定 DSH pin、包版本和公共 API snapshot 不变。动态 CLR 仍仅适用于 JIT。未执行 hosted CI、远端 SourceLink 获取、具名 UI Host、浏览器渲染或 外部应用；没有新增依赖、推送、远端合并、发布或部署。后续文档/回执提交与已验证的运行时检查点分别记录。
 
 
 ### 配置监听修正与平台门禁闭环，2026-10-10
@@ -286,7 +286,7 @@ Windows x64 的 810 项原生测试通过，无失败/跳过；WSL2 Ubuntu 24.04
 
 私有输入收集器起初在 Windows 存储上合并了两个仅大小写不同的 Linux 投影文件。恢复时，两份原文件可读取，且匹配首次捕获哈希。仅复制恢复将全部 70 份输入存入保留大小写的归档，并保留首次失败日志和捕获记录。稍后独立复核逐份确认保留输入匹配首次捕获，但原 Linux 临时目录已不可访问，未声称此时重读原目录。Windows 和无 Git 的原源码、缓存及元数据已独立重读。这次收集修复没有重跑或改变任一平台门禁。
 
-详见[源码绑定回执](../verification/config-watch-2026-10-10/evidence.json)。本条关闭该检查点的本地 Windows 全量门禁项。完整 Typert 类型图/后端/协议、剩余 Settings 及生产消费者仍未完成。hosted CI、远端 SourceLink 获取、具名 UI Host、Maker 执行、新依赖选型和发布仍未验证或未授权。
+详见[源码绑定回执](../verification/config-watch-2026-10-10/evidence.json)。本条关闭该检查点的本地 Windows 全量门禁项。完整 Typert 类型图/后端/协议、剩余 Settings 及生产消费者仍未完成。hosted CI、远端 SourceLink 获取、具名 UI Host、外部应用 执行、新依赖选型和发布仍未验证或未授权。
 
 ## Remote 准备阶段修复验证，2026-10-11
 
@@ -325,7 +325,7 @@ R02 从已合入 main `424cfb98823e9867de5198118b26f3973b9b397d` 续行。运行
 
 保留两次早先失败作为私有本地证据。未提交实现通过原生测试，但其包 SourceLink 仍绑定旧 main 而失败；提交实现后纠正了源码身份。冻结的 `3753a5a` 门禁随后因 Settings 包夹具把用户 patch 同时作为基础文件、写入后重复应用 override 并使 Entry 不可寻址而失败。夹具现在遵循既有宿主方式，挂载独立空 `cordis.yml`。原客户端断言在定向包复验和最终完整门禁中均通过；两次早先失败均不重分类为验收。
 
-本候选关闭上述标准 Settings 读写、可选 Remote 参数及有界普通声明／目录检查。标准文档打开、生成 PluginManager／通知整合、完整模型／后端及丰富协议职责继续保留在[原范围](development.zh.md)，未从本轮工作移除。本检查点未执行 Linux、Native AOT、hosted CI、远端 SourceLink 获取、浏览器渲染、具名 UI Host 或 Maker。依赖、pin 和源码版本未改；未推送、远端合并、打 tag、发布或部署。本地使用 alpha.4 版本号的包只是隔离验证输入，不替换已发布 alpha.4。后续文档／回执提交另有身份，不替代本运行时检查点。
+本候选关闭上述标准 Settings 读写、可选 Remote 参数及有界普通声明／目录检查。标准文档打开、生成 PluginManager／通知整合、完整模型／后端及丰富协议职责继续保留在[原范围](development.zh.md)，未从本轮工作移除。本检查点未执行 Linux、Native AOT、hosted CI、远端 SourceLink 获取、浏览器渲染、具名 UI Host 或 外部应用。依赖、pin 和源码版本未改；未推送、远端合并、打 tag、发布或部署。本地使用 alpha.4 版本号的包只是隔离验证输入，不替换已发布 alpha.4。后续文档／回执提交另有身份，不替代本运行时检查点。
 
 ## 生成式管理与普通模型消费2026-10-11
 
@@ -346,7 +346,7 @@ R02 从已合入 main `424cfb98823e9867de5198118b26f3973b9b397d` 续行。运行
 
 首个冻结 `57a3df8` 完整运行在 847 项中失败一项：预读不可读兼容数据绕过了原安全授权拒绝。其 846 项通过不算验收。修复将未知字节与不存在区分，继续由原权威裁决；既有主要回归保留断言，并新增失败 application／未变化状态检查。原失败报告保留。独立规范格式检查发现 21 个排版差异，经 token 不变的修正后四阶段通过。早先试验消费者暴露必需 nullable 字段被省略、CLI 未挂载 PluginManager，两项均在此门禁前修复。另一次脚本自检启动使用了错误 SDK 搜索路径，固定 SDK 下未改动的测试通过。以上尝试均不改记为最终批次通过。
 
-[管理迁移](management-remote-migration.zh.md)记录唯一生成式公共用法，以及退出的手写 PluginManager HTTP／SSE 路由、浏览器方法和 decoder。原始配置／状态／制品职责保留既有所有者与授权。选定通知不将 Peer／uplink／waterfalls、owned-value／引用图或完整附件／wire 互通关项。保存的 v2 重建 Remote、泛型 DTO 发射、引用模型组合、原生文档／UI 集成及其余[原范围](development.zh.md)继续开放。本检查点未执行原始 DSH 源测试／跨运行时 differential、Linux、Native AOT、托管 CI、远程 SourceLink 取回、浏览器渲染、无 Git 源码归档构建或 Maker；早先上游执行保留自己的证据身份。没有新增依赖、合并、tag、发布或部署；本地 alpha.4 版本包是隔离验证输入。后续文档／回执提交与这些二进制分别绑定身份。
+[管理迁移](management-remote-migration.zh.md)记录唯一生成式公共用法，以及退出的手写 PluginManager HTTP／SSE 路由、浏览器方法和 decoder。原始配置／状态／制品职责保留既有所有者与授权。选定通知不将 Peer／uplink／waterfalls、owned-value／引用图或完整附件／wire 互通关项。保存的 v2 重建 Remote、泛型 DTO 发射、引用模型组合、原生文档／UI 集成及其余[原范围](development.zh.md)继续开放。本检查点未执行原始 DSH 源测试／跨运行时 differential、Linux、Native AOT、托管 CI、远程 SourceLink 取回、浏览器渲染、无 Git 源码归档构建或 外部应用；早先上游执行保留自己的证据身份。没有新增依赖、合并、tag、发布或部署；本地 alpha.4 版本包是隔离验证输入。后续文档／回执提交与这些二进制分别绑定身份。
 
 ## 显式引用模型消费2026-10-11
 
@@ -358,7 +358,7 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 
 [绑定回执](../verification/reference-model-composition-2026-10-11/evidence.json)记录实际报告、TRX、源码／包 hash 和六类拒绝结果。257 个私有捕获的消费者输入来自实际完成的目录，包括生成输入及与本批 feed 核对的五个已还原 Cordis 归档；它们不是对每次临时源码变更中间态的重建。三个非 C# 文件与 Git blob 仅有 CRLF／LF 表示差异，每个编译 C# 文件字节都与 Git 一致。私有 `JsonInclude` red／green 探针及初次 formatter 分歧继续记录为失败证据；没有通过放宽断言获得验收。
 
-另一次静态管理客户端 Native AOT 检查在先前的 `6ad9d7f` 包上通过，宿主为 JIT。[独立回执](../verification/management-model-continuation-2026-10-11/static-management-aot.json)记录七个 .NET 步骤和一个 TypeScript 步骤，不证明 `2cf481c` 的 AOT。本次新源码检查点未执行原始 DSH 测试／跨运行时 differential、Linux、Native AOT、托管 CI、浏览器渲染、Maker、无 Git 归档构建或远程 SourceLink 取回。更广的保存 Remote、泛型 DTO、Schema／TS 引用模型及原基础设施职责继续开放。没有据此新增依赖、合并、发布或部署；文档／回执提交与二进制身份分别记录。
+另一次静态管理客户端 Native AOT 检查在先前的 `6ad9d7f` 包上通过，宿主为 JIT。[独立回执](../verification/management-model-continuation-2026-10-11/static-management-aot.json)记录七个 .NET 步骤和一个 TypeScript 步骤，不证明 `2cf481c` 的 AOT。本次新源码检查点未执行原始 DSH 测试／跨运行时 differential、Linux、Native AOT、托管 CI、浏览器渲染、外部应用、无 Git 归档构建或远程 SourceLink 取回。更广的保存 Remote、泛型 DTO、Schema／TS 引用模型及原基础设施职责继续开放。没有据此新增依赖、合并、发布或部署；文档／回执提交与二进制身份分别记录。
 
 ## 模型管线重建，2026-10-11
 
@@ -374,7 +374,7 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 
 随后冻结点 `e2ba70e` 的 848 项测试通过 847 项。一项管理传输测试在活动 Gateway 迭代器结束前关闭 root，违反 `424cfb98` 已记录的生命周期合同。未修改源码的定向重跑通过，因此该失败依赖调度时序。测试现在先撤销通知源，读取相同终止错误帧和 EOF，再关闭 root 并检查 Gone。16 项管理传输定向测试全部通过，生产清理仍传播失败。
 
-四阶段 formatter 对 240 个 C# 文件达成一致。38 项验证脚本自检在观察修复前执行，相关脚本字节未变化。本批未执行 Linux、Native AOT、原始 DSH 源码／跨运行时差分、浏览器渲染、Maker、托管 CI、源码归档构建或远端 SourceLink 获取。此前 Linux／AOT 证据仍绑定原检查点。未改变包版本、上游 pin 或依赖；本次验收不包含合并、推送、发布或部署。
+四阶段 formatter 对 240 个 C# 文件达成一致。38 项验证脚本自检在观察修复前执行，相关脚本字节未变化。本批未执行 Linux、Native AOT、原始 DSH 源码／跨运行时差分、浏览器渲染、外部应用、托管 CI、源码归档构建或远端 SourceLink 获取。此前 Linux／AOT 证据仍绑定原检查点。未改变包版本、上游 pin 或依赖；本次验收不包含合并、推送、发布或部署。
 
 ## null 数组属性与当前用法修正，2026-10-11
 
@@ -384,7 +384,7 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 
 修复前，普通和 Remote 作者均在冻结的 `7937ee8` 包上因空引用提取失败。另一次构建使用相同隔离旧包缓存，移除显式提取根后，在 Host generator 触发 `CORDISREMOTE001`。这些是实际执行的失败。更早的直接 generator 尝试使用全局缓存，因缺少属性失败，不作为 null 数组红例。首轮脚本自检选择了错误的系统 SDK；一项新增断言把既有 primitive 字符串引用误写为 named 声明；相应日志分别保留，均未要求改变生产合同。
 
-现行 architecture 保留 TypertLoader owner，使用精确请求暂停与恢复，并说明稳定 CLR 原地加载和显式开发 ShadowCopy。配对作者指南说明可选常量默认值、省略与 null 的区别，以及末尾 CancellationToken 的默认值。历史验证回执不变。本检查点未执行 Linux、Native AOT、原始 DSH 源码／跨运行时差分、浏览器或具名 UI、托管 CI、Maker、源码归档构建或远端 SourceLink 获取。更广模型和协议工作继续开放；未改变依赖、pin 或包版本，未合并、发布或部署。
+现行 architecture 保留 TypertLoader owner，使用精确请求暂停与恢复，并说明稳定 CLR 原地加载和显式开发 ShadowCopy。配对作者指南说明可选常量默认值、省略与 null 的区别，以及末尾 CancellationToken 的默认值。历史验证回执不变。本检查点未执行 Linux、Native AOT、原始 DSH 源码／跨运行时差分、浏览器或具名 UI、托管 CI、外部应用、源码归档构建或远端 SourceLink 获取。更广模型和协议工作继续开放；未改变依赖、pin 或包版本，未合并、发布或部署。
 
 ## 生成式 scoped 调用者，2026-10-11
 
@@ -396,7 +396,7 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 
 第一次定向 HTTP 调用暴露了显式 null 身份导致的本地 STJ 序列化失败。修正只调整内部请求封套，没有放松 Host codec 或其他参数规则。该失败日志和后续使用混合探测 feed 的定向检查分别保留身份；只有上述冻结源码、新 feed 的完整门禁属于本批验收证据。
 
-本检查点未执行 Linux、Native AOT、原版 DSH 源测试／跨运行时差分、真实浏览器或具名 UI、托管 CI、Maker、源码归档构建及远端 SourceLink 获取。历史结果继续绑定原源码身份。浏览器 scoped 装配、owned Context／引用值、Peer、上行／双向流、完整事件及附件仍未完成。没有修改依赖、上游 pin、包版本，也没有合并、发布或部署。
+本检查点未执行 Linux、Native AOT、原版 DSH 源测试／跨运行时差分、真实浏览器或具名 UI、托管 CI、外部应用、源码归档构建及远端 SourceLink 获取。历史结果继续绑定原源码身份。浏览器 scoped 装配、owned Context／引用值、Peer、上行／双向流、完整事件及附件仍未完成。没有修改依赖、上游 pin、包版本，也没有合并、发布或部署。
 
 ## 共享 Remote Connection 与 typed uplink，本地证据 2026-10-12
 
@@ -416,7 +416,7 @@ Release 重建零警告、零错误。`python scripts/verify.py --package --pack
 
 正常 build／pack 和独立调用者覆盖共享 unary 结果合同、两种 scoped、multipart、typed uplink、引用模型、Settings 及生成式管理。Remote 引用复用已有声明组合与源事实。同一候选另通过[真实浏览器恢复](../verification/remote-connection-2026-10-12/browser-recovery.json)：生成的选定通知经过生产 ASP.NET mux；断线保留插件实例／草稿，失败查询能够恢复，实际撤销才释放实例。
 
-上一条本地回执中的固定 DSH Node unary／mux 及 Windows Native AOT caller 检查，属于各自记录的格式化前源码／包候选。它们是有限证据，不作为最终候选重跑结果。本门禁未执行 Linux、原始 DSH 测试套件或全运行时差分、托管 CI、远端 SourceLink 获取、源码归档构建或 Maker。反向 Context／owned-value、完整固定事件、浏览器 scoped 装配和剩余模型／平台职责继续开放。依赖、上游 pin、包版本和已发布包身份均未改变。本次仅本地实现与验证，未推送、合并、发布或部署。
+上一条本地回执中的固定 DSH Node unary／mux 及 Windows Native AOT caller 检查，属于各自记录的格式化前源码／包候选。它们是有限证据，不作为最终候选重跑结果。本门禁未执行 Linux、原始 DSH 测试套件或全运行时差分、托管 CI、远端 SourceLink 获取、源码归档构建或 外部应用。反向 Context／owned-value、完整固定事件、浏览器 scoped 装配和剩余模型／平台职责继续开放。依赖、上游 pin、包版本和已发布包身份均未改变。本次仅本地实现与验证，未推送、合并、发布或部署。
 
 ## Remote 载体审查修正，2026-10-12
 
@@ -428,7 +428,7 @@ F01 原有的 open／cancel 泄漏及 null 取消原因丢失、F02 接受内层
 
 公共调用继续使用共享 Connection、生成的 `RemoteResult<T>` 和流句柄。修正后的行为为：准入前取消不发送 open，内层 payload 在 lookup 前校验，二进制类型由实际元数据决定，关闭既解除阻塞 I/O，也保留已完成的协议关闭帧。根字节绕过 base64；嵌套对象仍先经 STJ 再提取。没有新增 API 世代或兼容路线。
 
-这只是 Windows 下的有界修正门禁，不代表 Linux、托管 CI、原生 Host 或完整平台验收。反向 Context、owned value、固定完整事件、直接 Gateway operatorPeer fallback、浏览器 scoped 及其他原职责仍开放。本回执不包含 Maker、版本、依赖、上游 pin、推送、合并或发布变更。
+这只是 Windows 下的有界修正门禁，不代表 Linux、托管 CI、原生 Host 或完整平台验收。反向 Context、owned value、固定完整事件、直接 Gateway operatorPeer fallback、浏览器 scoped 及其他原职责仍开放。本回执不包含 外部应用、版本、依赖、上游 pin、推送、合并或发布变更。
 
 ## 上行终止与集合投影修正，2026-10-12
 
@@ -438,7 +438,7 @@ F01 原有的 open／cancel 泄漏及 null 取消原因丢失、F02 接受内层
 
 公共用法不变。Host 可以在上行仍打开时终止双向流：end／RemoteError 保留缓冲项，物理失败保留 carrier 类别。关闭输入不再制造拒绝。集合结果 codec 转发其委托编码使用的元数据，包括 nullable 集合；Optional codec 保留纯 JSON 结果编码。四个格式化阶段对 261 个 C# 文件达成一致，双语文档检查通过。新工作树首次客户端模块构建缺少依赖的问题，通过安装既有 lockfile 解决，没有修改依赖。
 
-未提交的反向 Context／owned value／固定事件施工及其初步寿命测试仍单独记录。本候选没有新增 Native AOT、真实浏览器、原始 DSH 套件、全运行时差分、托管 CI、远端 SourceLink 获取、源码归档或 Maker 证据。版本、依赖、上游 pin 未变，未推送、合并、发布或部署。
+未提交的反向 Context／owned value／固定事件施工及其初步寿命测试仍单独记录。本候选没有新增 Native AOT、真实浏览器、原始 DSH 套件、全运行时差分、托管 CI、远端 SourceLink 获取、源码归档或 外部应用 证据。版本、依赖、上游 pin 未变，未推送、合并、发布或部署。
 
 ## 类型化 Remote 事件与反向 Context，2026-10-12
 
@@ -450,7 +450,7 @@ F01 原有的 open／cancel 泄漏及 null 取消原因丢失、F02 接受内层
 
 排队撤销、过期包清单数量、disposable 类型库引用缺失、浏览器夹具准入和消费缓存依赖的失败证据与最终候选分开保留。另有一次 Windows 构建因仍在运行的诊断测试锁住输出 DLL 而失败，后续候选使用独立输出。没有放宽断言来保留旧通知协议。[Remote 事件](remote-events.zh.md) 说明当前公共路线和已移除的通知服务／导出。撤销修正检查点的四阶段格式化一致；最终构建执行 C# 风格检查，事件中英文文档已加入文档检查器。
 
-本批完成的是选定的固定事件消费链，不代表所有 Typert／平台职责完成。直接 Gateway 的 operatorPeer fallback、浏览器 scoped 消费、其余模型后端和具名平台接入继续留在原范围。此次没有新增 Native AOT、完整固定 DSH 套件／差分、托管 CI、远端 SourceLink 取回、源码归档或 Maker 证据。此前修正回执保留原身份。版本、依赖和上游 pin 未变；本次验证不包含合并、发布或部署。
+本批完成的是选定的固定事件消费链，不代表所有 Typert／平台职责完成。直接 Gateway 的 operatorPeer fallback、浏览器 scoped 消费、其余模型后端和具名平台接入继续留在原范围。此次没有新增 Native AOT、完整固定 DSH 套件／差分、托管 CI、远端 SourceLink 取回、源码归档或 外部应用 证据。此前修正回执保留原身份。版本、依赖和上游 pin 未变；本次验证不包含合并、发布或部署。
 
 ## 事件审查、operator Peer 与声明空性，2026-10-12
 
@@ -462,7 +462,7 @@ E01、E02、E03 均已复现并修正：声明集合空性进入懒加载的 Hos
 
 新的 Windows 包 Host 与真实应用内浏览器通过共享 scoped 事件消费者：每次查询当前 adapter、borrowed Context、next／undefined／null、回复结算后的 owned 释放，以及取消后的 handler 结算。[浏览器回执](../verification/events-nullability-2026-10-12/browser-scoped.json)标识实际生成模块与 Host DLL。它证明反向事件路径，不代表出站浏览器 scoped facade 已完成。验证后已关闭临时页面与 Host。
 
-原 `0a722f6` 的 Windows／Linux 门禁仍保留真实可空字典 Remote 调用失败。最终候选首轮 Windows 尝试因 NuGet TLS／漏洞数据不可用而在锁定 restore 处失败。另有明确标记的离线定向复验将 NU1900 保留为警告，不计作完整门禁；连接恢复后，默认 Windows 门禁未使用该例外而通过。277 个 C# 文件的四阶段格式检查收敛；公共 API 增量为生成代码所需的声明空性 codec 入口及查询委托。本批不宣称新增 AOT、托管 CI、完整 DSH 差分／互通、SourceLink 远端获取、源码包、具名 UI 或 Maker 验收。
+原 `0a722f6` 的 Windows／Linux 门禁仍保留真实可空字典 Remote 调用失败。最终候选首轮 Windows 尝试因 NuGet TLS／漏洞数据不可用而在锁定 restore 处失败。另有明确标记的离线定向复验将 NU1900 保留为警告，不计作完整门禁；连接恢复后，默认 Windows 门禁未使用该例外而通过。277 个 C# 文件的四阶段格式检查收敛；公共 API 增量为生成代码所需的声明空性 codec 入口及查询委托。本批不宣称新增 AOT、托管 CI、完整 DSH 差分／互通、SourceLink 远端获取、源码包、具名 UI 或 外部应用 验收。
 
 ## 出站 scoped 与嵌套声明修正，2026-10-12
 
@@ -474,7 +474,7 @@ N01/N02 最初在六个源码用例中失败三项。修复后的源码边界接
 
 [出站浏览器回执](../verification/scoped-nested-nullability-2026-10-12/browser-outbound.json)使用 Windows 冻结包消费者生成的原样制品和 Host。真实浏览器 fetch／WebSocket 调用检查 receiver 和 lookup scope、当前 adapter／身份变化、缺少 adapter、显式 null 与 undefined、直接 lookup fallback、scoped 流、保留回调撤销、重新挂载及借用 Connection 寿命。此浏览器结果不代表完整反向 Context 或 Peer scope-targeting 矩阵通过。
 
-本候选未运行完整 DSH 原始源码套件、静态 AOT、托管 CI、远端 SourceLink 获取或 Maker 验证。这些结果不表示整个 port 或所有具名目标环境已完成。没有改变包版本、依赖或 upstream pin，也未合并、发布或部署。
+本候选未运行完整 DSH 原始源码套件、静态 AOT、托管 CI、远端 SourceLink 获取或 外部应用 验证。这些结果不表示整个 port 或所有具名目标环境已完成。没有改变包版本、依赖或 upstream pin，也未合并、发布或部署。
 
 ## 选定 Client 调用准备，2026-10-12
 

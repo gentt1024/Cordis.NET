@@ -27,13 +27,13 @@ internal sealed class WebProjection(RemoteProjection model, NativeService servic
                 var parameters = method
                     .Parameters.Select(parameter => new ClientParameter(
                         parameter.Wire,
-                        projection.Codec(parameter.Type),
+                        projection.Codec(ParameterType(parameter)),
                         parameter.Optional && parameter.Lookup is null,
                         parameter.Lookup))
                     .ToArray();
                 var result = method.Result.Name == "System_Void"
                     ? new ClientCodec(JsonSerializer.SerializeToElement(false), IsVoid: true)
-                    : projection.Codec(method.Result);
+                    : projection.Codec(method.Result, output: true);
                 var receiver = method.Context is { } context
                     ? new ClientInvocation(context, method.ContextWire, projection.Codec(method.ContextWireType!))
                     : null;
@@ -155,8 +155,9 @@ internal sealed class WebProjection(RemoteProjection model, NativeService servic
             var supported = option.Name switch
             {
                 "PropertyNamingPolicy" or "WriteIndented" or "IncludeFields" or "RespectNullableAnnotations" or
-                    "RespectRequiredConstructorParameters" or "DefaultIgnoreCondition"
+                    "RespectRequiredConstructorParameters"
                     or "UnmappedMemberHandling" => true,
+                "DefaultIgnoreCondition" => option.Value.Json is "0" or "2" or "3",
                 "GenerationMode" => option.Value.Json is "0" or "1",
                 "NumberHandling" or "PreferredObjectCreationHandling" => option.Value.Json == "0",
                 _ => false
@@ -166,7 +167,21 @@ internal sealed class WebProjection(RemoteProjection model, NativeService servic
         }
     }
 
-    private ClientCodec Codec(NativeTypeReference root)
+    private static NativeTypeReference ParameterType(NativeParameter parameter) =>
+        parameter.Attributes.Any(attribute =>
+            attribute.Name == "System.Diagnostics.CodeAnalysis.DisallowNullAttribute")
+            ? NonNullable(parameter.Type)
+            : parameter.Type;
+
+    private static NativeTypeReference NonNullable(NativeTypeReference type) =>
+        type.Kind == "nullable"
+            ? type.Arguments.Single()
+            : type with
+            {
+                Nullability = "NotAnnotated"
+            };
+
+    private ClientCodec Codec(NativeTypeReference root, bool output = false)
     {
         var definitions = new JsonObject();
         var names = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -291,28 +306,34 @@ internal sealed class WebProjection(RemoteProjection model, NativeService servic
                 if (member.Kind == "field" && Option("IncludeFields") != "true" &&
                     Attribute(member.Attributes, "JsonIncludeAttribute") is null)
                     continue;
+                if (output && !member.Readable)
+                    continue;
                 foreach (var attribute in member.Attributes)
                     if (attribute.Name == JsonPrefix + "JsonNumberHandlingAttribute" &&
                         attribute.Arguments.Single().Json != "0")
                         throw Refuse("Non-default number handling: " + type.Id + "." + member.Name);
                 var reference = member.Type;
-                if (member.Attributes.Any(value => value.Name == "System.Diagnostics.CodeAnalysis.AllowNullAttribute"))
+                if (member.Attributes.Any(value => value.Name == "System.Diagnostics.CodeAnalysis." +
+                        (output ? "MaybeNullAttribute" : "AllowNullAttribute")))
                     reference = reference with
                     {
                         Nullability = "Annotated"
                     };
                 if (member.Attributes.Any(value =>
-                        value.Name == "System.Diagnostics.CodeAnalysis.DisallowNullAttribute"))
-                    reference = reference with
-                    {
-                        Nullability = "NotAnnotated"
-                    };
+                        value.Name == "System.Diagnostics.CodeAnalysis." +
+                        (output ? "NotNullAttribute" : "DisallowNullAttribute")))
+                    reference = NonNullable(reference);
                 var property = Read(reference);
                 properties.Add(member.WireName, property);
-                if (member.Required || member.JsonRequired ||
-                    Option("RespectRequiredConstructorParameters") == "true" &&
-                    constructor?.Parameters.Any(parameter => parameter.Member == member.Name && !parameter.Optional) ==
-                    true)
+                var condition = ignore is null ? Option("DefaultIgnoreCondition", "0") : Named(ignore, "Condition");
+                var canOmit = condition == "2" || condition == "3" &&
+                    (member.Type.Kind is "nullable" or "named" or "array" or "collection" ||
+                        member.Type.Name == "System_String");
+                if (output
+                        ? !canOmit
+                        : member.Required || member.JsonRequired ||
+                        constructor?.Parameters.Any(parameter =>
+                            parameter.Member == member.Name && !parameter.Optional) == true)
                     required.Add(member.WireName);
             }
 

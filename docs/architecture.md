@@ -36,7 +36,7 @@ transport and production-consumer work; earlier HTTP management acceptance remai
 The fixed DSH source remains the behavioral authority. Its existing comparison with the
 native implementation is applied incrementally, rather than repeated as a new inventory.
 The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
-continues to own completeness. Maker is a consumer of that scope.
+continues to own completeness. Application consumption supplies evidence; it does not define platform scope.
 
 | Workflow | Fixed DSH responsibility | Native expression and owner | Observable boundary |
 |---|---|---|---|

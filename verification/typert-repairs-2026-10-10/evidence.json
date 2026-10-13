@@ -2430,7 +2430,7 @@
     },
     "originalReportSha256": "0294cd7f3ed5f92c0b8a3c5094863672ebbcfe98a0f4e69f9e5d155066dfab58"
   },
-  "evidenceBoundary": "Local Windows x64 and Ubuntu 24.04 x64 under WSL2; exact frozen source and separate package batches. Dynamic CLR Host requires JIT; Native AOT evidence applies to static clients/probes. Node is used by independent TS/reference gates, not the Settings .NET chain. This is not complete Typert, hosted CI, remote SourceLink retrieval, Maker execution, named UI framework validation, publication or dependency-selection acceptance.",
+  "evidenceBoundary": "Local Windows x64 and Ubuntu 24.04 x64 under WSL2; exact frozen source and separate package batches. Dynamic CLR Host requires JIT; Native AOT evidence applies to static clients/probes. Node is used by independent TS/reference gates, not the Settings .NET chain. This is not complete Typert, hosted CI, remote SourceLink retrieval, external applications execution, named UI framework validation, publication or dependency-selection acceptance.",
   "openScope": [
     "Complete authored type graph and referenced-model composition",
     "All model-driven emitters and publication backends",

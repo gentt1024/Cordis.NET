@@ -174,10 +174,18 @@ public abstract partial class TypertCodec
     /// </remarks>
     public abstract JsonElement Encode(object? value);
 
+    /// <summary>Encode a caller's input using the receiver's read contract.</summary>
+    public virtual JsonElement EncodeInput(object? value) => Encode(value);
+
+    /// <summary>Decode a peer's output using its write contract.</summary>
+    public virtual object? DecodeOutput(JsonElement value) => Decode(value);
+
     /// <summary>Encode a unary result, extracting typed byte arrays into binary attachments.</summary>
     public virtual TypertRemoteResult EncodeResult(object? value) => TypertRemoteResult.Success(Encode(value));
 
     internal virtual JsonTypeInfo? ResultMetadata => null;
+    internal virtual JsonElement ResultSchema => Schema;
+    internal virtual TypertNullability? DeclarationQuery => null;
 
     /// <summary>Create an AOT-compatible codec from source-generated JSON metadata and an optional explicit schema.</summary>
     /// <remarks>
@@ -211,6 +219,7 @@ public abstract partial class TypertCodec
     private sealed class NullableCodec(TypertCodec inner) : TypertCodec
     {
         private JsonElement? schema;
+        private JsonElement? resultSchema;
         public override string TypeSymbol => inner.TypeSymbol;
         public override JsonElement Schema => schema ??= ExportSchema();
 
@@ -221,17 +230,27 @@ public abstract partial class TypertCodec
         }
 
         public override JsonElement Encode(object? value) => inner.Encode(value);
+        public override JsonElement EncodeInput(object? value) => inner.EncodeInput(value);
+
+        public override object? DecodeOutput(JsonElement value)
+        {
+            _ = inner.ResultSchema;
+            return value.ValueKind == JsonValueKind.Null ? null : inner.DecodeOutput(value);
+        }
+
+        internal override TypertNullability? DeclarationQuery => inner.DeclarationQuery;
         public override TypertRemoteResult EncodeResult(object? value) => inner.EncodeResult(value);
         internal override JsonTypeInfo? ResultMetadata => inner.ResultMetadata;
+        internal override JsonElement ResultSchema => resultSchema ??= ExportSchema(output: true);
 
-        private JsonElement ExportSchema()
+        private JsonElement ExportSchema(bool output = false)
         {
             using var buffer = new MemoryStream();
             using (var writer = new Utf8JsonWriter(buffer))
             {
                 writer.WriteStartObject();
                 writer.WriteStartArray("anyOf");
-                WriteNestedSchema(writer, inner.Schema, "#/anyOf/0");
+                WriteNestedSchema(writer, output ? inner.ResultSchema : inner.Schema, "#/anyOf/0");
                 writer.WriteStartObject();
                 writer.WriteString("type", "null");
                 writer.WriteEndObject();
@@ -304,6 +323,7 @@ public abstract partial class TypertCodec
         : TypertCodec
     {
         private JsonElement? schema;
+        private JsonElement? resultSchema;
         public override string TypeSymbol => symbol;
         public override JsonElement Schema => schema ??= PrepareSchema(explicitSchema?.Clone() ?? ExportSchema());
 
@@ -315,19 +335,36 @@ public abstract partial class TypertCodec
 
         public override JsonElement Encode(object? value) => JsonSerializer.SerializeToElement((T)value!, metadata);
 
+        public override JsonElement EncodeInput(object? value) =>
+            JsonSerializer.SerializeToElement((T)value!, TypertJsonMetadata.WriteInput(metadata));
+
+        public override object? DecodeOutput(JsonElement value)
+        {
+            Validate(value, ResultSchema, ResultSchema, 0);
+            return JsonSerializer.Deserialize(value, TypertJsonMetadata.ReadOutput(metadata));
+        }
+
+        internal override TypertNullability? DeclarationQuery => nullability;
+
         public override TypertRemoteResult EncodeResult(object? value) =>
             TypertBinaryResult.Encode((T)value!, metadata);
 
         internal override JsonTypeInfo ResultMetadata => metadata;
 
-        private JsonElement ExportSchema()
+        internal override JsonElement ResultSchema =>
+            resultSchema ??= PrepareSchema(explicitSchema?.Clone() ?? ExportSchema(output: true));
+
+        private JsonElement ExportSchema(bool output = false)
         {
             var node = metadata.GetJsonSchemaAsNode(
                 new JsonSchemaExporterOptions
                 {
-                    TreatNullObliviousAsNonNullable = true
+                    TreatNullObliviousAsNonNullable = true,
+                    TransformSchemaNode = output ? ProjectOutputObject : null
                 });
-            if (nullability is not null)
+            if (output)
+                node = ProjectNullability(node, path => OutputNullability(metadata, nullability, path));
+            else if (nullability is not null)
                 node = ProjectNullability(node, nullability);
             using var document = JsonDocument.Parse(node.ToJsonString());
             return document.RootElement.Clone();

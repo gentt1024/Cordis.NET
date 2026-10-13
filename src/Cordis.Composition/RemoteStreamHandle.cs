@@ -72,7 +72,7 @@ public sealed class RemoteStreamHandle<T> : IAsyncEnumerable<T>, IAsyncDisposabl
     {
         CheckInput();
         call.CheckWritable();
-        var encoded = codec.Encode(value);
+        var encoded = codec.EncodeInput(value);
         TypertCodec.ValidateUplinkItem(encoded);
         _ = codec.Decode(encoded);
         call.Send(encoded);

@@ -52,8 +52,8 @@ public static partial class TypertArtifacts
     {
         ArgumentNullException.ThrowIfNull(contribution);
 
-        static ClientCodec Codec(TypertCodec codec) => new(
-            codec.Schema,
+        static ClientCodec Codec(TypertCodec codec, bool output = false) => new(
+            output ? codec.ResultSchema : codec.Schema,
             ReferenceEquals(codec, TypertCodec.Void),
             codec.AcceptsUndefined,
             codec.ResultMetadata);
@@ -71,7 +71,7 @@ public static partial class TypertArtifacts
                             parameter.AcceptsUndefined,
                             parameter.Lookup))
                         .ToArray(),
-                    Codec(descriptor.Result),
+                    Codec(descriptor.Result, output: true),
                     descriptor.IsStream,
                     descriptor.Invocation is { } receiver
                         ? new(receiver.Context, receiver.Wire, Codec(receiver.Codec))

@@ -112,9 +112,8 @@ with them. No legacy route or versioned Remote is retained. Native host state, r
 and client artifact routes retain their independent duties and authorization.
 
 Settings keeps its single [numeric revision contract](settings-contract-migration.md).
-Maker adaptation belongs to its own session: regenerate clients, bind current host authorization,
-subscribe before snapshot reads, and preserve unknown installation outcomes. This repository
-does not modify Maker or add a permanent compatibility path for its old generated code.
+Application consumers regenerate clients, bind current host authorization, subscribe before snapshot reads,
+and preserve unknown installation outcomes. Old generated code does not establish a compatibility requirement.
 
 The shared Connection uses the fixed unary envelope, unary multipart attachments and text WebSocket mux.
 Per-method NDJSON and generator-embedded carrier code are removed. Host-selected emit notifications

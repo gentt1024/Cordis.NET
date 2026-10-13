@@ -252,3 +252,13 @@ Chief 对 `9ae967c` 的审查发现，只给复用的 STJ `$ref` 根部增加空
 固定 `packages/typert/generator/src/workspace.ts` 先执行分析，再调用 `FaceModelEmitter`，并检查包是否导出生成的运行文件和声明文件。.NET 保存模型 Web 路线对应这一职责：显式主模型及引用声明进入静态 JSON Schema 与共用 TS 发射器，再由正常 MSBuild build/pack 交付。客户端不加载 Provider 实现；Host 绑定继续执行实际注册的 Service。
 
 JSON Schema 2020-12 definitions 描述受支持的 STJ 线类型，不构成第二种保存声明模型。制品注释标识源模型，不承诺兼容旧试验输出。CLR 构造器/accessor 执行不属于该静态后端，所以初始化事实不作为运行默认值输出；真实 Host 仍负责执行。不支持的 policy/shape 投影会拒绝并删除所属旧输出；后端尚未完成不缩减已经成立的运行支持。公开输入及剩余拒绝边界见[作者指南](authoring.zh.md)。
+
+### Web 输入与结果合同，2026-10-13
+
+共同声明事实现在按方向生成 Web Schema。输入投影分别保留参数 DisallowNull 与省略／默认值、setter 的 AllowNull／DisallowNull，以及必填成员。非可选构造参数关联的成员始终必填，不取决于 RespectRequiredConstructorParameters；这与 .NET 10 JsonSchemaExporter 及 Host codec 先 Schema 准入、再反序列化的行为一致。没有放宽 Host 输入准入。
+
+结果投影遵循 getter 的 MaybeNull／NotNull，以及成员 JsonIgnore 和全局 DefaultIgnoreCondition 的条件写出规则。JsonRequired 不承诺条件写出时一定出现该字段。运行 descriptor 路线从现有 STJ metadata 派生相应结果投影，输入 Schema 与 Encode 继续各司其职。不可静态解释的 ShouldSerialize 谓词只使对应输出字段的存在性不确定；生成时不会执行该谓词。显式提供的 codec Schema 仍是作者提供的合同。生成代码支撑记录 TypertNullabilityInfo 补充 GetterNullable 与 SetterNullable 显式标记。声明读取器已经保留 accessor 属性；投影统一处理属性上的写法与程序集中的 getter 返回值／setter 参数写法。CreateDeclared 通过原有 resolver 和私有 serializer options 副本应用差异，不修改作者 Context、不替换 converter、不关闭空性检查，也不建立第二个 Schema 权威。这修正了 .NET 10 源生成器只在 property 上读取标记所导致的引用程序集差异。保存模型版本不变；消费者从当前声明重新生成。
+
+生成的 .NET 客户端按接收方输入合同编码参数，按发送方输出合同解码结果。私有序列化元数据保留 converter 和命名规则，移除 DTO 输入上的输出忽略规则，以及结果上的输入必填和 setter 规则；参数封套继续保留可选参数省略规则。`TypertCodec.EncodeInput` 与 `DecodeOutput` 将这两个方向提供给生成式事件和上行消费；Host 的 `Decode` 与 `Encode` 继续承担读入／写出。这些是同一声明的用途投影，不增加线类型或兼容路径。
+
+固定 DSH `packages/client/connection/src/client/rpc.ts` 将 fetch override 作为局部 callable 调用。Connection 采用相同方式，避免显式传入原生 fetch 时错误地绑定 Connection 接收者。现有构造时默认函数捕获与绑定、取消、错误和所有权保持。默认、原生、绑定和箭头函数都经过同一传输路径。

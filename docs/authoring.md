@@ -511,3 +511,13 @@ The subject may implement `IEventFilter`; its filter is retained by the carrier.
 `Scope.Of(context)` reads the nearest inherited tag. Supply `parent` to `Scope.Create` to bind routing ancestry, or keep the handle from `Scope.BindParent(key, parent)` when controlled reparenting is needed. Routing parents do not transfer ownership. `DisposeAsync` waits for owned cleanup, including a prior `DisposeRawAsync` call used by an ordered composite effect.
 
 Remote methods use `TypertInvocation.Current!.Peer!` for the admitted Peer and register through `peer.Context`. A child scope with `parent: peer` routes upward to those Peer listeners. Do not dispose the borrowed Peer Context. A socket, logical stream or caller does not own the shared Connection's Peer, and no request argument is needed to identify it. The same mechanism serves the direct Gateway's owner-bound fallback.
+
+### Directional Web data contracts
+
+Optional parameters and nullable values are independent. `[DisallowNull] double? expectedRevision = null!` accepts omission or a number, but rejects explicit JSON null. The generated TypeScript parameter is `expectedRevision?: number`.
+
+A DTO may have different input and result shapes without a second declaration. `[JsonRequired, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int Count { get; set; }` requires Count on input and allows Count to be absent on output. A nullable getter with DisallowNull still permits null in the result while rejecting it on input. Use the generated method's parameter and result types instead of reusing one directional type for both. Constructor defaults apply at the real Host; non-optional constructor parameters must be supplied even when RespectRequiredConstructorParameters is false or omitted.
+
+`new TypertConnection(base)` and `new TypertConnection(base, globalThis.fetch)` both use the standard Connection. Bound functions and arrow overrides remain supported; consumers do not need to bind a native function to compensate for the library's call site.
+
+Generated .NET methods use the same directional contracts automatically. Pass required zero/default values normally; input encoding includes them even when the author omits them when writing results. Returned DTOs accept the author's permitted nulls and omitted default fields. Do not override serializer options to compensate for these directions.

@@ -73,7 +73,7 @@ The Settings-only hash DTOs and operations are removed: `SettingsView`, `Setting
 
 `CordisManagement` no longer publishes `/settings`, `/settings/schema` or the handwritten Settings mutation route. The browser management client no longer supplies Settings hash methods. Its raw configuration methods retain their independent purpose. The maintained application, CLI, probes and package consumers use the generated Settings contract. CLI Settings namespaces are profile entry ids such as `worker`, rather than runtime addresses such as `root:worker`; full-configuration commands retain runtime addresses. CLI Settings reads/schema/edits call the same generated controller.
 
-Maker is outside this change. Its owning session must regenerate its client, preserve numeric revisions in drafts, send the observed value on ordinary edits, use path mutations for redacted forms, handle conflict without discarding drafts, and stop calling the removed handwritten routes. This library adds no compatibility path on Maker's behalf.
+external applications is outside this change. Its owning session must regenerate its client, preserve numeric revisions in drafts, send the observed value on ordinary edits, use path mutations for redacted forms, handle conflict without discarding drafts, and stop calling the removed handwritten routes. This library adds no compatibility path on external applications's behalf.
 
 ## Data and publication
 

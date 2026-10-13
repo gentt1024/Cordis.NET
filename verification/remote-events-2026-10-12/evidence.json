@@ -85,6 +85,6 @@
     "csharpFiles": 272,
     "logSha256": "c6f1bc3c8233e4f1f33e89cf9f4ed9c1b8e113cad5132494bae68c63e4ccab52"
   },
-  "remaining": "Direct Gateway operatorPeer fallback, browser scoped consumption, remaining model backends and named platform integrations remain open. This batch adds no Native AOT, hosted CI, whole fixed-DSH suite/differential, remote SourceLink retrieval, source archive or Maker execution.",
+  "remaining": "Direct Gateway operatorPeer fallback, browser scoped consumption, remaining model backends and named platform integrations remain open. This batch adds no Native AOT, hosted CI, whole fixed-DSH suite/differential, remote SourceLink retrieval, source archive or external applications execution.",
   "previousReceipt": "verification/remote-queue-collections-2026-10-12/evidence.json"
 }

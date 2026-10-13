@@ -138,7 +138,8 @@ export class TypertConnection {
 
   async #call(endpoint, args, signal) {
     const rpcId = crypto.randomUUID();
-    const response = await this.#fetcher(this.#base.href.replace(/\/$/, '') + '/' + endpoint, {
+    const send = this.#fetcher;
+    const response = await send(this.#base.href.replace(/\/$/, '') + '/' + endpoint, {
       method:'POST', headers:{'content-type':'application/json'}, signal,
       body:JSON.stringify({type:'client-request', rpcId, method:endpoint, payload:{args}}),
     });
