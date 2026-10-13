@@ -553,3 +553,11 @@ Linux Native AOT 覆盖 conformance、指定静态／HTTP 消费者及既有生�
 真实 Chromium 使用冻结 `45ee050` 的 Linux 生成包 Host 与客户端制品，在 Windows 运行，通过默认、原生、绑定和箭头 fetch。这只证明上述构建／运行平台组合，不是 Windows 构建包或后续候选的证据。实际 HTTP 调用、输入拒绝和取消原因均通过；临时 Host 与转发代理已经关闭。
 
 后续工作修正 Undefined 省略，并补齐固定上游 scope store／layer。ScopeStoreTests 主责存储语义，共享 .NET／TS 包 caller 验证 Peer 和子 scope 注册。新 worktree 验证最初因未还原 TypeScript 依赖停止；按锁文件安装后，同批包的共享 .NET／TS 调用通过。一次客户端构建选到了另一套已安装 SDK；指定锁定 SDK 后通过，没有修改 global.json。这些属于开发检查，不是冻结候选验收。新生产代码仍需自己的完整门禁与浏览器证据，不能自动继承此前绿色切片。
+
+### 有方向合同与 Scope 冻结证据，2026-10-13
+
+源码 `a11cb73ec584405612170ea9b690bf56c1f3834c` 修正 Undefined 输入省略，并加入固定 Scope store／layer。[回执](../verification/web-contract-scope-2026-10-13/evidence.json) 区分完整失败与同源码补完。Windows 完成 896 项通过、1 项 HMR 协调失败，尚未执行打包。同一份 Extensions 测试程序集随后隔离运行 113 项全部通过。重复超时原因仍未关闭；隔离通过或使用手动 watcher 都不能证明是环境问题。
+
+Linux 完整包／AOT 门禁通过运行时、对照、打包、符号、静态消费者、CLR 部署及选定固定端互通，随后因 Web 输出目录已存在而停止。在新输出目录补完时，源码和 18 份包／符号文件完全相同：三种 Web 合同模式及引用模型消费通过，标准管理、数值和 Settings 的 JIT／AOT 消费通过。补完结果不改写原完整门禁失败状态。
+
+两次真实 Chromium 会话使用上述 Linux 构建的 Host／客户端制品，在 Windows 运行通过：出站 scoped／Peer 与 Scope layer 消费；引用 Web 及默认、原生、绑定、箭头 fetch。回执绑定 Host／客户端及截图哈希，两个临时 Host 和代理均已关闭。这不是 Windows 构建包、后续 Settings 文档修改或 alpha5 发布的验收。
