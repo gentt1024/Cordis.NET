@@ -519,3 +519,15 @@ Windows x64 源码测试通过 883 项；四阶段格式检查在 277 个 C# 文
 - 新建的空 HTTP 缓存无法访问 NuGet 漏洞数据源。后续保留已有 nuget.org 缓存，没有关闭审计。最终验证和格式检查使用另一卷上经核对位于仓库外的临时目录。Git 启动拒绝未被诊断为与磁盘耗尽相同的原因。
 
 真实浏览器使用同一冻结包和生成资产也已通过：原生 Host Peer 路由、receiver／lookup、当前 adapter 与身份、null／undefined、流和撤销。页面结果及资产／截图 hash 独立于严格 TypeScript 和 Node 检查记录。首次自动工具审批拒绝后，用户明确授权临时 loopback 代理；验证后两个夹具进程均已关闭。这证明浏览器调用原生 Host 路由，不代表浏览器侧 scope 实现已获验证。本候选未运行 Linux、Native AOT、托管 CI、真实 IDE 或具名 UI 框架验证。本批不关闭全部 Peer／Context 工作流、scope store／layer 或剩余引用后端。Chief 对 S01/S02 和 N01/N02 的关闭结论继续有效。
+
+## Scoped subject tracing 修正，2026-10-13
+
+实现 `707fddeaaeaa3316f44fef76a15a3c76e335a00d` 处理 Chief 的 SC01。旧生成 helper 把 subject 作为直接事件参数，Cordis 将它 tracing 为新 caller view，但路由载体保留原 subject，导致合法调用在投影前被拒绝。固定 DSH agent dispatch 将 subject 嵌入 payload；原生 helper 现以一个值元组承载原始 subject、request 和 signal，转发器在投影前检查其中的 subject。普通 Core tracing、严格身份检查、公开 helper 签名和 wire payload 不变，旧直接参数布局退出。
+
+主要回归位于 `RemoteEventsTests`，调用实际生成 helper 和 `FromCordis`。在修前生产代码上，同类型的返回自身对照通过，返回新 view 的用例在路由 subject 校验处失败。修后两者通过；测试还观察普通直接参数 tracing、投影收到的精确身份和 continuation 返回结果。首次夹具因对仅支持异步释放的句柄使用同步释放及格式诊断而未编译，该设置失败与编译成功后的产品红例分别保留。相关原生路由／准入 27 例、生成式事件 8 例通过；这些子集也在最终全量中执行，不与全量计数相加。
+
+[回执](../verification/scoped-subject-2026-10-13/evidence.json) 绑定源码／tree、红绿 TRX hash、18 个包 hash 和消费报告。干净且未变化的源码在 Windows x64／SDK 10.0.111 上通过完整 `verify.py --package`：892 项测试、test-map、JIT／模块／CLI／API、普通 Git 路径符号／调试检查、NuGet／HTTP、CLR 部署／多 Entry、选定固定客户端互操作及完整生成式 .NET／TS 包消费。后者的 160 个子进程步骤包含预期拒绝。四阶段格式检查通过且未改源码。
+
+独立管理 Host 现使用 `ForContext` 返回新 view 的 subject，既有 .NET 和严格 TypeScript 事件消费通过。真实浏览器复用同批 Host 包与生成资产，通过当前 adapter、借用 Context、next／undefined／null、owned reply 和取消后 handler 结算。loopback Host 与代理已关闭。这是本候选的新证据；较早 `28901b9` 的浏览器与门禁结果保留原身份。
+
+本次不声称完成 Linux、Native AOT、托管 CI、真实 IDE、具名 UI 框架、新一轮完整上游测试、浏览器侧 scope 实现或全部 Peer 工作流。固定源码对应已在本地核对。首次 design-time 保持 MSBuild 脚本层接纳；引用 Schema／TS 消费及 scope store／layer 仍是独立职责。没有为验证放宽生产断言或安全检查。

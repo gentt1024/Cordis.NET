@@ -306,7 +306,7 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 | 标准 unary、结果与附件 | 共享 Connection、关联封套／结果及 multipart 已替换生成器内嵌 carrier、NDJSON 和 unary wire base64 | 保留普通结果与装配错误边界。S01/S02 通过生成包／浏览器调用收口选定 JS 准备，拒绝时零 HTTP/open；`SharedClient.ts` 是主要消费者。 |
 | 固定 Gateway ConnectionHandle RPC | Node 下具名固定 DSH Connection 及独立 .NET/TS 包已有有界执行记录 | 最终候选通过 `verify-typert.py` 重跑选定固定客户端／原生 Host 用例，包含失败、binary 路径和所有权；不扩大为全产品或 SDK stdio 兼容。 |
 | 固定流协议 | text mux、类型化上下行、半关闭、载体失败及逻辑调用寿命已有有界执行 | 补齐剩余声明 codec 与选定跨端组合；在既有生命周期及包消费者中保留准入／未使用上行控制。 |
-| Context、对象、Peer 与固定事件 | receiver／lookup scoped、反向 agent Context、owned／borrowed 释放、类型化事件及 operatorPeer fallback 已实现。`28901b9` 补齐原生身份／祖先 scope 路由及 Peer key，并有真实生成式 .NET／TS 包调用。 | 同一 `28901b9` 包及生成资产已通过真实出站浏览器调用，包含原生 Host Peer 路由；这不代表浏览器侧 scope 实现已获验证。scope store／layer 和剩余具名 Context／Peer 组合保留独立出口。本条 Host 路线不代表完整覆盖。 |
+| Context、对象、Peer 与固定事件 | receiver／lookup scoped、反向 agent Context、owned／borrowed 释放、类型化事件及 operatorPeer fallback 已实现。`28901b9` 补齐原生身份／祖先 scope 路由及 Peer key。`707fdde` 通过在 tracing 前嵌入原始 subject 修正 SC01，生成式 .NET／TS 包及浏览器事件消费通过。 | 同一 `28901b9` 包及生成资产已通过真实出站浏览器调用，包含原生 Host Peer 路由；这不代表浏览器侧 scope 实现已获验证。scope store／layer 和剩余具名 Context／Peer 组合保留独立出口。本条 Host 路线不代表完整覆盖。 |
 | 恢复与替换 | 已执行代际撤销、保留回调、重挂载及借用 Connection／Context 边界 | 在同一消费者扩展剩余 scope-targeting 寿命。不确定写入结果不授权重放；安装任务仍属于操作所有者。 |
 | 标准应用与最终交付 | 数值 Settings、生成式管理／事件、CLI 与模块恢复复用配置／operations | 完成 Settings 文档／客户端装配及标准管理 UI 观察。本地准备阶段 PR 说明和 CI 矩阵。最终出口要求同一冻结候选的 Windows/Linux、静态 AOT caller、选定固定一端互通、浏览器、包／符号／SourceLink 及具名平台证据。远端创建 PR、合并、发布须获授权。 |
 
