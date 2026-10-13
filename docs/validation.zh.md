@@ -544,6 +544,12 @@ Windows x64 源码测试通过 883 项；四阶段格式检查在 277 个 C# 文
 
 Linux Native AOT 覆盖 conformance、指定静态／HTTP 消费者及既有生成式管理／投影／Settings caller。显式引用 DTO caller 和动态 Host 仍是 JIT。本批执行选定固定端互操作检查，未运行原始 DSH 源码套件或托管 CI。不据此重新证明所有 scoped／事件浏览器路径、实际 IDE 或具名 UI 集成，也不关闭 scope store／layer 或全部序列化／类型后端。既有模型、scoped 与所有权职责继续在[开发记录](development.zh.md)维护。
 
+## Draft PR 作者验证选择器修正，2026-10-13
+
+[CI 运行 38375206795](https://github.com/gentt1024/Cordis.NET/actions/runs/38375206795) 实际检出 PR 临时合并提交 `018537bf4368f2790616769ce7f3bce2ac84e8a0`，由分支 `4f2e2685499490dc77499f2dee98ef23a3a792e7` 与 main `3342a967f4e57206bec272684a40a437fc051b77` 组成。Windows 和 Ubuntu 的 `verify.py --aot --package` 均通过，上游源码执行交由八个全部通过的分片。随后 authoring 门禁在注入 revision-fence 缺陷之前失败：选择器仍匹配不含 `settings is null` 的旧条件。两个完整 CI 任务均未通过。此前的 HMR 超时本轮未复发，但其原因仍未证实。
+
+修正仅更新这条故障注入选择器及其替换表达式，保留 Settings 分支条件、生产代码和原 Probes 消费断言。Windows 定向运行既有五项配置故障注入均通过：各副本先编译成功，再由真实消费者拒绝对应缺陷。revision 用例明确失败于 `profile field edit fences stale revisions`，而非还原、编译或无关检查。这份本地结果只覆盖配置故障注入组，不代表剩余 authoring 阶段完成，也不把上一轮 CI 证据转移到新检出提交。
+
 ## 有方向合同收口检查点，2026-10-13
 
 冻结源码 `45ee050b44b05236141836b3980707b7a944cf92` 修正 WEB01–WEB03 和 FETCH01，包含引用程序集 accessor 空性。Windows 门禁停在一项 HMR reconciliation 超时：891 项通过、一项失败。同一编译产物的 HMR 测试类单独运行三项均通过。全量超时尚未归因，不能视为完整通过，也不能认定是文件监控环境失败。该轮 Windows 门禁尚未运行打包阶段。

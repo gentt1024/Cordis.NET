@@ -544,6 +544,12 @@ The first fresh Linux gate on `9be3b92` stopped because locked npm dependencies 
 
 Linux Native AOT covers conformance, designated static/HTTP consumers and the existing generated management/projection/Settings callers. The explicit referenced DTO caller and dynamic Host remain JIT. This batch executes selected fixed interoperability checks, not original DSH source suites or hosted CI. It does not re-prove every scoped/event browser path, establish live IDE or named UI integration, close scope store/layer, or complete all serializer/type backends. The existing model, scoped and ownership duties remain in [development](development.md).
 
+## Draft PR authoring selector correction, 2026-10-13
+
+[CI run 38375206795](https://github.com/gentt1024/Cordis.NET/actions/runs/38375206795) checked out PR merge commit `018537bf4368f2790616769ce7f3bce2ac84e8a0`, combining branch `4f2e2685499490dc77499f2dee98ef23a3a792e7` with main `3342a967f4e57206bec272684a40a437fc051b77`. Windows and Ubuntu both passed `verify.py --aot --package` with upstream source execution delegated to the eight successful shards. The subsequent authoring gate failed before injecting its revision-fence defect: its selector still expected the old condition without `settings is null`. Neither complete CI job passed. The earlier HMR timeout did not recur in this run; its cause remains unproven.
+
+The correction updates only that mutation selector and its replacement, retaining the Settings branch guard, production code and unchanged Probes consumer assertion. A focused Windows run of the existing five configuration mutations passed: each copy compiled, then the real consumer rejected its intended defect. The revision case failed specifically at `profile field edit fences stale revisions`, rather than restore, compilation or an unrelated guard. This local result covers the mutation group only; it neither completes the remaining authoring stages nor transfers the preceding CI evidence to a new checkout.
+
 ## Directional contract closeout checkpoints, 2026-10-13
 
 Frozen `45ee050b44b05236141836b3980707b7a944cf92` corrects WEB01–WEB03 and FETCH01, including referenced accessor nullability. Its Windows gate stopped at one HMR reconciliation timeout: 891 tests passed and one failed. The same compiled HMR class passed all three cases in isolation. The cause of the full-run timeout is unresolved; it is not a successful full gate or a proven filesystem-watcher environment failure. Packaging did not run on Windows in that gate.
