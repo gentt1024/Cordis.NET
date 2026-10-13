@@ -242,3 +242,7 @@ Chief 对 `9ae967c` 的审查发现，只给复用的 STJ `$ref` 根部增加空
 `DisposeRawAsync` 使用普通 Fiber disposer。`DisposeAsync` 还等待 `Fiber.WaitAsync`，使并发释放等待已由 raw 入口启动的清理。它复用原生生命周期工作，不增加所有者或调度器。Peer 以自身为 scope key，Connection／fallback 所有权及 socket 借用关系保持不变。生成的 waterfall 调用改用以 subject 为 key 的载体，保留 subject 的基础过滤器，并把 subject 留在参数中。按固定 `packages/api/remotes/src/index.ts`，转发先在载体没有 key 时调用 `next()`（包括普通 receiver）；有 key 时，必须在投影前确认 subject 类型正确且与 key 是同一对象。临时的原始 subject receiver 路径退出；消费者重新生成。
 
 这完成上述原生路由机制，不代表 scope store／layer 导出、所有反向 Context adapter 或全部 Peer 互操作完成。具体候选的执行结果及平台限制见验证记录。
+
+### Scoped 事件 subject 身份，2026-10-13
+
+固定 agent dispatch 在 Cordis 对直接参数做 tracing 前，将 subject 放入事件 payload。原生生成式 waterfall 现在以一个值元组承载 subject、request 和取消令牌；选定转发器在投影前，用其中的原始 subject 与 key 比较。即使 `IContextualService` 的普通 caller view 是新对象，也保留该 subject 身份。Core tracing 不变。旧的三个直接参数布局已退出，事件 helper 需重新生成；公开 helper 签名、模型事实和 wire payload 不变。

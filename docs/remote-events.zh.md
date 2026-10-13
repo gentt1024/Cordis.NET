@@ -83,3 +83,5 @@ resolver 和 release 保持同步。缺少或失败的解析继续 Host 的 cont
 断线移除该次交付，不合成 `next`，待决调用可以投递给后续代际。源撤销关闭流并取消待决工作。旧 client 身份不能结算当前交付；重复的已完成回复不能恢复调用。emit 不保证持久重放。waterfall 回复区分 result、next 和 rejection，保留拒绝的 name、message、code、details。
 
 源码对应固定 DSH `639ed015397290b3745d163aafe02ffee4aa3f84` 的 `packages/typert/protocol/src/types.ts`、`owned-value.ts`、`packages/api/gateway/src/client/remote-events.ts`、`stream-protocol.ts`，以及 `packages/api/remotes/src/remote-events.ts` 的转发选择。这条路径本身不证明全部浏览器 scoped、直接 Gateway 的 operatorPeer fallback、所有模型后端或全部 DSH 产品／SDK 互通。验证记录单独标识实际候选及已执行消费者。
+
+生成式 waterfall helper 在事件分发前，将原始 subject、request 和 signal 放入一个原生 payload。contextual subject 在普通直接事件参数中可以产生新的 caller view；转发仍投影与 scope carrier 一致的原始 subject。作者继续使用原有 `InvokeAsync` 和 `Forward` 签名，在修正后重新生成 helper。

@@ -9,9 +9,11 @@ using Xunit;
 
 namespace Cordis.Platform.Tests;
 
-public sealed record EventAgent(Context Context, string Id) : IEventFilter
+public sealed record EventAgent(Context Context, string Id, bool FreshView = false) : IEventFilter, IContextualService
 {
     public bool Filter(Context listener) => Context.Filter?.Invoke(listener) ?? true;
+
+    public object ForContext(Context caller) => FreshView ? new EventAgent(caller, Id, true) : this;
 }
 
 public sealed record EventQuestion(string Question);
@@ -32,6 +34,67 @@ public partial class EventTestsJson : JsonSerializerContext;
 public sealed class RemoteEventsTests
 {
     private static readonly TimeSpan Limit = TimeSpan.FromSeconds(10);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Generated_waterfall_preserves_subject_identity_through_caller_tracing(bool freshView)
+    {
+        await using var root = new Context();
+        await root.RunAsync(async ctx =>
+        {
+            var subject = new EventAgent(ctx, "original", freshView);
+            await using var tracing = ctx.On(
+                "trace-control",
+                (_, args) =>
+                {
+                    Assert.Equal(!freshView, ReferenceEquals(subject, args[0]));
+                    return Undefined.Value;
+                });
+            ctx.Events.Waterfall("trace-control", () => Undefined.Value, subject);
+            var projected = 0;
+            var source = TypertRemoteEvents.FromCordis(
+                ctx,
+                [
+                    ApprovalEventTypert.Forward(agent =>
+                    {
+                        Assert.Same(subject, agent);
+                        projected++;
+                        return new(agent.Context, agent.Id);
+                    })
+                ]);
+            using var lifetime = new CancellationTokenSource();
+            await using var events = source(lifetime.Token).GetAsyncEnumerator();
+            var read = events.MoveNextAsync().AsTask();
+            try
+            {
+                var pending = ApprovalEventTypert.InvokeAsync(
+                    ctx,
+                    subject,
+                    new("identity"),
+                    () => Task.FromResult(new RemoteOptional<string?>("local")));
+                if (await Task.WhenAny(pending, read).WaitAsync(Limit) == pending)
+                    await pending;
+                Assert.True(await read.WaitAsync(Limit));
+                var invocation = Assert.IsType<TypertRemoteEventInvocation>(events.Current);
+                Assert.Equal(1, projected);
+                Assert.Equal("identity", invocation.Request.GetProperty("question").GetString());
+                invocation.Resolve(new TypertRemoteEventOutcome.Next());
+                Assert.Equal("local", (await pending.WaitAsync(Limit)).Value);
+            }
+            finally
+            {
+                await lifetime.CancelAsync();
+                try
+                {
+                    await read;
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
+        });
+    }
 
     [Theory]
     [InlineData(false, false, false, "null")]

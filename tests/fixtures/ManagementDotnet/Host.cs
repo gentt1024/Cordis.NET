@@ -540,7 +540,10 @@ sealed class FixtureToolchain(string directory) : IProfilePackageToolchain
             : [];
 }
 
-public sealed record EventSubject(Context Context, string Id);
+public sealed record EventSubject(Context Context, string Id) : IContextualService
+{
+    public object ForContext(Context caller) => new EventSubject(caller, Id);
+}
 
 public sealed record DecisionRequest(string Mode);
 

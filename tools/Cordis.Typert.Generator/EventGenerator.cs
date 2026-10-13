@@ -182,7 +182,7 @@ public sealed class EventGenerator : IIncrementalGenerator
                 .Append(result)
                 .Append(">(caller.Events.WaterfallWith(global::Cordis.Composition.Scope.Target(agent, agent), ")
                 .Append(name)
-                .Append(", () => BoxNext(next), agent, request, signal));\n")
+                .Append(", () => BoxNext(next), (agent, request, signal)));\n")
                 .Append(
                     "private static async global::System.Threading.Tasks.Task<object?> BoxNext(global::System.Func<global::System.Threading.Tasks.Task<")
                 .Append(result)

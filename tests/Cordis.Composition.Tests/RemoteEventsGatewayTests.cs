@@ -43,14 +43,15 @@ public sealed class RemoteEventsGatewayTests
                 "different-key" => Scope.Target(ctx, new object()),
                 _ => Scope.Target(ctx, ctx)
             };
+            object payload = kind == "different-subject-type"
+                ? (new object(), Json("{}"), CancellationToken.None)
+                : (ctx, Json("{}"), CancellationToken.None);
             var pending = TypertRemoteEvents.AwaitResult<JsonElement>(
                 ctx.Events.WaterfallWith(
                     receiver,
                     "selected",
                     () => Task.FromResult<object?>(Json("\"local\"")),
-                    kind == "different-subject-type" ? new object() : ctx,
-                    Json("{}"),
-                    CancellationToken.None));
+                    payload));
             if (rejected)
                 await Assert.ThrowsAsync<InvalidOperationException>(() => pending.WaitAsync(Limit));
             else
@@ -84,9 +85,7 @@ public sealed class RemoteEventsGatewayTests
                         Scope.Target(ctx, ctx),
                         "selected",
                         () => Task.FromResult<object?>(Json("{}")),
-                        ctx,
-                        Json("{}"),
-                        CancellationToken.None)))
+                        (ctx, Json("{}"), CancellationToken.None))))
                 .ToArray();
             await source.DisposeAsync();
         });

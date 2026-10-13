@@ -91,10 +91,12 @@ public static class TypertRemoteEvents
             var key = Scope.CarrierKeyOf(evt.Receiver);
             if (key is null)
                 return await TypertRemoteEventsClient.AwaitAsync(evt.Next());
-            if (args.Length != 3 || args[0] is not TSubject subject || !ReferenceEquals(key, subject))
-                throw new InvalidOperationException("A scoped event must carry its routing subject directly.");
-            var target = project(subject);
-            var payload = request.Encode((TRequest)args[1]!);
+            if (args.Length != 1 ||
+                args[0] is not ValueTuple<TSubject, TRequest, CancellationToken> invocation ||
+                !ReferenceEquals(key, invocation.Item1))
+                throw new InvalidOperationException("A scoped event payload must carry its routing subject.");
+            var target = project(invocation.Item1);
+            var payload = request.Encode(invocation.Item2);
             TypertEventProtocol.Request(payload);
             var completion =
                 new TaskCompletionSource<TypertRemoteEventOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -104,7 +106,7 @@ public static class TypertRemoteEvents
                     target.Context,
                     target.AgentId,
                     payload,
-                    (CancellationToken)args[2]!,
+                    invocation.Item3,
                     value => completion.TrySetResult(value),
                     error => completion.TrySetException(error)));
             return await completion.Task is TypertRemoteEventOutcome.Result answer
