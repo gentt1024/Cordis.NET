@@ -43,11 +43,16 @@ catch (JsonException)
 
 if (JsonSerializer.Deserialize("{\"text\":\"yes\"}", metadata)!.Text != "yes")
     throw new Exception("Nullable DTO metadata decode failed.");
+var numericMetadata = (JsonTypeInfo<NumericDefaults>)NumericDefaultsClientJson.Default.GetTypeInfo(typeof(NumericDefaults))!;
+var initialized = JsonSerializer.Deserialize("{}", numericMetadata)!;
+if (initialized.Ratio != 1.25f || initialized.Amount != 0.1m ||
+    initialized.EmptyRatio is not null || initialized.EmptyAmount is not null)
+    throw new Exception("Absent numeric input fields did not retain nullable initializers.");
 await using var numeric = new NumericDefaultsClient(connection);
 var defaults = (await numeric.ValueAsync(new NumericDefaults())).Value;
 if (defaults.Ratio != 1.25f || defaults.Amount != 0.1m ||
     defaults.EmptyRatio is not null || defaults.EmptyAmount is not null)
-    throw new Exception("Absent numeric fields did not retain nullable initializers.");
+    throw new Exception("Numeric defaults changed in the generated call.");
 var cleared = (await numeric.ValueAsync(
     new NumericDefaults
     {
@@ -68,10 +73,16 @@ var numbers = (await numeric.ValueAsync(
 if (numbers.Ratio != 2.5f || numbers.Amount != 12.75m ||
     numbers.EmptyRatio != 3.5f || numbers.EmptyAmount != 4.25m)
     throw new Exception("Explicit nullable numeric values changed in the generated client.");
+using var invalidHttp = new HttpClient(new Replies(incompleteOutput: true));
+await using var invalidConnection = new TypertConnection(invalidHttp, new Uri("https://test.invalid/remote"));
+await using var invalidClient = new NumericDefaultsClient(invalidConnection);
+var invalidOutput = await invalidClient.ValueAsync(new NumericDefaults());
+if (invalidOutput.Ok || invalidOutput.Error.InnerException is not JsonException)
+    throw new Exception("A result missing required output fields was accepted.");
 Console.WriteLine(
     "GREEN primitive/string/collection roots; null/default named arguments and legal colliding names; DisallowNull decode; nullable numeric absent/null/explicit values; read-only retained/refused; changed nullable policy changes identity; stale output removed on SDK/options failure.");
 
-sealed class Replies : HttpMessageHandler
+sealed class Replies(bool incompleteOutput = false) : HttpMessageHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
@@ -85,7 +96,7 @@ sealed class Replies : HttpMessageHandler
             "count" => Check(args),
             "text" => "null",
             "values" => "[1,2]",
-            "value" => CheckNumeric(args.GetProperty("input")),
+            "value" => incompleteOutput ? "{}" : CheckNumeric(args.GetProperty("input")),
             _ => throw new Exception("Unknown request.")
         };
         return new(HttpStatusCode.OK)
@@ -121,7 +132,7 @@ sealed class Replies : HttpMessageHandler
             return "{\"Ratio\":null,\"Amount\":null,\"EmptyRatio\":null,\"EmptyAmount\":null}";
         if (ratio.GetSingle() == 1.25f && amount.GetDecimal() == 0.1m &&
             emptyRatio.ValueKind == JsonValueKind.Null && emptyAmount.ValueKind == JsonValueKind.Null)
-            return "{}";
+            return "{\"Ratio\":1.25,\"Amount\":0.1,\"EmptyRatio\":null,\"EmptyAmount\":null}";
         if (ratio.GetSingle() == 2.5f && amount.GetDecimal() == 12.75m &&
             emptyRatio.GetSingle() == 3.5f && emptyAmount.GetDecimal() == 4.25m)
             return "{\"Ratio\":2.5,\"Amount\":12.75,\"EmptyRatio\":3.5,\"EmptyAmount\":4.25}";
