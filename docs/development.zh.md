@@ -290,7 +290,7 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 | T01：普通声明、Service、Config、事件与引用对象 | 共同普通／Remote 根、目录、类型化事件声明及生成监听；普通 Service 保留同进程使用 | 沿现有 Context／所有权完成选定引用对象消费者。事件交付由 `RemoteEventsGatewayTests`、`RemoteEventsTests` 及独立管理消费者证明。 |
 | T01/T02：签名、泛型、接口及引用图 | 共同声明保留选定签名、泛型定义／实参、基类／接口及完整声明身份 | 只补已确认 producer／后端／consumer 路线缺少的事实。更广的实参泛型与引用图须在 `typert_declaration_consumer.py` 证明字面模型事实及真实消费。 |
 | T02：空性、required、默认值、文档及编译事实 | 嵌套声明用途／STJ 投影与忽略成员映射在 `19ff2b6` 验证；`aa47d14` 审查接受 N01/N02；已修复关闭 XML 输出导致的提取漂移 | 保持这些关闭结论。不支持的序列化／类型形状须由具体消费需求驱动扩展；源码准入归 `EventDeclarationTests`，生成打包归既有声明消费者。 |
-| T02：跨包身份与外部引用 | 显式引用模型接通普通 DTO/STJ 及真实引用 Remote；独立 caller 不加载 Provider 实现 | 补齐其余引用 Schema／TS／后端组合，沿同一模型。下一出口为具名作者／模型／合同包在无 Provider DLL 下消费，同时检查冲突／缺失引用与重生成。 |
+| T02：跨包身份与外部引用 | 显式引用模型接通普通 DTO/STJ、真实引用 Remote 及 `6356b86` 的打包 Schema／TS；独立 Node／浏览器 caller 不加载 Provider 实现，冲突／缺失引用与重生成检查通过。 | 沿同一声明补齐其余有界序列化／类型及事件后端组合。已完成的普通引用 Web 路线不关闭这些形状。 |
 | T03：运行时、Schema、.NET、TS 消费共同事实 | 共同解释器驱动 Host 绑定、当前保存模型 caller 和类型化事件；已移除重复作者 wire 制品及旧读取器 | 完成各选定分析／目录、Schema 和客户端输出的支持面。运行时 `TypertArtifacts.Contribution` 不等于完整模型后端。使用 `verify-typert-dotnet.py` 与 `verify-typert.py`；不重建已成立模型。 |
 | T04：更丰富的 .NET 方法／数据投影 | optional／default 方法、数组、List、字符串字典及四类框架集合接口已有包证据 | 补齐其余选定方法／数据形状及显式引用消费。拒绝记录当前限制，不等于完成；独立 DTO/STJ 与 Remote 消费者承担验收。 |
 | T05：model-only、pre-CoreCompile 后 STJ、无需 Node／Provider | 独立包覆盖首次 MSBuild 设计时输入及实际 STJ 编译，随后 build/pack、增量／Clean／冷构建生成与漂移拒绝 | 这些检查还在 `28901b9` 的完整 Windows 包门禁中通过；较早 `09c2c11` 的环境失败在验证记录中保留自己的历史身份。实际 IDE 与具名 WPF／Avalonia／Godot .NET／Blazor 消费者仍需调度、视图／Slot 装配、关闭与重新进入证据；SDK／依赖选择须明确说明。 |
@@ -488,4 +488,4 @@ Chief 对已推送 `9243d3a` 的审查关闭 S01/S02，保留 N01/N02 及此前�
 
 Chief 对固定 `7ca5ac8` 的审查关闭了实现 `707fdde` 的 SC01；这是独立源码、类型及上游审查，不是重新运行记录中的包。嵌套 subject、精确身份准入和既有寿命保持不变，不需要再增加 payload 抽象或兼容解析。
 
-下一本地增量将显式引用声明接到打包的 Schema/ESM/TypeScript 制品，复用既有 TS 发射器及 Connection runtime，增加保存模型 `emit-web` 与正常 build/pack target，并扩展现有独立引用消费者。本增量定向及最终候选验证须有自己的源码身份；SC01 回执不验证它。live IDE、Linux/静态 AOT、scope store/layer 及其余具名 UI 消费者继续保持开放。
+源码 `6356b86` 完成这条有界显式引用 Web 路线：保存模型 `emit-web`、普通 build/pack、共享 TS 发射器及 Connection、独立严格 TS／Node 调用和真实浏览器消费。浏览器验证发现并修正默认原生 fetch 绑定，夹具不注入绕过。冻结源码通过 Windows 包门禁及 Linux 包／AOT 门禁，见[验证记录](validation.zh.md#引用-web-制品与默认浏览器-connection2026-10-13)。未新增模型格式、重复传输、依赖或兼容路径。live IDE、scope store／layer、具名 UI 消费者及其余序列化／类型／后端形状保留独立出口。

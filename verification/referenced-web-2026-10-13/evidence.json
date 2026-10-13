@@ -1,0 +1,2688 @@
+{
+  "sourceCommit": "6356b86d3862b43217725da3668998433973b970",
+  "sourceTree": "e7d3cd0a152c79adb31410bbfdfd403fb2b74fa7",
+  "upstream": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "status": "two-platform-package-gates-and-real-browser-passed",
+  "platforms": [
+    {
+      "commit": "6356b86d3862b43217725da3668998433973b970",
+      "rid": "win-x64",
+      "sdkVersion": "10.0.111",
+      "status": "requested-checks-passed",
+      "cleanWorkingTree": true,
+      "sourceUnchanged": true,
+      "sourceManifestSha256": "2e6c152f6ec3aeb6696fb5fd9a7208f177cf4c24a61c58c2cd0a299ed9c16130",
+      "rawReceiptSha256": "b4393a60a5c5d0045c4d46b4cbbb2bdd2b9d45afc41c2f2c694b3dc529c1ff4e",
+      "tests": [
+        {
+          "sha256": "ec2ad0da641ea0c9a2d80a92428c0a4575d0102cfe4ad21c4de7e3df9ccdfd95",
+          "counters": {
+            "total": "148",
+            "executed": "148",
+            "passed": "148",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          },
+          "nonPassedOutcomes": []
+        },
+        {
+          "sha256": "b796156589f4543d49221d81e987b922312b8fca3e2cf7b47fa1207e80daa98f",
+          "counters": {
+            "total": "113",
+            "executed": "113",
+            "passed": "113",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          },
+          "nonPassedOutcomes": []
+        },
+        {
+          "sha256": "f2c78be853922c661ca065bd4b72ab009c66e710dd6ba836815713202316fb69",
+          "counters": {
+            "total": "503",
+            "executed": "503",
+            "passed": "503",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          },
+          "nonPassedOutcomes": []
+        },
+        {
+          "sha256": "47859884e284b731831a4fe7104789dc3e5cefcfcd73fdedbdf0f0c4a2203065",
+          "counters": {
+            "total": "128",
+            "executed": "128",
+            "passed": "128",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          },
+          "nonPassedOutcomes": []
+        }
+      ],
+      "steps": [
+        {
+          "name": "sdk",
+          "exitCode": 0,
+          "seconds": 2.653,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "sdk-version",
+          "exitCode": 0,
+          "seconds": 1.694,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "restore",
+          "exitCode": 0,
+          "seconds": 20.408,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "seconds": 80.23,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test",
+          "exitCode": 0,
+          "seconds": 934.468,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test-map",
+          "exitCode": 0,
+          "seconds": 2.385,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-1",
+          "exitCode": 0,
+          "seconds": 0.401,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-2",
+          "exitCode": 0,
+          "seconds": 0.592,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-2",
+          "exitCode": 0
+        },
+        {
+          "name": "jit-3",
+          "exitCode": 0,
+          "seconds": 0.682,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-3",
+          "exitCode": 0
+        },
+        {
+          "name": "upgrade-jit",
+          "exitCode": 0,
+          "seconds": 0.589,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "example",
+          "exitCode": 0,
+          "seconds": 0.269,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-build",
+          "exitCode": 0,
+          "seconds": 17.323,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-types",
+          "exitCode": 0,
+          "seconds": 1.647,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-lifecycle",
+          "exitCode": 0,
+          "seconds": 0.859,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-shared-modules",
+          "exitCode": 0,
+          "seconds": 20.105,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-author-watch",
+          "exitCode": 0,
+          "seconds": 11.126,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-validate",
+          "exitCode": 0,
+          "seconds": 0.322,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-preview",
+          "exitCode": 0,
+          "seconds": 0.25,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-invocation",
+          "exitCode": 0,
+          "seconds": 14.101,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-usage",
+          "exitCode": 2,
+          "seconds": 0.156,
+          "expectedExitCode": 2
+        },
+        {
+          "name": "cli-invalid-option",
+          "exitCode": 1,
+          "seconds": 0.14,
+          "expectedExitCode": 1
+        },
+        {
+          "name": "api",
+          "exitCode": 0,
+          "seconds": 1.178,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-optional",
+          "exitCode": 0,
+          "seconds": 10.878,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "pack",
+          "exitCode": 0,
+          "seconds": 14.479,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-symbols-and-debug-consumer",
+          "exitCode": 0,
+          "seconds": 119.198,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-content-boundaries",
+          "exitCode": 0
+        },
+        {
+          "name": "consumer-restore",
+          "exitCode": 0,
+          "seconds": 3.313,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-publish",
+          "exitCode": 0,
+          "seconds": 15.841,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-run",
+          "exitCode": 0,
+          "seconds": 0.253,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-restore",
+          "exitCode": 0,
+          "seconds": 7.309,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-run",
+          "exitCode": 0,
+          "seconds": 6.199,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-install",
+          "exitCode": 0,
+          "seconds": 0.803,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-package-preview",
+          "exitCode": 0,
+          "seconds": 0.183,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-restore",
+          "exitCode": 0,
+          "seconds": 3.778,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-publish",
+          "exitCode": 0,
+          "seconds": 13.28,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-run",
+          "exitCode": 0,
+          "seconds": 1.759,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-retained-run",
+          "exitCode": 0,
+          "seconds": 3.901,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republish",
+          "exitCode": 0,
+          "seconds": 10.961,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republished-run",
+          "exitCode": 0,
+          "seconds": 1.098,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "independent-consumer-location",
+          "exitCode": 0
+        },
+        {
+          "name": "clr-deployment",
+          "exitCode": 0,
+          "seconds": 101.277,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "clr-multi-entry",
+          "exitCode": 0,
+          "seconds": 98.859,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-package-consumer",
+          "exitCode": 0,
+          "seconds": 44.093,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-dotnet-settings",
+          "exitCode": 0,
+          "seconds": 383.06,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "whitespace",
+          "exitCode": 0,
+          "seconds": 0.068,
+          "expectedExitCode": 0
+        }
+      ],
+      "generatedConsumers": {
+        "status": "requested-checks-passed",
+        "aotRequested": false,
+        "stepCount": 165,
+        "steps": [
+          {
+            "name": "declaration-external-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-author-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-author-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-author-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-artifact-only-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-selected-sdk",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-direct-baseline",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-return-annotation-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-extension-receiver-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-method-default-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-null-array-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-null-array-named-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-duplicate-signature-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-malformed-declaration-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-first-invalid-root-build",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-first-invalid-root-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-generated-neighbor-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-cold-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-consumer",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-tampered-identity-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-unknown-root-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-nonpublic-root-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-nonpublic-container-root-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-remote-emission-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-first-design-time",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-design-time-compile",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-contracts-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-contracts-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-contracts-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "shared-declaration-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "shared-declaration-host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "shared-declaration-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-extract-context-declaration-missing",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-context-declaration-missing",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-context-lookup-type-mismatch",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-context-lookup-type-mismatch",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-context-wire-collision",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-context-wire-collision",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-private-marked-method",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-private-marked-method",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-abstract-marked-method",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-abstract-marked-method",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-extern-marked-method",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-extern-marked-method",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-bodyless-marked-method",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-bodyless-marked-method",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-empty-json-context",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-empty-json-context",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-authored-json-metadata",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-authored-json-metadata",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-metadata-context-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-extract-external-metadata-context",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-external-metadata-context",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-internal-service",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-missing-implementation",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-refuse-unknown-property",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-first-refused-build",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-first-refused-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-refuse-dataexpression-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-dataexternal-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-datareadonly-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-datawirecollision-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-dataoptions-dataoptions",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-datachild-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-catalogservice-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-msbuild-refusal",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-failed-build-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-selected-sdk",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-first-design-time",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-contracts-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-first-design-time",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-web-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-source-change-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-changed-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-changed-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-changed-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-web-missing",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-web-missing-recovery",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-web-conflict",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-web-conflict-recovery",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-missing-model",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-remote-failed-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-cold-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-changed-design-time",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-reference-change-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-changed-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-changed-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-changed-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-refuse-missing",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-conflicting-source",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-reference-identity",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-reference-root",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-reference-generic",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-private-json-include",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-dictionary-key",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-msbuild-missing-model",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-design-time-missing-model",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-failed-build-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "event-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "event-author-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-pluginManager-client-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-plugin-manager-changed-client-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-alpha-changed-client-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-alpha-nested-client-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-management-host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-management-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-management-jit",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "author-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "unrelated-declaration-change-accepted",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "valid-stale-model-method-name-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "valid-stale-model-service-type-name-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "model-only-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "contracts-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "contracts-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "contracts-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "projection-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "selected-sdk",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "numeric-model-only-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "primitives-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "primitives-model-project",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "nullable-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "nullable-model-project",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-model-project",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "collision-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "collision-model-project",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "recordStruct-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "recordStruct-model-project",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "optional-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "optional-model-project",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-host-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-host-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "helperCollision-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "helper-model-only-contracts-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "helper-JsonCollision-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "helper-CarrierCollision-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "helper-ClientCollision-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "helper-ArgsCollision-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "optional-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "nullable-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "projection-caller-jit",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "author-package-publish",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "typed-settings-jit",
+            "exitCode": 0,
+            "expectedFailure": false
+          }
+        ],
+        "rawReceiptSha256": "e5d275fd131869f2cab2d10f4098ce2547083b72ac35604c6aca6acb84c8d789",
+        "webCalls": [
+          {
+            "name": "referenced-web-caller",
+            "exitCode": 0,
+            "packageVersion": "1.0.0-alpha",
+            "assets": {
+              "cordis-remote.d.mts": "189a6622e3b556dbd69a733407f0ef70de2feb1203c74a3a104ba3c1f96ed9dc",
+              "cordis-remote.mjs": "91c61827f64b91ed3ac037f21ab741840ab0c2c6a9fca4d5313cc694fe1f897d",
+              "remote.d.mts": "4b40106ffa40125271b458ff9b03de59055a8e3e565980097afc8ff28ae0cf19",
+              "remote.mjs": "59097563aa6d51a58aec01b2a56f20c1d5b4008be33887f2168caab9015350b8"
+            }
+          },
+          {
+            "name": "referenced-web-changed-caller",
+            "exitCode": 0,
+            "packageVersion": "1.0.1-alpha",
+            "assets": {
+              "cordis-remote.d.mts": "189a6622e3b556dbd69a733407f0ef70de2feb1203c74a3a104ba3c1f96ed9dc",
+              "cordis-remote.mjs": "91c61827f64b91ed3ac037f21ab741840ab0c2c6a9fca4d5313cc694fe1f897d",
+              "remote.d.mts": "fe258cc32411f634a4a8190c41ea97cdf77d806ce97e70977b3b2d3529103a28",
+              "remote.mjs": "9ad3a01766e460bb0b3a529531a150f98d3b2149c1278fcef7d8d65254fd7ffc"
+            }
+          }
+        ]
+      },
+      "packages": {
+        "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "e52ed545d97af1477edf86eb2ae296c4808eeb58924e7999e1bb166915bbc2a1",
+        "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "640448e55711efdd9e40a81cd2a102a949a759e10ef36077c35b1db6eba5a277",
+        "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "0dd11fe6ec736b4e4f08f45dcef4b788f8036b0e6211683a3c3ba1611485a28f",
+        "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "10166ac4ae0ba960d33cf618a8cae336cd1838fd505beaca1ca803f54b4149b1",
+        "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "902f3f8f98058ca9e17f3191ce24e3c36d5957997a21de9598c0722e4be36427",
+        "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "8e6680804cf01d0f1658f3c6d951eeaf1af30b2ead1e2a2fdd7de895d6b9f3b4",
+        "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "1abf006e24f5f2298abcc197ff0684f4637aa8e2772c064226781338c9529ed4",
+        "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "02b120819b9d3236cc1676912d93000226fc14d8d7a94bf9aaa6e1ffd90623f1",
+        "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "5f5a7ab719cea3503dbc5bb5506b092c2aaa2850280c606f811c08cf8f0b63ef",
+        "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "56716ab3370cf9be811016992bb32781c3c1c3c7b24dfb23b9a2910fdee1fcd3",
+        "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "f9c049fc0d88d891befa21904fe09e0822c373025a37b89311129d3a1b2efb2e",
+        "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "8cb0d794fe9e541cdd60af18dee21cf55c012336a11656cb466bf0cfee51bfe9",
+        "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "cf6c82a4e7c49e5bc77b6cf0fa74e3a07a0e0e4f7cd1ded4529ab1927887d34d",
+        "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "70b8115299759ef731738fe4da581c0e0e3f18be2af2b8706fe71c058e242ac9",
+        "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "d6cf378983fb1a46cc33a022420b62b1597dfe9f5f8c9fef6249c496017d82ac",
+        "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "c9b3aaa3a64d42fdd25b346647d063792990160da187e4f8c3eab53f0e23ac73",
+        "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "e614fc36984d2052486bb1bc17edfa9ef867d671accb3faca32bd7b4b8fc8b07",
+        "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "066b23c8e3f2187a33c8ed8a4359b0e6d7451551103cdabd9d1e5f71e3f04346"
+      }
+    },
+    {
+      "commit": "6356b86d3862b43217725da3668998433973b970",
+      "rid": "linux-x64",
+      "sdkVersion": "10.0.111",
+      "status": "requested-checks-passed",
+      "cleanWorkingTree": true,
+      "sourceUnchanged": true,
+      "sourceManifestSha256": "ff18a92c3902cda28f612fc7c5e99046e21a86bf4e8cd8e4bf3ad01d5a39cd49",
+      "rawReceiptSha256": "1d5ae9d2378600a60c8d03af76d63b099926c7bee2032e75b815ffe6110204a4",
+      "tests": [
+        {
+          "sha256": "b6f2fdc2157b34839a08b362510d4166149e55a5bb3b755b08c7adacf991df67",
+          "counters": {
+            "total": "128",
+            "executed": "125",
+            "passed": "125",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          },
+          "nonPassedOutcomes": [
+            {
+              "name": "Cordis.Platform.Tests.PackageProcessTests.Exited_sdk_cannot_report_prepared_output_while_its_child_still_writes",
+              "outcome": "NotExecuted"
+            },
+            {
+              "name": "Cordis.Platform.Tests.PackageProcessTests.Cancelled_preparation_stops_child_with_independent_output_pipes_before_returning",
+              "outcome": "NotExecuted"
+            },
+            {
+              "name": "Cordis.Platform.Tests.PackageProcessTests.Host_exit_terminates_owned_package_children_without_waiting_for_sdk_exit",
+              "outcome": "NotExecuted"
+            }
+          ]
+        },
+        {
+          "sha256": "3fe4e9dbc893cbdb7b168d32623534749a374bb6743a0ddebf587f9083ed10b8",
+          "counters": {
+            "total": "503",
+            "executed": "503",
+            "passed": "503",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          },
+          "nonPassedOutcomes": []
+        },
+        {
+          "sha256": "c09123ee02fc1e38c71b607971f6ce8a236fb85d64762481d0b818aff7b05719",
+          "counters": {
+            "total": "113",
+            "executed": "113",
+            "passed": "113",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          },
+          "nonPassedOutcomes": []
+        },
+        {
+          "sha256": "a83862a55a7bf47e744c0d2ae9c4b990ccd186ec564890fb79f11efbec62bd65",
+          "counters": {
+            "total": "148",
+            "executed": "148",
+            "passed": "148",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          },
+          "nonPassedOutcomes": []
+        }
+      ],
+      "steps": [
+        {
+          "name": "sdk",
+          "exitCode": 0,
+          "seconds": 0.683,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "sdk-version",
+          "exitCode": 0,
+          "seconds": 0.129,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "restore",
+          "exitCode": 0,
+          "seconds": 5.67,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "seconds": 28.246,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test",
+          "exitCode": 0,
+          "seconds": 343.879,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test-map",
+          "exitCode": 0,
+          "seconds": 0.458,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-1",
+          "exitCode": 0,
+          "seconds": 0.26,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-2",
+          "exitCode": 0,
+          "seconds": 0.269,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-2",
+          "exitCode": 0
+        },
+        {
+          "name": "jit-3",
+          "exitCode": 0,
+          "seconds": 0.292,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-3",
+          "exitCode": 0
+        },
+        {
+          "name": "upgrade-jit",
+          "exitCode": 0,
+          "seconds": 0.292,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "example",
+          "exitCode": 0,
+          "seconds": 0.141,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-build",
+          "exitCode": 0,
+          "seconds": 9.132,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-types",
+          "exitCode": 0,
+          "seconds": 2.164,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-lifecycle",
+          "exitCode": 0,
+          "seconds": 0.314,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-shared-modules",
+          "exitCode": 0,
+          "seconds": 13.104,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-author-watch",
+          "exitCode": 0,
+          "seconds": 6.759,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-validate",
+          "exitCode": 0,
+          "seconds": 0.07,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-preview",
+          "exitCode": 0,
+          "seconds": 0.088,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-invocation",
+          "exitCode": 0,
+          "seconds": 9.448,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-usage",
+          "exitCode": 2,
+          "seconds": 0.031,
+          "expectedExitCode": 2
+        },
+        {
+          "name": "cli-invalid-option",
+          "exitCode": 1,
+          "seconds": 0.076,
+          "expectedExitCode": 1
+        },
+        {
+          "name": "api",
+          "exitCode": 0,
+          "seconds": 0.654,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-optional",
+          "exitCode": 0,
+          "seconds": 5.631,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "aot-publish",
+          "exitCode": 0,
+          "seconds": 17.586,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "aot-run",
+          "exitCode": 0,
+          "seconds": 0.013,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-aot-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "upgrade-aot-run",
+          "exitCode": 0,
+          "seconds": 0.015,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-jit-aot-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "pack",
+          "exitCode": 0,
+          "seconds": 3.004,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-symbols-and-debug-consumer",
+          "exitCode": 0,
+          "seconds": 6.896,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-content-boundaries",
+          "exitCode": 0
+        },
+        {
+          "name": "consumer-restore",
+          "exitCode": 0,
+          "seconds": 2.541,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-publish",
+          "exitCode": 0,
+          "seconds": 7.922,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-run",
+          "exitCode": 0,
+          "seconds": 0.145,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-publish",
+          "exitCode": 0,
+          "seconds": 12.585,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-run",
+          "exitCode": 0,
+          "seconds": 0.006,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-restore",
+          "exitCode": 0,
+          "seconds": 3.613,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-run",
+          "exitCode": 0,
+          "seconds": 2.061,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-install",
+          "exitCode": 0,
+          "seconds": 0.73,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-package-preview",
+          "exitCode": 0,
+          "seconds": 0.09,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-restore",
+          "exitCode": 0,
+          "seconds": 1.162,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-publish",
+          "exitCode": 0,
+          "seconds": 3.454,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-run",
+          "exitCode": 0,
+          "seconds": 0.722,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-publish",
+          "exitCode": 0,
+          "seconds": 34.905,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-run",
+          "exitCode": 0,
+          "seconds": 0.085,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-retained-run",
+          "exitCode": 0,
+          "seconds": 0.649,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republish",
+          "exitCode": 0,
+          "seconds": 2.717,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republished-run",
+          "exitCode": 0,
+          "seconds": 0.615,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-retained-run",
+          "exitCode": 0,
+          "seconds": 0.079,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republish",
+          "exitCode": 0,
+          "seconds": 32.864,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republished-run",
+          "exitCode": 0,
+          "seconds": 0.087,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "independent-consumer-location",
+          "exitCode": 0
+        },
+        {
+          "name": "clr-deployment",
+          "exitCode": 0,
+          "seconds": 15.455,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "clr-multi-entry",
+          "exitCode": 0,
+          "seconds": 41.411,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-package-consumer",
+          "exitCode": 0,
+          "seconds": 45.744,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-dotnet-settings",
+          "exitCode": 0,
+          "seconds": 238.96,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "whitespace",
+          "exitCode": 0,
+          "seconds": 0.003,
+          "expectedExitCode": 0
+        }
+      ],
+      "generatedConsumers": {
+        "status": "requested-checks-passed",
+        "aotRequested": true,
+        "stepCount": 172,
+        "steps": [
+          {
+            "name": "declaration-external-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-author-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-author-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-author-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-artifact-only-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-selected-sdk",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-direct-baseline",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-return-annotation-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-extension-receiver-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-method-default-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-null-array-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-null-array-named-source-drift",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-duplicate-signature-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-malformed-declaration-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-first-invalid-root-build",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-first-invalid-root-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-generated-neighbor-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-cold-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-catalog-consumer",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "declaration-tampered-identity-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-unknown-root-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-nonpublic-root-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-nonpublic-container-root-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "declaration-remote-emission-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-first-design-time",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-design-time-compile",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-contracts-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-contracts-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-contracts-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "shared-declaration-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "shared-declaration-host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "shared-declaration-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-extract-context-declaration-missing",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-context-declaration-missing",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-context-lookup-type-mismatch",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-context-lookup-type-mismatch",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-context-wire-collision",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-context-wire-collision",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-private-marked-method",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-private-marked-method",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-abstract-marked-method",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-abstract-marked-method",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-extern-marked-method",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-extern-marked-method",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-bodyless-marked-method",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-bodyless-marked-method",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-empty-json-context",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-empty-json-context",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-authored-json-metadata",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-authored-json-metadata",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-metadata-context-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-extract-external-metadata-context",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-external-metadata-context",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-extract-internal-service",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "saved-remote-refuse-missing-implementation",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-refuse-unknown-property",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-first-refused-build",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "saved-remote-first-refused-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "ordinary-data-refuse-dataexpression-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-dataexternal-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-datareadonly-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-datawirecollision-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-dataoptions-dataoptions",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-datachild-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-refuse-catalogservice-refusedjson",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-msbuild-refusal",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "ordinary-data-failed-build-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-selected-sdk",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-first-design-time",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-contracts-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-first-design-time",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-web-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-source-change-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-changed-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-changed-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-changed-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-web-missing",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-web-missing-recovery",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-web-conflict",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-web-conflict-recovery",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-missing-model",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-remote-failed-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-remote-cold-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-changed-design-time",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-reference-change-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-changed-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-changed-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-changed-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-refuse-missing",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-conflicting-source",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-reference-identity",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-reference-root",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-reference-generic",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-private-json-include",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-refuse-dictionary-key",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-msbuild-missing-model",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-design-time-missing-model",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "referenced-data-failed-build-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "referenced-data-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "event-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "event-author-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-pluginManager-client-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-plugin-manager-changed-client-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-alpha-changed-client-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-alpha-nested-client-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-management-host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-management-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-management-caller-aot-publish",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-management-jit",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "standard-management-aot",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "author-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "unrelated-declaration-change-accepted",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "valid-stale-model-method-name-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "valid-stale-model-service-type-name-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "model-only-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "contracts-incremental",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "contracts-clean",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "contracts-cold-rebuild",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "projection-author-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "selected-sdk",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "numeric-model-only-contracts-pack",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "caseParts-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "primitives-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "primitives-model-project",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "nullable-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "nullable-model-project",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-model-project",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "collision-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "collision-model-project",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "recordStruct-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "recordStruct-model-project",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "optional-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "optional-model-project",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-host-caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "readonly-host-caller",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "helperCollision-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "helper-model-only-contracts-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "helper-JsonCollision-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "helper-CarrierCollision-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "helper-ClientCollision-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "helper-ArgsCollision-rejected",
+            "exitCode": 1,
+            "expectedFailure": true
+          },
+          {
+            "name": "optional-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "nullable-source-extract",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "projection-caller-jit",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "projection-caller-aot-publish",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "projection-caller-aot",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "author-package-publish",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "host-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "caller-build",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "caller-aot-publish",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "typed-settings-jit",
+            "exitCode": 0,
+            "expectedFailure": false
+          },
+          {
+            "name": "typed-settings-aot",
+            "exitCode": 0,
+            "expectedFailure": false
+          }
+        ],
+        "rawReceiptSha256": "85a3a45f55be8c56d017f6a8441ac2615d041326f9437294cb5ef3b354084fee",
+        "webCalls": [
+          {
+            "name": "referenced-web-caller",
+            "exitCode": 0,
+            "packageVersion": "1.0.0-alpha",
+            "assets": {
+              "remote.d.mts": "fbfe3adc4e9472576d5cea3b8339f8556eda430f25eb884c751fcaa7726d7f35",
+              "cordis-remote.d.mts": "189a6622e3b556dbd69a733407f0ef70de2feb1203c74a3a104ba3c1f96ed9dc",
+              "remote.mjs": "d51214f5b475f9b9d79900724b689b0c17449649e5e6edabd0733b4b2169f9a0",
+              "cordis-remote.mjs": "91c61827f64b91ed3ac037f21ab741840ab0c2c6a9fca4d5313cc694fe1f897d"
+            }
+          },
+          {
+            "name": "referenced-web-changed-caller",
+            "exitCode": 0,
+            "packageVersion": "1.0.1-alpha",
+            "assets": {
+              "remote.d.mts": "d20d6e4acb2a63205b1784aad7805cd286925e4b74db4d5027422919d1e4bcbd",
+              "cordis-remote.d.mts": "189a6622e3b556dbd69a733407f0ef70de2feb1203c74a3a104ba3c1f96ed9dc",
+              "remote.mjs": "0ad892d1fa8d1c17ee2b29e0f600e9fc29f1ad30370e1aff2b38a1db9c0ab78f",
+              "cordis-remote.mjs": "91c61827f64b91ed3ac037f21ab741840ab0c2c6a9fca4d5313cc694fe1f897d"
+            }
+          }
+        ]
+      },
+      "packages": {
+        "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "a19547a56e67187b6218ad395bcaffbbafce8b10628132641f762cb7c6989512",
+        "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "78d6f8c250eca26c8cdf94a2307a216693562cfeeadba907995deaed2bd8c776",
+        "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "c73be2e0a9212cf8b0bcb7da14f3202561e72272510c007a12124a874968f170",
+        "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "c92b0d9c6080eb984b391c6914ec3bd8bda36dd8b042a360c2823a21681c66e7",
+        "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "ce9090c2163408129e081ff17758986a29da4ae7c0a5fc89e1cbbfaf853ada68",
+        "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "ed2f6fb14bae2550a82e2828b56bf72f200b6530ecd2115419d7bca73c7af263",
+        "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "e5170c226d83809385afcb4ecb5bd237ca422a35f116746f66440b1fb481086a",
+        "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "73fd9bd19afa405f1ca4bf3db0585b073513eb5d7eb4562bda1a1f44416b5d29",
+        "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "e7cb3985b5804d47d2182e1fcd95659afc4c2034e6f657b9362fcedda531dd03",
+        "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "c05eeaee13bb8da945c0b73fb8f8081b349ce3a14ac6a24539d4cae3fc2661c2",
+        "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "85c844d1d02341a41e32ed1e9db262ff0075695ee812aad85d01d3c0e0e065b6",
+        "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "d2464c2c2acc087f4df5143772913cf381f4d00481106e66fff0969e6df3a81d",
+        "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "3cf121a06c6ab1e47c3113fe74c1c0846602020cc3cdad3c40487f08eba9171b",
+        "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "4f583ab04effad0e11ba232d8741eaf0d8c524b648b1e0ef21bff3f657d59ad8",
+        "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "423acd9369e0c01c402928b71324bb8c618c5f7b6f66007e51dc7e92c601969a",
+        "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "f7d9f2649436cbb2d84f79319345dee00a0da52e16066d2c2d5f2d15023e85a5",
+        "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "6712263fd780bbbe3b7f32057aa6eeb6f409b669823b5fb43b1bc98a792d3199",
+        "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "ad9412b68e28b15e5a637b76f749f85f43293723bc3de518d77ac96ef7711806"
+      }
+    }
+  ],
+  "linuxTestBoundary": "889 passed; three exact Windows Job/process ownership cases reported NotExecuted, not counted as passed. Existing platform-specific gate accepts only those names.",
+  "browser": {
+    "red": {
+      "sourceCommit": "9be3b92ff704429bf293b919082fa1ec4ed60843",
+      "status": "failed",
+      "publicCall": "new TypertConnection(origin + \"/remote\"); createRemote(connection)[\"referencedData/echo\"]({value: input})",
+      "observedError": "RemoteError: TypeError: Failed to execute 'fetch' on 'Window': Illegal invocation",
+      "boundary": "Real Chromium browser, default fetch, before request dispatch",
+      "assets": {
+        "cordis-remote.mjs": "07b5eab746093aca0ca727cbd2f7906603571d1c2990dc51a9b98475684bbe7b",
+        "index.html": "6f89e0ce9a3afd1c8fc209ffb6b9f36f7b556149e409b05e3aac5e1247e62a8f",
+        "ReferencedWebClient.js": "3562892c060bbad5471ca2016f14f51bc7450c9398c1651b3b18103079de870f",
+        "remote.mjs": "59097563aa6d51a58aec01b2a56f20c1d5b4008be33887f2168caab9015350b8"
+      },
+      "hostAssemblySha256": "0e630c51f52988f312d75997968c4ff212cf143e89a1d6ab8e10b60b8ce18bab",
+      "compositionAssemblySha256": "495116854463a03f112ac73bc71e6f717ba2aafad21aca0ee35ba64c9869b8c4",
+      "screenshotSha256": "5d097edcc30780e226721e836a858184658bee39cdb8c94aca93a06cf62e6a93"
+    },
+    "green": {
+      "sourceCommit": "6356b86d3862b43217725da3668998433973b970",
+      "hostAssemblySha256": "650adecfde0b2f7438a8453d33f5d61a765b520b7c7a3e9c53cf99803d7dc34d",
+      "compositionAssemblySha256": "25e74ba986adb7e4bff3f169d753d927d712a19172662c00058e9c84d65c6b0b",
+      "assets": {
+        "cordis-remote.mjs": "91c61827f64b91ed3ac037f21ab741840ab0c2c6a9fca4d5313cc694fe1f897d",
+        "index.html": "dde8007f9191e49aec734894170a4276663072d4d97ee7394cc3a44594bc48b0",
+        "ReferencedWebClient.js": "3562892c060bbad5471ca2016f14f51bc7450c9398c1651b3b18103079de870f",
+        "remote.mjs": "59097563aa6d51a58aec01b2a56f20c1d5b4008be33887f2168caab9015350b8"
+      },
+      "schemaSha256": "1d566fe3c0e32080135092e4b7d22d5f0c2ff121548e03803735fe07cec4b37f",
+      "status": "passed",
+      "screenshotSha256": "7a8bdb1f3bd9572bd23ed46ca4082a1574f290cf7241fb8cb2e20c50edd07a1b",
+      "consumer": "tests/fixtures/DeclarationModel/ReferencedWebClient.ts and ReferencedWebClient.html",
+      "transport": "Temporary loopback proxy forwards unmodified RPC bodies to the independently built actual Host. No injected fetch function or simulated Remote response."
+    }
+  },
+  "testAdmission": {
+    "primaryOwner": "Existing referenced-model package consumer, with the same TS call exercised in a real browser",
+    "observableContract": "The default Connection performs the actual typed call in Chromium and returns the Host response without caller-provided fetch",
+    "credibleRegression": "Observed Illegal invocation on 9be3b92 before HTTP dispatch",
+    "coverageGap": "Node fetch tolerated the invalid receiver; prior browser fixtures injected fetch wrappers",
+    "productionTestSeamAdded": false
+  },
+  "predecessor": {
+    "sourceCommit": "9be3b92ff704429bf293b919082fa1ec4ed60843",
+    "windowsGate": "passed",
+    "linuxAotGate": "passed",
+    "browser": "failed-default-fetch-illegal-invocation",
+    "note": "Predecessor gates do not establish corrected source acceptance."
+  },
+  "boundaries": [
+    "Original DSH source suites and hosted CI were not executed in this batch; selected fixed interoperability checks are included.",
+    "Linux Native AOT covers conformance and designated static/HTTP/generated callers; the explicit referenced DTO caller and dynamic Host remain JIT.",
+    "Reference update changes a saved initializer/input identity, not the deployed Host default or a tested wire-shape change.",
+    "This browser check covers packaged referenced unary data calls using the default Connection; it is not a new exhaustive scoped/event browser matrix.",
+    "Live IDE, named UI targets, scope store/layer, and all unsupported model-backend shapes remain open.",
+    "No package version, dependency, behavior pin, Maker, remote branch, merge, publication or deployment changes.",
+    "A Linux browser helper attempt timed out before READY; the temporary Host path was subsequently absent. It is not a browser execution result; final browser evidence uses the Windows gate assets."
+  ]
+}

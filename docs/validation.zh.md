@@ -531,3 +531,15 @@ Windows x64 源码测试通过 883 项；四阶段格式检查在 277 个 C# 文
 独立管理 Host 现使用 `ForContext` 返回新 view 的 subject，既有 .NET 和严格 TypeScript 事件消费通过。真实浏览器复用同批 Host 包与生成资产，通过当前 adapter、借用 Context、next／undefined／null、owned reply 和取消后 handler 结算。loopback Host 与代理已关闭。这是本候选的新证据；较早 `28901b9` 的浏览器与门禁结果保留原身份。
 
 本次不声称完成 Linux、Native AOT、托管 CI、真实 IDE、具名 UI 框架、新一轮完整上游测试、浏览器侧 scope 实现或全部 Peer 工作流。固定源码对应已在本地核对。首次 design-time 保持 MSBuild 脚本层接纳；引用 Schema／TS 消费及 scope store／layer 仍是独立职责。没有为验证放宽生产断言或安全检查。
+
+## 引用 Web 制品与默认浏览器 Connection，2026-10-13
+
+冻结源码 `6356b86d3862b43217725da3668998433973b970` 通过完整 Windows 包门禁及 Linux 包／AOT 门禁。两端工作树在执行期间保持干净且源码未变。Windows 892 项测试通过；Linux 889 项通过，三个既定 Windows Job／进程所有权用例记录为未执行。[脱敏回执](../verification/referenced-web-2026-10-13/evidence.json)记录其精确名称、各平台步骤、生成消费者结果及包哈希。本地验证包保留现有版本，仅作私有测试制品，不是新发布。
+
+既有独立引用模型消费者现在从显式主模型／引用声明生成并打包 Schema／ESM／TypeScript。严格 TS 检查及 Node 调用通过实际 Host 验证递归 DTO、数组、字典、wire 名称、required／null 边界和 Host 默认值。缺失与冲突引用拒绝生成并移除自有输出；恢复、增量输出稳定、Clean 和冷构建通过。引用变更用例改变保存的初始化值／输入身份，证明重生成，不证明 wire 形状变化或已部署 Host 默认值改变。
+
+真实 Chromium 消费打包文件时，在前序 `9be3b92` 发现默认 fetch 接收者错误。该提交已通过的 Windows／Linux 门禁仍只归属前序源码。默认 Connection 现在绑定原生全局 fetch，无须调用者注入。同一 TS 样例及已入库 HTML 入口通过临时回环转发代理调用修正后的包 Host，验证通过。这是该问题的主要浏览器回归；Node 的 fetch 接受旧接收者，不能保护此边界。验证后代理及 Host 均关闭。
+
+`9be3b92` 的首次全新 Linux 门禁因未安装锁定 npm 依赖而停止；失败回执与随后完整重跑分开保留。早期开发夹具／格式检查失败及浏览器红例也保留。一次 Linux 浏览器辅助启动在 READY 前超时，随后其临时 Host 路径已不存在，不计作浏览器运行；最终浏览器证据使用 Windows 候选包。
+
+Linux Native AOT 覆盖 conformance、指定静态／HTTP 消费者及既有生成式管理／投影／Settings caller。显式引用 DTO caller 和动态 Host 仍是 JIT。本批执行选定固定端互操作检查，未运行原始 DSH 源码套件或托管 CI。不据此重新证明所有 scoped／事件浏览器路径、实际 IDE 或具名 UI 集成，也不关闭 scope store／layer 或全部序列化／类型后端。既有模型、scoped 与所有权职责继续在[开发记录](development.zh.md)维护。
