@@ -239,7 +239,19 @@ unary 使用固定的 `client-request`／`server-response` 封套及关联 `rpcI
 
 对于可预期的业务拒绝，作者可在现有服务边界抛出 `RemoteError`，明确提供可公开的 code、message 和可选 JSON details。Gateway 保留这些字段；普通未处理异常当前映射为 `gateway/internal` 并保留异常消息。这对应固定 DSH 的 [rpcFailure](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/index.ts)，不是自动脱敏或宿主统一异常映射服务。需要隐藏内部信息的应用应在其拥有的业务调用边界完成映射和诊断记录；外层 ASP.NET 异常中间件不能假设还能捕获已被 Gateway 转为结果的异常。这里不改变取消、装配失败或流的独立合同，也不承诺已有统一映射回调。
 
-公开的 `TypertCodec.Schema` 是输入方向投影；输出方向的 `ResultSchema` 当前为内部成员，由标准 emitter 使用。不要用输入 Schema 代替返回值 Schema，也不要反射内部成员。生成 Web 客户端的类型声明不等于对任意结果 DTO 执行完整运行时校验。原生 `DecodeOutput` 有自己的输出解码职责；它不提供给外部 Web 校验器导出输出 Schema 的入口。需要该入口的消费者必须单独确认支持范围，不能据此声称已存在公开输出 Schema API。
+`TypertCodec.Schema` 描述输入；公开只读、非 virtual 的 `ResultSchema` 描述 JSON 输出。从实际生成的 contribution 取得结果 codec 后导出：
+
+```csharp
+var contribution = EchoServiceTypert.Contribution("Example.Author");
+var resultCodec = contribution.Invocations.Single(method => method.Endpoint == "example/echo").Result;
+File.WriteAllText("echo-result.schema.json", resultCodec.ResultSchema.GetRawText());
+```
+
+使用服务声明的实际 endpoint。导出的 JSON 可脱离 provider 及其 `JsonTypeInfo` 保存和消费。它与原生 `DecodeOutput`、客户端 emitter 使用同一输出投影，不是另一份 Schema 声明。输入与输出在条件省略、只读／计算成员及 accessor 空性上可以不同。支持的局部引用在导出的 Schema 内解析；Nullable、Optional 保留原有组合规则，顶层 `Undefined` 仍属于缺席合同（`AcceptsUndefined`），不等于 JSON null。
+
+读取保留惰性投影及不支持构造的精确 `NotSupportedException` 诊断。format 注解不保证每个外部校验器都会校验对应格式。它描述序列化 JSON，不描述 multipart 帧或还原后的 JavaScript 二进制值。公开范围是读取，不新增外部 override 协议或 HTTP 端点。生成 Web 类型声明本身不校验任意结果 DTO。导出 Schema 不保证 STJ 能重建作者 DTO；只读计算结果可作为 JSON 消费，不要求原生 DTO 往返重建。
+
+应用决定何时校验以及失败后如何处理，包括先记录业务接受事实、再校验结果。为此读取或导出同一输出合同，不以输入 Schema、DTO 反射或手写规则代替。读取属性不新增 Gateway 结果校验，也不改变接受、取消、回复或清理顺序。
 
 ```typescript
 import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";

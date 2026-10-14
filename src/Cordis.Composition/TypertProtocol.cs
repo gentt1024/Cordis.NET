@@ -184,7 +184,21 @@ public abstract partial class TypertCodec
     public virtual TypertRemoteResult EncodeResult(object? value) => TypertRemoteResult.Success(Encode(value));
 
     internal virtual JsonTypeInfo? ResultMetadata => null;
-    internal virtual JsonElement ResultSchema => Schema;
+
+    /// <summary>Gets the codec's output/write-direction JSON Schema projection.</summary>
+    /// <remarks>
+    /// This read-only JSON value can be saved independently of the codec and its provider. Projection is
+    /// prepared lazily and retains the supported schema subset and NotSupportedException behavior of Schema.
+    /// Input and output requiredness, omission and nullability can differ. Top-level absence is described by
+    /// AcceptsUndefined, not JSON Schema. Format annotations do not promise validation by every consumer.
+    /// This describes JSON output, not the multipart carrier envelope or restored binary JavaScript values.
+    /// Reading it does not validate encoded results or change invocation and business commit ordering.
+    /// This property exposes consumption only; it does not introduce an output-projection override contract.
+    /// </remarks>
+    public JsonElement ResultSchema => ResultSchemaCore;
+
+    internal virtual JsonElement ResultSchemaCore => Schema;
+
     internal virtual TypertNullability? DeclarationQuery => null;
 
     /// <summary>Create an AOT-compatible codec from source-generated JSON metadata and an optional explicit schema.</summary>
@@ -241,7 +255,7 @@ public abstract partial class TypertCodec
         internal override TypertNullability? DeclarationQuery => inner.DeclarationQuery;
         public override TypertRemoteResult EncodeResult(object? value) => inner.EncodeResult(value);
         internal override JsonTypeInfo? ResultMetadata => inner.ResultMetadata;
-        internal override JsonElement ResultSchema => resultSchema ??= ExportSchema(output: true);
+        internal override JsonElement ResultSchemaCore => resultSchema ??= ExportSchema(output: true);
 
         private JsonElement ExportSchema(bool output = false)
         {
@@ -351,7 +365,7 @@ public abstract partial class TypertCodec
 
         internal override JsonTypeInfo ResultMetadata => metadata;
 
-        internal override JsonElement ResultSchema =>
+        internal override JsonElement ResultSchemaCore =>
             resultSchema ??= PrepareSchema(explicitSchema?.Clone() ?? ExportSchema(output: true));
 
         private JsonElement ExportSchema(bool output = false)

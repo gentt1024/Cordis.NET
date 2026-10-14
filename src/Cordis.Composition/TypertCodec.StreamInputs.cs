@@ -79,7 +79,7 @@ public abstract partial class TypertCodec
         public override bool AcceptsUndefined => true;
         public override string TypeSymbol => inner.TypeSymbol + " | undefined";
         public override JsonElement Schema => inner.Schema;
-        internal override JsonElement ResultSchema => inner.ResultSchema;
+        internal override JsonElement ResultSchemaCore => inner.ResultSchema;
         internal override TypertNullability? DeclarationQuery => inner.DeclarationQuery;
 
         public override object Decode(JsonElement value)
@@ -142,7 +142,7 @@ public abstract partial class TypertCodec
         public override TypertRemoteResult EncodeResult(object? value) => Inner.EncodeResult(value);
         internal override JsonTypeInfo? ResultMetadata => Inner.ResultMetadata;
         private JsonElement? resultSchema;
-        internal override JsonElement ResultSchema => resultSchema ??= PrepareSchema(ExportSchema(output: true));
+        internal override JsonElement ResultSchemaCore => resultSchema ??= PrepareSchema(ExportSchema(output: true));
         internal override TypertNullability? DeclarationQuery => item.DeclarationQuery is null ? null : Query;
 
         private TypertNullabilityInfo? Query(ReadOnlySpan<string> path)

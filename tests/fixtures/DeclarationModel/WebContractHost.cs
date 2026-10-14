@@ -45,6 +45,54 @@ resultSchema.AsObject().Remove("$comment");
 resultSchema["$ref"] = "#/$defs/webContract~1direction~1result";
 using var schemaDocument = JsonDocument.Parse(resultSchema.ToJsonString());
 TypertCodec.Create(WebContractJson.Default.JsonElement, schema: schemaDocument.RootElement).Decode(encoded);
+var directionCodec = contribution.Invocations.Single(method => method.Endpoint == "webContract/direction").Result;
+var exportedSchemaPath = Path.Combine(directory, "result.schema.json");
+File.WriteAllText(exportedSchemaPath, directionCodec.ResultSchema.GetRawText());
+using (var exportedSchema = JsonDocument.Parse(File.ReadAllText(exportedSchemaPath)))
+{
+    var outputCodec = TypertCodec.Create(WebContractJson.Default.JsonElement, schema: exportedSchema.RootElement);
+    outputCodec.Decode(encoded);
+    var decoded = (DirectionalData)directionCodec.DecodeOutput(encoded)!;
+    if (decoded.Count != 0 || decoded.OutputNullable is not null || decoded.InputNullable != "initial")
+        throw new Exception("Public output schema changed actual output decoding.");
+    if (encoded.TryGetProperty("Count", out _))
+        throw new Exception("Result serialization lost conditional output omission.");
+    var invalid = JsonNode.Parse(encoded.GetRawText())!;
+    invalid["InputNullable"] = null;
+    try
+    {
+        using var invalidDocument = JsonDocument.Parse(invalid.ToJsonString());
+        outputCodec.Decode(invalidDocument.RootElement);
+        throw new Exception("Public output schema weakened getter nullability.");
+    }
+    catch (JsonException)
+    {
+    }
+
+    try
+    {
+        directionCodec.Decode(encoded);
+        throw new Exception("Input codec accepted an output-only shape.");
+    }
+    catch (JsonException)
+    {
+    }
+}
+
+using (var unsupported = JsonDocument.Parse("""{"type":"string","pattern":"^x$"}"""))
+{
+    var unsupportedCodec = TypertCodec.Create(WebContractJson.Default.String, schema: unsupported.RootElement);
+    try
+    {
+        _ = unsupportedCodec.ResultSchema;
+        throw new Exception("Public output schema bypassed lazy unsupported-keyword refusal.");
+    }
+    catch (NotSupportedException error) when (error.Message.Contains("pattern", StringComparison.Ordinal))
+    {
+    }
+}
+
+schemas["publicResultSchema"] = JsonNode.Parse(directionCodec.ResultSchema.GetRawText());
 schemas["serializedResult"] = JsonNode.Parse(encoded.GetRawText());
 File.WriteAllText(Path.Combine(directory, "host-schemas.json"), schemas.ToJsonString());
 

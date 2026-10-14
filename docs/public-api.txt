@@ -1713,6 +1713,7 @@ Cordis.Composition: Cordis.Composition.TypertCodec : System.Object [] flags=Publ
   Property System.String TypeSymbol attrs= NotNull/Unknown get=True set=False init=False
   Method System.Text.Json.JsonElement Encode(System.Object) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
   Method System.Text.Json.JsonElement EncodeInput(System.Object) attrs= params=value:Nullable/Nullable  return=NotNull/NotNull
+  Property System.Text.Json.JsonElement ResultSchema attrs= NotNull/Unknown get=True set=False init=False
   Property System.Text.Json.JsonElement Schema attrs= NotNull/Unknown get=True set=False init=False
   Method Void ValidateUplinkItem(System.Text.Json.JsonElement) attrs= params=value:NotNull/NotNull  return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertConnection : System.Object [System.IAsyncDisposable] flags=Public, Sealed, BeforeFieldInit attrs=

@@ -239,7 +239,19 @@ This entry reads actual Host descriptors and STJ Schema, then uses the shared cl
 
 For expected business rejection, authors can throw `RemoteError` at their existing service boundary with a public code, message and optional JSON details. Gateway preserves those fields. Ordinary unhandled exceptions currently become `gateway/internal` with their exception message retained, matching fixed DSH [rpcFailure](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/index.ts). This is not automatic redaction or a host-wide exception mapping service. Applications that must conceal internal information should map failures and record diagnostics at their owned business invocation boundary. Outer ASP.NET exception middleware cannot assume it will catch an exception already converted into a Gateway result. This does not change the separate cancellation, assembly-failure or stream contracts, or promise an existing global mapping callback.
 
-Public `TypertCodec.Schema` projects input direction. Output-direction `ResultSchema` is currently internal and used by the standard emitter. Do not substitute input Schema for a result schema or reflect internal members. Generated Web type declarations do not perform complete runtime validation of arbitrary result DTOs. Native `DecodeOutput` has its own output-decoding responsibility; it is not an output-schema export for an external Web validator. Consumers requiring that export must establish its support separately; there is no current public output-schema API.
+`TypertCodec.Schema` describes input; the public read-only, non-virtual `ResultSchema` describes JSON output. Export the result codec from the actual generated contribution:
+
+```csharp
+var contribution = EchoServiceTypert.Contribution("Example.Author");
+var resultCodec = contribution.Invocations.Single(method => method.Endpoint == "example/echo").Result;
+File.WriteAllText("echo-result.schema.json", resultCodec.ResultSchema.GetRawText());
+```
+
+Use the endpoint declared by your service. The exported JSON can be stored and consumed without the provider or its `JsonTypeInfo`. It is the same output projection used by native `DecodeOutput` and the client emitter, not a second schema declaration. Input and output differ for conditional omission, read-only/computed members and accessor nullability. Supported local references resolve within the exported schema. Nullable and Optional codecs preserve their existing composition; top-level `Undefined` remains an absence contract (`AcceptsUndefined`), not a JSON null value.
+
+Access preserves lazy projection and precise `NotSupportedException` diagnostics for unsupported schema constructs. Format annotations do not promise validation by every external validator. This describes serialized JSON, not multipart framing or restored JavaScript binary values. It exposes reading, not a new external override protocol or an HTTP endpoint. Generated Web type declarations alone do not validate arbitrary result DTOs. Exporting a schema does not guarantee that STJ can reconstruct the author DTO; a computed read-only result can be consumed as JSON without a native DTO round trip.
+
+Applications choose when to validate and how to handle failure, including recording business acceptance before validation. Read or export this schema for that purpose; do not substitute input Schema, reflect DTOs or duplicate the output rules. Reading the property adds no Gateway result validation and changes no acceptance, cancellation, reply or cleanup ordering.
 
 ```typescript
 import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";

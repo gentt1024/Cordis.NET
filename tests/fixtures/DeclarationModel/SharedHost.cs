@@ -22,7 +22,21 @@ await context.RunAsync(owner =>
 {
 #if CORDIS_READONLY_HOST
     owner.Provide("readonly", new ReadonlyService());
-    registry.Register(owner, ReadonlyServiceTypert.Contribution("IndependentProjection.Provider"));
+    var contribution = ReadonlyServiceTypert.Contribution("IndependentProjection.Provider");
+    var resultCodec = contribution.Invocations.Single(method => method.Endpoint == "readonly/value").Result;
+    var schemaPath = Path.Combine(AppContext.BaseDirectory, "result.schema.json");
+    File.WriteAllText(schemaPath, resultCodec.ResultSchema.GetRawText());
+    using (var exported = System.Text.Json.JsonDocument.Parse(File.ReadAllText(schemaPath)))
+    {
+        if (!exported.RootElement.GetProperty("properties").TryGetProperty("applies", out _))
+            throw new Exception("Public result schema lost the computed read-only output member.");
+        var output = resultCodec.Encode(new ReadonlyValue());
+        var exportedCodec = TypertCodec.Create(ExportedSchemaJson.Default.JsonElement, schema: exported.RootElement);
+        exportedCodec.Decode(output);
+        if (output.GetProperty("applies").GetString() != "live")
+            throw new Exception("Public result schema changed read-only serialization.");
+    }
+    registry.Register(owner, contribution);
 #else
     owner.Metadata["prefix"] = "root";
     var receiver = owner.Extend();
@@ -96,3 +110,8 @@ await server.StartAsync();
 Console.WriteLine("READY " + server.Urls.Single());
 Console.Out.Flush();
 await server.WaitForShutdownAsync();
+
+#if CORDIS_READONLY_HOST
+[System.Text.Json.Serialization.JsonSerializable(typeof(System.Text.Json.JsonElement))]
+internal partial class ExportedSchemaJson : System.Text.Json.Serialization.JsonSerializerContext;
+#endif

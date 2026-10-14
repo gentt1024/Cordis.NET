@@ -2,6 +2,10 @@
 
 [中文](compatibility.zh.md)
 
+## Output contract reuse, 2026-10-14
+
+The fixed DSH public `InvocationDescriptor` exposes its result codec, whose strict `create()` exposes a parseable schema ([protocol types](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/protocol/src/types.ts)). This supports composing the result contract; it does not prescribe a .NET JSON Schema property. The .NET adaptation exposes the existing output projection through non-virtual `TypertCodec.ResultSchema`, leaving internal directional dispatch internal. STJ input/output differences require this distinction from `Schema`. Consumers reuse the same projection as output decoding and client generation and choose validation timing themselves. No external override extension, schema service, HTTP endpoint or Gateway validation policy is added. See [authoring](authoring.md) for projection limits.
+
 ## Scoped .NET caller adaptation, 2026-10-11
 
 The fixed generator derives a direct method's optional scope only from its single lookup parameter and a matching `TypertContextMap` entry with the same wire type ([analyzer](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/analyzer.ts#L1177)). Receiver Context invocation is separate: its identity chooses the Host Context before Service admission and lookup resolution. The [Client Gateway](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts#L390) obtains scoped identities through the current Client adapter.

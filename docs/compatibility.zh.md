@@ -2,6 +2,10 @@
 
 [English](compatibility.md)
 
+## 输出合同复用，2026-10-14
+
+固定 DSH 的公开 `InvocationDescriptor` 提供结果 codec，其 strict `create()` 提供可执行 parse 的 Schema（[protocol types](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/protocol/src/types.ts)）。这支持结果合同的组合复用，不直接规定 .NET 的 JSON Schema 属性。本库的平台适配以非 virtual 的 `TypertCodec.ResultSchema` 公开现有输出投影，内部方向分派仍为内部实现。STJ 的输入／输出差异要求它与 `Schema` 区分。消费者复用输出解码及客户端生成的同一投影，自行决定校验时机。不新增外部 override 扩展、Schema 服务、HTTP 端点或 Gateway 校验政策。投影限制见[作者指南](authoring.zh.md)。
+
 ## scoped .NET caller 适配，2026-10-11
 
 固定生成器仅在 direct 方法恰好一个 lookup 参数，且存在同 key、同 wire 类型的 `TypertContextMap` 条目时推导可选 scope（[analyzer](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/analyzer.ts#L1177)）。接收方 Context 调用是另一种语义：身份在 Service 准入及 lookup 解析之前选择 Host Context。[Client Gateway](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts#L390) 经当前 Client adapter 取得 scoped 身份。
