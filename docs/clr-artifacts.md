@@ -30,3 +30,30 @@ Publish a complete new output directory for each code revision using the author'
 `ClrUnloadObservation.LoadDirectory` is the path used by the retiring instance. `ShadowDirectory` is null for stable loading. `TryDeleteShadow` never deletes a stable source. For an explicit development copy, call it only after all file consumers, including Workers, have stopped. Managed wrapper collection is an additional observation, not proof of that precondition. Native locks can still defer deletion.
 
 Business retirement, candidate activation, unload request, GC and physical deletion remain separate outcomes. Production does not force GC. Complete installed-package online upgrades and arbitrary native isolation are not added by this workflow.
+
+## Inspect the prepared replacement
+
+Pass `admitCandidate` when the application must check the candidate's actual contract before any withdrawal. The callback is optional for hosts without an admission policy. Registered names include aliases and inactive exports; `GetContribution` returns null for an entry without `IClrTypertModule`. Aliases share the same module, plugin and cached contribution. Ordinary resolver reads continue to see the published generation until commit.
+
+```csharp
+await resolver.ReplaceAsync(
+    replacements,
+    switchFibers: async pairs =>
+    {
+        await artifacts.SuspendAsync(affectedRequests);
+        await loader.ReplacePluginsAsync(pairs);
+    },
+    admitCandidate: candidate =>
+    {
+        foreach (var name in candidate.Specifiers)
+            if (candidate.GetContribution(name) is { } contribution)
+                CheckApplicationContract(contribution);
+        return ValueTask.CompletedTask;
+    },
+    cancellationToken: cancellationToken);
+await artifacts.ResumeAsync(affectedRequests);
+```
+
+`CheckApplicationContract` is the application's policy. Read each invocation's `Result.ResultSchema` when checking output. Admission failure or cancellation before switching retires the candidate and keeps the old mapping. Switching failures retain the existing explicit recovery rules; resume contracts only after confirmed commit or successful recovery.
+
+The view closes when admission completes, including failure. Do not retain plugins, codecs, delegates or Types as a permanent catalog. Copy needed JSON Schema and strings instead. The view cannot invalidate CLR objects already captured by application code. Factories and schema preparation execute author code; their side effects are outside rollback. Stable startup, installed-package restart upgrades and native resource ownership are unchanged.

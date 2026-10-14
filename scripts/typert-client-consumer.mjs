@@ -3,9 +3,11 @@ import { execFileSync } from 'node:child_process'
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { verifyClientCauses } from './typert-client-causes.mjs'
 
 const [base, directory, runtime] = process.argv.slice(2)
 const { createRemote, mountRemote, TypertConnection } = await import(pathToFileURL(resolve(directory, 'remote.mjs')))
+await verifyClientCauses(createRemote, TypertConnection, 'sample/Echo', {request: {Text: 'cause', Count: 1}})
 const connection = new TypertConnection(base)
 const client = createRemote(connection)
 assert.deepEqual(await client['sample/Tuple']({ value: ['tuple', 4] }), { ok: true, value: ['tuple', 4] })

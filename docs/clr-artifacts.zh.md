@@ -30,3 +30,30 @@
 `ClrUnloadObservation.LoadDirectory` 表示退休实例实际使用的目录。稳定装载时 `ShadowDirectory` 为 null，`TryDeleteShadow` 从不删除稳定来源。显式开发副本仅在所有文件消费者，包括 Worker，结束后才能调用删除。托管 wrapper 回收是附加观察，不证明此前提成立；native 占用仍可能推迟删除。
 
 业务退休、候选激活、卸载请求、GC 和物理删除仍是独立结果。生产不强制 GC；此路线不增加完整包在线升级或通用 native 隔离能力。
+
+## 检查已经准备的替换候选
+
+应用需要在撤回任何旧合同前检查实际候选时，传入 `admitCandidate`；没有准入政策的宿主可以省略。注册名包含别名和未激活出口；没有 `IClrTypertModule` 的入口由 `GetContribution` 返回 null。别名共享模块、插件和缓存贡献。普通 resolver 读取在提交前仍看到已发布代际。
+
+```csharp
+await resolver.ReplaceAsync(
+    replacements,
+    switchFibers: async pairs =>
+    {
+        await artifacts.SuspendAsync(affectedRequests);
+        await loader.ReplacePluginsAsync(pairs);
+    },
+    admitCandidate: candidate =>
+    {
+        foreach (var name in candidate.Specifiers)
+            if (candidate.GetContribution(name) is { } contribution)
+                CheckApplicationContract(contribution);
+        return ValueTask.CompletedTask;
+    },
+    cancellationToken: cancellationToken);
+await artifacts.ResumeAsync(affectedRequests);
+```
+
+`CheckApplicationContract` 是应用自己的政策；检查输出时读取 invocation 的 `Result.ResultSchema`。准入失败或切换前取消会退出候选、保留旧映射。切换失败继续使用既有显式恢复规则，只在确认提交或恢复成功后恢复合同。
+
+准入完成即关闭视图，失败也一样。不要把插件、codec、delegate 或 Type 留作永久目录，应复制所需 JSON Schema 和字符串。视图不能使应用已捕获的 CLR 对象失效。工厂和 Schema 准备执行作者代码，其副作用不在回滚保证内。稳定启动、安装包重启升级及 native 资源所有权保持不变。

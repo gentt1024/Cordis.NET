@@ -259,6 +259,65 @@ await installedRoot.RunAsync(async context =>
         secondCall.Value!.Value.GetInt32() != 113)
         throw new InvalidOperationException(
             "Typed Remote did not consume both entries of the installed author package.");
+
+    Dictionary<string, ClrModuleDefinition> TypedCandidate(
+        string directory,
+        string first = "IndependentMultiEntry.First")
+    {
+        return new Dictionary<string, ClrModuleDefinition>
+        {
+            ["nuget:independentmultientry"] = new(directory, "IndependentMultiEntry.dll", first),
+            ["nuget:independentmultientry/second"] = new(
+                directory,
+                "IndependentMultiEntry.dll",
+                "IndependentMultiEntry.Second"),
+            ["nuget:independentmultientry/native"] = new(
+                directory,
+                "IndependentMultiEntry.dll",
+                "IndependentBundle.NativeEntry")
+        };
+    }
+
+    var observed = new Dictionary<string, TypertContribution>(StringComparer.Ordinal);
+
+    ValueTask Admit(ClrReplacementCandidate candidate)
+    {
+        observed.Clear();
+        foreach (var name in candidate.Specifiers)
+        {
+            var artifact = candidate.GetContribution(name);
+            if (artifact is null)
+            {
+                if (!name.EndsWith("/native", StringComparison.Ordinal))
+                    throw new InvalidOperationException("Expected a generated candidate contribution.");
+                continue;
+            }
+
+            observed.Add(name, artifact);
+            // This application's requirement is an integer result; the platform does not define compatibility.
+            foreach (var method in artifact.Invocations)
+                if (method.Result.ResultSchema.GetProperty("type").GetString() != "integer")
+                    throw new InvalidOperationException("Application requires integer results.");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    var activeFirst = installedLoader.Resolve("one").Fiber;
+    var activeDescriptor = registry.GetLocal("first/Echo");
+    await RejectAsync(
+        () => installedResolver
+            .ReplaceAsync(
+                TypedCandidate(args[1], "IndependentMultiEntry.IncompatibleFirst"),
+                _ => throw new InvalidOperationException("Rejected admission reached contract withdrawal."),
+                Admit)
+            .AsTask(),
+        "Application requires integer results");
+    if (!ReferenceEquals(activeFirst, installedLoader.Resolve("one").Fiber) ||
+        !ReferenceEquals(activeDescriptor, registry.GetLocal("first/Echo")) ||
+        !(await gateway.InvokeAsync("first/Echo", arguments.RootElement)).Ok)
+        throw new InvalidOperationException("Rejected admission changed a live Fiber or contract.");
+    await VerifyUnaffectedAsync();
     var clientDirectory = Directory.CreateDirectory(Path.Combine(profile, "clients")).FullName;
     foreach (var name in new[] { "first", "second" })
     {
@@ -338,21 +397,7 @@ await installedRoot.RunAsync(async context =>
             try
             {
                 await installedResolver.ReplaceAsync(
-                    new Dictionary<string, ClrModuleDefinition>(StringComparer.Ordinal)
-                    {
-                        ["nuget:independentmultientry"] = new(
-                            typedTarget,
-                            "IndependentMultiEntry.dll",
-                            "IndependentMultiEntry.First"),
-                        ["nuget:independentmultientry/second"] = new(
-                            typedTarget,
-                            "IndependentMultiEntry.dll",
-                            "IndependentMultiEntry.Second"),
-                        ["nuget:independentmultientry/native"] = new(
-                            typedTarget,
-                            "IndependentMultiEntry.dll",
-                            "IndependentBundle.NativeEntry"),
-                    },
+                    TypedCandidate(typedTarget),
                     async pairs =>
                     {
                         await artifacts!.SuspendAsync(affectedRequests);
@@ -361,7 +406,8 @@ await installedRoot.RunAsync(async context =>
                             throw new InvalidOperationException("Affected contracts remained callable at retirement.");
                         await VerifyUnaffectedAsync();
                         await installedLoader.ReplacePluginsAsync(pairs);
-                    });
+                    },
+                    Admit);
             }
             catch (Exception error)
             {
@@ -387,6 +433,12 @@ await installedRoot.RunAsync(async context =>
                 throw;
             }
 
+            foreach (var (name, artifact) in observed)
+                if (!ReferenceEquals(
+                        artifact,
+                        await ((ITypertArtifactResolver)installedResolver).ResolveAsync(name, new Uri("file:///"))))
+                    throw new InvalidOperationException(
+                        "Commit replaced the candidate contribution read during admission.");
             await artifacts!.ResumeAsync(affectedRequests);
             await VerifyUnaffectedAsync();
         });

@@ -602,3 +602,17 @@ const result = await settings['settings/openSettingsDocument']({})
 ```
 
 两者沿普通 RemoteResult 返回已接纳的 `{ opened: true }`。展示操作时检查 `hasDocument`，像其他 Settings 操作一样处理失败。托管应用示例展示此宿主操作，不将文档下载到浏览器。文档打开不绕过 Gateway 授权，也不提供编辑任意路径的权限。
+
+## 运行数值 metadata 与本地原因
+
+如果 JIT 作者需要 reflection metadata 的初始化值语义，可以显式实现 `JsonSerializerContext.GetTypeInfo`，返回应用实际配置的 `DefaultJsonTypeInfoResolver` metadata。声明的命名／空性事实须与之对应。生成绑定继续使用同一 codec 和 Gateway；`TypertArtifacts.GenerateClient(contribution)` 经共享 emitter 导出运行合同。这条路线不在保存模型客户端中重放任意反射逻辑，也不承诺 Native AOT。
+
+| 数值政策 | 输入 | 结果及事件输出 |
+|---|---|---|
+| Strict | JSON number，再由原生类型／范围准入 | JSON number |
+| AllowReadingFromString | JSON number 或有限数值的原生数字字符串 | JSON number |
+| WriteAsString／AllowNamedFloatingPointLiterals／其他组合 | 拒绝受影响的 metadata 投影 | 拒绝受影响的 metadata 投影 |
+
+支持 byte/sbyte、short/ushort、int/uint、long/ulong、float/double 和 decimal，以及现有 nullable 与容器组合。数字字符串语法区分类型，原生解析仍检查位宽和溢出；未知 pattern 拒绝。省略成员保留实际 serializer 的默认行为，显式零和 false 保持存在。使用声明的 wire 字段名；当前 Schema 准入没有完整实现底层 Web serializer 的大小写不敏感行为。[兼容说明](compatibility.zh.md#metadata-数值方向2026-10-15)记录该边界及 exporter 与原生解析器的差异。
+
+生成 JS unary 失败继续由 `result.error.code` 分类；本地捕获的传输错误同时原样保存在 `result.error.cause`，包括非 Error 值。取消原因保留对应固定 DSH，普通 carrier 原因保留是 Cordis.NET 的明确扩展。远端业务错误只按 code/message/details 重建。cause 不是 wire 数据或自动日志政策，调用不会自动重放。应用可以在生成调用和 Connection 寿命内判别自己拥有的原因，不应无限期保留承载资源的错误对象。

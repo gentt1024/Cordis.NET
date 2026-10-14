@@ -111,6 +111,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default="dotnet")
     parser.add_argument("--packages", required=True, type=Path)
+    parser.add_argument("--package-version", help="Use the isolated candidate package version.")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--node", default="node")
     parser.add_argument("--tsc", type=Path, help="Path to the existing TypeScript compiler CLI.")
@@ -127,7 +128,7 @@ def main():
         parser.error("TypeScript compiler not found; install the client module dependencies or provide --tsc.")
     if options.output.exists() and any(options.output.iterdir()):
         parser.error("Output must be empty. Preserve the previous evidence and select a new --output directory.")
-    version = ET.parse(root / "Directory.Build.props").findtext(".//Version")
+    version = options.package_version or ET.parse(root / "Directory.Build.props").findtext(".//Version")
     directory = Path(tempfile.mkdtemp(prefix="cordis-multi-entry-consumer-"))
     author_packages = directory / "author-packages"
     author_packages.mkdir()

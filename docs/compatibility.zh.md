@@ -284,3 +284,17 @@ ScopedLayers 从传入的注册 Context 获取可见性和清理所有权。读�
 固定 `packages/api/settings-controller/src/index.ts`、`packages/settings/settings/src/index.ts` 和 `packages/boot/config-editor/src/index.ts` 定义此流程。ISettingsProvider.PrepareDocumentAsync 返回提供者的文档；SettingsForms 返回现有 profile 用户补丁路径，不写入镜像，也不创建文件。SettingsController 在取消检查前解析当前 provider，准备后再次检查取消，将准备／打开失败分类为 gateway/internal 或 gateway/cancelled。注入的打开器接受文档后，并发取消不改写成功结果。结果始终为 opened:true；C# 没有布尔字面量类型，因此载体使用 bool。
 
 可选构造器委托是宿主文本编辑器集成，对应上游 openTextFile。默认使用 ProcessStartInfo.ArgumentList，不经命令 shell：Windows 调用 Explorer，WSL 转换路径后调用 Explorer，macOS 使用 open -t，桌面 Linux 使用 xdg-open。Windows 目标保留非 ASCII 原文并转义 Explorer 分隔符；委派退出码 1 在未取消时视为接受。取消结束所拥有的启动进程，不关闭已经接收文档的编辑器。不新增依赖或第二个配置所有者。无桌面宿主可以提供自己的打开器；桌面不可用时继续返回可诊断失败。
+
+## 候选准入与本地失败原因，2026-10-15
+
+固定 DSH HMR 先准备实际 import 的替代插件，再改变注册；公开 protocol descriptor 支持复用 codec。CLR `ReplaceAsync` 在现有 mutation 边界内、切换回调之前提供 `admitCandidate`。`ClrReplacementCandidate` 暴露注册名、已准备插件及缓存贡献，包含未激活出口和别名。它是回调期借用视图，没有新增事务权威。拒绝会退出候选，旧合同尚未撤回。准入可能执行作者工厂和惰性 Schema，不能回滚任意作者副作用。关闭视图阻止继续读取，不能撤销已经返回的 CLR 引用。这是 CLR 组合适配，不是上游 ABI 兼容算法。
+
+固定 `packages/api/gateway/src/client/index.ts` 对取消保留捕获的 cause，对普通 carrier 失败不保留。共享 JS 客户端现在对两者都保留实际捕获值。取消 cause 是移植纠正，普通 carrier cause 是明确增加的进程内观察能力。分类仍为 `gateway/cancelled` 或 `gateway/internal`。`RemoteError` 接受标准 `ErrorOptions`；`cause` 不可枚举，不放入 details，不从 wire 重建，也不增加重试或重放。原有准备、撤销和流边界保持不变。
+
+## Metadata 数值方向，2026-10-15
+
+运行描述符路线消费作者实际 `JsonTypeInfo`。现有 byte/sbyte、short/ushort、int/uint、long/ulong、float/double 和 decimal 在 Strict 下接受 JSON number；AllowReadingFromString 另接受原生数字字符串。现有 nullable、DTO、数组／集合、字符串键字典值组合使用同一投影。输出仍为数值。事件参数与 continuation 输出使用输出投影，传入回复使用输入准入。
+
+.NET 10 exporter 合并读取与写出形状，提供的三个数字 pattern 比原生读取范围窄。输入投影保留有限数值的原生语法，包括有符号数的前导加号、前导零和 decimal 指数；无符号文本不带正负号。实现只识别这三个 exporter 模式及其有限原生模式投影，使用 BCL 非回溯匹配器；未知 pattern 继续拒绝。整数位宽、decimal 范围和转换由原生 STJ 负责。float/double 检查拒绝非有限结果，包括原生读取可能接受的字符串 NaN/Infinity。这是有界 STJ 适配，不是任意 JSON Schema 或 converter 执行。
+
+WriteAsString、AllowNamedFloatingPointLiterals 和未支持组合在影响投影时明确拒绝。显式 reflection metadata Context 可以在 JIT Host 中保留 init-only 初始化值，并导出运行描述符；这不表示保存模型生成或 Native AOT 能执行任意作者 Context。Web 命名保留，但 Schema 准入仍要求声明的 wire 字段名；PropertyNameCaseInsensitive 不意味着当前 JSON Schema 接受原生读取的所有大小写形式。本次数值工作不证明全部 Web 默认行为等价。

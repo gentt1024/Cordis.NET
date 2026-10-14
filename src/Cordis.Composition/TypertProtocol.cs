@@ -374,7 +374,10 @@ public abstract partial class TypertCodec
                 new JsonSchemaExporterOptions
                 {
                     TreatNullObliviousAsNonNullable = true,
-                    TransformSchemaNode = output ? ProjectOutputObject : null
+                    TransformSchemaNode = (context, node) => ProjectNumbers(
+                        context,
+                        output ? ProjectOutputObject(context, node) : node,
+                        output)
                 });
             if (output)
                 node = ProjectNullability(node, path => OutputNullability(metadata, nullability, path));
@@ -425,6 +428,10 @@ public abstract partial class TypertCodec
                 case "prefixItems":
                     foreach (var child in field.Value.EnumerateArray())
                         ValidateSchema(child, root, references);
+                    break;
+                case "pattern":
+                    if (!numericPatterns.ContainsKey(field.Value.GetString()!))
+                        throw new NotSupportedException("Only recognized numeric string patterns are supported.");
                     break;
                 case "$schema":
                 case "$comment":
@@ -495,6 +502,10 @@ public abstract partial class TypertCodec
             throw new JsonException("The boundary value does not match a declared enum member.");
         if (schema.TryGetProperty("const", out var constant) && !JsonElement.DeepEquals(constant, value))
             throw new JsonException("The boundary value does not match the declared constant.");
+        if (value.ValueKind == JsonValueKind.String && schema.TryGetProperty("pattern", out var pattern) &&
+            (!numericPatterns[pattern.GetString()!].IsMatch(value.GetString()!) ||
+                !FiniteNumericText(value.GetString()!, schema)))
+            throw new JsonException("The boundary string does not match its numeric pattern.");
         if (schema.TryGetProperty("type", out var type))
         {
             var matches = type.ValueKind == JsonValueKind.Array
@@ -556,6 +567,9 @@ public abstract partial class TypertCodec
 
         if (value.ValueKind == JsonValueKind.Number)
         {
+            if (schema.TryGetProperty("format", out var numericFormat) && numericFormat.GetString() == "float" &&
+                (!value.TryGetSingle(out var single) || !float.IsFinite(single)))
+                throw new JsonException("The boundary number is not a finite float.");
             var number = value.GetDouble();
             if (!double.IsFinite(number) ||
                 (schema.TryGetProperty("minimum", out var minimum) && number < minimum.GetDouble()) ||

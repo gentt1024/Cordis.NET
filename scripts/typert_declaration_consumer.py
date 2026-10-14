@@ -330,6 +330,7 @@ def verify_web_contracts(root, feed, output, version, dotnet, composition, run, 
             f'<DefineConstants>$(DefineConstants);{constant}</DefineConstants>',
             composition + '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>')
         shutil.copyfile(fixtures / "WebContractRemote.cs", author / "WebContractRemote.cs")
+        shutil.copyfile(fixtures / "WebNumericRemote.cs", author / "WebNumericRemote.cs")
         run(label + "-author-pack", [dotnet, "pack", author_project, "-c", "Release", "-o", feed])
         model = author / ("obj/Release/net10.0/cordis-typert/" + package + ".Provider.cordis.model.json")
         contracts, contracts_project = project("WebContracts" + mode,
@@ -367,6 +368,10 @@ def verify_web_contracts(root, feed, output, version, dotnet, composition, run, 
             for name in ("cordis-remote.mjs", "cordis-remote.d.mts"):
                 shutil.copyfile(web / name, web / "runtime" / name)
             web_call(label + "-runtime-caller", address, web / "runtime", "contracts-runtime")
+            if mode == "True":
+                for name in ("cordis-remote.mjs", "cordis-remote.d.mts"):
+                    shutil.copyfile(web / name, web / "numbers" / name)
+                web_call(label + "-numeric-caller", address, web / "numbers", "numbers")
             run(label + "-dotnet-caller", [dotnet, caller / f"bin/Release/net10.0/WebCaller{mode}.dll", address])
         schemas = json.loads((web / "host-schemas.json").read_text(encoding="utf-8"))
         for name in ("required", "selected"):

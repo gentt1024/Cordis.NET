@@ -3,7 +3,7 @@ export declare class RemoteError extends Error {
   readonly isDSHRemoteError: true;
   readonly code: string;
   readonly details: unknown;
-  constructor(code: string, message: string, details?: unknown);
+  constructor(code: string, message: string, details?: unknown, options?: ErrorOptions);
 }
 export declare class RemoteStreamCarrierError extends Error {}
 export type RemoteResult<T> = {readonly ok: true; readonly value: T} | {readonly ok: false; readonly error: RemoteError};

@@ -1,7 +1,7 @@
 // Shared carrier and contribution lifetimes for generated Cordis.NET clients.
 export class RemoteError extends Error {
-  constructor(code, message, details = {}) {
-    super(message);
+  constructor(code, message, details = {}, options) {
+    super(message, options);
     this.name = 'RemoteError';
     this.isDSHRemoteError = true;
     this.code = code;
@@ -17,7 +17,7 @@ export class RemoteStreamCarrierError extends Error {
 }
 
 const record = value => typeof value === 'object' && value !== null && !Array.isArray(value);
-const failure = (code, message, details) => ({ok:false, error:new RemoteError(code, message, details)});
+const failure = (code, message, details, options) => ({ok:false, error:new RemoteError(code, message, details, options)});
 const withdrawn = () => failure('gateway/internal', 'The Remote contribution was withdrawn.');
 
 // Fixed DSH typert/protocol json-value: allow only lossless JSON and top-level absence.
@@ -396,7 +396,7 @@ export function createClient(connection, methods) {
           combined.throwIfAborted();
           return result;
         } catch (error) {
-          return failure(combined.aborted ? 'gateway/cancelled' : 'gateway/internal', String(error));
+          return failure(combined.aborted ? 'gateway/cancelled' : 'gateway/internal', String(error), {}, {cause:error});
         }
       })());
     };

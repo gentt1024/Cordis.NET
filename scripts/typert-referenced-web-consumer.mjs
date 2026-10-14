@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const [origin, directory, mode = 'references'] = process.argv.slice(2)
 const output = resolve(directory)
-const fixture = mode === 'references' ? 'ReferencedWebClient' : 'WebContractClient'
+const fixture = mode === 'references' ? 'ReferencedWebClient' : mode === 'numbers' ? 'WebNumericClient' : 'WebContractClient'
 if (mode === 'references') {
   const allSchemas = JSON.parse(await readFile(resolve(output, 'remote.schema.json'), 'utf8')).$defs
   for (const name of ['referencedData/guid/parameters/value', 'referencedData/guid/result'])

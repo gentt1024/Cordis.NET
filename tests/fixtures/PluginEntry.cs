@@ -7,6 +7,38 @@ using System.Runtime.Loader;
 
 namespace VersionedPlugin;
 
+public class AdmissionEntry : IClrPluginModule, IClrTypertModule
+{
+    private readonly string identity = Guid.NewGuid().ToString("N");
+    private int factoryCalls;
+
+    public IPlugin CreatePlugin() => new Plugin<object?>
+    {
+        Apply = (context, _) => context.Provide("candidate-identity", identity)
+    };
+
+    public virtual TypertContribution CreateTypertContribution()
+    {
+        if (++factoryCalls != 1)
+            throw new InvalidOperationException("Candidate factory ran twice.");
+        return new(identity, "host", [], TypertPackageModel.Empty, []);
+    }
+}
+
+public sealed class AdmissionFailureEntry : AdmissionEntry
+{
+    public override TypertContribution CreateTypertContribution() =>
+        throw new InvalidOperationException("Candidate contribution refused.");
+}
+
+public sealed class AdmissionSchemaFailureEntry : AdmissionEntry
+{
+    public override TypertContribution CreateTypertContribution() => base.CreateTypertContribution() with
+    {
+        Schemas = [new("broken", () => throw new InvalidOperationException("Candidate schema refused."))]
+    };
+}
+
 public sealed class InvalidEntry : IClrPluginModule
 {
     public IPlugin CreatePlugin() => null!;

@@ -602,3 +602,17 @@ const result = await settings['settings/openSettingsDocument']({})
 ```
 
 Both return the ordinary RemoteResult with `{ opened: true }` on accepted handoff. Check `hasDocument` when presenting the action, and handle failure like other Settings operations. The managed application example exposes this host action; it does not download a document to the browser. Document opening does not bypass Gateway authorization or grant permission to edit arbitrary paths.
+
+## Runtime numeric metadata and local causes
+
+For a JIT author whose initializer semantics require reflection metadata, an explicit `JsonSerializerContext.GetTypeInfo` may return metadata from the application's configured `DefaultJsonTypeInfoResolver`. Keep declared naming/nullability facts aligned with that metadata. The generated binding still uses the same codec and Gateway; `TypertArtifacts.GenerateClient(contribution)` exports the runtime contract through the shared emitter. This route does not replay arbitrary reflection logic in saved-model clients or promise Native AOT support.
+
+| Numeric policy | Input | Result and event output |
+|---|---|---|
+| Strict | JSON number, then native type/range admission | JSON number |
+| AllowReadingFromString | JSON number or finite native numeric string | JSON number |
+| WriteAsString / AllowNamedFloatingPointLiterals / other combinations | Affected metadata projection refused | Affected metadata projection refused |
+
+Supported scalars are byte/sbyte, short/ushort, int/uint, long/ulong, float/double and decimal, in existing nullable and container shapes. Numeric string grammar is type-sensitive; native parsing still checks width and overflow. Unknown patterns are refused. Omitted members keep the actual serializer's defaults; explicit zero and false remain present. Use declared wire names. Current schema admission is not fully case-insensitive even when the underlying Web serializer is. See [compatibility](compatibility.md#metadata-numeric-directions-2026-10-15) for that boundary and the exporter/native-parser difference.
+
+Generated JS unary failures keep classification in `result.error.code`. Locally caught transport errors are also available unchanged in `result.error.cause`, including non-Error values. Cancellation preservation follows fixed DSH; preserving ordinary carrier causes is an explicit Cordis.NET extension. Remote business errors are rebuilt only from code/message/details. Cause is not wire data or an automatic logging policy, and no call is replayed automatically. Applications can inspect a reason they own without bypassing generated calls or Connection lifetimes; retain resource-bearing errors only as long as needed.

@@ -18,6 +18,13 @@ var runtime = TypertArtifacts.GenerateClient(contribution);
 Directory.CreateDirectory(Path.Combine(directory, "runtime"));
 File.WriteAllText(Path.Combine(directory, "runtime/remote.mjs"), runtime.Module);
 File.WriteAllText(Path.Combine(directory, "runtime/remote.d.mts"), runtime.Declaration);
+var numbers = WebNumericRemoteTypert.Contribution("web-numeric-provider");
+var numericClient = TypertArtifacts.GenerateClient(numbers);
+Directory.CreateDirectory(Path.Combine(directory, "numbers"));
+File.WriteAllText(Path.Combine(directory, "numbers/remote.mjs"), numericClient.Module);
+File.WriteAllText(Path.Combine(directory, "numbers/remote.d.mts"), numericClient.Declaration);
+var numericEvents = TypertArtifacts.GenerateEvents([NumericChangedTypert.Definition]);
+File.WriteAllText(Path.Combine(directory, "numbers/events.d.mts"), numericEvents.Declaration);
 var schemas = new JsonObject();
 foreach (var method in contribution.Invocations)
     foreach (var parameter in method.Parameters)
@@ -103,7 +110,9 @@ await root.RunAsync(owner =>
 {
     owner.Provide("typert", registry);
     owner.Provide("webContract", new WebContractRemote());
+    owner.Provide("webNumeric", new WebNumericRemote());
     registry.Register(owner, contribution);
+    registry.Register(owner, numbers);
     connection = new(owner, new TypertGateway(owner, registry));
     owner.Provide("connection", connection);
     return Task.CompletedTask;
@@ -112,10 +121,13 @@ var builder = WebApplication.CreateSlimBuilder();
 builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Logging.ClearProviders();
 await using var server = builder.Build();
+server.UseWebSockets();
 server.MapCordisRemote(
     "/remote",
     connection,
-    (_, endpoint) => Task.FromResult(endpoint.StartsWith("webContract/", StringComparison.Ordinal)));
+    (_, endpoint) => Task.FromResult(
+        endpoint.StartsWith("webContract/", StringComparison.Ordinal) ||
+        endpoint.StartsWith("webNumeric/", StringComparison.Ordinal)));
 server.MapPost("/stop", () => server.Lifetime.StopApplication());
 await server.StartAsync();
 Console.WriteLine("READY " + server.Urls.Single());

@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--packages", required=True, type=Path)
+    parser.add_argument("--package-version", help="Use the isolated candidate package version.")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--dotnet", default="dotnet")
     parser.add_argument("--aot", action="store_true")
@@ -23,7 +24,7 @@ def main():
     options.output.mkdir(parents=True, exist_ok=True)
     source = Path(tempfile.mkdtemp(prefix="cordis-remote-consumer-"))
     (source / "global.json").write_bytes((root / "global.json").read_bytes())
-    version = ET.parse(root / "Directory.Build.props").findtext(".//Version")
+    version = options.package_version or ET.parse(root / "Directory.Build.props").findtext(".//Version")
     author_feed = source / "author-feed"
     author_feed.mkdir()
     config = ET.Element("configuration")
