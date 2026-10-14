@@ -641,4 +641,4 @@ Rider 2026.2 首次打开时，Remote 属性和生成类型均未识别。实际
 
 ## 输出原生读取修正 RS01，2026-10-14
 
-在固定 `.resultschema.20261014.2` 包、相同源生成 metadata 和相同 JSON 下，常量 getter 与 JsonConstructor 绑定 getter 均通过原生 Deserialize 和 codec.Decode，但 DecodeOutput 因 adapter 新增的无 setter required 标记失败。此前失败保留，归因修正为输出读取适配问题。主要回归位于 TypertRegistryTests，覆盖两种 DTO 及构造必填选项的开关；四项在修正前均因同一非法 metadata 失败，修正后 Composition 全部 522 项通过。缺少输出字段及显式 null 仍拒绝。真实只读 Host 增加 DecodeOutput 调用，既有方向 DTO 的省略与空性消费不变。受影响包消费及新冻结候选完整 CI 尚待完成，不借用上一轮绿色结果。
+在固定 `.resultschema.20261014.2` 包、相同源生成 metadata 和相同 JSON 下，常量 getter 与 JsonConstructor 绑定 getter 均通过原生 Deserialize 和 codec.Decode，但 DecodeOutput 因 adapter 新增的无 setter required 标记失败。此前失败保留，归因修正为输出读取适配问题。主要回归位于 TypertRegistryTests，覆盖两种 DTO 及构造必填选项的开关；四项在修正前均因同一非法 metadata 失败，修正后 Composition 全部 522 项通过。缺少输出字段及显式 null 仍拒绝。真实只读 Host 增加 DecodeOutput 调用，既有方向 DTO 的省略与空性消费不变。冻结源码 `23ecbab` 与包身份 `0.2.0-alpha.5.rs01.20261014.1` 已通过既有完整 .NET／TS 消费脚本，包含只读 Host 的原生调用及三种构造选项下的方向合同。九组包／符号包和独立离线调试消费者均指向该源码；格式化后的冻结源码也通过四项定向回归。[RS01 回执](../verification/alpha5-rs01-2026-10-14/evidence.json) 记录这些结果及保留的基线失败。本地未请求 AOT，新候选托管完整 CI 尚待完成，不借用上一轮绿色结果。
