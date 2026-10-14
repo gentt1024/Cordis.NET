@@ -2,6 +2,32 @@
 
 [English](development.md)
 
+## 当前支持与发行状态
+
+当前分支准备 alpha5，尚未发布 alpha5。[验证索引](validation.zh.md#当前候选索引)记录验过的源码与包；[发行准备](publication-readiness.zh.md)负责发行门禁。下方历史检查点描述各自时点，不定义当前剩余工作。
+
+| 范围 | 当前用法与边界 |
+|---|---|
+| 运行时／组合 | Context、Fiber、服务、静态模块、Profile 和协调编辑；普通 C# 服务不需要 Remote。 |
+| Settings／管理 | 数值 revision Settings、生成式 PluginManager 和选定类型化事件复用配置操作及安装任务；Host 决定授权和文档打开策略。 |
+| 声明 | 共同模型、显式引用、普通 build／pack 和首次 design-time 生成；下表列出支持和拒绝形状。 |
+| Remote | 共享 unary／multipart 和文本 mux Connection、scoped 客户端、反向 Context／owned value、Peer 路由及固定事件；互通有明确范围，不包含所有 DSH SDK 传输。 |
+| CLR | 准备／发布回执、稳定 LoadDirectory、重启升级、逻辑移除保留文件；要求普通运行时，业务排空／就绪归应用。 |
+| 待验消费 | 实际已准备候选的合同访问、unary 本地 transport cause 和 Web 数值 metadata 消费仍待裁决。泛型 DTO／静态后端限制保持明确；具名 UI／平台需要自己的证据。 |
+
+## 维护导航
+
+下表上游路径均使用 [upstream.lock.json](../upstream.lock.json)。短表定位所有者和主要检查；[兼容性说明](compatibility.zh.md)记录适配。打包／传输检查保护各自接线，不重复所有者的全部断言。
+
+| 职责 | 固定上游／.NET 适配 | 源码所有者 | 主要检查与独立消费 |
+|---|---|---|---|
+| 执行与服务视图 | vendor/cordis/packages/core；类型化视图替代上下文 JS 重绑定 | [Core](../src/Cordis.Core)：Context、Fiber、ReflectService | [CoreTests](../tests/Cordis.Core.Tests/CoreTests.cs)；隔离包消费 |
+| 配置／Settings | packages/boot、packages/api；typed 字段和 STJ 复用现有写入者 | [Composition](../src/Cordis.Composition)：配置操作、SettingsForms | [ConfigurationEditTests](../tests/Cordis.Composition.Tests/ConfigurationEditTests.cs)；[Settings 调用方](../scripts/verify-typert-dotnet.py) |
+| 安装 | packages/boot；NuGet／SDK 准备保留操作／任务所有权 | [Extensions](../src/Cordis.Extensions)、[Clr](../src/Cordis.Clr) 工具链 | [ConfigurationSessionTests](../tests/Cordis.Extensions.Tests/ConfigurationSessionTests.cs)；[部署](../scripts/verify-clr-deployment.py) |
+| 模型／后端 | packages/typert/generator；Roslyn 和 STJ 替代 TS 分析／codec | [Model](../tools/Cordis.Typert.Generator/Model)、[Generation](../src/Cordis.Composition/Generation)、MSBuild targets | [独立调用方](../scripts/verify-typert-dotnet.py)，含构建／打包／design-time 接线 |
+| Remote／事件 | packages/api/gateway、packages/typert/protocol；async 和释放适配所有权 | [Composition](../src/Cordis.Composition) Registry／Gateway／Connection、[AspNetCore](../src/Cordis.AspNetCore) | [Registry](../tests/Cordis.Composition.Tests/TypertRegistryTests.cs)、[事件](../tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs)；[真实客户端](../scripts/verify-typert.py) |
+| CLR 生命周期 | packages/boot/hmr；collectible ALC 和稳定文件适配加载／退休 | [ClrModuleResolver](../src/Cordis.Clr/ClrModuleResolver.cs)、Loader | [ClrTests](../tests/Cordis.Platform.Tests/ClrTests.cs)；[多入口消费](../scripts/verify-clr-multi-entry.py) |
+
 ## 模型管线合同
 
 本次重建让普通根与 Remote 根使用同一个声明事实模型。不完整的移植产物不能反过来定义下一轮架构：缺失能力先校正事实和阶段职责，不自动另开公共协议。本轮不假设实验模型文件或客户端存在兼容承诺。受维护消费者重新提取、生成和构建；应用持久数据、Git 历史与已发布包身份另行保全。
@@ -15,11 +41,11 @@
 | 生成消费者 | 同一保存事实及选定目录／数据／客户端政策 → 对应后端已支持范围内的目录、DTO／STJ 或 .NET／TS 输出 | 各用途 emitter | caller 无法重建必需数据／serializer 行为时拒绝该投影，不复制作者业务代码 | 保留 pre-`CoreCompile` 生成及无 Provider 实现引用的 caller；普通根不要求 Remote 注册 |
 | 构建与交付 | 当前源码、模型及生成结果 → 包与消费者证据 | MSBuild targets、包检查及既有消费者门禁 | 生成失败删除拥有的旧输出；Clean 与增量构建仍是可观察合同 | 只打包 `cordis/typert/$(AssemblyName).cordis.model.json`；退出 `CordisTypertDeclarationModelPath` 及旧模型路径 |
 
-此表中选定路线已在 `7937ee8` 完成 Windows x64 JIT／包门禁；[验证记录](validation.zh.md#模型管线重建2026-10-11)列明精确源码、包批次及失败边界。当前必须接通的消费者包括 Settings、PluginManager、通知、普通目录、DTO／STJ 及受支持的 .NET／TS 路线。完整源码／编译器覆盖、更广引用模型及 Schema／TS 后端、丰富 Remote／owned-value 协议、原生文档与原任务 UI／平台工作继续开放。后端拒绝记录当前能力，不关闭这些义务。新结果必须绑定真实源码和包批次；下方历史检查点不证明本次重建。
+下表列出现行支持形状，完成检查见[验证索引](validation.zh.md#当前候选索引)。历史重建检查点不定义当前剩余工作。
 
 MSBuild 按解析得到的完整程序集身份，将引用的 XML 文档作为生成器输入。这样，即使提取器读取实现程序集，而 C# 编译器绑定引用程序集，两边仍保留相同的文档事实。XML 文本参与增量分析，只在引用声明需要时解析。生成器仍使用编译器符号定位实现成员、发射可编译的 C#；调用语义来自共同声明合同。
 
-后续检查点 `54ae030` 在提取、保存模型读取与 Host 绑定中保留 null 数组属性，并修正现行所有者／替换和可选参数指引。[定向修正记录](validation.zh.md#null-数组属性与当前用法修正2026-10-11)具有独立冻结的 Windows 包身份。上述阶段职责不变，原有模型、协议与平台剩余工作继续开放。
+提取、模型读取和 Host 绑定保留 null 数组属性及引用文档事实；历史修正证据保留于下方。
 
 ## Alpha5 独立后端处置
 
@@ -105,6 +131,9 @@ cordis run ./profile --source ./feed --url http://127.0.0.1:5080 --authorization
 挂载条目前，CLI 还提供 `appReady` 的 `IApplicationReady` 与 `appExit` 的 `ApplicationExit`。就绪订阅应注册为 Context effect。插件树和宿主启动成功后提交就绪，晚订阅者立即回调。应用可在激活中（例如帮助）或就绪后请求退出。首个请求启动固定上游的五秒宽限，包括启动期间的请求；CLI 等待插件树有序释放，超过宽限则以该码强制退出进程。普通启动没有五秒时限。启动/就绪异常返回失败；Cordis 报告 effect 清理错误，不改写请求的退出码。既有 HMR 使用同一就绪结果。进程信号仍由 .NET Host 处理。
 
 库宿主可通过 `ProfileSession.StartAsync(prepare: ...)` 提供这些 Composition 合同并决定自己的退出策略，不必使用 CLI 或另一套运行时。验证流程会编译独立 CLR 应用并执行真实 CLI，覆盖参数边界、帮助/错误、就绪与清理。受控 carrier、浏览器执行和原生管理测试分别记录。
+
+<details>
+<summary>历史裁决与检查点；现行支持以上方为准</summary>
 
 ## 初始应用基础设施实施片（历史验收）
 
@@ -559,3 +588,5 @@ descriptor/STJ 的 GenerateClient 仍是成立的公共路线，保存模型限�
 不新增全宿主安全异常回调。固定 Gateway 保留普通异常 message；应用沿现有 RemoteError 边界负责公开业务错误映射与诊断。这种局部业务映射不涵盖全部 resolver、codec、流或清理失败，应用部署验收与库验收分别负责。
 
 原始 CI 包的应用、Rider 2026.2 和 Windows opener 交接已在所记录边界内关闭。输出 Schema 生产变化需要自身的包及最终平台证据。正式版本身份、合入及发行仍需授权。
+
+</details>

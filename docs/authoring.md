@@ -6,7 +6,7 @@ These optional .NET authoring helpers use the existing Cordis runtime. A package
 
 ## Start with the runnable example
 
-The authoring helpers on this page require the authoring release listed in the [release notes](../CHANGELOG.md); older NuGet packages do not include them. Until that release is available on NuGet, use this source checkout. The commands below run the repository examples through project references with the SDK selected by `global.json`; installing packages alone does not provide the example projects.
+For a first package-only application, start with [getting started](getting-started.md). This guide describes the current selected batch, including generated Remote and model consumers. Choose the exact feed/version from [validation](validation.md#current-candidate-index); do not assume published alpha.4 contains later changes. The optional examples below use source project references and the SDK in global.json.
 
 The [shared contracts](../examples/Probes.Contracts/Probes.cs), [provider and configuration](../examples/Probes.Plugin/ProbeModule.cs), and [static host with two consumers](../examples/Probes/Program.cs) are the authoritative source examples. They show a plain formatting capability, a caller-bound probe registry, typed events, early revocation, provider disappearance and consumer reactivation.
 
@@ -279,7 +279,7 @@ The selected fixed event workflow, reverse Context and owned-value handling use 
 
 ## Native authored models and .NET consumers, 2026-10-10
 
-The current contract is one declaration model, with purpose-specific projections as described in the [pipeline table](development.md#model-pipeline-contract). The reconstruction must preserve the runtime and consumer behavior below. Completed historical gates remain bound to their recorded source and packages; they do not validate the new wiring.
+Ordinary and Remote declarations use one common model and purpose-specific projections. The [current support table](development.md#current-support-and-release-status) and backend disposition distinguish runtime metadata from independent generation.
 
 Ordinary Plugin, Service and Config use remains in process. Remote is an optional boundary for consumers in another environment. A C# author keeps the existing Remote attributes and explicit STJ context; setting `CordisTypertService` opts that project into source-model extraction. Composition supplies the SDK compiler tool and build target. Node and TypeScript are not prerequisites for this path.
 
@@ -289,7 +289,7 @@ Ordinary Plugin, Service and Config use remains in process. Remote is an optiona
 </PropertyGroup>
 ```
 
-The build publishes `cordis/typert/$(AssemblyName).cordis.model.json` in the author package. Service selection and ordinary roots feed the same `extract-model` entry and declaration graph. For an author assembly named `Example`, the file is `Example.cordis.model.json`. The Remote generator compares selected service facts with the current compilation and refuses drift with `CORDISREMOTE002`; unrelated declarations are not a second service contract. Referenced declarations keep their CLR metadata provenance and adjacent XML documentation. Missing source initializers or implementations are not reconstructed from metadata. Full referenced-model composition remains open.
+The build publishes `cordis/typert/$(AssemblyName).cordis.model.json` in the author package. Service selection and ordinary roots feed the same `extract-model` entry and declaration graph. For an author assembly named `Example`, the file is `Example.cordis.model.json`. The Remote generator compares selected service facts with the current compilation and refuses drift with `CORDISREMOTE002`; unrelated declarations are not a second service contract. Referenced declarations keep their CLR metadata provenance and adjacent XML documentation. Missing source initializers or implementations are not reconstructed from metadata. Referenced source definitions compose through the explicit reference-model inputs below.
 
 A separate contract package can consume a copy of that artifact without referencing the provider implementation:
 
@@ -332,7 +332,7 @@ The production `SettingsController` resolves the optional ordinary `ISettingsPro
 
 The [independent .NET Settings gate](../scripts/verify-typert-dotnet.py) packs an author and contract package, then builds a package-only caller outside this repository. The caller does not reference the provider implementation and uses static metadata with reflection fallback disabled. It covers typed describe, redaction, missing/failed provider, retry, held-view invalidation, definition withdrawal/re-registration, scoped suspension and borrowed-client ownership. Primitive roots, null/default arguments, nullable-state annotations and unsupported projections have separate cases. Run with `--aot` for the static caller; the dynamic CLR Host remains an ordinary-runtime boundary. Formal platform results belong to the exact completed checkpoint in [validation](validation.md).
 
-This path covers unary callers, supported downlink streams and the standard Settings, PluginManager and notification consumers. Native document integration, rich graphs, complete source-type analysis and TS generation from the ordinary declaration model remain open. Existing TS/Web output stays available and retains its separate gate.
+This route covers supported unary/stream, Settings, PluginManager and event consumers. Consult the [backend disposition](development.md#alpha5-independent-backend-disposition) for refused shapes and [validation](validation.md#current-candidate-index) for named platform evidence.
 
 
 ## Typed Remote uplink
@@ -499,7 +499,7 @@ Two scoped contracts remain distinct. A method with `RemoteMethod(Context = "...
 
 For independent callers, a JSON context available only as assembly metadata lacks the source facts needed to reproduce its serializer and is refused with `TYPM115`. The Host may still bind that actual context. A non-finite optional numeric default is retained as an author fact and works for omitted Host arguments. If the selected JSON number handling cannot transmit it, standalone .NET caller generation refuses with `TYPM116`; it does not emit a method whose default call fails during serialization.
 
-The independent consumer must use one authored DTO as an ordinary root and a Remote argument/result, with a real HTTP author host and a package-only generated caller. DTO behavior belongs to the existing data consumers; this route checks saved-model mapping and transport. Generic DTO projection, broader Remote/reference-model backends, design-time IDE and named UI validation remain open. Completed platform evidence remains bound in [validation](validation.md); no earlier batch proves this reconstruction.
+The independent consumer uses an authored DTO as both an ordinary root and a Remote argument/result through a real HTTP Host and package-only caller. Data consumers own DTO behavior; this route checks model and transport wiring. Backend limits and named IDE/UI evidence remain in the current support and validation records.
 
 ## Browser scoped Remote consumption
 

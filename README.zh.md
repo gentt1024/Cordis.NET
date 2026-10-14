@@ -2,58 +2,41 @@
 
 [English](README.md)
 
-Cordis.NET 忠实实现固定提交中 DSH 维护的 Cordis。仓库范围包含领域无关的运行时，以及构建、运行、配置、管理和交付模块化应用的通用基础设施。Core 保持领域无关；应用库和平台适配位于 Core 之上。
+Cordis.NET 是固定 DSH 所维护 Cordis 运行时及通用应用基础设施的忠实、地道 .NET port。可以编写普通 C# 插件和服务、组合应用，或向 .NET／Web 客户端开放选定服务。Remote 是可选边界；普通插件开发不需要 Node。
 
-项目目标是忠实、地道的 .NET port。实现依据固定上游行为和有理由的平台适配；历史试验不构成另一套独立框架规范。合同修正和兼容决策遵循[上游忠实性要求](docs/compatibility.zh.md#上游忠实性要求)。
+固定上游行为和有依据的平台适配决定实现。历史试验不构成另一套框架规范或兼容义务，具体见[兼容性说明](docs/compatibility.zh.md)。
 
-当前提供生命周期与注入、Profile/Bundle/Patch 合成、运行会话协调、配置引用、插件启停与部署协调，以及可选的 CLR、Generic Host 和 JavaScript 适配。源码增加 typed 字段组合、有序配置编辑与 reset、显式声明导出、NuGet/SDK 包工具链、ASP.NET Core 管理接口、应用 CLI 命令和可复用 TypeScript 客户端模块。初始应用与作者能力已随 `0.2.0-alpha.3` 发布。当前源码修正标准 Settings，并接通生成 PluginManager、选定通知及原生模型消费者，见[管理迁移](docs/management-remote-migration.zh.md)。这些续建改动需要新的后续包版本身份；源码版本仍为 `0.2.0-alpha.4`。本地验收与尚未执行的发布检查见[验证记录](docs/validation.zh.md)，平台边界见[兼容性说明](docs/compatibility.zh.md)。应用专属的业务规则和领域政策由消费应用承担。
+Cordis.NET 独立维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。行为基线为 deepseek-ai/deepseek-harness 的 639ed015397290b3745d163aafe02ffee4aa3f84，其中 vendored Cordis 版本为 4.0.4；任意 TypeScript 插件不是支持的部署格式。
 
-Cordis.NET 由独立社区维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。
+## 从任务开始
 
-行为目标为 `deepseek-ai/deepseek-harness@639ed015397290b3745d163aafe02ffee4aa3f84`，其中 vendored `@deepseek-ai/cordis` 的版本为 `4.0.4`。本项目将可观察契约适配到 .NET；不声称与任意 TypeScript 插件完全兼容。
+| 任务 | 所需包与入口 |
+|---|---|
+| 运行普通 .NET 插件和服务 | Core；需要 Loader、Profile 和配置时添加 Composition。[仅使用包的首个应用](docs/getting-started.zh.md)。 |
+| 向 .NET 或 Web 消费者开放 Host | Composition 提供声明提取、生成绑定、独立客户端和共享 Remote 合同；AspNetCore 提供带授权的 HTTP／WebSocket 宿主适配。[作者指南](docs/authoring.zh.md)。 |
+| 安装并运行独立 CLR 插件 | Clr 在现有配置操作之上提供 SDK 工具链和稳定制品加载。[制品流程](docs/clr-artifacts.zh.md)、[托管插件](examples/ManagedPlugin/README.md)、[托管应用](examples/ManagedApplication/README.md)。 |
 
-## 从源码试用
+可选 Hosting 接入 Microsoft Generic Host；Extensions 提供选定运行时扩展；JavaScript 通过 Jint 求值受信任配置表达式，不提供 Node 环境或沙箱。静态 Core／Composition 应用支持 Native AOT；动态 CLR 加载和 Jint 要求普通运行时。CLI 包为 Cordis.NET.Tool。包 ID 使用 Cordis.NET.*，命名空间和程序集使用 Cordis.*。
 
-安装 `global.json` 指定的 .NET SDK，然后运行组合示例：
+## 选择包批次
+
+当前分支正在准备 alpha5，尚未发布。请从发行或验证回执选择精确版本及匹配的 feed，不要假设已发布 alpha.4 含有本分支能力。正式发行获批前源码版本保持不变。[当前支持与发行状态](docs/development.zh.md#当前支持与发行状态)区分已实现能力、已知限制和待决事项；[验证索引](docs/validation.zh.md#当前候选索引)标明实际验过的包。
+
+按[入门指南](docs/getting-started.zh.md)安装选定批次，无需 clone 即可运行。若要从源码探索相同的组合流程，使用 global.json 指定 SDK：
 
 ```console
 dotnet run --project examples/Composition/Composition.csproj
 ```
 
-该示例注册静态插件、应用配置、读取服务并更新配置。
-
-[管理应用示例](examples/ManagedApplication/README.md) 将真实包安装、配置与浏览器模块接入同一 Profile 会话。其可选前端构建需要 Node，普通 C# 插件开发不需要。
-
-## 安装预发行版
-
-```console
-dotnet add package Cordis.NET.Composition --prerelease
-dotnet tool install --global Cordis.NET.Tool --prerelease
-```
-
-这些命令选择最新已发布包，包括预发行版。Composition 与 Probes 示例使用[发布说明](CHANGELOG.md)中列出的作者辅助 API；旧包不包含这些 API。请通过源码项目引用验证当前续建改动；不得覆盖已发布的 alpha.4 包。参见[入门页](docs/getting-started.zh.md)与[作者指南](docs/authoring.zh.md)。
-
-NuGet 包 ID 使用 `Cordis.NET.*` 前缀；CLR 命名空间与程序集名称仍为 `Cordis.*`。
-
-## 选择部署路径
-
-- **静态与 Native AOT：** 使用 `Cordis.NET.Core`、`Cordis.NET.Composition`，并可选用 `Cordis.NET.Extensions`，模块需静态注册。
-- **CLR 模块：** 添加 `Cordis.NET.Clr`，在普通 .NET 运行时加载托管插件程序集。此路径不兼容 Native AOT。
-- **JavaScript 表达式：** 添加 `Cordis.NET.JavaScript`，通过 Jint 求值 `!!js`。只应处理受信任配置；它不是沙箱，也不承诺 Native AOT 支持。
-
-`Cordis.NET.Hosting` 提供 Generic Host 集成。当前源码新增可选 `Cordis.NET.AspNetCore`，用于显式授权的管理与服务接口。源码 CLI 保留验证／预览，并增加 `run` 与远程管理命令；已发布工具尚不包含这些命令。
+该示例挂载静态插件、读取服务并更新配置。[托管应用](examples/ManagedApplication/README.md)进一步演示包安装和浏览器模块；仅可选前端构建需要 Node。
 
 ## 文档
 
-- [入门](docs/getting-started.zh.md)
-- [插件与应用作者指南](docs/authoring.zh.md)
-- [核心概念](docs/core-concepts.zh.md)
-- [兼容性与证据](docs/compatibility.zh.md)
-- [上游基线与来源](docs/upstream.zh.md)
-- [DSH 0.2.0-rc.2 升级矩阵](docs/upgrade-0.2.0-rc.2.zh.md)
-- [可选配置描述](docs/configuration-description.zh.md)
-- [开发与验证](docs/development.zh.md)
-- [安全策略](SECURITY.md)
-- [贡献指南](CONTRIBUTING.zh.md)
+- [入门](docs/getting-started.zh.md)：包选择、首次调用与关闭。
+- [作者指南](docs/authoring.zh.md)：声明、生成消费者、错误和所有权。
+- [核心概念](docs/core-concepts.zh.md)与[架构](docs/architecture.md)：运行时和子系统职责。
+- [开发](docs/development.zh.md)：当前支持、维护导航与验证。
+- [兼容性](docs/compatibility.zh.md)、[上游来源](docs/upstream.zh.md)与[升级矩阵](docs/upgrade-0.2.0-rc.2.zh.md)：固定行为和平台适配。
+- [发行准备](docs/publication-readiness.zh.md)、[变更记录](CHANGELOG.md)、[贡献指南](CONTRIBUTING.zh.md)、[安全](SECURITY.md)和[归属声明](NOTICE.md)。
 
-项目目前是早期预览版。稳定版发布前，公共 API 和适配细节可能变化。发布记录见 [CHANGELOG.md](CHANGELOG.md)，归属信息见 [NOTICE.md](NOTICE.md)。
+目前为早期预览。稳定发行前公共 API 和适配仍可调整；持久数据、Git 历史和已发布包身份继续保全。

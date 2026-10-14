@@ -2,6 +2,17 @@
 
 [English](validation.md)
 
+## 当前候选索引
+
+[CI 38533282314](https://github.com/gentt1024/Cordis.NET/actions/runs/38533282314) 十二个作业全部通过：双平台 runtime／包／AOT／authoring、八个固定上游分片和两个汇总。分支为 50cc463a2b28c102cdc32648eb21d650601e6dde，实际 PR 检出为 7df28667d6e8e89ca19104b49d12965a8385bf4e，base 为 3342a967f4e57206bec272684a40a437fc051b77。Windows 上游 5618 通过、1 个依赖大小写敏感文件系统的跳过；Ubuntu 5619 通过。上游执行不等于 .NET 断言全部逐项对照。
+
+[完成 CI 回执](../verification/alpha5-rs01-2026-10-14/ci-completed.json)记录日志、下载包身份和哈希。两套各九个包均标记检出 7df2866，alpha.4 文字不授权覆盖已发布包。生产实现为 23ecbab，50cc463 只增加记录。[原 RS01 回执](../verification/alpha5-rs01-2026-10-14/evidence.json)保留本地包身份和当时 pending 的 CI 状态。
+
+后续仓库质量修改需要自己的检查。[当前支持](development.zh.md#当前支持与发行状态)和[发行门禁](publication-readiness.zh.md)区分未完成消费与已通过 CI；历史浏览器、IDE 和原生应用结果保留原源码与包身份。
+
+<details>
+<summary>历史证据，保留各自源码、包与执行范围</summary>
+
 ## 合作式替换生命周期，2026-10-09
 
 支持范围是契约兼容、所拥有工作能够合作式停止的插件。本修补有意加强固定 DSH HMR `639ed015397290b3745d163aafe02ffee4aa3f84` 的门槛：退休清理失败时拒绝激活候选，而非警告后继续。普通 `Fiber.DisposeAsync` 清理容错和公开 disposer 既有重复调用语义不变，包版本与固定行为基线不变。
@@ -642,3 +653,5 @@ Rider 2026.2 首次打开时，Remote 属性和生成类型均未识别。实际
 ## 输出原生读取修正 RS01，2026-10-14
 
 在固定 `.resultschema.20261014.2` 包、相同源生成 metadata 和相同 JSON 下，常量 getter 与 JsonConstructor 绑定 getter 均通过原生 Deserialize 和 codec.Decode，但 DecodeOutput 因 adapter 新增的无 setter required 标记失败。此前失败保留，归因修正为输出读取适配问题。主要回归位于 TypertRegistryTests，覆盖两种 DTO 及构造必填选项的开关；四项在修正前均因同一非法 metadata 失败，修正后 Composition 全部 522 项通过。缺少输出字段及显式 null 仍拒绝。真实只读 Host 增加 DecodeOutput 调用，既有方向 DTO 的省略与空性消费不变。冻结源码 `23ecbab` 与包身份 `0.2.0-alpha.5.rs01.20261014.1` 已通过既有完整 .NET／TS 消费脚本，包含只读 Host 的原生调用及三种构造选项下的方向合同。九组包／符号包和独立离线调试消费者均指向该源码；格式化后的冻结源码也通过四项定向回归。[RS01 回执](../verification/alpha5-rs01-2026-10-14/evidence.json) 记录这些结果及保留的基线失败。本地未请求 AOT，新候选托管完整 CI 尚待完成，不借用上一轮绿色结果。
+
+</details>

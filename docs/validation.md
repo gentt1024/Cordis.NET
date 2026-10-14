@@ -2,6 +2,17 @@
 
 [中文](validation.zh.md)
 
+## Current candidate index
+
+[CI 38533282314](https://github.com/gentt1024/Cordis.NET/actions/runs/38533282314) passed all twelve jobs: two runtime/package/AOT/authoring jobs, eight fixed-source shards and two aggregators. Branch: 50cc463a2b28c102cdc32648eb21d650601e6dde. Actual PR checkout: 7df28667d6e8e89ca19104b49d12965a8385bf4e against base 3342a967f4e57206bec272684a40a437fc051b77. Windows recorded 5618 upstream passes and one case-sensitive-filesystem skip; Ubuntu recorded 5619 passes. Source execution is not complete .NET assertion-review closure.
+
+The [completed CI receipt](../verification/alpha5-rs01-2026-10-14/ci-completed.json) records logs, downloaded package identities and hashes. Both sets of nine packages identify checkout 7df2866; their alpha.4 text does not authorize overwriting published packages. Production implementation is 23ecbab; 50cc463 only adds records. The [original RS01 receipt](../verification/alpha5-rs01-2026-10-14/evidence.json) retains its local package identity and its then-pending CI statement.
+
+Later repository-quality edits require their own checks. [Current support](development.md#current-support-and-release-status) and [release gates](publication-readiness.md) distinguish unresolved consumption from passed CI. Earlier browser, IDE and native application results retain their original source and packages.
+
+<details>
+<summary>Historical evidence with its original source, package and execution scope</summary>
+
 ## Cooperative replacement lifecycle, 2026-10-09
 
 The supported class is contract-compatible plugins whose owned work stops cooperatively. This repair deliberately strengthens fixed DSH HMR `639ed015397290b3745d163aafe02ffee4aa3f84`: a retirement cleanup failure prevents candidate activation instead of warning and continuing. Ordinary `Fiber.DisposeAsync` cleanup tolerance and the existing public repeated-disposal semantics remain unchanged. The package version and pinned behavior baseline are unchanged.
@@ -642,3 +653,5 @@ Two development runs failed on new fixture assumptions about optional `required`
 ## Native output reader correction RS01, 2026-10-14
 
 Using the fixed `.resultschema.20261014.2` package, identical source-generated metadata and identical JSON, both a constant getter and a JsonConstructor-bound getter passed native Deserialize and codec.Decode. DecodeOutput failed on the adapter-added required marker without a setter. The earlier failure remains recorded; its attribution is corrected to the output-reader adaptation. TypertRegistryTests owns the regression for both DTOs with constructor requiredness enabled and disabled. All four cases failed before the fix on the same invalid metadata; all 522 Composition tests passed after it. Missing output fields and explicit null remain refused. The real readonly Host now calls DecodeOutput; existing directional omission/null consumers are retained. Frozen source `23ecbab` and package identity `0.2.0-alpha.5.rs01.20261014.1` passed the complete existing .NET/TS consumer script, including the readonly Host native call and all three directional constructor-option variants. Nine package/symbol pairs and an independent offline debug consumer identify this source. The four focused regressions also passed on the formatted frozen source. The [RS01 receipt](../verification/alpha5-rs01-2026-10-14/evidence.json) records these results and the retained baseline failures. No local AOT was requested. Complete hosted CI for this new candidate remains pending; the previous green run does not cover this correction.
+
+</details>

@@ -1,12 +1,14 @@
 # Cordis.NET.AspNetCore
 
-Optional ASP.NET Core management endpoints over a running Cordis profile. Package, configuration and lifecycle operations use the session's existing owners.
+Choose the exact version and feed for this package batch; see [getting started](../../docs/getting-started.md) for package-only use and ownership. Published packages and unreleased candidate feeds are distinct.
+
+Authorized HTTP unary and WebSocket mux hosting for generated Remote services, plus management endpoints over a running Cordis profile. Package, configuration and lifecycle operations use the session's existing owners.
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
 
 The host supplies an authorization callback for every operation and an optional platform package toolchain. Build permission is checked separately from installation permission. The adapter does not provide accounts or login policy.
 
-See `examples/ManagedApplication` for the maintained application example and `docs/authoring.md` for configuration authoring. This package is introduced in `0.2.0-alpha.3`; it is not included in the published `0.2.0-alpha.1` batch.
+See the [managed application](../../examples/ManagedApplication/README.md) and [authoring guide](../../docs/authoring.md).
 
 `Map` exposes host state, complete configuration edits and client artifacts. Full configuration and its schema use separate `configuration-read`/`configuration-write` permissions because raw data and defaults can contain secrets. Mount the generated `PluginManager` with `MountPluginManagerAsync` over the same profile operations and toolchain. Settings uses the generated Remote over `SettingsForms`; notifications use the host-selected emit source registered on the same Gateway. `MapCordisRemote` supplies their physical HTTP carrier with host authorization. See the [management](../../docs/management-remote-migration.md) and [Settings](../../docs/settings-contract-migration.md) migration guides; the matching handwritten routes are removed.
 

@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>true</IsAotCompatible><PackageId>Cordis.NET.Composition</PackageId><Description>File-backed Cordis plugin composition, profiles and lazy configuration.</Description></PropertyGroup>
+  <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>true</IsAotCompatible><PackageId>Cordis.NET.Composition</PackageId><Description>Cordis application composition, coordinated configuration, declaration models and generated .NET/Web Remote contracts.</Description></PropertyGroup>
   <PropertyGroup>
     <CordisTypertService>*</CordisTypertService>
     <CordisTypertCompiler>$(MSBuildProjectDirectory)/../../tools/Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.dll</CordisTypertCompiler>

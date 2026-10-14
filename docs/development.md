@@ -2,24 +2,50 @@
 
 [中文](development.zh.md)
 
+## Current support and release status
+
+This branch prepares alpha5; alpha5 is not published. [Validation](validation.md#current-candidate-index) identifies tested source and package batches. [Publication readiness](publication-readiness.md) owns release gates. Historical checkpoints below describe their own revisions, not current remaining work.
+
+| Area | Current use and boundary |
+|---|---|
+| Runtime/composition | Context, Fiber, services, static modules, profiles and coordinated edits. Ordinary C# services need no Remote. |
+| Settings/management | Numeric-revision Settings, generated PluginManager and selected typed events reuse configuration operations and installation tasks. Hosts own authorization and document-opening policy. |
+| Declarations | One common model, explicit references, normal build/pack and first design-time generation. The backend table below lists supported and refused shapes. |
+| Remote | Shared unary/multipart and text mux Connection, scoped clients, reverse Context/owned values, Peer routing and fixed events. Interoperability is bounded, not all DSH SDK transports. |
+| CLR | Prepared/published receipts, stable LoadDirectory, restart upgrades and retained files after logical removal. Ordinary runtime only; business drain/readiness stays application-owned. |
+| Pending consumption | Actual prepared-candidate contract access, unary local transport cause and Web-number metadata consumption need decisions. Generic DTO/static backend limits remain explicit; named UI/platform acceptance requires its own evidence. |
+
+## Maintenance navigation
+
+Every upstream path below uses [upstream.lock.json](../upstream.lock.json). This short map locates the owner and primary check; [compatibility](compatibility.md) records adaptations. Packaging/transport checks protect their own wiring, not duplicate every owner assertion.
+
+| Responsibility | Fixed upstream / .NET adaptation | Source owner | Primary check and distinct consumer |
+|---|---|---|---|
+| Execution and service views | vendor/cordis/packages/core; typed views replace contextual JS rebinding | [Core](../src/Cordis.Core): Context, Fiber, ReflectService | [CoreTests](../tests/Cordis.Core.Tests/CoreTests.cs); isolated package consumer |
+| Configuration / Settings | packages/boot and packages/api; typed fields and STJ over the existing writer | [Composition](../src/Cordis.Composition): configuration operations, SettingsForms | [ConfigurationEditTests](../tests/Cordis.Composition.Tests/ConfigurationEditTests.cs); [Settings caller](../scripts/verify-typert-dotnet.py) |
+| Installation | packages/boot; NuGet/SDK preparation retains operation/task ownership | [Extensions](../src/Cordis.Extensions), [Clr](../src/Cordis.Clr) toolchain | [ConfigurationSessionTests](../tests/Cordis.Extensions.Tests/ConfigurationSessionTests.cs); [deployment](../scripts/verify-clr-deployment.py) |
+| Model / backends | packages/typert/generator; Roslyn and STJ replace TS analysis/codecs | [Model](../tools/Cordis.Typert.Generator/Model), [Generation](../src/Cordis.Composition/Generation), MSBuild targets | [Independent callers](../scripts/verify-typert-dotnet.py), including build/pack/design-time wiring |
+| Remote / events | packages/api/gateway and packages/typert/protocol; async and disposal adapt ownership | [Composition](../src/Cordis.Composition) Registry/Gateway/Connection, [AspNetCore](../src/Cordis.AspNetCore) | [Registry](../tests/Cordis.Composition.Tests/TypertRegistryTests.cs), [events](../tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs); [real clients](../scripts/verify-typert.py) |
+| CLR lifecycle | packages/boot/hmr; collectible ALC and stable files adapt loading/retirement | [ClrModuleResolver](../src/Cordis.Clr/ClrModuleResolver.cs), Loader | [ClrTests](../tests/Cordis.Platform.Tests/ClrTests.cs); [multi-entry consumer](../scripts/verify-clr-multi-entry.py) |
+
 ## Model pipeline contract
 
-The reconstruction uses one declaration fact model for ordinary and Remote roots. An incomplete port cannot define the next architecture: correct missing facts and stage responsibilities before creating another public protocol. This work assumes no compatibility commitment to experimental model files or clients. Re-extract and rebuild maintained consumers; preserve persisted application data, Git history and published package identities separately.
+Ordinary and Remote roots share one declaration fact model. An incomplete port cannot define the next architecture: correct missing facts and stage responsibilities before creating another public protocol. This work assumes no compatibility commitment to experimental model files or clients. Re-extract and rebuild maintained consumers; preserve persisted application data, Git history and published package identities separately.
 
 | Stage | Input → output | Owner | Refusal boundary | Exit path |
 |---|---|---|---|---|
-| Select and extract | Effective compiler input plus explicit ordinary roots and/or service selection → declaration facts, referenced graph and diagnostics | Source reader and `extract-model` | Invalid root, unusable syntax, duplicate identity or missing required facts; analysis diagnostics do not imply every backend must refuse | One `$(AssemblyName).cordis.model.json`; remove the old `extract` entry and separate wire artifact |
+| Select and extract | Effective compiler input plus explicit ordinary roots and/or service selection → declaration facts, referenced graph and diagnostics | Source reader and `extract-model` | Invalid root, unusable syntax, duplicate identity or missing required facts; analysis diagnostics do not imply every backend must refuse | One `$(AssemblyName).cordis.model.json`; ordinary roots do not require a Remote declaration |
 | Validate and compose | Current saved facts and optional explicit reference models → validated identities and reachable definitions | Model reader/composition | Incomplete or inconsistent input, identity mismatch, missing/conflicting definition; references do not add primary roots | Re-extract rejected inputs; no old-format reader, conversion or DLL-based fact repair |
-| Interpret for a purpose | Common facts plus named backend policy → a recomputable internal projection | Declaration interpreter and the selected backend | Unsupported behavior is refused by the consuming backend; it is not silently removed from analysis | Replace independent authored-model interpretations; internal projections are not a second persisted contract |
-| Bind Host | Remote facts plus actual author implementation and explicit STJ metadata → typed bindings and runtime descriptors | Remote generator; Registry/Gateway own publication and invocation lifetime | Existing Host contract, declaration drift and unavailable runtime capability; standalone-caller restrictions do not automatically disable Host | Retain correct binding, cancellation and withdrawal behavior; remove the old two-artifact conformance bridge |
+| Interpret for a purpose | Common facts plus named backend policy → a recomputable internal projection | Declaration interpreter and the selected backend | Unsupported behavior is refused by the consuming backend; it is not silently removed from analysis | Internal projections are recomputed for the selected backend, not persisted as another contract |
+| Bind Host | Remote facts plus actual author implementation and explicit STJ metadata → typed bindings and runtime descriptors | Remote generator; Registry/Gateway own publication and invocation lifetime | Existing Host contract, declaration drift and unavailable runtime capability; standalone-caller restrictions do not automatically disable Host | Bindings retain cancellation and withdrawal; declaration drift is checked against the current compilation |
 | Generate consumers | Same saved facts plus selected catalog/data/client policy → catalog, DTO/STJ or .NET/TS output within that backend's supported scope | Respective emitter | A caller that cannot reproduce required data/serializer behavior refuses that projection; it never copies author business code | Preserve pre-`CoreCompile` generation and provider-independent callers; ordinary roots require no Remote registration |
-| Build and deliver | Current sources, models and generated output → package and consumer evidence | MSBuild targets, package checks and existing consumer gates | Failed generation removes owned stale output; Clean and incremental builds remain observable contracts | Pack only `cordis/typert/$(AssemblyName).cordis.model.json`; retire `CordisTypertDeclarationModelPath` and obsolete model paths |
+| Build and deliver | Current sources, models and generated output → package and consumer evidence | MSBuild targets, package checks and existing consumer gates | Failed generation removes owned stale output; Clean and incremental builds remain observable contracts | Pack only `cordis/typert/$(AssemblyName).cordis.model.json`; explicit model/reference inputs determine generation |
 
-The selected flows in this table completed the Windows x64 JIT/package gate at `7937ee8`; [validation](validation.md#model-pipeline-rebuild-2026-10-11) records the exact source, package batch and failure boundaries. Required current consumers include Settings, PluginManager, notifications, the ordinary catalog, DTO/STJ and supported .NET/TS routes. Complete source/compiler coverage, broader referenced-model and Schema/TS backends, rich Remote/owned-value protocols, native documents and the original UI/platform work remain open. Backend refusal records current capability; it does not close these obligations. New results must name their actual source and package batch; historical checkpoints below are not evidence for this reconstruction.
+Current supported shapes are listed below; completed checks are indexed in [validation](validation.md#current-candidate-index). Historical reconstruction checkpoints do not define current remaining work.
 
 MSBuild supplies reference XML documentation to the generator under each resolved assembly identity. This preserves the same documentation facts when extraction reads an implementation assembly and the C# compiler binds its reference assembly. XML text is an incremental analyzer input and is parsed only when a referenced declaration needs it. The generator still uses compiler symbols to locate implementation members and emit compilable C#; invocation semantics come from the common declaration contract.
 
-The follow-up at `54ae030` preserves null attribute arrays through extraction, saved-model reading and Host binding, and corrects current owner/replacement and optional-parameter guidance. The [focused repair record](validation.md#null-attribute-arrays-and-current-guidance-2026-10-11) has a separate frozen Windows package identity. It preserves the stage responsibilities above and leaves the original remaining model, protocol and platform work open.
+Null attribute arrays and reference documentation are retained through extraction, model reading and Host binding. Historical repair evidence is preserved below.
 
 ## Alpha5 independent backend disposition
 
@@ -105,6 +131,9 @@ The launcher parses its own options until `--` or the first unrecognized token; 
 Before entries mount, the CLI also provides `IApplicationReady` as `appReady` and `ApplicationExit` as `appExit`. Register readiness subscriptions with a Context effect. Readiness commits after tree and host startup; late subscribers run immediately. The application may request exit during activation (for help) or after readiness. The first request starts the fixed upstream five-second grace, including during startup; the CLI awaits orderly tree disposal and forces process exit with that code if grace expires. Ordinary startup has no five-second deadline. Startup/readiness exceptions return failure. Cordis reports effect cleanup errors without rewriting the requested code. Existing HMR uses the same readiness result. Process signal handling remains the .NET Host's responsibility.
 
 Library hosts can provide these Composition contracts through `ProfileSession.StartAsync(prepare: ...)` and own their exit policy; they do not need the CLI or another runtime. The verification flow compiles an independent CLR application and runs the real CLI for argument boundaries, help/error, readiness and cleanup. Controlled carrier checks, browser execution and native management tests are separate evidence.
+
+<details>
+<summary>Historical decisions and checkpoints; current support is listed above</summary>
 
 ## Initial application infrastructure slices (historical acceptance)
 
@@ -559,3 +588,5 @@ Descriptor/STJ GenerateClient remains an established public route; saved-model l
 No host-wide safe-exception callback is added. Fixed Gateway preserves ordinary exception messages; applications own public business-error mapping and diagnostics through the existing RemoteError boundary. That local business mapping does not cover all resolver, codec, stream or cleanup failures. Application deployment acceptance remains separate from library acceptance.
 
 Original-CI-package application, Rider 2026.2 and Windows opener handoff are closed within their recorded bounds. The new output-schema production change needs its own package and final platform evidence. Release identity, merge and publication still require authorization.
+
+</details>

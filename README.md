@@ -2,58 +2,41 @@
 
 [中文](README.zh.md)
 
-Cordis.NET implements the DSH-maintained Cordis at a fixed revision. Its scope includes a domain-independent runtime and generic infrastructure for building, running, configuring, managing, and shipping modular applications. Core remains domain-independent; application libraries and platform adapters sit above it.
+Cordis.NET is a faithful, idiomatic .NET port of the fixed DSH-maintained Cordis runtime and generic application infrastructure. Build ordinary C# plugins and services, compose applications, or expose selected services to .NET and Web clients. Remote is optional; ordinary plugin development does not require Node.
 
-The project aims for a faithful, idiomatic .NET port. Fixed upstream behavior and justified platform adaptations govern the implementation; earlier experiments do not become a separate framework specification. See the [upstream fidelity requirement](docs/compatibility.md#upstream-fidelity-requirement) for contract corrections and compatibility decisions.
+Fixed upstream behavior and justified platform adaptations govern the implementation. Earlier experiments do not establish a separate framework specification or compatibility obligation. See [compatibility](docs/compatibility.md).
 
-Available components include lifecycle and injection, profile/bundle/patch composition, running-session coordination, configuration references, plugin enablement and deployment reconciliation, and optional CLR, Generic Host and JavaScript adapters. Source adds typed field composition, ordered configuration edits and resets, explicit declaration exports, a NuGet/SDK package toolchain, ASP.NET Core management endpoints, application CLI commands and reusable TypeScript client modules. The initial application and authoring capabilities shipped in `0.2.0-alpha.3`. Current source corrects standard Settings and adds generated PluginManager, selected notifications and native model consumers; see [management migration](docs/management-remote-migration.md). These continuation changes require a future package version identity; the source version remains `0.2.0-alpha.4`. See the [validation record](docs/validation.md) for local acceptance and outstanding release checks, and [compatibility](docs/compatibility.md) for platform boundaries. Application-specific business rules and domain policy belong to consuming applications.
+Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft. The behavior baseline is deepseek-ai/deepseek-harness at 639ed015397290b3745d163aafe02ffee4aa3f84, whose vendored Cordis reports 4.0.4; arbitrary TypeScript plugins are not a supported deployment format.
 
-Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
+## Start with your task
 
-The behavior target is `deepseek-ai/deepseek-harness@639ed015397290b3745d163aafe02ffee4aa3f84`, whose vendored `@deepseek-ai/cordis` reports version `4.0.4`. This project adapts observable contracts to .NET; it does not claim complete compatibility with arbitrary TypeScript plugins.
+| Task | Packages and entry |
+|---|---|
+| Run ordinary .NET plugins and services | Core; add Composition for Loader, profiles and configuration. [First package-only application](docs/getting-started.md). |
+| Expose a Host to .NET or Web consumers | Composition supplies declaration extraction, generated bindings, independent clients and shared Remote contracts; AspNetCore supplies the authorized HTTP/WebSocket host adapter. [Authoring](docs/authoring.md). |
+| Install and run separate CLR plugins | Clr supplies the SDK toolchain and stable artifact loading over existing configuration operations. [Artifact workflow](docs/clr-artifacts.md), [managed plugin](examples/ManagedPlugin/README.md), [managed application](examples/ManagedApplication/README.md). |
 
-## Try it from source
+Optional Hosting integrates Microsoft Generic Host. Extensions provides selected runtime extensions; JavaScript evaluates trusted configuration expressions through Jint, without a Node environment or sandbox. Static Core/Composition applications support Native AOT; dynamic CLR loading and Jint require an ordinary runtime. The CLI package is Cordis.NET.Tool. Package IDs use Cordis.NET.*, while namespaces and assemblies use Cordis.*.
 
-Install the .NET SDK selected by `global.json`, then run the working composition example:
+## Select a package batch
+
+This branch is preparing alpha5 and has not published it. Use an exact package version and its matching feed from a release or validation receipt; do not assume the latest published alpha.4 contains this branch. The source version remains unchanged until an approved release. [Current support and release status](docs/development.md#current-support-and-release-status) separates implemented capabilities, known limits and pending decisions; [validation](docs/validation.md#current-candidate-index) identifies the actual tested packages.
+
+Follow [getting started](docs/getting-started.md) to install the selected batch and run without cloning the repository. To explore the same composition workflow from source with the SDK in global.json:
 
 ```console
 dotnet run --project examples/Composition/Composition.csproj
 ```
 
-The example registers a static plugin, applies configuration, observes its service, and updates it.
-
-The [managed application example](examples/ManagedApplication/README.md) combines real package installation, configuration and browser modules through the same profile session. Its optional frontend build requires Node; ordinary C# plugin development does not.
-
-## Install the prerelease
-
-```console
-dotnet add package Cordis.NET.Composition --prerelease
-dotnet tool install --global Cordis.NET.Tool --prerelease
-```
-
-These commands select the latest published packages, including prereleases. The Composition and Probes examples use the authoring helpers described in the [release notes](CHANGELOG.md); older packages do not include them. Use source project references to exercise current continuation changes; they must not replace published alpha.4 packages. See [getting started](docs/getting-started.md) and the [authoring guide](docs/authoring.md).
-
-The package IDs use the `Cordis.NET.*` prefix. CLR namespaces and assembly names remain `Cordis.*`.
-
-## Choose a deployment path
-
-- **Static and Native AOT:** use `Cordis.NET.Core`, `Cordis.NET.Composition`, and optionally `Cordis.NET.Extensions` with statically registered modules.
-- **CLR modules:** add `Cordis.NET.Clr` to load managed plugin assemblies in an ordinary .NET runtime. This path is not Native AOT compatible.
-- **JavaScript expressions:** add `Cordis.NET.JavaScript` for `!!js` evaluation through Jint. Trusted configuration only; this is not a sandbox and no Native AOT support is claimed.
-
-`Cordis.NET.Hosting` integrates the runtime with Generic Host. Current source adds optional `Cordis.NET.AspNetCore` for explicitly authorized management/service endpoints. The source CLI retains validation/preview and adds `run` plus remote management commands; those commands are not in the published tool yet.
+The example mounts a static plugin, reads its service and updates configuration. The [managed application](examples/ManagedApplication/README.md) adds package installation and browser modules; only its optional frontend build needs Node.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md)
-- [Plugin and application authoring](docs/authoring.md)
-- [Core concepts](docs/core-concepts.md)
-- [Compatibility and evidence](docs/compatibility.md)
-- [Upstream baseline and provenance](docs/upstream.md)
-- [DSH 0.2.0-rc.2 upgrade matrix](docs/upgrade-0.2.0-rc.2.md)
-- [Optional configuration descriptions](docs/configuration-description.md)
-- [Development and verification](docs/development.md)
-- [Security policy](SECURITY.md)
-- [Contributing](CONTRIBUTING.md)
+- [Getting started](docs/getting-started.md): package selection, first call and shutdown.
+- [Authoring](docs/authoring.md): declarations, generated consumers, errors and ownership.
+- [Core concepts](docs/core-concepts.md) and [architecture](docs/architecture.md): runtime and subsystem responsibilities.
+- [Development](docs/development.md): current support, maintenance navigation and verification.
+- [Compatibility](docs/compatibility.md), [upstream provenance](docs/upstream.md) and [upgrade matrix](docs/upgrade-0.2.0-rc.2.md): fixed behavior and platform adaptations.
+- [Publication readiness](docs/publication-readiness.md), [changelog](CHANGELOG.md), [contributing](CONTRIBUTING.md), [security](SECURITY.md) and [notices](NOTICE.md).
 
-The project is an early preview. Public APIs and adaptation details may change before a stable release. See [CHANGELOG.md](CHANGELOG.md) for release notes and [NOTICE.md](NOTICE.md) for attribution.
+This is an early preview. Public APIs and adaptations may change before a stable release; persisted data, Git history and published package identities are preserved.

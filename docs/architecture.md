@@ -28,7 +28,7 @@ unrelated contributions retain their identity. The [authoring workflow](authorin
 defines the ordering and failure boundary. This supplies no product admission, draining or
 business recovery policy.
 
-The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
+The [current support and maintenance navigation](development.md#current-support-and-release-status)
 and [compatibility record](compatibility.md) distinguish implemented workflows from remaining
 backend and consumer evidence. Fixed-end interoperability claims name the tested client and
 carrier; they do not imply compatibility with every DSH product or SDK transport.
@@ -37,8 +37,8 @@ carrier; they do not imply compatibility with every DSH product or SDK transport
 
 The fixed DSH source remains the behavioral authority. Its existing comparison with the
 native implementation is applied incrementally, rather than repeated as a new inventory.
-The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
-continues to own completeness. Application consumption supplies evidence; it does not define platform scope.
+The [current support and maintenance navigation](development.md#current-support-and-release-status)
+records current support; historical scope decisions retain their original checkpoints. Application consumption supplies evidence; it does not define platform scope.
 
 | Workflow | Fixed DSH responsibility | Native expression and owner | Observable boundary |
 |---|---|---|---|

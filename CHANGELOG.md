@@ -2,9 +2,13 @@
 
 ## [Unreleased]
 
-- Corrected the standard Settings contract to numeric owner revisions and optional numeric expected revisions. Generated .NET/TS clients, the CLI and maintained consumers use one contract; string/null revisions and old Settings hash endpoints are rejected or removed. Full-configuration/file hash checks retain their independent duties. See [Settings migration](docs/settings-contract-migration.md).
-- Added selected ordinary C# declaration models and an independent artifact-only catalog, retaining bounded member/generic/reference/source facts without requiring Remote declarations. Optional parameter facts now drive supported runtime bindings and generated clients.
-- Recorded the fixed-upstream port requirement and source-bound local verification. These source changes require a future package version; the published alpha.4 batch remains unchanged.
+- Unified ordinary, Remote and event declarations in the common model, with explicit references and supported independent .NET/Web generation through normal build, pack and design-time inputs.
+- Added shared unary/multipart and WebSocket mux clients, scoped Context/Peer routing, owned resources and typed event listeners with explicit cancellation and disposal.
+- Standard Settings uses numeric observation revisions and optional expected revisions. Generated PluginManager and notifications reuse existing operations and task ownership. Maintained clients regenerate against the corrected contracts.
+- Stable CLR artifacts use preparation/publication receipts, direct directory loading, restart upgrades and logical removal that retains files.
+- Exposed read-only, non-virtual output Schema reuse and corrected native readonly output metadata without changing application validation policy.
+- Improved current documentation, package README navigation and API extension-boundary inspection. Backend and remaining consumption limits are listed in the current support record.
+- These changes require a new approved package identity. Published alpha.4 packages and historical release entries remain unchanged.
 
 ## [0.2.0-alpha.4]
 

@@ -1,9 +1,11 @@
 # Cordis.NET.Tool
 
+Choose the exact version and feed for this package batch; see [getting started](../../docs/getting-started.md) for package-only use and ownership. Published packages and unreleased candidate feeds are distinct.
+
 CLR startup uses installed files directly. Package upgrades prepare and save the new version, then require a host restart. Removal retains deployment files. After stopping every host, Worker and other consumer, use `cordis delete-retained <profile> <package> <version>` to physically delete an unreferenced version and its receipt. See the [artifact workflow](../../docs/clr-artifacts.md).
 
 ```console
-dotnet tool install --global Cordis.NET.Tool --prerelease
+dotnet tool install --global Cordis.NET.Tool --version <selected-version>
 ```
 
 The published tool validates and previews entry configuration with `cordis validate <path>` and `cordis preview <path>`.

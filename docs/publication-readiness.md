@@ -2,6 +2,8 @@
 
 [中文](publication-readiness.zh.md)
 
+Current preparation: the RS01 candidate completed [all twelve PR CI jobs](validation.md#current-candidate-index). Repository-quality changes and the unresolved consumption decisions in [current support](development.md#current-support-and-release-status) remain separate release exits. A green PR does not authorize merging or publishing.
+
 The current tree is prepared as a reviewable public source snapshot. Documentation, package metadata, package-specific readmes, community templates, public validation evidence, license material, and local release checks are present.
 
 The repository identity and package metadata are fixed to `gentt1024/Cordis.NET`. Published alpha.3 and alpha.4 packages and their tags remain immutable. The current local source still carries `0.2.0-alpha.4`, but later implementation and contract changes have their own source checkpoints and isolated validation packages. Publishing these changes requires a newly approved package version; none is selected here. Local validation packages must not replace the published alpha.4 batch. Cordis.NET versions are independent of the pinned DSH tag. A future release's final commit, new version, tag and selected package hashes must agree.

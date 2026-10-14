@@ -6,7 +6,7 @@
 
 ## 从可运行示例开始
 
-本页的作者辅助 API 要求使用[发布说明](../CHANGELOG.md)中列出的作者接口版本；旧 NuGet 包不包含这些 API。在对应版本上架 NuGet 前，请使用当前源码检出。下面的命令通过项目引用运行仓库示例，并使用 `global.json` 指定的 SDK；仅安装包不会提供示例项目。
+首个仅依赖包的应用请从[入门指南](getting-started.zh.md)开始。本页描述当前所选批次，包括生成式 Remote 和模型消费者。请从[验证索引](validation.zh.md#当前候选索引)选择精确 feed／版本，不要假设已发布 alpha.4 含有后续变更。下方可选示例使用源码项目引用和 global.json 的 SDK。
 
 [共享契约](../examples/Probes.Contracts/Probes.cs)、[提供者与配置](../examples/Probes.Plugin/ProbeModule.cs)和[包含两个消费者的静态宿主](../examples/Probes/Program.cs)是示例的权威源码。它们展示普通格式化能力、caller-bound 状态探针注册服务、类型化事件、提前撤销、提供者消失和消费者重新激活。
 
@@ -279,7 +279,7 @@ await connection.dispose();
 
 ## 原生作者模型与 .NET 消费者，2026-10-10
 
-当前合同是一个声明模型，按用途投影，见[管线阶段表](development.zh.md#模型管线合同)。重建必须保留下述运行时及消费者行为。已完成的历史门禁仍只绑定其记录的源码与包，不证明新接线。
+普通声明和 Remote 使用共同模型及各用途投影。[当前支持表](development.zh.md#当前支持与发行状态)与后端处置区分运行 metadata 和独立生成。
 
 普通 Plugin、Service 与 Config 继续在进程内使用。Remote 是面向其他环境消费者的可选边界。C# 作者继续使用现有 Remote 标记和显式 STJ context；设置 `CordisTypertService` 后，该项目才启用源模型提取。Composition 提供 SDK compiler 工具与构建 target；这条路径不需要 Node 或 TypeScript。
 
@@ -289,7 +289,7 @@ await connection.dispose();
 </PropertyGroup>
 ```
 
-构建在作者包内发布 `cordis/typert/$(AssemblyName).cordis.model.json`。service 选择与普通根进入同一 `extract-model` 入口和声明图。若作者程序集名为 `Example`，文件即 `Example.cordis.model.json`。Remote generator 将所选 service 事实与当前编译比较，以 `CORDISREMOTE002` 拒绝漂移；无关声明不成为第二份 service 合同。引用声明保留 CLR metadata 来源及相邻 XML 文档，不从 metadata 重建缺失的源 initializer 或实现。完整引用模型组合仍待建设。
+构建在作者包内发布 `cordis/typert/$(AssemblyName).cordis.model.json`。service 选择与普通根进入同一 `extract-model` 入口和声明图。若作者程序集名为 `Example`，文件即 `Example.cordis.model.json`。Remote generator 将所选 service 事实与当前编译比较，以 `CORDISREMOTE002` 拒绝漂移；无关声明不成为第二份 service 合同。引用声明保留 CLR metadata 来源及相邻 XML 文档，不从 metadata 重建缺失的源 initializer 或实现。引用源码定义通过下方显式 reference-model 输入组合。
 
 独立合同包可以消费该制品的副本，无需引用提供者实现：
 
@@ -332,7 +332,7 @@ var view = reply.Value;
 
 [独立 .NET Settings 门禁](../scripts/verify-typert-dotnet.py) 打包作者与合同包，再于仓库外构建仅依赖包的调用者。调用者不引用提供者实现，关闭 reflection fallback 并使用静态 metadata。门禁覆盖类型化 describe、脱敏、provider 缺失/失败、重试、已持视图失效重读、definition 撤销/重注册、局部 suspend 和借用客户端所有权；基础类型根、null/default 参数、空状态注解及拒绝不支持投影另有用例。`--aot` 验证静态调用者；动态 CLR Host 仍属于普通运行时边界。正式平台结果以[验证记录](validation.zh.md)中的确切完成检查点为准。
 
-该路径覆盖 unary 客户端、受支持的 downlink 流，以及标准 Settings、PluginManager 和通知消费。原生文档集成、富图、完整源类型分析及从普通模型生成 TS 仍开放。已有 TS/Web 输出继续可用并单独验收。
+此路线覆盖受支持的 unary／stream、Settings、PluginManager 和事件消费者。拒绝形状见[后端处置](development.zh.md#alpha5-独立后端处置)，具名平台证据见[验证索引](validation.zh.md#当前候选索引)。
 
 
 ## 类型化 Remote 上行
@@ -499,7 +499,7 @@ await scoped.ReadAsync();
 
 对独立 caller，仅有程序集 metadata 的 JSON context 缺少重建 serializer 所需的源码事实，以 `TYPM115` 拒绝；Host 仍可绑定该实际 context。非有限数值的可选默认值保留为作者事实，Host 在参数省略时可使用它。若所选 JSON number handling 无法传输该值，独立 .NET caller 生成以 `TYPM116` 拒绝，不生成默认调用会在序列化时失败的方法。
 
-独立消费者必须将一个作者 DTO 同时用作普通 root 和 Remote 参数／结果，使用真实 HTTP 作者宿主及仅包引用的生成调用者。DTO 行为由既有数据消费者负责，此路检查保存模型映射和传输。泛型 DTO 投影、更广的 Remote／引用模型后端、design-time IDE 和具名 UI 验证继续开放。完成的平台证据仍绑定在[验证记录](validation.zh.md)中，早先批次不证明本次重建。
+独立消费者将作者 DTO 同时用于普通 root 和 Remote 参数／结果，通过真实 HTTP Host 与仅包调用方消费。数据消费者负责 DTO 行为，此路线检查模型和传输接线。后端限制与具名 IDE／UI 证据以当前支持和验证记录为准。
 
 ## 浏览器 scoped Remote 消费
 

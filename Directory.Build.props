@@ -14,7 +14,7 @@
     <Description>A native .NET implementation of the pinned DeepSeek Harness Cordis model.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>dotnet;plugin-system;modularity;cordis</PackageTags>
-    <PackageReleaseNotes>Coordinated profile installation with immutable admitted candidates, stale-input refusal, captured configuration application, legacy reconciliation compatibility, and admission before package removal. Unified repository C# lint and canonical formatting. The fixed DSH behavior baseline is unchanged.</PackageReleaseNotes>
+    <PackageReleaseNotes>Common declaration models and generated .NET/Web Remote contracts; scoped calls, streams and typed events; numeric Settings and generated management over existing operations; stable CLR artifacts; reusable output schemas and native readonly result metadata. Fixed DSH baseline unchanged. See the matching source documentation for support and release status.</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/gentt1024/Cordis.NET.git</RepositoryUrl>
     <PackageProjectUrl>https://github.com/gentt1024/Cordis.NET</PackageProjectUrl>

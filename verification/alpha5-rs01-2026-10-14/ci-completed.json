@@ -1,0 +1,299 @@
+{
+  "checkedAt": "2026-10-14T13:30:22.197Z",
+  "pr": 16,
+  "runId": 38533282314,
+  "branchCommit": "50cc463a2b28c102cdc32648eb21d650601e6dde",
+  "productionCommit": "23ecbabbd2ef7d6839a42685a4b8cd18ab9edef8",
+  "baseCommit": "3342a967f4e57206bec272684a40a437fc051b77",
+  "actualCheckout": "7df28667d6e8e89ca19104b49d12965a8385bf4e",
+  "jobs": [
+    {
+      "name": "runtime (windows-latest)",
+      "id": 115749990987,
+      "conclusion": "success"
+    },
+    {
+      "name": "upstream (ubuntu-24.04, shard 3)",
+      "id": 115749991310,
+      "conclusion": "success"
+    },
+    {
+      "name": "upstream (ubuntu-24.04, shard 4)",
+      "id": 115749991458,
+      "conclusion": "success"
+    },
+    {
+      "name": "runtime (ubuntu-24.04)",
+      "id": 115749991479,
+      "conclusion": "success"
+    },
+    {
+      "name": "upstream (windows-latest, shard 4)",
+      "id": 115749991482,
+      "conclusion": "success"
+    },
+    {
+      "name": "upstream (ubuntu-24.04, shard 1)",
+      "id": 115749991484,
+      "conclusion": "success"
+    },
+    {
+      "name": "upstream (windows-latest, shard 3)",
+      "id": 115749991502,
+      "conclusion": "success"
+    },
+    {
+      "name": "upstream (windows-latest, shard 2)",
+      "id": 115749991523,
+      "conclusion": "success"
+    },
+    {
+      "name": "upstream (ubuntu-24.04, shard 2)",
+      "id": 115749991698,
+      "conclusion": "success"
+    },
+    {
+      "name": "upstream (windows-latest, shard 1)",
+      "id": 115749992049,
+      "conclusion": "success"
+    },
+    {
+      "name": "verify (windows-latest)",
+      "id": 115763672928,
+      "conclusion": "success"
+    },
+    {
+      "name": "verify (ubuntu-24.04)",
+      "id": 115763672958,
+      "conclusion": "success"
+    }
+  ],
+  "boundary": "Read-only CI check; original failed-run evidence is preserved. Successful jobs do not close the three application consumption gaps.",
+  "artifactVerification": {
+    "packageIdentities": "package-identities.json",
+    "all18NuspecCommits": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+  },
+  "upstreamSummaries": {
+    "win": {
+      "status": "passed",
+      "cases": 5619,
+      "passed": 5618,
+      "skipped": [
+        {
+          "case": [
+            "composition",
+            "packages/boot/app-boot/tests/package-meta.spec.ts",
+            "plugin locale display metadata > rejects case-equivalent language files on case-sensitive filesystems",
+            0
+          ],
+          "status": "skipped"
+        }
+      ],
+      "meaning": "Complete fixed-source execution on this platform; not .NET assertion-review closure.",
+      "downloadZipSha256": "357190df7d7a9b7921bc4eae789a1bc6e36ea7836bb4a55db09ffaa4fc45454e"
+    },
+    "linux": {
+      "status": "passed",
+      "cases": 5619,
+      "passed": 5619,
+      "skipped": [],
+      "meaning": "Complete fixed-source execution on this platform; not .NET assertion-review closure.",
+      "downloadZipSha256": "cee30234ece9f42cc6e8e16bbf14561f45c5b0cb20302d89b7c37a40c164f6e2"
+    }
+  },
+  "packages": [
+    {
+      "platform": "win",
+      "zipSha256": "725994a7a8afe000002db9ac5674011a75e4a26dd0209f6b8b702257e0b59abd",
+      "packages": [
+        {
+          "file": "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg",
+          "sha256": "41d03fd958ef72a7809650e1bbbd2f53dec8a9c31f3f2de05e457d64203cc456",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+          "sha256": "19338a0bbc01688548c435cb908f8e2567d2be5fd8ad0769a657650e5b7139f0",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+          "sha256": "705952cad0da45510d4c71506195581601eaa1bd4dce3dace30ba03f64564e46",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+          "sha256": "2298a7216f8842b24900db948caa8d7eae3fd0684607d81db1da1a84275dcef6",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+          "sha256": "bf2d021b107d84c00d92f4d788d3f2f931ccd1c593f8cf32378f984857443233",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+          "sha256": "e1d05a7be4f3c4fa3fb7f03614a662375a8d27153f4e40ab388b9594d3bcd1f7",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg",
+          "sha256": "3b9347f4c026b226955eddf65497b4a517ee84b26403d5a1a8dc9ca71dbc670b",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg",
+          "sha256": "0b80ec4892e11105ce21cb23061a673ddaa463556747d00fa2d192ea675253e5",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Tool.0.2.0-alpha.4.nupkg",
+          "sha256": "a3bffe71d5496b3a09fc2b2210f2644e29735a0856666fff574970399bff98f4",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "zipSha256": "d55bb378a00a1fecffc9191d1b0ee6460c6ffa10622626e8c7f548daa523dfc8",
+      "packages": [
+        {
+          "file": "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg",
+          "sha256": "02f0d0e4a74b017df48b7867c8a24fe29c7028801203e700d3244b62e9714bd3",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+          "sha256": "7bb11cfa27e7ef8e54ea3c91ebacc9b713e50ca0dbcd3e6fc53ced2bd5142adf",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+          "sha256": "a2e6714ac6e765f7377c6d7313c5555dcfb046c2e90f2fadaeb171edc16287d6",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+          "sha256": "80fb224da8182aa57b046d6ab022d024d0281b1c85862328d2f394b1588a7af4",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+          "sha256": "c0507460f5e6ee416a98d125cb7aeac58e3da1239aa8d63d7972f2e682faafae",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+          "sha256": "39eecf7b5a48187d89b8a0abfca2e36b7d41599f21472f137dd6af87348a466f",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg",
+          "sha256": "ecbe2be4cbd5d4f04d79e84983ef7594376f76f6cb25a41e1381765754006c63",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg",
+          "sha256": "9b612f6156982014d96fd642ca316c543a2775f0e5d2ecdd6337b203d8100bf3",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        },
+        {
+          "file": "Cordis.NET.Tool.0.2.0-alpha.4.nupkg",
+          "sha256": "7b6a741ca5fde09091209f25e764d9961787e2b95c8e3c4bad161db27eb1af7c",
+          "version": "0.2.0-alpha.4",
+          "repository": {
+            "type": "git",
+            "url": "https://github.com/gentt1024/Cordis.NET.git",
+            "commit": "7df28667d6e8e89ca19104b49d12965a8385bf4e"
+          }
+        }
+      ]
+    }
+  ],
+  "verification": "Both runtime checkout logs and all downloaded nuspec repository commits agree. ZIP SHA-256 values match GitHub artifact digests. Original local evidence is unchanged."
+}
