@@ -634,6 +634,11 @@ Rider 2026.2 首次打开时，Remote 属性和生成类型均未识别。实际
 
 源码 `ae98280` 通过 public、非 virtual、仅 getter 的 `TypertCodec.ResultSchema` 公开已有输出投影，方向分派仍为内部实现。[回执](../verification/alpha5-result-schema-2026-10-14/evidence.json) 将九个本地包身份 `0.2.0-alpha.5.resultschema.20261014.2`、符号包和独立离线调试消费者绑定到该源码。既有 .NET／TS 完整包消费者脚本通过，包含真实方向结果、导出递归引用、只读计算成员的 JSON 输出、标准管理／事件及 Settings。另一个包探针确认 getter 为 public、非 virtual 且无 setter。
 
-`python scripts/verify.py` 在干净且验证期间未变的源码检查点通过：907 项测试、JIT 对照、客户端／CLI、API 及可选参数检查。本次调用未请求 AOT、重新打包或上游差分；包消费单独记在上述结果中。新提交的托管双平台、AOT 和上游分片完整验收仍待完成。此前完整 CI 与人工 IDE／桌面结果保留各自身份。
+`python scripts/verify.py` 在干净且验证期间未变的源码检查点通过：907 项测试、JIT 对照、客户端／CLI、API 及可选参数检查。本次调用未请求 AOT、重新打包或上游差分；包消费单独记在上述结果中。随后运行 38527530581 的 12 个作业全部通过，分支头为 71e86a8；两平台 runtime 日志及下载的包制品均指向合并检出点 00b4fc10b6d1a197070eb8026273a42e00f226c4。CI 制品沿用仓库版本 0.2.0-alpha.4，属于未发布的验证包，不替换已发布 alpha.4。此结果不覆盖后续 RS01 修正。此前完整 CI 与人工 IDE／桌面结果保留各自身份。
 
 两次开发运行因新增夹具对可省略 required、数组形式 type 的假设而失败，没有改记通过。另一个原生只读 DTO 重建探针因 required 计算成员没有 setter 而失败。JSON 结果导出／校验及真实 JSON 消费已通过，不据此推断任意原生 DTO 可重建。未为迎合探针放宽生产 Schema。现行源码及包文本的定向扫描未发现所检查的私有产品标识或机器路径，第三方 notices 保留。本批是本地候选，不是正式发行身份。
+
+
+## 输出原生读取修正 RS01，2026-10-14
+
+在固定 `.resultschema.20261014.2` 包、相同源生成 metadata 和相同 JSON 下，常量 getter 与 JsonConstructor 绑定 getter 均通过原生 Deserialize 和 codec.Decode，但 DecodeOutput 因 adapter 新增的无 setter required 标记失败。此前失败保留，归因修正为输出读取适配问题。主要回归位于 TypertRegistryTests，覆盖两种 DTO 及构造必填选项的开关；四项在修正前均因同一非法 metadata 失败，修正后 Composition 全部 522 项通过。缺少输出字段及显式 null 仍拒绝。真实只读 Host 增加 DecodeOutput 调用，既有方向 DTO 的省略与空性消费不变。受影响包消费及新冻结候选完整 CI 尚待完成，不借用上一轮绿色结果。

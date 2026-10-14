@@ -51,7 +51,9 @@ internal static class TypertJsonMetadata
                     }
                     else
                     {
-                        property.IsRequired = RequiredOnWrite(property, metadata.Options.DefaultIgnoreCondition);
+                        // ResultSchema checks presence before native reading, including getter-only members.
+                        property.IsRequired = property.Set is not null &&
+                            RequiredOnWrite(property, metadata.Options.DefaultIgnoreCondition);
                         property.IsSetNullable = property.IsGetNullable;
                     }
                 }

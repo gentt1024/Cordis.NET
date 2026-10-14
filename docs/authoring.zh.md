@@ -249,7 +249,7 @@ File.WriteAllText("echo-result.schema.json", resultCodec.ResultSchema.GetRawText
 
 使用服务声明的实际 endpoint。导出的 JSON 可脱离 provider 及其 `JsonTypeInfo` 保存和消费。它与原生 `DecodeOutput`、客户端 emitter 使用同一输出投影，不是另一份 Schema 声明。输入与输出在条件省略、只读／计算成员及 accessor 空性上可以不同。支持的局部引用在导出的 Schema 内解析；Nullable、Optional 保留原有组合规则，顶层 `Undefined` 仍属于缺席合同（`AcceptsUndefined`），不等于 JSON null。
 
-读取保留惰性投影及不支持构造的精确 `NotSupportedException` 诊断。format 注解不保证每个外部校验器都会校验对应格式。它描述序列化 JSON，不描述 multipart 帧或还原后的 JavaScript 二进制值。公开范围是读取，不新增外部 override 协议或 HTTP 端点。生成 Web 类型声明本身不校验任意结果 DTO。导出 Schema 不保证 STJ 能重建作者 DTO；只读计算结果可作为 JSON 消费，不要求原生 DTO 往返重建。
+读取保留惰性投影及不支持构造的精确 `NotSupportedException` 诊断。format 注解不保证每个外部校验器都会校验对应格式。它描述序列化 JSON，不描述 multipart 帧或还原后的 JavaScript 二进制值。公开范围是读取，不新增外部 override 协议或 HTTP 端点。生成 Web 类型声明本身不校验任意结果 DTO。DecodeOutput 先按 ResultSchema 校验 JSON 字段存在性和空性，再使用原生 STJ metadata 读取。只有 getter 的成员不会被标成必须执行的原生赋值：常量 getter 保留作者定义的值，JsonConstructor 绑定的 getter 由构造函数恢复。这不承诺还原任意计算状态，也不扩大静态 DTO 后端的支持面。
 
 应用决定何时校验以及失败后如何处理，包括先记录业务接受事实、再校验结果。为此读取或导出同一输出合同，不以输入 Schema、DTO 反射或手写规则代替。读取属性不新增 Gateway 结果校验，也不改变接受、取消、回复或清理顺序。
 

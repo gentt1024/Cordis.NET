@@ -33,7 +33,8 @@ await context.RunAsync(owner =>
         var output = resultCodec.Encode(new ReadonlyValue());
         var exportedCodec = TypertCodec.Create(ExportedSchemaJson.Default.JsonElement, schema: exported.RootElement);
         exportedCodec.Decode(output);
-        if (output.GetProperty("applies").GetString() != "live")
+        if (output.GetProperty("applies").GetString() != "live" ||
+            ((ReadonlyValue)resultCodec.DecodeOutput(output)!).Applies != "live")
             throw new Exception("Public result schema changed read-only serialization.");
     }
     registry.Register(owner, contribution);
