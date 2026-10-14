@@ -582,6 +582,22 @@ Linux 完整包／AOT 门禁通过运行时、对照、打包、符号、静态�
 
 本次完整结果替换候选待验状态，不改写失败运行 38375206795 与 38405914024 的结论。历史 HMR 超时没有复发，原因仍未解决。早先真实浏览器与中立应用结果保留自己的源码／包身份。本次运行不证明交互浏览器、live IDE 或每个原生桌面 opener，也未建立 alpha5 发布身份。当前出口见[收口记录](development.zh.md#alpha5-完整-ci-检查点2026-10-14)。后续仅文档修改不宣称新的二进制门禁。
 
+## Guid 保存模型候选，2026-10-14
+
+默认 STJ Guid 适配增加共享框架分类及其 C#／Schema 投影，包括非空可选 Guid 的默认值。[回执](../verification/guid-projection-2026-10-14/evidence.json) 绑定生产／消费者源码 hash，以及唯一本地候选 `0.2.0-alpha.5.guid.20261014.1` 的十八份包／符号包 hash。仓库发行版本及已发布制品未改变。
+
+Windows x64 使用 SDK 10.0.111，旧包 Web compiler 以 TYPM114 拒绝 System.Guid。修正后的独立数据与 Remote 消费者通过正常模型提取、build/pack、首次 design-time 生成、增量及 Clean／冷构建、引用变化和缺失／冲突拒绝。实际 .NET 和严格 TypeScript caller 经 HTTP 保留 Guid.Empty、非零值、nullable／默认值及支持集合值。Schema 为 string/uuid；实际 Host STJ 拒绝非法字符串和违反非空约束的输入。独立数据及 Remote caller 也通过静态 Native AOT，Host 保持 JIT。Guid 成员自定义 converter 在两个独立后端仍以 TYPM110 拒绝，并清理旧输出。
+
+既有 .NET 事件 listener 和 Web waterfall 现传递 Guid 值。包管理／事件消费者通过 JIT、静态 caller AOT 和 TypeScript 检查。实际内置 Chromium 使用同批包资产通过 Guid request/reply、当前 adapter、next/undefined/null、owned 结算、Settings、安装观察及来源恢复；临时 Host／代理已关闭。十四项既有 Platform 事件用例、全部四阶段格式及中英文文档检查通过。
+
+保留的准备失败与旧 compiler 的 Guid 拒绝分开记录：普通数据夹具选择未支持 record、夹具端点未加入授权、AOT 暴露动态反射检查，以及夹具缺少 XML 注释。修正保留原断言和 warnings-as-errors。本批属于 Windows 定向证据，新完整 CI 单列；此前 a66b784 CI 不覆盖本次修改。live IDE、默认桌面打开、完整应用重启、HMR 风险裁决及获授权的发行身份仍未关闭。
+
+## 保存模型 Web 事件完整 CI，2026-10-14
+
+[运行 38497878162](https://github.com/gentt1024/Cordis.NET/actions/runs/38497878162) 的十二个作业全部通过，对应分支 `a66b7845760670545e0d7a056185f67be561af3a`。两个 runtime 作业的检出日志均确认实际合并提交为 `7893ed59fde70aa413f913526af8df14fb5b39e3`，由该分支与 main `3342a967f4e57206bec272684a40a437fc051b77` 合成。Windows 和 Ubuntu 使用 SDK 10.0.111 完成包／AOT 及 authoring 门禁，八个固定上游分片和两个并集汇总均通过。新事件生产者和独立消费者由此具备本批自己的完整平台证据。
+
+[回执](../verification/alpha5-web-events-ci-2026-10-14/evidence.json) 记录作业和制品压缩包身份。摘要来自 GitHub 元数据，并非独立下载重算。下述浏览器检查保留开发包身份；本次运行不提供交互浏览器、live IDE、实际默认桌面打开或完整应用关闭／重启的证据。历史 HMR 超时未使本次运行失败，但其原因和风险裁决仍未闭合。CI 包不是新的 alpha5 发行包。本次文档更新没有修改生产代码，也不宣称另跑一次二进制验收。
+
 ## 保存模型 Web 事件开发验证，2026-10-14
 
 e44bd35 之后的本地续建接通了保存模型事件生成入口。[回执](../verification/web-events-closeout-2026-10-14/evidence.json) 绑定改动源码文件、开发包、独立 Host／客户端资产及保留的失败。Composition 在独立本地 feed 重建，未变的依赖包沿用既有开发包。这是开发验证，不是最终冻结平台或发行批次。

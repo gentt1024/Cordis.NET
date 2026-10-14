@@ -524,6 +524,21 @@ The subject may implement `IEventFilter`; its filter is retained by the carrier.
 
 Remote methods use `TypertInvocation.Current!.Peer!` for the admitted Peer and register through `peer.Context`. A child scope with `parent: peer` routes upward to those Peer listeners. Do not dispose the borrowed Peer Context. A socket, logical stream or caller does not own the shared Connection's Peer, and no request argument is needed to identify it. The same mechanism serves the direct Gateway's owner-bound fallback.
 
+### Guid in saved-model clients
+
+Use `System.Guid` directly in ordinary data and Remote/event values with the default source-generated STJ context. For example, add this method to the normal `RemoteService` author and register `Item` with `JsonSerializable`:
+
+```csharp
+public sealed record Item(Guid Id);
+
+[RemoteMethod("echo")]
+public Task<Item> EchoAsync(Item value) => Task.FromResult(value);
+```
+
+Normal extract/build/pack preserves the Guid declaration identity. Independent C# data/callers use `global::System.Guid`; Web callers accept and return strings with string/uuid Schema. No framework source model, mapping annotation or Provider assembly is needed by the independent generator. Explicit references remain required for authored DTOs from another model.
+
+`Guid?`, arrays, supported lists and string-key dictionary values compose with the same mapping. An omitted optional `Guid value = default` uses Guid.Empty; explicit null requires a nullable declaration. TypeScript string typing does not establish UUID validity: the Host's existing STJ codec admits or rejects actual values. A custom converter changes the contract and remains unsupported by the saved-model projection. Guid keys and application ID wrappers are not included.
+
 ### Directional Web data contracts
 
 Optional parameters and nullable values are independent. `[DisallowNull] double? expectedRevision = null!` accepts omission or a number, but rejects explicit JSON null. The generated TypeScript parameter is `expectedRevision?: number`.

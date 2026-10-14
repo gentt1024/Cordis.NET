@@ -43,6 +43,9 @@ internal static class DeclarationWireProjection
     {
         if (!Framework(type))
             return null;
+        if (type.Assembly.StartsWith("System.Runtime, ", StringComparison.Ordinal) &&
+            type.MetadataName == "System.Guid" && reference.Arguments.Length == 0)
+            return new("guid", "System.Guid", reference.Nullability, []);
         if (type.MetadataName == "System.Text.Json.JsonElement" && reference.Arguments.Length == 0)
             return new("json", "System.Text.Json.JsonElement", reference.Nullability, []);
         if (type.MetadataName == "System.Nullable`1" && reference.Arguments.Length == 1)

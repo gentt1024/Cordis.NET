@@ -24,7 +24,12 @@ builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Logging.ClearProviders();
 await using var server = builder.Build();
 server.UseWebSockets();
-server.MapCordisRemote("/remote", connection, (_, endpoint) => Task.FromResult(endpoint == "referencedData/echo"));
+server.MapCordisRemote(
+    "/remote",
+    connection,
+    (_, endpoint) => Task.FromResult(
+        endpoint is "referencedData/echo" or "referencedData/guid" or "referencedData/nullableGuid"
+            or "referencedData/item"));
 server.MapPost(
     "/stop",
     () =>

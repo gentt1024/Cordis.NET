@@ -6,6 +6,47 @@ namespace IndependentDeclarations.External;
 
 public interface IExternalMarker;
 
+public sealed record GuidItem(Guid Id)
+{
+#if GUID_CUSTOM_CONVERTER
+    [JsonConverter(typeof(GuidTextConverter))]
+#endif
+    public Guid? Optional
+    {
+        get;
+        init;
+    }
+
+    public Guid[]? Array
+    {
+        get;
+        init;
+    }
+
+    public List<Guid?>? Values
+    {
+        get;
+        init;
+    }
+
+    public Dictionary<string, Guid>? ByName
+    {
+        get;
+        init;
+    }
+}
+
+#if GUID_CUSTOM_CONVERTER
+public sealed class GuidTextConverter : JsonConverter<Guid>
+{
+    public override Guid Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        Guid.Parse(reader.GetString()![3..]);
+
+    public override void Write(Utf8JsonWriter writer, Guid value, JsonSerializerOptions options) =>
+        writer.WriteStringValue("id:" + value);
+}
+#endif
+
 public sealed record RequiredConstructor(string Name);
 
 public sealed record OptionalConstructor(string Name = "constructor-default");

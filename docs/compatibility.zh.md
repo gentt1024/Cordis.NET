@@ -16,6 +16,8 @@ Cordis.NET 以[上游文档](upstream.zh.md)所述、DeepSeek Harness 锁定的 
 
 ## 上游忠实性要求
 
+保存模型后端按框架身份识别 `System.Guid`，将其作为 .NET 标量适配。固定 DSH [Schema emitter](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts) 区分标准类型与作者声明，并没有定义 CLR Guid API。平台依据是默认 STJ [Guid converter](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Converters/Value/GuidConverter.cs)，其读写 JSON string，Schema 为 string/uuid。共同事实保留真实程序集／类型身份；数据、方法和事件投影共享框架分类，独立 C# 保留 Guid，Web 使用 string。Guid? 及支持集合的值遵循既有 null／presence 规则。实际值准入继续由 Host STJ 负责，不增加 UUID 版本／变体校验器。独立后端仍拒绝自定义 converter，外部 DTO 仍需源事实；本项不扩入 Guid 字典键、ID wrapper 或其他 BCL 类型。
+
 直接 Gateway 调用遵循固定 `packages/api/gateway/src/index.ts` 的 `operatorPeer()`：载体已准入的 Peer 优先；否则读取当前 `connection` 服务，没有 Connection 时才延迟创建并复用 Gateway Context 拥有的 Peer。原生宿主构造 `TypertHostConnection` 后，通过 `owner.Provide("connection", connection)` 使用普通 Cordis 服务所有权发布，并共同负责撤销注册和释放 Connection。流在开始时确定 Peer，在迭代和清理期间保持该身份；后续调用会观察替换或撤销。原先直接调用没有 Peer 是移植缺口，不是平台适配。这项修正不代表剩余丰富 Peer／scope-targeting 工作流完成。
 
 普通数据后端通过既有共同声明组合与共享框架投影支持 `Dictionary<string,T>`、`IDictionary<string,T>` 和 `IReadOnlyDictionary<string,T>`。JSON 对象键保持字符串，不推断数值键转换。值保留声明的空性、默认值和引用声明身份。这是有界的静态 DTO／STJ 投影，不执行泛型作者代码，也不代表任意 CLR 集合均已支持。

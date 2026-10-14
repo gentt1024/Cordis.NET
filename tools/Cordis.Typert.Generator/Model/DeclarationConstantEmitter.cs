@@ -10,6 +10,7 @@ internal static class DeclarationConstantEmitter
         "emptyCollection" => "[]",
         "enum" => "(global::" + value.Type + ")" + value.Json,
         "type" => "typeof(" + JsonSerializer.Deserialize<string>(value.Json) + ")",
+        "value" when value.Json == "null" && value.Type == "System.Guid" => "default(global::System.Guid)",
         "value" when value.Json == "null" => "null",
         "value" => value.Type.TrimEnd('?') switch
         {

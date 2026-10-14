@@ -1,6 +1,7 @@
 """Verify ordinary declaration artifacts through isolated package authors and a catalog consumer."""
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 from xml.sax.saxutils import escape
@@ -23,7 +24,7 @@ def design_time_sources(label, project, dotnet, run, names):
     return sources
 
 
-def verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted):
+def verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, aot=False):
     fixtures = root / "tests/fixtures/DeclarationModel"
     external_setup = pack_external_data(fixtures, feed, dotnet, composition, run, project)
 
@@ -287,12 +288,13 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
         "ordinaryModelRefusedByRemoteEmitter": True
     }, indent=2) + "\n", encoding="utf-8")
     verify_data_consumer(fixtures, source, feed, output, dotnet, composition, compiler, roslyn, run, project, hosted)
-    verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, external_setup)
+    verify_web_contracts(root, feed, output, version, dotnet, composition, run, project, hosted, external_setup[2])
+    verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, external_setup, aot=aot)
 
 
 def pack_external_data(fixtures, feed, dotnet, composition, run, project):
     roots = ''.join('<CordisTypertModelRoot Include="IndependentDeclarations.External.' + name + '"/>'
-        for name in ("ImportedData", "UnrelatedData", "ImportedHiddenData", "Envelope`1",
+        for name in ("ImportedData", "GuidItem", "UnrelatedData", "ImportedHiddenData", "Envelope`1",
             "RequiredConstructor", "OptionalConstructor", "SelectedConstructor", "DirectionalData"))
     external, external_project = project("DeclarationExternal",
         '<AssemblyName>IndependentDeclarations.External</AssemblyName>'
@@ -374,10 +376,9 @@ def verify_web_contracts(root, feed, output, version, dotnet, composition, run, 
         assert "Name" not in schemas["webContract/optional/value"].get("required", [])
 
 
-def verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, external_setup=None):
+def verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, external_setup=None, aot=False):
     fixtures = root / "tests/fixtures/DeclarationModel"
     external, external_project, external_model = external_setup or pack_external_data(fixtures, feed, dotnet, composition, run, project)
-    verify_web_contracts(root, feed, output, version, dotnet, composition, run, project, hosted, external_model)
     sdk = run("referenced-data-selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
     compiler = source / "cache/cordis.net.composition" / version / "tools/net10.0/typert/Cordis.Typert.Compiler.dll"
     roslyn = dotnet.parent / "sdk" / sdk / "Roslyn/bincore"
@@ -437,6 +438,11 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         for assembly in ("IndependentDeclarations.External.dll", "IndependentReferenced.Provider.dll"):
             assert not list((caller / "bin").rglob(assembly)), "Caller acquired an author's implementation assembly"
     call("referenced-data-caller", 11)
+    if aot:
+        run("referenced-data-aot-publish", [dotnet, "publish", caller_project, "-c", "Release",
+            "-p:PublishAot=true", "-o", source / "referenced-data-native"])
+        run("referenced-data-aot", [source / "referenced-data-native" /
+            ("ReferencedDataConsumer.exe" if os.name == "nt" else "ReferencedDataConsumer"), "11"])
 
     remote, remote_project = project("ReferencedRemoteContracts",
         '<PackageId>IndependentReferenced.Remote</PackageId><Version>1.0.0-alpha</Version>'
@@ -462,6 +468,9 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         '<PackageReference Include="IndependentReferenced.Remote" Version="1.0.0-alpha"/>')
     shutil.copyfile(fixtures / "ReferencedRemoteConsumer.cs", remote_caller / "Program.cs")
     run("referenced-remote-caller-build", [dotnet, "build", remote_caller_project, "-c", "Release"])
+    if aot:
+        run("referenced-remote-aot-publish", [dotnet, "publish", remote_caller_project, "-c", "Release",
+            "-p:PublishAot=true", "-o", source / "referenced-remote-native"])
     remote_host, remote_host_project = project("ReferencedRemoteHost", '<OutputType>Exe</OutputType>',
         '<PackageReference Include="IndependentReferenced.Provider" Version="1.0.0-alpha"/>'
         f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>'
@@ -472,6 +481,9 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         with hosted(label + "-host", [dotnet, remote_host / "bin/Release/net10.0/ReferencedRemoteHost.dll"]) as address:
             result = run(label, [dotnet, remote_caller / "bin/Release/net10.0/ReferencedRemoteConsumer.dll", address, str(expected)])
             assert ("referenced Remote package caller passed: " + str(expected)).encode() in result
+            if aot and expected == 11:
+                run("referenced-remote-aot", [source / "referenced-remote-native" /
+                    ("ReferencedRemoteConsumer.exe" if os.name == "nt" else "ReferencedRemoteConsumer"), address, "11"])
         for assembly in ("IndependentDeclarations.External.dll", "IndependentReferenced.Provider.dll"):
             assert not list((remote_caller / "bin").rglob(assembly)), "Remote Caller acquired author implementation"
     remote_call("referenced-remote-caller", 11)
@@ -611,13 +623,34 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     assert generated.read_bytes() == changed_projection, "Cold rebuild changed a reference-composed carrier"
     shutil.copyfile(primary_input, output / "referenced-data-main-model.json")
     shutil.copyfile(reference_input, output / "referenced-data-library-model.json")
+    # A framework scalar does not authorize replaying a member's executable converter.
+    run("referenced-guid-converter-build", [dotnet, "build", external_project, "-c", "Release",
+        "-p:DefineConstants=GUID_CUSTOM_CONVERTER"])
+    converter_references = remote / "converter-references.rsp"
+    converter_references.write_text(str(external_model) + "\n", encoding="utf-8")
+    for backend, arguments, owned_output in (
+        ("dotnet", ["--namespace", "IndependentDeclarations.Refused", "--client", "RefusedClient"],
+            remote / "RefusedClient.g.cs"),
+        ("web", [], remote / "refused-web"),
+    ):
+        if backend == "web":
+            owned_output.mkdir()
+            (owned_output / "remote.schema.json").write_text("stale schema", encoding="utf-8")
+        else:
+            owned_output.write_text("stale source", encoding="utf-8")
+        rejected = run("referenced-guid-converter-" + backend, [dotnet, compiler, "--roslyn-directory", roslyn,
+            "emit-" + backend, "--model", model, "--reference-models", converter_references,
+            "--service", "referencedData", *arguments, "--output", owned_output], True)
+        assert b"TYPM110" in rejected, rejected
+        assert not (owned_output / "remote.schema.json").exists() if backend == "web" else not owned_output.exists()
+        refusals.append({"case": "guid-member-converter-" + backend, "staleOutputRemoved": True})
     (output / "referenced-data-evidence.json").write_text(json.dumps({
         "consumer": "reference-composed-data-and-remote", "mainContractIdentity": main_identity,
         "referenceContractIdentity": reference_identity, "changedReferenceContractIdentity": changed_identity,
         "packageReferencesOnly": True, "authorImplementationsReferenced": False,
         "namesRequiredNullDefaultsAndRecursion": True, "referenceRootsDoNotExpandMainRoots": True,
         "sourceAuthoredConflict": True, "referenceChangeRegeneratedAndConsumed": True,
-        "remoteBuildPackAndHttpInvocation": True, "remoteMissingReferenceRejected": True,
+        "remoteBuildPackAndHttpInvocation": True, "remoteMissingReferenceRejected": True, "staticDataAndCallerAot": aot,
         "remoteReferenceChangeConsumedThroughNewPackage": True,
         "firstDesignTimeDataAndRemoteInputs": True, "designTimeReferenceRefreshAndRefusal": True,
         "cleanAndFailedBuildRemovedOwnedOutputs": True, "refusals": refusals

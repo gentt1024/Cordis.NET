@@ -13,6 +13,12 @@ Check(
 Check(
     value.External.Count == expectedDefault && value.External.Note == "external-default",
     "source-only imported declaration defaults");
+Check(value.Identifier == Guid.Empty, "omitted framework scalar retains its CLR default");
+var identifier = Guid.Parse("f031a626-7695-4b15-a915-15aa56e0cf94");
+value.Identifier = identifier;
+Check(
+    JsonSerializer.Deserialize(JsonSerializer.Serialize(value, metadata), metadata)!.Identifier == identifier,
+    "independent data carrier retains the Guid type and value");
 var explicitNull = JsonSerializer.Deserialize(
     """{"External":{"external_name":"imported","Code":null,"Note":null}}""",
     metadata)!;
@@ -92,7 +98,7 @@ Check(
     ReferencedDataJson.Default.GetTypeInfo(typeof(ImportedData)) is not null,
     "reachable imported type has static metadata");
 Check(
-    typeof(ReferencedData).Assembly.GetType("IndependentDeclarations.Referenced.UnrelatedData") is null,
+    Type.GetType("IndependentDeclarations.Referenced.UnrelatedData, ReferencedDataContracts") is null,
     "referenced model roots do not expand the main projection");
 Console.WriteLine("referenced ordinary data carrier consumer passed: " + expectedDefault);
 

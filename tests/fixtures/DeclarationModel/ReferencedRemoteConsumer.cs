@@ -7,6 +7,35 @@ if (JsonSerializer.IsReflectionEnabledByDefault)
 using var http = new HttpClient();
 await using var connection = new TypertConnection(http, new Uri(new Uri(args[0]), "/remote"));
 await using var client = new ReferencedClient(connection);
+foreach (var identifier in new[] { Guid.Empty, Guid.Parse("f031a626-7695-4b15-a915-15aa56e0cf94") })
+{
+    var scalar = await client.GuidAsync(identifier);
+    if (!scalar.Ok || scalar.Value != identifier)
+        throw new Exception("Generated Guid caller changed the root value.");
+    var nullableScalar = await client.NullableGuidAsync(identifier);
+    if (!nullableScalar.Ok || nullableScalar.Value != identifier)
+        throw new Exception("Generated nullable Guid caller changed a present value.");
+    var item = await client.ItemAsync(
+        new GuidItem(identifier)
+        {
+            Optional = identifier,
+            Array = [Guid.Empty, identifier],
+            Values = [null, identifier],
+            ByName = new()
+            {
+                ["id"] = identifier
+            }
+        });
+    if (!item.Ok || item.Value.Id != identifier || item.Value.Optional != identifier ||
+        item.Value.Array?[1] != identifier || item.Value.Values?[0] is not null ||
+        item.Value.Values?[1] != identifier || item.Value.ByName?["id"] != identifier)
+        throw new Exception("Generated Guid DTO/collection caller changed the value.");
+}
+
+var defaultGuid = await client.GuidAsync();
+var nullableGuid = await client.NullableGuidAsync();
+if (!defaultGuid.Ok || defaultGuid.Value != Guid.Empty || !nullableGuid.Ok || nullableGuid.Value is not null)
+    throw new Exception("Generated Guid default and nullable default were conflated.");
 var expected = int.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
 var value = new ReferencedData
 {

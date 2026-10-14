@@ -681,6 +681,7 @@ internal sealed partial class DotnetProjectionEmitter
                 _ => throw new InvalidDataException("Unsupported CLR primitive " + type.Name)
             },
             "json" => "global::System.Text.Json.JsonElement",
+            "guid" => "global::System.Guid",
             "named" => Identifier(declarations[type.Name].Name),
             "nullable" => TypeName(type.Arguments.Single()).TrimEnd('?') + "?",
             "array" => TypeName(type.Arguments.Single()) + "[]",

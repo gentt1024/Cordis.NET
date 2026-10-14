@@ -169,6 +169,12 @@ public sealed class DataWireCollision
 
 public sealed class ReferencedData
 {
+    public Guid Identifier
+    {
+        get;
+        set;
+    }
+
     public IEnumerable<ImportedData?>? Sequence
     {
         get;

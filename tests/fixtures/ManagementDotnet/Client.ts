@@ -230,8 +230,9 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
   events.on(owner, 'fixture/decision', async (request, next) => {
     assert(request.agent === owner, 'Reverse Context did not replace the Host subject')
     assert(!('omitted' in request), 'Host request lost conditional omission')
+    assert(request.id === 'f031a626-7695-4b15-a915-15aa56e0cf94', 'Saved event request changed its Guid')
     if (request.mode === 'next') return next()
-    if (request.mode === 'value') return {value: 'accepted', detail: null}
+    if (request.mode === 'value') return {value: 'accepted', detail: null, id: request.id}
     if (request.mode === 'undefined') return undefined
     if (request.mode === 'hold') {
       request.signal.addEventListener('abort', () => cancelled(), {once:true})

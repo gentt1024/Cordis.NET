@@ -21,6 +21,12 @@ namespace Cordis.Platform.Tests
 {
     public sealed record DecisionRequest(string Mode)
     {
+        public Guid Id
+        {
+            get;
+            init;
+        }
+
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Omitted
         {
@@ -31,6 +37,12 @@ namespace Cordis.Platform.Tests
 
     public sealed record DecisionValue(string Value)
     {
+        public Guid Id
+        {
+            get;
+            init;
+        }
+
         [AllowNull]
         public string Detail
         {
@@ -42,6 +54,13 @@ namespace Cordis.Platform.Tests
     /// <summary>A nullable nested collection exported before its required sibling.</summary>
     public sealed class LooseFirst
     {
+        /// <summary>Framework identifier carried by the event.</summary>
+        public Guid Id
+        {
+            get;
+            set;
+        }
+
         /// <summary>Nested nullable elements.</summary>
         [JsonPropertyOrder(0)]
         public List<List<string?>> Loose

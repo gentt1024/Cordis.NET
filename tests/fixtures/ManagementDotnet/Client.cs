@@ -472,10 +472,11 @@ sealed class EventObservation : IAsyncDisposable
                 ctx,
                 (loose, strict) =>
                 {
-                    if (loose.Loose.Single().Single() is not null || strict.Loose.Single().Single() is not null ||
+                    if (loose.Id != Guid.Parse("f031a626-7695-4b15-a915-15aa56e0cf94") ||
+                        loose.Loose.Single().Single() is not null || strict.Loose.Single().Single() is not null ||
                         loose.Strict.Single().Single() != "required" || strict.Strict.Single().Single() != "required")
                         Nested.TrySetException(
-                            new Exception("Saved event listener lost nested declaration nullability."));
+                            new Exception("Saved event listener lost its Guid or nested declaration nullability."));
                     else
                         Nested.TrySetResult();
                 });

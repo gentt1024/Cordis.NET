@@ -171,6 +171,7 @@ server.MapPost(
                 "alpha/nested",
                 new Cordis.Platform.Tests.LooseFirst
                 {
+                    Id = Guid.Parse("f031a626-7695-4b15-a915-15aa56e0cf94"),
                     Loose = [[null]],
                     Strict = [["required"]]
                 },
@@ -226,12 +227,18 @@ server.MapPost(
             invocation = DecisionRequestedTypert.InvokeAsync(
                 ctx,
                 new EventSubject(ctx, "agent-1"),
-                new DecisionRequest(http.Request.Query["mode"].ToString()),
+                new DecisionRequest(http.Request.Query["mode"].ToString())
+                {
+                    Id = Guid.Parse("f031a626-7695-4b15-a915-15aa56e0cf94")
+                },
                 () => Task.FromResult(new RemoteOptional<DecisionValue?>(new DecisionValue("fallback"))),
                 http.RequestAborted);
             return Task.CompletedTask;
         });
         var result = await invocation;
+        if (http.Request.Query["mode"] == "value" &&
+            (!result.HasValue || result.Value?.Id != Guid.Parse("f031a626-7695-4b15-a915-15aa56e0cf94")))
+            throw new InvalidOperationException("Generated event reply changed its Guid.");
         return Results.Text(
             JsonSerializer.Serialize(
                 new DecisionReply(result.HasValue, result.HasValue ? result.Value?.Value : null),

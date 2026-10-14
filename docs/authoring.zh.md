@@ -524,6 +524,21 @@ subject 可以实现 `IEventFilter`，载体保留其过滤器。载体不暴露
 
 Remote 方法通过 `TypertInvocation.Current!.Peer!` 取得准入后的 Peer，并通过 `peer.Context` 注册。以 `parent: peer` 创建的子 scope 会向上路由到这些 Peer 监听者。不要释放借用的 Peer Context。socket、逻辑流和调用方都不拥有共享 Connection 的 Peer，也不需要用请求参数指定它。直接 Gateway 调用中由所有者持有的 fallback 使用同一机制。
 
+### 保存模型客户端中的 Guid
+
+使用默认源生成 STJ context 时，普通数据及 Remote／事件值可以直接声明 `System.Guid`。例如，在正常 `RemoteService` 作者中加入以下方法，并用 `JsonSerializable` 登记 `Item`：
+
+```csharp
+public sealed record Item(Guid Id);
+
+[RemoteMethod("echo")]
+public Task<Item> EchoAsync(Item value) => Task.FromResult(value);
+```
+
+正常 extract/build/pack 保留 Guid 声明身份。独立 C# 数据／caller 使用 `global::System.Guid`；Web caller 接受和返回字符串，Schema 为 string/uuid。独立生成不需要框架源模型、映射注解或 Provider 程序集；来自另一模型的作者 DTO 仍需显式引用。
+
+`Guid?`、数组、支持的列表及 string-key 字典值沿同一映射组合。省略可选 `Guid value = default` 使用 Guid.Empty；显式 null 需要可空声明。TypeScript 的 string 类型不证明 UUID 合法，实际值由 Host 既有 STJ codec 接纳或拒绝。自定义 converter 会改变合同，保存模型投影继续拒绝此类情况。本项不包含 Guid 键和应用 ID wrapper。
+
 ### 有方向的数据 Web 合同
 
 可省略参数与可空值是独立事实。`[DisallowNull] double? expectedRevision = null!` 接受省略或数值，但拒绝显式 JSON null。生成的 TypeScript 参数为 `expectedRevision?: number`。

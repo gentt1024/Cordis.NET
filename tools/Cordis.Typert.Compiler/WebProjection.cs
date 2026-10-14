@@ -273,6 +273,13 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                     break;
                 case "json":
                     return new();
+                case "guid":
+                    value = new()
+                    {
+                        ["type"] = "string",
+                        ["format"] = "uuid"
+                    };
+                    break;
                 case "array":
                 case "collection":
                     if (reference.Rank > 1 || reference.Kind == "array" && reference.Arguments[0].Name == "System_Byte")

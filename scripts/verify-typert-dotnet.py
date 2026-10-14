@@ -20,6 +20,7 @@ from typert_management_consumer import verify_management_consumer
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--packages", required=True, type=Path)
+    parser.add_argument("--package-version", help="Use the unique local candidate package identity instead of the repository version.")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--dotnet", default="dotnet")
     parser.add_argument("--aot", action="store_true")
@@ -45,7 +46,7 @@ def main():
     source = Path(tempfile.mkdtemp(prefix="cordis-settings-dotnet-"))
     assert not source.is_relative_to(root)
     shutil.copyfile(root / "global.json", source / "global.json")
-    version = ET.parse(root / "Directory.Build.props").findtext(".//Version")
+    version = options.package_version or ET.parse(root / "Directory.Build.props").findtext(".//Version")
     feed = source / "author-feed"
     feed.mkdir()
     config = ET.Element("configuration")
@@ -129,12 +130,12 @@ def main():
             status = "requested-checks-passed"
             return
         if options.data_references_only:
-            verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted)
+            verify_referenced_data_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, aot=options.aot)
             provider_referenced = False
             status = "requested-checks-passed"
             return
         if not options.management_only:
-            verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted)
+            verify_declaration_consumer(root, source, feed, output, version, dotnet, composition, run, project, hosted, aot=options.aot)
         if options.declarations_only:
             provider_referenced = False
             status = "requested-checks-passed"

@@ -9,7 +9,10 @@ const [origin, directory, mode = 'references'] = process.argv.slice(2)
 const output = resolve(directory)
 const fixture = mode === 'references' ? 'ReferencedWebClient' : 'WebContractClient'
 if (mode === 'references') {
-  const schema = JSON.parse(await readFile(resolve(output, 'remote.schema.json'), 'utf8')).$defs['referencedData/echo/parameters/value']
+  const allSchemas = JSON.parse(await readFile(resolve(output, 'remote.schema.json'), 'utf8')).$defs
+  for (const name of ['referencedData/guid/parameters/value', 'referencedData/guid/result'])
+    assert.deepEqual(allSchemas[name], { type: 'string', format: 'uuid' })
+  const schema = allSchemas['referencedData/echo/parameters/value']
   const defs = Object.values(schema.$defs)
   const imported = defs.find(value => value.properties?.external_name)
   assert.deepEqual(imported.required.sort(), ['Code', 'external_name'])
