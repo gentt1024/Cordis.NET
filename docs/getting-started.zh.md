@@ -34,7 +34,9 @@ await context.RunAsync(async owner =>
     };
     var fiber = owner.Plugin(plugin);
     await fiber.WaitAsync();
-    Console.WriteLine(owner.Get<Func<int>>("answer")());
+    var answer = owner.Get<Func<int>>("answer")
+        ?? throw new InvalidOperationException("The answer service is unavailable.");
+    Console.WriteLine(answer());
     await fiber.DisposeAsync();
 });
 ```
