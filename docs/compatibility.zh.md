@@ -138,7 +138,7 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 
 Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provider 值。caller-bound view 是实际调用 receiver；`Service<TState>.CreateView` 每次新建视图不会使活跃 provider 失效。准入在 contextual tracing 前捕获注册及原始值。后续每次检查先执行正常 contextual 查询，再读取最终注册及原始值，因此同步重入不能掩盖 provider 变化。重新提供同一个对象，包括在同一个 Fiber 内重提供，都会形成不同注册，使此前准入失效。设置不同原始值也会使其失效，即使注册身份未变；同值 `Set`、普通 `Notify` 和无关隔离 realm 的变化保持准入。这些观察仅在 Core 与 Composition 内部使用，不新增公开 API、服务 registry 或持久代数。未完成调用可以保留其注册及 provider，直至结束，仍遵循既有 CLR 协作寿命边界。
 
-完整源类型分析、丰富 Context/owned-value 图、完整 Peer/waterfall 事件及其余丰富值语义仍未实现。当前文本 mux、typed uplink 和 unary multipart 的实施边界见下方共享 Connection 记录。标准 Settings、PluginManager 和宿主选择的 emit 通知现已使用生成合同。原生 state、完整配置、制品路由及独立 `MapCordisService` 适配继续承担各自职责。这些受支持的原生路线不证明完整固定线协议互通。
+共同声明分析、选定反向 Context/owned-value、类型化固定事件、Peer 路由及原生 Scope store/layer 现已有实现和有界消费证据。文本 mux、typed uplink 和 unary multipart 的实施边界见下方共享 Connection 记录。当前剩余职责见[开发记录](development.zh.md#分析投影与消费d-model)，不据此声称任意类型图或所有 Peer/codec 组合均已完成。标准 Settings、PluginManager 和宿主选择的 emit 通知使用生成合同。原生 state、完整配置、制品路由及独立 `MapCordisService` 适配继续承担各自职责。固定线协议互通仅限[验证记录](validation.zh.md)中的具名用例。
 
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
 
@@ -250,6 +250,8 @@ Chief 对 `9ae967c` 的审查发现，只给复用的 STJ `$ref` 根部增加空
 ## 保存模型 Web 制品适配，2026-10-13
 
 固定 `packages/typert/generator/src/workspace.ts` 先执行分析，再调用 `FaceModelEmitter`，并检查包是否导出生成的运行文件和声明文件。.NET 保存模型 Web 路线对应这一职责：显式主模型及引用声明进入静态 JSON Schema 与共用 TS 发射器，再由正常 MSBuild build/pack 交付。客户端不加载 Provider 实现；Host 绑定继续执行实际注册的 Service。
+
+选定事件声明现在使用同一保存模型 build/pack 路线。事件选择与 .NET 后端共用，运行时元数据和保存事实共用内部事件发射器。普通参数和 waterfall request 使用输出 Schema，reply 使用输入 Schema，continuation 结果类型使用输出 Schema。这保留了运行时发射器已有的方向合同，并从保存事实提供对应输入。固定的本地 next／Host continuation 边界、显式转发、反向 Context 及借用／拥有资源结算保持不变。`EventData` 仍是可重算投影，没有第二份作者模型或 Provider 加载步骤。
 
 JSON Schema 2020-12 definitions 描述受支持的 STJ 线类型，不构成第二种保存声明模型。制品注释标识源模型，不承诺兼容旧试验输出。CLR 构造器/accessor 执行不属于该静态后端，所以初始化事实不作为运行默认值输出；真实 Host 仍负责执行。不支持的 policy/shape 投影会拒绝并删除所属旧输出；后端尚未完成不缩减已经成立的运行支持。公开输入及剩余拒绝边界见[作者指南](authoring.zh.md)。
 

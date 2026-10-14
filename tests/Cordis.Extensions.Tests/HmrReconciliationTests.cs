@@ -148,7 +148,10 @@ public sealed class HmrReconciliationTests(Xunit.Abstractions.ITestOutputHelper 
 
     private sealed class TracedEvaluator(Action<string> trace) : IExpressionEvaluator
     {
-        private readonly JintExpressionEvaluator inner = new();
+        private readonly JintExpressionEvaluator inner = new()
+        {
+            Configure = _ => trace("expression engine configured")
+        };
 
         public object? Evaluate(string expression, Context context)
         {

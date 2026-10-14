@@ -14,6 +14,14 @@ internal sealed record RemoteEventContract(
 /// <summary>Interpret selected event semantics once from common declaration facts.</summary>
 internal static class DeclarationEventContract
 {
+    internal static DeclarationType? Select(DeclarationModelDocument model, string selection) =>
+        model.Declarations.SingleOrDefault(type =>
+        {
+            var marker = Attribute(type.Attributes, "Cordis.Composition.RemoteEventAttribute");
+            return model.Roots.Contains(type.Id) && marker is not null &&
+                (type.MetadataName == selection || String(marker.Arguments.FirstOrDefault()) == selection);
+        });
+
     internal static RemoteEventContract Read(DeclarationModelDocument model, string id)
     {
         var facts = model.Declarations.Single(type => type.Id == id);

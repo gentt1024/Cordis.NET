@@ -1,0 +1,220 @@
+{
+  "recordedDate": "2026-10-14",
+  "sourceBaseCommit": "e44bd354374a419e9f35c5d531a6960bb47ff8e9",
+  "status": "development-checks-passed-not-release-acceptance",
+  "sourceFiles": {
+    "scripts/typert-browser-consumer.mjs": "7ed8fb056669191328708f7429f48cb39886fe8f53d59ff558d3b84f10ee2798",
+    "scripts/typert-management-client-consumer.mjs": "ceab2a6b50f7a76a3f88b160bca01213a5269cd33c9bf3f9c7e51561f31f115e",
+    "scripts/typert_management_consumer.py": "a9d065a90bef106457747f6d0bb52c002175ad3ee9341e2bc05da7e6564ee177",
+    "src/Cordis.Composition/Generation/EventClientEmitter.cs": "63d713f185f885ffa455f19a6bdaeb6b8c6dc2364a1b827835359972e3443866",
+    "src/Cordis.Composition/TypertArtifacts.Events.cs": "b17b03305b7b08876cf02b12ae2568a5a19554ee8724bbc9444e587edc799cf8",
+    "tests/Cordis.Extensions.Tests/HmrReconciliationTests.cs": "74636d9c3c1d7ff0158cb68219cd29b316461d75f06eb9cbb2ad0fb2aaad7a28",
+    "tests/fixtures/EventDeclarations/Author.cs": "9a2d685bd578a7e58d0ba0fa5b0f4989d1c1dc7c1e669ec201d56a51ca6a7c70",
+    "tests/fixtures/ManagementDotnet/Client.ts": "bda3187503085e20f2975d861087ff48eb300f2bfa2e15d1c028beba8bfee4d6",
+    "tests/fixtures/ManagementDotnet/Host.cs": "7ae47fdd33a80aad68a4fdbc492490e911f99855f1557f92f0a065908339725e",
+    "tools/Cordis.Typert.Compiler/CompilerRunner.cs": "40c8cced47a4eb2b204ad3404c983ab63eb46104d46f217a8d507ac719418dcc",
+    "tools/Cordis.Typert.Compiler/WebProjection.cs": "f817d195caec51afe1e32881f0633099e9d8ca770302486dc35e1713ca814358",
+    "tools/Cordis.Typert.Generator/Model/DeclarationEventContract.cs": "c55ed481ae0b6bab6e6c889174e490d8d226feb78a789a01e8e769c3c904be44"
+  },
+  "packages": {
+    "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "9a1de344a95cf3f0a8d2959231ece97bc1adf23955fa6b0131f6c9ab095fc580",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "1da9e097dd8d361f21a9b4ca325e99336f0f5c578a2ecaf144ea43f79758ba82",
+    "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "60ff9ceb3817624d1738a6743e4e45fef8491a5715149819b4bd358ebb82af62",
+    "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "d0b77dae68fc2bdb6885af23c24b8ae45eb6bd038226c462402d3a0a17d3e3db",
+    "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "bf3d8461aca5277f059373c9d0b59130f32b89d8805de23890b9428edbcdc372",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "12fe3795bd4862246d2cc70a5fe1e412ac83c0bb70ff64b4f76fa2e39fd0f99b",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "234452bd08eaf411843f7468465004a29a094daf1605e6e4df1a93c42173d479",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "50982684365aab20a2c05a97965fc9a6916c3cba2c530930533ea99737610296",
+    "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "e846289e114c308b64b7eb64a0616d61dcf8e4b275ee0c15da9f23f501e9c968"
+  },
+  "packageBoundary": "Composition rebuilt locally; unchanged runtime dependencies reused from prior development feed. No published package was replaced. This is not the final frozen full-gate batch.",
+  "hostAssemblySha256": "36c6becd6ba36d6477eddd66ad4413fbcc0a0bdc78d5e9ecad0a2df63e9917ce",
+  "clientAssets": {
+    "Client.js": "fc19ff2f8ddaea2947204e9e5f98b4e06d0dfea78e4c89c979f5b33f14a69e4b",
+    "collections.mjs": "f7ad48cb784dbfda64a54dc57ac1847c5a0302c92bc87a243b71a8758da1528f",
+    "cordis-remote.mjs": "7e72b561d045eafd8b3447205bbf3db0f432331b853f44f6fb5d58cd5373be18",
+    "decision.mjs": "886f3734c23be8b78c002c2f14f3558a63de54c040e0e95e151f3b0a7e317d85",
+    "events.mjs": "bc33ba5b51cf2bb6d22127633a0bd81579db7b9fcf270297c91b4716fb9e5f5e",
+    "management.mjs": "de6f956e2fe4b0da60f67a8cda69f890b5404519ebc381b2e907f52da1d460ba",
+    "settings.mjs": "ba5e463b3a1aa74d664ba69e016772f2289bd03d1c95e403170c589b23963b3a"
+  },
+  "savedWebAssets": {
+    "collections.d.mts": "e8b37064459126ba3a862b31c7a451c76832b53e319e3935b7d917987309a62b",
+    "collections.mjs": "f7ad48cb784dbfda64a54dc57ac1847c5a0302c92bc87a243b71a8758da1528f",
+    "collections.schema.json": "9bafcd73d751e7c9de84205e7da49d2d1d77dc7b226ce1375292e0e65701063e",
+    "cordis-remote.d.mts": "189a6622e3b556dbd69a733407f0ef70de2feb1203c74a3a104ba3c1f96ed9dc",
+    "cordis-remote.mjs": "7e72b561d045eafd8b3447205bbf3db0f432331b853f44f6fb5d58cd5373be18",
+    "decision.d.mts": "c6f40b3a3393f44fb576e8b27fdf7a181873f74b779d03eb9620a34f58aca724",
+    "decision.mjs": "886f3734c23be8b78c002c2f14f3558a63de54c040e0e95e151f3b0a7e317d85",
+    "decision.schema.json": "630c150bcdcb617e1cbccbb39b9e82e3e0669b093b476918eef8b3fe32790943"
+  },
+  "checks": {
+    "packageConsumer": "requested-checks-passed",
+    "steps": [
+      {
+        "name": "event-author-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "event-author-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-pluginManager-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-settingsController-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-plugin-manager-changed-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-alpha-changed-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-alpha-nested-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-host-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-collections-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-collections-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-decision-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-decision-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-missing-reference",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-web-events-reference-restored",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-cold-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-jit",
+        "exitCode": 0,
+        "expectedFailure": false
+      }
+    ],
+    "management": {
+      "status": "requested-checks-passed",
+      "packageReferencesOnly": true,
+      "ordinaryContractsReferencedOnly": true,
+      "nodeCommands": [
+        {
+          "name": "standard-management-typescript",
+          "exitCode": 0
+        }
+      ],
+      "platformAdapter": "explicit fixture toolchain with actual prepared files; SDK execution is covered separately",
+      "aotRequested": false,
+      "failures": []
+    },
+    "platformEventTests": {
+      "passed": 14,
+      "failed": 0
+    },
+    "currentExtensionsTests": {
+      "passed": 113,
+      "failed": 0
+    },
+    "api": "unchanged snapshot passed",
+    "format": "8 touched C# files; canonical four stages agree",
+    "docs": "15 paired documents and 9 package READMEs passed",
+    "browser": {
+      "engine": "Codex in-app Chromium on Windows",
+      "result": "PASS saved-model package events and standard management: directional data, current adapter, next/undefined/null, owned settlement, settings, installation observation and source recovery",
+      "entry": "scripts/typert-browser-consumer.mjs events",
+      "temporaryHostAndProxyStopped": true,
+      "boundary": "Actual browser transport with a fixture installation toolchain and injected document opener; no desktop editor, native installation SDK or complete application restart acceptance."
+    }
+  },
+  "retainedFailures": [
+    {
+      "name": "baseline-emit-web",
+      "reason": "Old packaged compiler refuses event selection",
+      "logSha256": "19b7fe6bc479e84521ec3a158acb21aa2897eada1730393b15272adcdc0d64ca"
+    },
+    {
+      "name": "directional-consumer",
+      "reason": "Fixture incorrectly treated local next as a Host round trip; corrected against fixed dispatchWaterfall without changing runtime continuation",
+      "logSha256": "d6c03534a2847826d488a26032496a911501e6af3eb05b6246f6a5e3f1388355"
+    },
+    {
+      "name": "hmr-retained-diagnostic-binary",
+      "passed": 112,
+      "failed": 1,
+      "firstExpressionSeconds": 12.052,
+      "logSha256": "4055d898ad1267b114b9be0a115ae4371ce0f74bd02f2e67165eb3c5b1eb17a7",
+      "boundary": "Retained diagnostic binary, not a current-source frozen candidate result"
+    },
+    {
+      "name": "platform-format",
+      "reason": "New fixture auto-property required repository multiline formatting",
+      "logSha256": "b616015dcaebcc761726b33bda25130a8df56f905ae27982acd5a78b0eed9c1c"
+    }
+  ],
+  "hmrDisposition": {
+    "currentRebuildBeforeEngineConfigureSeconds": 5.043,
+    "currentRebuildAfterConfigureSeconds": 0.114,
+    "currentRebuildAllOwnersDrained": true,
+    "originalWaitSeconds": 10,
+    "assertionsRetriesConcurrencyUnchanged": true,
+    "hangCollector": "20-second diagnostic hang collector; no dump emitted because cases completed",
+    "remaining": "Cold initialization, JIT and resource waiting not separated by a captured stack. Keep risk open for maintainer disposition; no environment-only conclusion."
+  },
+  "notEstablished": [
+    "new frozen Windows/Linux full gate",
+    "new AOT package acceptance",
+    "ordinary live IDE/debugger",
+    "real default desktop opener",
+    "complete neutral application shutdown/restart",
+    "new release identity or publication"
+  ]
+}

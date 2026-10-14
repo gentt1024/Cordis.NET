@@ -5,9 +5,14 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const [origin, destination] = process.argv.slice(2)
+const [origin, destination, savedEvents] = process.argv.slice(2)
 const output = resolve(destination)
 await mkdir(output, { recursive: true })
+for (const name of ['collections', 'decision']) {
+  for (const extension of ['mjs', 'd.mts']) {
+    await writeFile(resolve(output, name + '.' + extension), await readFile(resolve(savedEvents, name + '.' + extension)))
+  }
+}
 for (const name of ['management', 'settings', 'events']) {
   for (const extension of ['mjs', 'd.ts']) {
     const response = await fetch(origin + '/client-runtime/' + name + '.' + extension)
@@ -35,7 +40,7 @@ if (diagnostics.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(
 }))
 const emitted = program.emit()
 assert.equal(emitted.emitSkipped, false, 'Independent strict TypeScript caller was not emitted')
-for (const name of ['management', 'settings', 'events', 'cordis-remote']) {
+for (const name of ['management', 'settings', 'events', 'collections', 'decision', 'cordis-remote']) {
   await writeFile(resolve(output, 'compiled', name + '.mjs'), await readFile(resolve(output, name + '.mjs')))
 }
 const { run } = await import(pathToFileURL(resolve(output, 'compiled/Client.js')).href)

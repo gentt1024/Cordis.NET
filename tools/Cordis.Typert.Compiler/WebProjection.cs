@@ -6,10 +6,10 @@ using Cordis.Typert.Generator.Model;
 namespace Cordis.Typert.Compiler;
 
 // Uses the same composed declarations as the native caller; no author assembly is loaded.
-internal sealed class WebProjection(RemoteProjection model, NativeService service)
+internal sealed class WebProjection(NativeTypeDeclaration[] declarations, NativeSerializerContext? serializer)
 {
     private const string JsonPrefix = DeclarationAttributeProjection.JsonPrefix;
-    private readonly Dictionary<string, NativeTypeDeclaration> types = model.Types.ToDictionary(type => type.Id);
+    private readonly Dictionary<string, NativeTypeDeclaration> types = declarations.ToDictionary(type => type.Id);
 
     internal static (ClientArtifact Client, string Schema) Emit(RemoteProjection model)
     {
@@ -20,7 +20,7 @@ internal sealed class WebProjection(RemoteProjection model, NativeService servic
         var schemas = new JsonObject();
         foreach (var service in model.Services)
         {
-            var projection = new WebProjection(model, service);
+            var projection = new WebProjection(model.Types, service.Serializer);
             projection.ValidateOptions();
             foreach (var method in service.Methods)
             {
@@ -121,6 +121,48 @@ internal sealed class WebProjection(RemoteProjection model, NativeService servic
         }
     }
 
+    internal static (ClientArtifact Client, string Schema) EmitEvent(
+        DeclarationModelDocument model,
+        RemoteEventContract contract,
+        DeclarationModelDocument[] references)
+    {
+        var data = DeclarationRemoteProjection.EventData(model, contract, references);
+        var projection = new WebProjection(data.Types, data.Serializer);
+        projection.ValidateOptions();
+        var schemas = new JsonObject();
+
+        ClientCodec Codec(string path, NativeTypeReference type, bool output, bool optional = false)
+        {
+            var codec = projection.Codec(type, output) with
+            {
+                AcceptsUndefined = optional
+            };
+            var key = contract.Name + "/" + path;
+            var node = JsonNode.Parse(codec.Schema.GetRawText())!;
+            Rebase(node, Pointer(key));
+            schemas.Add(key, node);
+            return codec;
+        }
+
+        var args = data.Args.Select((type, index) => Codec("args/" + index, type, true)).ToArray();
+        var waterfall = data.Request is { } request
+            ? new ClientEventWaterfall(
+                Codec("request", request, true),
+                Codec("reply", data.Result!, false, data.Optional),
+                Codec("next", data.Result!, true, data.Optional))
+            : null;
+        var catalog = new JsonObject
+        {
+            ["$schema"] = "https://json-schema.org/draft/2020-12/schema",
+            ["$defs"] = schemas
+        };
+        return (EventClientEmitter.Generate([new(contract.Name, args, waterfall)]), catalog.ToJsonString(
+            new JsonSerializerOptions
+            {
+                WriteIndented = true
+            }) + "\n");
+    }
+
     private static string Pointer(string key) => "#/$defs/" +
         key.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal);
 
@@ -140,7 +182,7 @@ internal sealed class WebProjection(RemoteProjection model, NativeService servic
                     Rebase(child, prefix);
     }
 
-    private NativeAttribute? Options => service.Serializer?.Attributes.SingleOrDefault(attribute =>
+    private NativeAttribute? Options => serializer?.Attributes.SingleOrDefault(attribute =>
         attribute.Name == JsonPrefix + "JsonSourceGenerationOptionsAttribute");
 
     private string Option(string name, string fallback = "false") =>
@@ -148,7 +190,7 @@ internal sealed class WebProjection(RemoteProjection model, NativeService servic
 
     private void ValidateOptions()
     {
-        if (service.Serializer is null)
+        if (serializer is null)
             throw Refuse("An explicit source JSON context is required.");
         foreach (var option in Options?.NamedArguments ?? [])
         {

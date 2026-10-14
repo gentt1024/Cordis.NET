@@ -8,6 +8,7 @@ using Cordis;
 using Cordis.AspNetCore;
 using Cordis.Composition;
 using Cordis.Extensions;
+using Cordis.Platform.Tests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -219,21 +220,21 @@ server.MapPost(
     "/control/decision",
     async (HttpContext http) =>
     {
-        Task<RemoteOptional<string?>> invocation = null!;
+        Task<RemoteOptional<DecisionValue?>> invocation = null!;
         await session.Context.RunAsync(ctx =>
         {
             invocation = DecisionRequestedTypert.InvokeAsync(
                 ctx,
                 new EventSubject(ctx, "agent-1"),
                 new DecisionRequest(http.Request.Query["mode"].ToString()),
-                () => Task.FromResult(new RemoteOptional<string?>("fallback")),
+                () => Task.FromResult(new RemoteOptional<DecisionValue?>(new DecisionValue("fallback"))),
                 http.RequestAborted);
             return Task.CompletedTask;
         });
         var result = await invocation;
         return Results.Text(
             JsonSerializer.Serialize(
-                new DecisionReply(result.HasValue, result.HasValue ? result.Value : null),
+                new DecisionReply(result.HasValue, result.HasValue ? result.Value?.Value : null),
                 DecisionJson.Default.DecisionReply),
             "application/json");
     });
@@ -568,20 +569,20 @@ public sealed record EventSubject(Context Context, string Id) : IContextualServi
     public object ForContext(Context caller) => new EventSubject(caller, Id);
 }
 
-public sealed record DecisionRequest(string Mode);
 
 public sealed record DecisionReply(bool HasValue, string? Value);
 
 [RemoteEvent("fixture/decision", typeof(DecisionJson))]
-public delegate Task<RemoteOptional<string?>> DecisionRequested(
+public delegate Task<RemoteOptional<DecisionValue?>> DecisionRequested(
     [RemoteLookup("agent", "agentId", typeof(string))]
     EventSubject agent,
     DecisionRequest request,
-    Func<Task<RemoteOptional<string?>>> next,
+    Func<Task<RemoteOptional<DecisionValue?>>> next,
     CancellationToken signal);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DecisionRequest))]
 [JsonSerializable(typeof(DecisionReply))]
+[JsonSerializable(typeof(DecisionValue))]
 [JsonSerializable(typeof(string))]
 public partial class DecisionJson : JsonSerializerContext;

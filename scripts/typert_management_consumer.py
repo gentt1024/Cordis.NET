@@ -33,6 +33,8 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
         '<Version>1.0.0-alpha</Version>', composition,
         '<ItemGroup><CordisTypertModelRoot Include="Cordis.Platform.Tests.EventAlpha.Changed"/>'
         '<CordisTypertModelRoot Include="Cordis.Platform.Tests.EventAlpha.Nested"/>'
+        '<CordisTypertModelRoot Include="Cordis.Platform.Tests.DecisionRequest"/>'
+        '<CordisTypertModelRoot Include="Cordis.Platform.Tests.DecisionValue"/>'
         '<CordisTypertModelRoot Include="Cordis.Platform.Tests.EventBeta.Changed"/></ItemGroup>')
     shutil.copyfile(root / "tests/fixtures/EventDeclarations/Author.cs", event_author / "Author.cs")
     run("event-author-pack", [dotnet, "pack", event_project, "-c", "Release", "-o", contract_feed])
@@ -61,9 +63,51 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
         f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>'
         f'<PackageReference Include="Cordis.NET.Extensions" Version="{version}"/>'
         '<FrameworkReference Include="Microsoft.AspNetCore.App"/>'
-        '<PackageReference Include="IndependentEvents.Author" Version="1.0.0-alpha"/>')
+        '<PackageReference Include="IndependentEvents.Author" Version="1.0.0-alpha"/>',
+        '<ItemGroup><CordisTypertModelRoot Include="DecisionRequested"/></ItemGroup>')
     shutil.copyfile(root / "tests/fixtures/ManagementDotnet/Host.cs", host / "Program.cs")
     run("standard-management-host-build", [dotnet, "build", host_project, "-c", "Release"])
+    saved_web = source / "SavedWebEvents"
+    saved_web.mkdir()
+    host_model = (host / "obj/Release/net10.0/cordis-typert/ManagementHost.cordis.model.json").read_bytes()
+    for service, name, source_model, references in (
+        ("alpha/changed", "collections", event_model, False),
+        ("fixture/decision", "decision", host_model, True),
+    ):
+        package_id = "IndependentEvents.Web." + name
+        extra = ('<ItemGroup><CordisTypertWebReferenceModel Include="events.model.json"/></ItemGroup>'
+            if references else "")
+        folder, path = project("WebEvents" + name,
+            f'<PackageId>{package_id}</PackageId><Version>1.0.0-alpha</Version>'
+            f'<CordisTypertService>{service}</CordisTypertService>'
+            '<CordisTypertWebModel>source.model.json</CordisTypertWebModel>', composition, extra)
+        (folder / "source.model.json").write_bytes(source_model)
+        if references:
+            (folder / "events.model.json").write_bytes(event_model)
+        run("saved-web-events-" + name + "-pack", [dotnet, "pack", path, "-c", "Release", "-o", contract_feed])
+        generated = folder / "obj/Release/net10.0/cordis-typert/web"
+        before = {asset.name: (asset.read_bytes(), asset.stat().st_mtime_ns) for asset in generated.iterdir()}
+        run("saved-web-events-" + name + "-incremental", [dotnet, "build", path, "-c", "Release"])
+        assert before == {asset.name: (asset.read_bytes(), asset.stat().st_mtime_ns) for asset in generated.iterdir()}, \
+            "Unchanged saved event generation rewrote its artifacts"
+        with zipfile.ZipFile(contract_feed / (package_id + ".1.0.0-alpha.nupkg")) as archive:
+            for asset in ("remote.schema.json", "remote.mjs", "remote.d.mts", "cordis-remote.mjs", "cordis-remote.d.mts"):
+                target = saved_web / (name + asset.removeprefix("remote") if asset.startswith("remote") else asset)
+                payload = archive.read("cordis/typert/web/" + asset)
+                assert not target.exists() or target.read_bytes() == payload, "Event packages disagree on shared runtime"
+                target.write_bytes(payload)
+        assets = json.loads((folder / "obj/project.assets.json").read_text(encoding="utf-8"))
+        assert not any(key.startswith(("IndependentEvents.Author/", "ManagementHost/"))
+            for key in assets["libraries"]), "Saved Web event generation acquired author assemblies"
+        if references:
+            (folder / "events.model.json").unlink()
+            run("saved-web-events-missing-reference", [dotnet, "build", path, "-c", "Release"], expected_failure=True)
+            assert not any(generated.glob("*")), "Failed event generation retained stale assets"
+            (folder / "events.model.json").write_bytes(event_model)
+            run("saved-web-events-reference-restored", [dotnet, "build", path, "-c", "Release"])
+            run("saved-web-events-clean", [dotnet, "clean", path, "-c", "Release"])
+            assert not any(generated.glob("*")), "Clean retained generated event assets"
+            run("saved-web-events-cold-build", [dotnet, "build", path, "-c", "Release"])
     references = composition + ''.join(contracts)
     caller, caller_project = project("ManagementCaller", '<OutputType>Exe</OutputType>', references)
     shutil.copyfile(root / "tests/fixtures/ManagementDotnet/Client.cs", caller / "Program.cs")
@@ -115,7 +159,7 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
                     assert address and address.startswith("http://127.0.0.1:"), address
                     if mode == "typescript":
                         node_run("standard-management-typescript", [node, root / "scripts/typert-management-client-consumer.mjs", address,
-                            source / "ManagementTypescript"])
+                            source / "ManagementTypescript", saved_web])
                     else:
                         command = [dotnet, caller / "bin/Release/net10.0/ManagementCaller.dll", address] if mode == "jit" else [
                             native / ("ManagementCaller.exe" if os.name == "nt" else "ManagementCaller"), address]

@@ -57,6 +57,8 @@ await events.RunAsync(host => OnReady(host.Home), generationCancellation);
 
 现有 `emit-dotnet` 的 `--service` 也接受选定事件名或委托元数据名。`CordisTypertClientModel`、`CordisTypertService`、`CordisTypertClientNamespace` 和 `CordisTypertClientName` 在编译前从保存的共同模型生成类型化 `On` 帮助类及独立数据。后端序列化限制仍然适用，不能复现的 Host serializer 不会被悄悄替换为另一种策略。
 
+`emit-web`／`CordisTypertWebModel` 使用同一事件选择，接受显式 `CordisTypertWebReferenceModel` 输入。正常 build/pack 在 `cordis/typert/web/remote.mjs` 交付 `createEvents`，连同声明和共享 Connection 资产；生成不要求运行 Host 或加载 Provider 程序集，Host 转发仍须明确选择。普通参数／request 和 continuation 值采用输出投影，reply 采用输入投影。`next()` 执行后续客户端本地监听链；本地链没有回答时，返回其 continuation 才将处理交回 Host。它不是让浏览器读取 Host 后续返回值的往返调用。
+
 
 集合元素空性来自事件声明，包括 `List<string?>?` 和 `Dictionary<string, T?>`。作者在 JSON context 注册普通 CLR 元数据（`typeof(List<string>)`），不另写一份 Schema。源码生成监听、保存模型生成监听和 TS 监听使用同一组事实；非空元素仍拒绝 null。委托采用 namespace 限定身份，互不相关的同名事件委托可以共存。
 

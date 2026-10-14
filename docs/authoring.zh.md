@@ -256,7 +256,7 @@ await connection.dispose();
 
 [多入口门禁](../scripts/verify-clr-multi-entry.py) 独立打包作者 NuGet，通过 `PackageReference` 消费，安装包根/子路径入口，并验证共享身份、独立配置、成功与失败替换、撤销、真实 HTTP 上的生成 TypeScript 调用及错误参数。独立的 [Remote 门禁](../scripts/verify-typert.py) 覆盖原生 Remote 作者链。使用最新本地包批次及所需 Node/TypeScript 依赖。平台验收以[验证记录](validation.zh.md)中已完成结果为准；这些示例本身不能证明 Windows/Linux 或 Native AOT 闭环。动态 CLR 加载要求普通运行时。
 
-选定的固定事件工作流、反向 Context 和 owned-value 处理使用[Remote 事件](remote-events.zh.md)所述共同声明。更丰富的源类型图、其余 Peer 工作流和浏览器出站 scoped 装配仍未完成。operator Peer 所有权、typed uplink 和 unary multipart 现已有实现与有限验证，不据此关闭剩余职责。Settings、PluginManager 与选定宿主 emit 通知已通过既有 profile owner 接入生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
+选定的固定事件工作流、反向 Context 和 owned-value 处理使用[Remote 事件](remote-events.zh.md)所述共同声明。浏览器出站 scoped 调用、原生 Peer 路由及 Scope store/layer 已有有界消费证据；对应候选和剩余出口见[开发记录](development.zh.md)与[验证记录](validation.zh.md)。operator Peer 所有权、typed uplink 和 unary multipart 也已有实现。这些结果不证明任意类型图或所有 Peer 工作流均已完成。Settings、PluginManager 与选定宿主 emit 通知通过既有 profile owner 使用生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
 
 
 ## 原生作者模型与 .NET 消费者，2026-10-10
@@ -414,7 +414,18 @@ target 在 `CoreCompile` 前调用 `emit-dotnet-data`，复用 Remote caller 支
 
 Schema 文件是 JSON Schema 2020-12 定义目录。完整参数对象位于 `#/$defs/<转义后的 namespace/method/arguments>`，也可以选择 `parameters/<wire>`、`result` 和可选 `uplink` 定义。定义 key 中 `/` 转义为 `~1`，`~` 转义为 `~0`。递归引用仍在同一文档内。制品注释记录输入身份；输出不变时保留时间戳。声明初始化值不被宣称为 Host 默认值：该后端不执行构造器或 accessor。
 
-当前后端接受普通闭合公开 DTO class/record、受支持的标量、递归引用、数组、框架集合接口和 string-key 字典，保留 wire 名称、required/nullable 字段及受支持的序列化包含选项。不支持的 serializer policy、自定义 converter、多态、数据继承、应用泛型 DTO、非 string 字典 key、多维数组和 binary attachment metadata 会明确拒绝。事件制品和更广的保存模型后端仍是独立工作。拒绝不等于完成；运行绑定及既有运行时制品发射器保留已成立的支持面。
+生成事件时，将 `CordisTypertService` 设为声明的事件名（如 `alpha/changed`）或 delegate 的完整 metadata name。主模型／引用模型属性及五个包资产不变。模块导出 `createEvents`，借用共享 Connection：
+
+```ts
+import { createEvents } from './remote.mjs'
+const events = createEvents(owner, connection, adapters)
+events.on(owner, 'alpha/changed', (values, labels, required) => { /* consume typed arguments */ })
+await events.run(signal, host => onReady(host.home))
+```
+
+Host 仍须明确选择生成的 forwarder；模型包含声明不会自动公开事件。普通参数和 waterfall request 描述 Host 输出，handler reply 描述 Host 输入，`next()` 描述后续链的输出。因此，条件省略可能使 reply 与 continuation 类型不同。`undefined`、显式 `null` 和调用 `next()` 仍是独立选择。事件 Schema 目录使用 `<event>/args/<index>`、`request`、`reply` 和 `next` key。JSON Schema 描述实际存在的 JSON 值；可选 `undefined` 保留在生成的 TypeScript 合同中。
+
+当前后端接受普通闭合公开 DTO class/record、受支持的标量、递归引用、数组、框架集合接口和 string-key 字典，保留 wire 名称、required/nullable 字段及受支持的序列化包含选项。不支持的 serializer policy、自定义 converter、多态、数据继承、应用泛型 DTO、非 string 字典 key、多维数组和 binary attachment metadata 会明确拒绝。拒绝不等于完成；运行绑定及既有运行时制品发射器保留已成立的支持面。[后端处置表](development.zh.md#alpha5-独立后端处置)按事实与实际用途区分这些限制。
 
 使用当前 compiler 重新提取声明模型，并重新构建受维护消费者。缺失必需结构化引用或来源事实的输入，以及旧模型输入，直接拒绝，不进行转换。保存制品的身份只验证已保存事实，不能补回遗漏、证明所有作者 JSON 配置或建立与任意 DLL 的对应关系。当前只有一个合同，不保留历史格式 reader 或版本化 Remote 兼容路线。
 

@@ -120,8 +120,11 @@ internal static class CompilerRunner
                 .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
                 .ToArray()
             : [];
-        var projection = DeclarationRemoteProjection.Project(model, Required(options, "service"), references);
-        var artifact = WebProjection.Emit(projection);
+        var selection = Required(options, "service");
+        var eventDeclaration = DeclarationEventContract.Select(model, selection);
+        var artifact = eventDeclaration is null
+            ? WebProjection.Emit(DeclarationRemoteProjection.Project(model, selection, references))
+            : WebProjection.EmitEvent(model, DeclarationEventContract.Read(model, eventDeclaration.Id), references);
         var directory = Path.GetFullPath(Required(options, "output"));
         var identity = "Declaration models: " + string.Join(
             ", ",
@@ -159,15 +162,7 @@ internal static class CompilerRunner
                 .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
                 .ToArray()
             : [];
-        var eventDeclaration = model.Declarations.SingleOrDefault(type =>
-        {
-            var marker = DeclarationAttributeProjection.Attribute(
-                type.Attributes,
-                "Cordis.Composition.RemoteEventAttribute");
-            return model.Roots.Contains(type.Id) && marker is not null &&
-                (type.MetadataName == service ||
-                    DeclarationAttributeProjection.String(marker.Arguments.FirstOrDefault()) == service);
-        });
+        var eventDeclaration = DeclarationEventContract.Select(model, service);
         if (eventDeclaration is not null)
             return DotnetProjectionEmitter.EmitEvent(
                 model,

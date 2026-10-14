@@ -14,7 +14,10 @@ const assets = new Map([
   ['/Client.js', resolve(output, outbound ? 'compiled/SharedClient.js' : 'compiled/Client.js')],
   ...(outbound ? [['/shared.mjs', resolve(output, 'compiled/shared.mjs')]] : [
     ['/management.mjs', resolve(output, 'compiled/management.mjs')],
+    ['/settings.mjs', resolve(output, 'compiled/settings.mjs')],
     ['/events.mjs', resolve(output, 'compiled/events.mjs')],
+    ['/collections.mjs', resolve(output, 'compiled/collections.mjs')],
+    ['/decision.mjs', resolve(output, 'compiled/decision.mjs')],
   ]),
   ['/cordis-remote.mjs', resolve(output, 'compiled/cordis-remote.mjs')],
   ['/cordis-context.mjs', resolve(output, 'cordis-context.mjs')],
@@ -23,7 +26,7 @@ for (const file of assets.values()) await readFile(file)
 const page = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Remote scoped package consumer</title>
 <button id="run">Run scoped checks</button><pre id="result">Ready</pre>
 <script type="module">
-import { ${outbound ? 'scopedCalls' : 'scopedEvents'} } from '/Client.js'
+import { ${outbound ? 'scopedCalls' : 'run'} } from '/Client.js'
 import { Context } from '/cordis-context.mjs'
 import { TypertConnection } from '/cordis-remote.mjs'
 const button = document.querySelector('#run'), result = document.querySelector('#result')
@@ -34,10 +37,10 @@ button.onclick = async () => {
     return fetch(input, {...init, headers})
   }, url => { url.searchParams.set('consumer', 'consumer-policy'); return new WebSocket(url) })
   try {
-    await ${outbound ? "scopedCalls(location.origin, location.origin.replace('http:', 'ws:') + '/remote/remote.mux', () => new Context())" : 'scopedEvents(location.origin, connection, () => new Context())'}
+    await ${outbound ? "scopedCalls(location.origin, location.origin.replace('http:', 'ws:') + '/remote/remote.mux', () => new Context())" : 'run(location.origin, () => new Context())'}
     result.textContent = ${JSON.stringify(outbound
       ? 'PASS generated outbound scoped: Peer routing, receiver and lookup, current adapter and identity, null/undefined, stream and withdrawal'
-      : 'PASS generated package events: current adapter, borrowed Context, next/undefined/null, owned reply and cancelled-handler settlement')}
+      : 'PASS saved-model package events and standard management: directional data, current adapter, next/undefined/null, owned settlement, settings, installation observation and source recovery')}
   } catch (error) { result.textContent = 'FAIL ' + error.stack }
   finally { await connection.dispose() }
 }

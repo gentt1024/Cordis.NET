@@ -1,5 +1,7 @@
 import { createRemote as createManagementRemote, TypertConnection, RemoteError, type RemoteResult } from './management.mjs'
 import { createEvents, type EventListeners } from './events.mjs'
+import { createEvents as createCollectionEvents, type EventListeners as CollectionListeners } from './collections.mjs'
+import { createEvents as createDecisionEvents, type EventListeners as DecisionListeners } from './decision.mjs'
 import { createRemote as createSettingsRemote } from './settings.mjs'
 import type { RemoteEventContext } from './cordis-remote.mjs'
 import { RemoteStreamCarrierError, typertOwnedValue } from './cordis-remote.mjs'
@@ -35,9 +37,9 @@ export async function run(origin: string, createContext: () => EventOwner) {
   const notifications = await observe(connection, createContext)
   const reader = notifications.reader
   const remotes = [manager, settings, notifications]
-  const nullableSample: Parameters<EventListeners['alpha/changed']> = [[null], {empty: null}, ['required']]
+  const nullableSample: Parameters<CollectionListeners['alpha/changed']> = [[null], {empty: null}, ['required']]
   // @ts-expect-error The third argument still has non-null elements.
-  const invalidRequired: Parameters<EventListeners['alpha/changed']>[2] = [null]
+  const invalidRequired: Parameters<CollectionListeners['alpha/changed']>[2] = [null]
   void nullableSample; void invalidRequired
   const emitted = await fetch(origin + '/control/collection-events', {method: 'POST'})
   assert(emitted.ok, 'Collection event fixture did not emit')
@@ -162,20 +164,24 @@ function object(value: unknown): Record<string, unknown> {
 async function observe(connection: TypertConnection, createContext: () => EventOwner) {
   const owner = createContext()
   const client = createEvents(owner, connection)
+  const collections = createCollectionEvents(owner, connection)
   const values: Notification[] = []
   let wake: (() => void) | undefined
   let ended = false
   let failure: { error: unknown } | undefined
   const publish = (frame: Notification): void => { values.push(frame); wake?.() }
   client.on(owner, 'plugin-manager/changed', value => publish({event:'plugin-manager/changed',args:[value]}))
-  client.on(owner, 'alpha/changed', (values, labels, required) => publish({event:'alpha/changed',args:[values, labels, required]}))
+  collections.on(owner, 'alpha/changed', (values, labels, required) => publish({event:'alpha/changed',args:[values, labels, required]}))
   client.on(owner, 'plugin-manager/install-log', value => publish({event:'plugin-manager/install-log',args:[value]}))
   client.on(owner, 'plugin-manager/install-state', value => publish({event:'plugin-manager/install-state',args:[value]}))
   const controller = new AbortController()
   let accept!: () => void
   let reject!: (error: unknown) => void
   const ready = new Promise<void>((resolve, refused) => { accept=resolve; reject=refused })
-  const pump = client.run(controller.signal, () => accept()).catch((error: unknown) => { failure={error}; reject(error) })
+  let opened = 0
+  const onReady = (): void => { if (++opened === 2) accept() }
+  const pump = Promise.all([client.run(controller.signal, onReady), collections.run(controller.signal, onReady)])
+    .catch((error: unknown) => { failure={error}; reject(error) })
     .finally(() => {ended=true; wake?.()})
   await ready
   const reader: AsyncIterator<Notification> = {
@@ -187,10 +193,14 @@ async function observe(connection: TypertConnection, createContext: () => EventO
     },
     async return() { controller.abort(); await pump; return {done:true,value:undefined} },
   }
-  return {reader, async dispose() {controller.abort(); await client.dispose(); await pump; await owner.fiber.dispose()} }
+  return {reader, async dispose() {controller.abort(); await Promise.all([client.dispose(), collections.dispose()]); await pump; await owner.fiber.dispose()} }
 }
 
 export async function scopedEvents(origin: string, connection: TypertConnection, createContext: () => EventOwner) {
+  const reply: Awaited<ReturnType<DecisionListeners['fixture/decision']>> = {value: 'input', detail: null}
+  // @ts-expect-error An accepted null setter input is not promised by the non-null output getter.
+  const invalidOutput: Awaited<ReturnType<Parameters<DecisionListeners['fixture/decision']>[1]>> = {value: 'output', detail: null}
+  void reply; void invalidOutput
   const owner = createContext()
   let resolves = 0, releases = 0, adapterReads = 0
   const releaseCount = (): number => releases
@@ -198,7 +208,7 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
   const firstRelease = new Promise<void>(resolve => {firstReleased=resolve})
   const secondRelease = new Promise<void>(resolve => {secondReleased=resolve})
   let owned = false
-  const events = createEvents(owner, connection, {getClient(key) {
+  const events = createDecisionEvents(owner, connection, {getClient(key) {
     assert(key === 'agent', 'Fixed agent adapter key changed')
     adapterReads++
     return { resolve(identity) {
@@ -219,7 +229,9 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
   const cancellation = new Promise<void>(resolve => {cancelled=resolve})
   events.on(owner, 'fixture/decision', async (request, next) => {
     assert(request.agent === owner, 'Reverse Context did not replace the Host subject')
+    assert(!('omitted' in request), 'Host request lost conditional omission')
     if (request.mode === 'next') return next()
+    if (request.mode === 'value') return {value: 'accepted', detail: null}
     if (request.mode === 'undefined') return undefined
     if (request.mode === 'hold') {
       request.signal.addEventListener('abort', () => cancelled(), {once:true})
@@ -238,6 +250,9 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
     const ask = (mode: string, signal?: AbortSignal) => fetch(origin + '/control/decision?mode=' + mode, {method:'POST',signal})
     const next = object(await (await ask('next')).json())
     assert(next.hasValue === true && next.value === 'fallback' && releaseCount() === 0, 'Borrowed continuation changed or was released')
+    const value = object(await (await ask('value')).json())
+    assert(value.hasValue === true && value.value === 'accepted' && releaseCount() === 0,
+      'Directional reply did not reach the Host input contract')
     owned = true
     const absent = object(await (await ask('undefined')).json())
     assert(absent.hasValue === false, 'Undefined was converted to null or continuation')
@@ -263,7 +278,7 @@ export async function scopedEvents(origin: string, connection: TypertConnection,
     settle()
     await closing
     await pending
-    assert(releaseCount() === 3 && resolves === 4 && adapterReads === 4, 'Resolution/release was cached, skipped or duplicated')
+    assert(releaseCount() === 3 && resolves === 5 && adapterReads === 5, 'Resolution/release was cached, skipped or duplicated')
     owner.on('borrowed-owner-alive', () => {})
   } finally {
     settle(); signal.abort()

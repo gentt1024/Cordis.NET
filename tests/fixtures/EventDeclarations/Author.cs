@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 using Cordis.Composition;
 
 namespace Cordis.Platform.Tests.EventAlpha
@@ -18,6 +19,26 @@ namespace Cordis.Platform.Tests.EventBeta
 
 namespace Cordis.Platform.Tests
 {
+    public sealed record DecisionRequest(string Mode)
+    {
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Omitted
+        {
+            get;
+            init;
+        }
+    }
+
+    public sealed record DecisionValue(string Value)
+    {
+        [AllowNull]
+        public string Detail
+        {
+            get;
+            set;
+        } = "default";
+    }
+
     /// <summary>A nullable nested collection exported before its required sibling.</summary>
     public sealed class LooseFirst
     {

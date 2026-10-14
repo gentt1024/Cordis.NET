@@ -575,3 +575,21 @@ Probes 现在输出既有共享运行时，收窄生成合同中的可省略列�
 Linux 完整包／AOT 门禁通过运行时、对照、打包、符号、静态消费者、CLR 部署及选定固定端互通，随后因 Web 输出目录已存在而停止。在新输出目录补完时，源码和 18 份包／符号文件完全相同：三种 Web 合同模式及引用模型消费通过，标准管理、数值和 Settings 的 JIT／AOT 消费通过。补完结果不改写原完整门禁失败状态。
 
 两次真实 Chromium 会话使用上述 Linux 构建的 Host／客户端制品，在 Windows 运行通过：出站 scoped／Peer 与 Scope layer 消费；引用 Web 及默认、原生、绑定、箭头 fetch。回执绑定 Host／客户端及截图哈希，两个临时 Host 和代理均已关闭。这不是 Windows 构建包、后续 Settings 文档修改或 alpha5 发布的验收。
+
+## 托管候选完整通过，2026-10-14
+
+[运行 38411639451](https://github.com/gentt1024/Cordis.NET/actions/runs/38411639451) 的十二个作业全部通过。分支 `e44bd354374a419e9f35c5d531a6960bb47ff8e9` 对 main `3342a967f4e57206bec272684a40a437fc051b77` 的 PR 合并检出为 `30bc56dde6e4327b9bdae40694239a2d38d2e1db`。Windows 和 Ubuntu 各自完成 `verify.py --aot --package`，随后以本作业的包完成 `verify-authoring.py --aot`；八个固定上游分片及两个原始用例并集检查通过。其中包含 Probes 严格类型、保留的负向控制及源码／包 JIT/AOT 消费一致性。[收据](../verification/alpha5-ci-2026-10-14/evidence.json) 记录公开作业／制品身份；归档摘要来自 GitHub 元数据，不表示已独立重算每个包。
+
+本次完整结果替换候选待验状态，不改写失败运行 38375206795 与 38405914024 的结论。历史 HMR 超时没有复发，原因仍未解决。早先真实浏览器与中立应用结果保留自己的源码／包身份。本次运行不证明交互浏览器、live IDE 或每个原生桌面 opener，也未建立 alpha5 发布身份。当前出口见[收口记录](development.zh.md#alpha5-完整-ci-检查点2026-10-14)。后续仅文档修改不宣称新的二进制门禁。
+
+## 保存模型 Web 事件开发验证，2026-10-14
+
+e44bd35 之后的本地续建接通了保存模型事件生成入口。[回执](../verification/web-events-closeout-2026-10-14/evidence.json) 绑定改动源码文件、开发包、独立 Host／客户端资产及保留的失败。Composition 在独立本地 feed 重建，未变的依赖包沿用既有开发包。这是开发验证，不是最终冻结平台或发行批次。
+
+`verify-typert-dotnet.py --management-only` 通过正常事件 build/pack、不引用 Provider 包的显式源模型组合、增量资产不变、缺失引用拒绝并清除旧输出、恢复、Clean／冷构建，以及实际 .NET／严格 TypeScript 调用。既有 waterfall 场景保留 continuation／undefined／null、当前 adapter、拥有资源在 reply／取消后的结算及借用边界。共同引用 DTO 检查 request 条件省略及 setter 输入／getter 输出空性的区别。初次方向夹具错误地通过客户端 `next()` 读取 Host 后续值；失败保留，纠正后的夹具遵循固定的本地链／Host continuation 边界，没有新增运行时绕路。
+
+同一成功消费者的编译资产及包 Host 在 Windows 实际内置 Chromium 中通过，同时覆盖 Settings、断开观察不取消安装任务，以及来源撤回／重装配。临时 Host 与代理已关闭。夹具注入安装准备和文档 opener，不能计为实际桌面编辑器或原生安装 SDK 证据；完整应用关闭／重启及最终冻结候选浏览器验收仍独立保留。
+
+既有 Platform 事件用例 14 项通过；当前源码重建的 Extensions 113 项通过。公共 API 未变，八个改动 C# 文件的四阶段格式检查一致，中英文文档／包 README 检查通过。一次夹具格式构建失败已纠正并保留。本批不宣称完整 Windows／Linux 门禁或新 AOT 验收。
+
+有界 HMR 诊断先用保留的计时二进制复现一次超时（112 通过、1 失败）：第三次刷新已入场并读完 patch，首次表达式占用 12.052 秒后发布错误。当前源码重建通过既有 evaluator 配置回调增加计时：首次求值在回调之前耗时 5.043 秒，之后 0.114 秒；恢复和所有者清理完成，其余求值约一毫秒。原十秒等待、断言、并发及重试策略均未改变。用例完成，hang collector 没有生成 dump。这将观察到的延迟缩小至冷 evaluator 准备段，但没有执行栈来区分 JIT、初始化或资源等待。剩余风险是负载下冷表达式准备可能超过 reconciliation 测试预算，须保留给维护者裁决；后续通过和最新托管绿色均不能证明仅属环境原因或关闭历史失败。

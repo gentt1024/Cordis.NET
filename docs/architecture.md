@@ -12,8 +12,10 @@ Composition owns the native Typert declaration model, explicit JSON codecs, Fibe
 Loader artifact discovery and carrier-independent Remote dispatcher. A Roslyn generator shipped
 in the Composition package adapts source analysis to the pinned .NET SDK. It emits typed delegates
 and metadata factories without loading plugin assemblies or scanning their methods at runtime.
-System.Text.Json source metadata supplies schemas and serialization; the same descriptors emit
-TypeScript clients. ASP.NET Core supplies the authorized HTTP/NDJSON carrier above this layer.
+System.Text.Json source metadata supplies Host schemas and serialization. Saved declaration
+facts supply independent .NET and Web artifacts within their documented backend support.
+Both routes reuse the client emitters. ASP.NET Core hosts the authorized HTTP unary route and
+the WebSocket mux Connection for streams, selected events and binary attachments.
 Actual visible services determine routing; a descriptor alone cannot invoke a provider.
 
 The native implementation preserves atomic registration, identity conflicts, exact-owner
@@ -26,10 +28,10 @@ unrelated contributions retain their identity. The [authoring workflow](authorin
 defines the ordering and failure boundary. This supplies no product admission, draining or
 business recovery policy.
 
-This is an incremental implementation of the original application infrastructure scope. The
-native carrier is not the complete fixed Typert wire protocol. The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
-and [compatibility record](compatibility.md) distinguish verified paths from remaining type-graph,
-transport and production-consumer work; earlier HTTP management acceptance remains historical.
+The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
+and [compatibility record](compatibility.md) distinguish implemented workflows from remaining
+backend and consumer evidence. Fixed-end interoperability claims name the tested client and
+carrier; they do not imply compatibility with every DSH product or SDK transport.
 
 ## Current workflow decisions
 
@@ -44,7 +46,7 @@ continues to own completeness. Application consumption supplies evidence; it doe
 | Model and build | Authored declaration graph precedes codec, catalog and client projections | SDK Roslyn extracts ordinary roots and selected services into one declaration artifact; Composition's MSBuild target publishes it before `CoreCompile` | Definitions, constructed references and type-parameter ownership remain distinct. A backend's refusal does not remove analysis facts. |
 | Settings view and write | Active live Entry forms, layers, redaction, optional view revision and ConfigEditor commit | Existing profile/configuration owner supplies layers and performs one complete candidate commit; a service-owned revision projection observes the form | Client view revision and file hash protect different conflicts. Replace resets live fields while retaining ordinary fields. Neither adds a whole-runtime transaction. |
 | Management | Accepted install work belongs to PluginManager, not the waiting connection | Generated `PluginManager` calls the existing operations/session/toolchain and active request table | Inspection, hash checks, build approval and preparation share one admitted task. Disconnecting a waiter does not cancel installation. Explicit cancel joins work; updating installed code requires restart. |
-| Remote and carrier | Context/reference ownership, invocation, streams, events and attachments | Existing Registry/Gateway retain authority; ASP.NET/HttpClient carry the supported native subset | JSON/NDJSON and base64 are current adaptations. Peer, uplink, event and attachment gaps require their own implementation and cross-end evidence. |
+| Remote and carrier | Context/reference ownership, invocation, streams, events and attachments | Registry/Gateway own admission and dispatch; the shared Connection owns HTTP unary and WebSocket mux exchange | Reverse Context, owned-value settlement, Peer/scope routing, selected events, uplink/downlink and binary attachments use these owners. Explicit forwarding selects exposed events; a connection does not own installation tasks. NDJSON and base64 are not the standard stream/attachment route. |
 | Artifact update | Installed selection and current activation have separate lifetimes | Stable deployment directories, shared bundle/ALC and existing restart policy | Saving V2 does not change V1's running descriptors/codecs. Unload request, collection and deletion remain separate. |
 
 Ordinary roots and selected Remote services share one declaration artifact,
@@ -62,9 +64,10 @@ The same authored DTO can be an ordinary root and a Remote argument/result. Expl
 definitions must match complete assembly-qualified identities, each model's identity is checked,
 and references do not enlarge the primary model's roots. Missing, conflicting or unsupported
 definitions are refused. External signatures retain their metadata provenance; opaque references
-cannot supply missing source facts, and no provider DLL is loaded to fill them. This does not
-establish correspondence to an arbitrary implementation DLL or complete the broader
-Remote/Schema/TS reference-model and generic DTO backends.
+cannot supply missing source facts, and no provider DLL is loaded to fill them. The same explicit
+reference composition now feeds supported Remote, Schema and Web projections. It does not
+establish correspondence to an arbitrary implementation DLL or enable generic DTO emission
+and other refused shapes.
 
 The [pipeline contract](development.md#model-pipeline-contract) identifies stage owners and the
 retired extraction, wire-artifact and conformance-bridge paths. An incomplete port cannot define
@@ -74,8 +77,9 @@ current contract decisions do not establish completed reconstruction validation;
 results remain bound to the source and package batches in [validation](validation.md).
 
 Roslyn, STJ, MSBuild/NuGet and the existing transport mechanics remain the selected tools.
-This continuation introduces no new RPC, schema or DI dependency. A complete type graph,
-all model backends and rich protocol interoperability remain separate open responsibilities.
+This continuation introduces no new RPC, schema or DI dependency. Remaining backend shapes
+and candidate-specific consumer acceptance are recorded separately from implemented runtime
+mechanisms; see the support boundaries in [authoring](authoring.md).
 
 ## ADR 001: one explicit execution domain
 
