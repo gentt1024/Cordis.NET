@@ -6,7 +6,7 @@
 
 使用 .NET 10 和所选批次 global.json 指定的 SDK；当前源码使用 10.0.111。从发行或[验证回执](validation.zh.md#当前候选索引)选择精确 Cordis.NET 版本与 feed。alpha5 发布前，使用该回执提供的隔离候选 feed。即使本地 CI 包文字版本相同，也不要与已发布 alpha.4 混用。
 
-将下方 <selected-version> 和 <feed> 替换为该批次的精确版本及 NuGet 源。公开发行可以使用 https://api.nuget.org/v3/index.json；未发布批次需使用随附的本地 feed。这些是占位符，不要求发布或重命名包。
+将下方 `<selected-version>` 和 `<feed>` 替换为该批次的精确版本及 NuGet 源。公开发行可以使用 https://api.nuget.org/v3/index.json；未发布批次需使用随附的本地 feed。这些是占位符，不要求发布或重命名包。
 
 ## 运行普通插件
 

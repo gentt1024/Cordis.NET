@@ -34,12 +34,12 @@
 
 | 阶段 | 输入 → 输出 | 所有者 | 拒绝边界 | 退出路径 |
 |---|---|---|---|---|
-| 选择与提取 | 有效编译输入及显式普通根和／或 service 选择 → 声明事实、引用图与诊断 | Source reader 与 `extract-model` | 无效根、不可用语法、重复身份或缺失必需事实；分析诊断不等于所有后端都必须拒绝 | 只输出 `$(AssemblyName).cordis.model.json`；退出旧 `extract` 入口与独立 wire 制品 |
+| 选择与提取 | 有效编译输入及显式普通根和／或 service 选择 → 声明事实、引用图与诊断 | Source reader 与 `extract-model` | 无效根、不可用语法、重复身份或缺失必需事实；分析诊断不等于所有后端都必须拒绝 | 只输出 `$(AssemblyName).cordis.model.json`；普通根不要求 Remote 声明 |
 | 校验与组合 | 当前保存事实及可选显式引用模型 → 已校验身份与可达定义 | Model reader／composition | 输入不完整或不一致、身份不符、定义缺失／冲突；引用不增加主模型 roots | 拒绝后重新提取；不保留旧格式 reader、转换器或从 DLL 猜补事实 |
-| 按用途解释 | 共同事实加明确后端政策 → 可重新计算的内部投影 | 声明解释器与所选后端 | 不支持的行为由消费后端拒绝，不从分析事实中静默删除 | 替换独立的作者模型语义解释；内部投影不是第二份持久合同 |
-| 绑定 Host | Remote 事实、作者实际实现与显式 STJ metadata → 类型化 binding 和运行 descriptor | Remote generator；Registry／Gateway 持有发布与调用寿命 | 既有 Host 合同、声明漂移与不可用运行能力；独立 caller 限制不自动禁用 Host | 保留正确绑定、取消与撤销行为；删除旧双制品 conformance 桥 |
+| 按用途解释 | 共同事实加明确后端政策 → 可重新计算的内部投影 | 声明解释器与所选后端 | 不支持的行为由消费后端拒绝，不从分析事实中静默删除 | 内部投影按所选后端重新计算，不另存为第二份合同 |
+| 绑定 Host | Remote 事实、作者实际实现与显式 STJ metadata → 类型化 binding 和运行 descriptor | Remote generator；Registry／Gateway 持有发布与调用寿命 | 既有 Host 合同、声明漂移与不可用运行能力；独立 caller 限制不自动禁用 Host | 绑定保留取消与撤销；声明漂移与当前编译核对 |
 | 生成消费者 | 同一保存事实及选定目录／数据／客户端政策 → 对应后端已支持范围内的目录、DTO／STJ 或 .NET／TS 输出 | 各用途 emitter | caller 无法重建必需数据／serializer 行为时拒绝该投影，不复制作者业务代码 | 保留 pre-`CoreCompile` 生成及无 Provider 实现引用的 caller；普通根不要求 Remote 注册 |
-| 构建与交付 | 当前源码、模型及生成结果 → 包与消费者证据 | MSBuild targets、包检查及既有消费者门禁 | 生成失败删除拥有的旧输出；Clean 与增量构建仍是可观察合同 | 只打包 `cordis/typert/$(AssemblyName).cordis.model.json`；退出 `CordisTypertDeclarationModelPath` 及旧模型路径 |
+| 构建与交付 | 当前源码、模型及生成结果 → 包与消费者证据 | MSBuild targets、包检查及既有消费者门禁 | 生成失败删除拥有的旧输出；Clean 与增量构建仍是可观察合同 | 只打包 `cordis/typert/$(AssemblyName).cordis.model.json`；显式模型／引用输入决定生成 |
 
 下表列出现行支持形状，完成检查见[验证索引](validation.zh.md#当前候选索引)。历史重建检查点不定义当前剩余工作。
 

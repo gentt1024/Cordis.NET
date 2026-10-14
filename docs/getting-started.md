@@ -6,7 +6,7 @@
 
 Use .NET 10 and the SDK selected by the chosen batch's global.json. This source checkout uses 10.0.111. Pick an exact Cordis.NET package version and feed from its release or [validation receipt](validation.md#current-candidate-index). Before alpha5 is published, use the isolated candidate feed supplied with that receipt. Do not mix its packages with published alpha.4 merely because a local CI package carries the same version text.
 
-Replace <selected-version> and <feed> below with that batch's exact version and NuGet source. A public release can use https://api.nuget.org/v3/index.json; an unpublished batch requires its supplied local feed. These are placeholders, not a request to publish or rename a package.
+Replace `<selected-version>` and `<feed>` below with that batch's exact version and NuGet source. A public release can use https://api.nuget.org/v3/index.json; an unpublished batch requires its supplied local feed. These are placeholders, not a request to publish or rename a package.
 
 ## Run an ordinary plugin
 
