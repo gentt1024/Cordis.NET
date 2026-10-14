@@ -242,7 +242,7 @@ NJsonSchema 是构建期 DTO 生成候选，需实际 Schema dialect 与生成 s
 3. 证明一条仅包引用 .NET 链：C# 作者声明 → 模型 → 发布合同/客户端制品 → 注册 → 实际 carrier 上类型化调用 → provider/definition 撤销与重试。消费者使用生成方法，不能手写 endpoint 字符串/JSON，不能引用 provider 实现。JIT 与静态 AOT 门禁不依赖 Node/TypeScript；覆盖脱敏、额外字段/参数、provider 缺失/故障、并发 invalidation 及保留回调的晚到结果。
 4. 从同一模型独立验证按需 TS/Web 输出。Scope/lookup、流、binary 和取消各用固定生产场景闭环；`describe` 成功不能关闭这些行。在精确集成源码上执行适用的 Windows/Linux/包/平台门禁。
 
-该顺序承接既有任务表，不另建总规划。完整模型/元数据发布、丰富 Context/owned-value 图、Peer/uplink/events、binary attachment 及 PluginManager/Settings/客户端管理生成合同消费仍是原使命缺口。产品替换接受与 FSM 权限/basis/receipt 继续属于产品。WPF、Avalonia、Godot .NET 与 Blazor 是目标消费者，但目标框架、analyzer host、浏览器及 export 兼容性仍需具名证据。
+该顺序承接既有任务表，不另建总规划。完整模型/元数据发布、丰富 Context/owned-value 图、Peer/uplink/events、binary attachment 及 PluginManager/Settings/客户端管理生成合同消费仍是原使命缺口。应用替换接受和业务授权继续由应用承担。WPF、Avalonia、Godot .NET 与 Blazor 是目标消费者，但目标框架、analyzer host、浏览器及 export 兼容性仍需具名证据。
 
 本审查仅修改文档，未合并、修改运行/API、安装依赖或产生新的平台验收。原范围只追加记录，既有验收保持不变。文档检查不能证明建议中的无 Node .NET 消费链或合并后的 CLR/Typert 行为。
 
@@ -535,11 +535,15 @@ CLR 包消费者新增一次 Prepare/Publish 后的新进程及新装载实例�
 
 | 入口 | 可观察差距或未解决的证据 | 完成证据 |
 |---|---|---|
-| 冻结标准浏览器／应用消费 | Web 事件开发批以独立包制品通过实际内置 Chromium 的管理、Settings、emit/waterfall 和来源恢复消费。 | 最终冻结包须重新绑定证据；完整应用关闭／重启走查仍需补齐。a11cb73／4f2e268 历史结果及 e44bd35 完整 CI 分开保留。 |
+| 冻结标准浏览器／应用消费 | 运行 38509755930 的 Windows 原始包已通过新隔离 .NET／TS 及真实 Chromium 的管理、Settings、Guid 事件和来源撤回／重装配。Host Cordis DLL 哈希与包字节相符。 | 仍须完成持久应用关闭／重启走查。该浏览器夹具的安装准备与文档打开仍为注入；此前批次保留各自身份。 |
 | HMR reconciliation | 保留的诊断二进制复现第三次变更超时：首次表达式耗时 12.052 秒，随后正常发布错误。当前源码重建通过，引擎配置回调之前耗时 5.043 秒。 | 初始化／JIT／资源等待的具体归因尚未证明；本次失败未观察到队列丢失。仍需维护者作风险裁决，不能标记为环境失败。 |
-| 保存模型 Web 事件 | 共享事件选择和 emitter 由正常 build/pack 接受保存主／引用事实；独立 .NET/TS 和开发包真实浏览器 emit/waterfall 通过，生命周期断言保留。 | 分支 a66b784、实际检出 7893ed59 已关闭实现及完整 CI 门禁缺口。冻结 CI 包的浏览器验收仍属于独立应用行。 |
+| 保存模型 Web 事件 | 共享事件选择和 emitter 由正常 build/pack 接受保存主／引用事实；独立 .NET/TS 和开发包真实浏览器 emit/waterfall 通过，生命周期断言保留。 | 实现及完整 CI 门禁在 a6cf07b、实际检出 5ab3ec2 继续保持关闭，包含 Guid。同一 Windows CI 包的真实浏览器证据见应用行。 |
 | 普通 C# 作者体验 | 首次 MSBuild design-time 输入、STJ 编译、Clean／冷构建和漂移检查通过。本次 CI 不含 live IDE 的源码可见性／调试会话。 | 单列普通作者工作流证据。具名 UI 框架接入继续后置，不作为 alpha5 阻断。 |
 | Settings 原生桌面打开 | provider／controller 和生成式调用通过；注入 opener 不证明每个系统的实际桌面启动。 | 支持系统的桌面打开证据与自动化请求语义分开记录。 |
 | 正式制品与公共内容收口 | CI 包属于合并检出身份，不是新批准的 alpha5 发布身份。当前文档需要修正过时实现状态。 | 保持当前公共源码／文档／包内容独立；获授权后构建验证新发行身份并发布封存制品，不改写历史或覆盖旧身份。 |
 
 [独立后端处置表](#alpha5-独立后端处置)已逐项处理所列限制。事件收口保留当前公开选择、Connection 和所有权合同，不新增依赖。[运行 38497878162](https://github.com/gentt1024/Cordis.NET/actions/runs/38497878162) 的十二个作业全部通过，对应分支 a66b784、实际合并检出 7893ed59。[回执](../verification/alpha5-web-events-ci-2026-10-14/evidence.json) 独立于 e44bd35 记录本次平台证据。浏览器／应用、作者体验、原生打开、HMR 裁决和发行身份仍是分别验收的出口。
+
+### Guid 完整 CI 与剩余发行出口，2026-10-14
+
+默认 Guid 投影与保存 Web 事件生成的实现及完整 CI 项已在 `a6cf07b` 关闭，实际检出为 `5ab3ec2`，[运行 38509755930](https://github.com/gentt1024/Cordis.NET/actions/runs/38509755930)。[验证记录](validation.zh.md#guid-与保存-web-事件完整-ci2026-10-14) 绑定原始包，并与本地开发结果分开。接下来只完成已有有限出口：这份完整 CI 包的真实浏览器与中立应用消费、普通真实 IDE／调试和默认桌面打开、有界 HMR 诊断／风险处置、公共内容一致性及另行授权的正式发行身份。本次关闭不要求新增模型世代、类型盘点、框架集成或依赖。

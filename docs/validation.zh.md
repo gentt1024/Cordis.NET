@@ -609,3 +609,13 @@ e44bd35 之后的本地续建接通了保存模型事件生成入口。[回执](
 既有 Platform 事件用例 14 项通过；当前源码重建的 Extensions 113 项通过。公共 API 未变，八个改动 C# 文件的四阶段格式检查一致，中英文文档／包 README 检查通过。一次夹具格式构建失败已纠正并保留。本批不宣称完整 Windows／Linux 门禁或新 AOT 验收。
 
 有界 HMR 诊断先用保留的计时二进制复现一次超时（112 通过、1 失败）：第三次刷新已入场并读完 patch，首次表达式占用 12.052 秒后发布错误。当前源码重建通过既有 evaluator 配置回调增加计时：首次求值在回调之前耗时 5.043 秒，之后 0.114 秒；恢复和所有者清理完成，其余求值约一毫秒。原十秒等待、断言、并发及重试策略均未改变。用例完成，hang collector 没有生成 dump。这将观察到的延迟缩小至冷 evaluator 准备段，但没有执行栈来区分 JIT、初始化或资源等待。剩余风险是负载下冷表达式准备可能超过 reconciliation 测试预算，须保留给维护者裁决；后续通过和最新托管绿色均不能证明仅属环境原因或关闭历史失败。
+
+## Guid 与保存 Web 事件完整 CI，2026-10-14
+
+[运行 38509755930](https://github.com/gentt1024/Cordis.NET/actions/runs/38509755930) 的第 1 次尝试全部十二个作业通过，分支为 `a6cf07b708fc7b3b1cf18ff45440310c33a52b89`。PR 实际合并检出为 `5ab3ec2bf67f3409c62f5e8ecb399378ccafcb81`，base 为 `3342a967f4e57206bec272684a40a437fc051b77`。默认 Guid 投影的完整 CI 项关闭，保存 Web 事件继续保持关闭。两平台 runtime 完成包／AOT 和 authoring 检查，八个固定上游分片及两个用例并集汇总成功。
+
+[回执](../verification/alpha5-guid-ci-2026-10-14/evidence.json) 记录作业与归档身份。本地下载了 Windows 包与证据归档，重算 SHA-256 与 GitHub 一致。两份原始验证报告均为 `requested-checks-passed`，SDK 10.0.111，执行期间源码未变。四份原始 TRX 合计 907 例通过。十八个包／符号包的 nuspec 均记录检出 `5ab3ec2` 和版本 `0.2.0-alpha.4`。独立审查另行下载了 Linux 归档，报告 904 例通过、三个既定 Windows 专用用例未执行。本地回执明确归属，未重复 Linux 归档审计。
+
+这批原始 CI 字节与本地 `0.2.0-alpha.5.guid.20261014.1` 开发包分开。CI 包必须使用专属 feed 和还原缓存，避免混入已发布或较早的同号包；它们不是正式 alpha5 包。此前本地浏览器证据保留原批次身份。真实 IDE／调试、默认桌面打开、完整应用关闭／重启及 HMR 风险处置仍分别验收。当前公共文档使用领域中立表述，已有归档内容与历史证据保留原貌；文档修正不触发另一轮二进制门禁。
+
+随后，这批 Windows CI 原始包通过既有 `--management-only` 隔离消费入口，使用新的 feed／缓存输入。生成 .NET JIT 和严格 TS 实际调用通过，包含保存事件的 pack／增量／引用拒绝／恢复／Clean 检查。实际内置 Chromium 消费这些生成资产，通过 Guid 事件请求／回复、Settings、管理、adapter 变化、next/undefined/null、owned 结算及来源撤回／重装配。Host 加载的四个 Cordis DLL 与原始 nupkg 字节相符；回执绑定这些 DLL、生成浏览器资产和 PASS 截图。Settings／安装夹具仍注入 opener／准备步骤。session 已释放，临时 Host／代理进程已停止；这不是持久应用重启测试。本次浏览器补验未重复 AOT 或完整门禁。

@@ -6,7 +6,7 @@ Cordis.NET 忠实实现固定提交中 DSH 维护的 Cordis。仓库范围包含
 
 项目目标是忠实、地道的 .NET port。实现依据固定上游行为和有理由的平台适配；历史试验不构成另一套独立框架规范。合同修正和兼容决策遵循[上游忠实性要求](docs/compatibility.zh.md#上游忠实性要求)。
 
-当前提供生命周期与注入、Profile/Bundle/Patch 合成、运行会话协调、配置引用、插件启停与部署协调，以及可选的 CLR、Generic Host 和 JavaScript 适配。源码增加 typed 字段组合、有序配置编辑与 reset、显式声明导出、NuGet/SDK 包工具链、ASP.NET Core 管理接口、应用 CLI 命令和可复用 TypeScript 客户端模块。初始应用与作者能力已随 `0.2.0-alpha.3` 发布。当前源码修正标准 Settings，并接通生成 PluginManager、选定通知及原生模型消费者，见[管理迁移](docs/management-remote-migration.zh.md)。这些续建改动需要新的后续包版本身份；源码版本仍为 `0.2.0-alpha.4`。本地验收与尚未执行的发布检查见[验证记录](docs/validation.zh.md)，平台边界见[兼容性说明](docs/compatibility.zh.md)。Agent/LLM 业务、RSI 目标和 FSM 领域逻辑由产品承担。
+当前提供生命周期与注入、Profile/Bundle/Patch 合成、运行会话协调、配置引用、插件启停与部署协调，以及可选的 CLR、Generic Host 和 JavaScript 适配。源码增加 typed 字段组合、有序配置编辑与 reset、显式声明导出、NuGet/SDK 包工具链、ASP.NET Core 管理接口、应用 CLI 命令和可复用 TypeScript 客户端模块。初始应用与作者能力已随 `0.2.0-alpha.3` 发布。当前源码修正标准 Settings，并接通生成 PluginManager、选定通知及原生模型消费者，见[管理迁移](docs/management-remote-migration.zh.md)。这些续建改动需要新的后续包版本身份；源码版本仍为 `0.2.0-alpha.4`。本地验收与尚未执行的发布检查见[验证记录](docs/validation.zh.md)，平台边界见[兼容性说明](docs/compatibility.zh.md)。应用专属的业务规则和领域政策由消费应用承担。
 
 Cordis.NET 由独立社区维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。
 
