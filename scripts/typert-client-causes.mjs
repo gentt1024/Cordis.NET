@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 
 // Exercise a generated unary method through its public Connection transport override.
 export async function verifyClientCauses(createRemote, TypertConnection, endpoint, args) {
-  for (const cause of [new Error('local retirement'), {code: 'local/retired'}, null, undefined, false, 0, 'local']) {
+  for (const cause of [new Error('local retirement'), {code: 'local/retired'}, Object.create(null), null, undefined, false, 0, 'local']) {
     for (const cancelled of [false, true]) {
       const cancellation = new AbortController()
       let calls = 0

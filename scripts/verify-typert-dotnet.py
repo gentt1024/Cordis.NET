@@ -13,7 +13,7 @@ import threading
 import xml.etree.ElementTree as ET
 import zipfile
 
-from typert_declaration_consumer import verify_declaration_consumer, verify_referenced_data_consumer, verify_data_consumer
+from typert_declaration_consumer import verify_declaration_consumer, verify_referenced_data_consumer, verify_data_consumer, pack_external_data, verify_web_contracts
 from typert_management_consumer import verify_management_consumer
 
 
@@ -30,6 +30,8 @@ def main():
         help="Run only standard generated management and notification package consumers.")
     parser.add_argument("--data-references-only", action="store_true",
         help="Run only ordinary DTO projections composed from explicit referenced models.")
+    parser.add_argument("--web-contracts-only", action="store_true",
+        help="Run only directional Web contracts and the runtime numeric metadata consumer.")
     parser.add_argument("--saved-remote-only", action="store_true",
         help="Run only the saved declaration model and real unary Remote package consumer.")
     options = parser.parse_args()
@@ -120,6 +122,12 @@ def main():
     try:
         composition = f'<PackageReference Include="Cordis.NET.Composition" Version="{version}"/>'
         clr = f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>'
+        if options.web_contracts_only:
+            external = pack_external_data(root / "tests/fixtures/DeclarationModel", feed, dotnet, composition, run, project)
+            verify_web_contracts(root, feed, output, version, dotnet, composition, run, project, hosted, external[2])
+            provider_referenced = False
+            status = "requested-checks-passed"
+            return
         if options.saved_remote_only:
             sdk = run("saved-remote-selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
             compiler = source / "cache/cordis.net.composition" / version / "tools/net10.0/typert/Cordis.Typert.Compiler.dll"
@@ -416,7 +424,7 @@ def main():
             "referencedWebEvidence": "referenced-web-evidence.json" if (output / "referenced-web-evidence.json").exists() else None,
             "aotRequested": options.aot, "declarationsOnly": options.declarations_only,
             "managementOnly": options.management_only, "dataReferencesOnly": options.data_references_only,
-            "savedRemoteOnly": options.saved_remote_only}, indent=2) + "\n", encoding="utf-8")
+            "savedRemoteOnly": options.saved_remote_only, "webContractsOnly": options.web_contracts_only}, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

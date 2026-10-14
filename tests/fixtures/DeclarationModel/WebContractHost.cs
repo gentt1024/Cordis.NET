@@ -126,7 +126,7 @@ server.MapCordisRemote(
     "/remote",
     connection,
     (_, endpoint) => Task.FromResult(
-        endpoint.StartsWith("webContract/", StringComparison.Ordinal) ||
+        endpoint == "remote.mux" || endpoint.StartsWith("webContract/", StringComparison.Ordinal) ||
         endpoint.StartsWith("webNumeric/", StringComparison.Ordinal)));
 server.MapPost("/stop", () => server.Lifetime.StopApplication());
 await server.StartAsync();

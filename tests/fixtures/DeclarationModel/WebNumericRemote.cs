@@ -91,7 +91,7 @@ public partial class WebNumericRemote
     [RemoteMethod("echo")]
     public Task<NumericDefinition> EchoAsync(NumericDefinition value) => Task.FromResult(value);
 
-    [RemoteMethod("stream")]
+    [RemoteMethod("stream", Stream = true)]
     public async IAsyncEnumerable<NumericDefinition> StreamAsync(
         NumericDefinition value,
         [EnumeratorCancellation] CancellationToken cancellationToken)

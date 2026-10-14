@@ -42,7 +42,6 @@ public sealed class ClrAdmissionTests
             });
             var oldIdentity = root.Get<string>("candidate-identity");
             ClrReplacementCandidate? escaped = null;
-            IPlugin? prepared = null;
             TypertContribution? read = null;
             var switched = false;
             var rejection = new InvalidOperationException("Application refused candidate.");
@@ -57,12 +56,11 @@ public sealed class ClrAdmissionTests
                 {
                     switched = true;
                     Assert.Throws<ObjectDisposedException>(() => escaped!.GetContribution("one"));
-                    Assert.Same(prepared, pairs[old]);
                     await oldRegistration.DisposeAsync();
                     await active!.DisposeAsync();
                     await root.RunAsync(async context =>
                     {
-                        active = context.Plugin(prepared!);
+                        active = context.Plugin(pairs[old]);
                         await active.WaitAsync();
                     });
                 },
@@ -76,8 +74,6 @@ public sealed class ClrAdmissionTests
                     Assert.Equal(oldIdentity, root.Get<string>("candidate-identity"));
                     Assert.NotNull(registry.GetPackage(previous!.Package));
                     Assert.Null(candidate.GetContribution("inactive"));
-                    prepared = candidate.GetPlugin("one");
-                    Assert.Same(prepared, candidate.GetPlugin("alias"));
                     await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.DisposeAsync().AsTask());
                     await Assert.ThrowsAsync<InvalidOperationException>(() =>
                         resolver
@@ -94,7 +90,7 @@ public sealed class ClrAdmissionTests
                 },
                 cancellation.Token));
             Assert.NotNull(escaped);
-            Assert.Throws<ObjectDisposedException>(() => escaped.GetPlugin("one"));
+            Assert.Throws<ObjectDisposedException>(() => escaped.GetContribution("one"));
             Assert.Same(other, await resolver.ResolveAsync("other", uri));
             if (accept)
             {
@@ -125,6 +121,7 @@ public sealed class ClrAdmissionTests
             Assert.True(Assert.Single(resolver.Unloads).UnloadRequested);
             await oldRegistration.DisposeAsync();
         });
+        await root.DisposeAsync();
     }
 
     private static ClrModuleDefinition Definition(string version, string entry) =>

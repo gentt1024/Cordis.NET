@@ -458,7 +458,6 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
                     {
                         var view = new ClrReplacementCandidate(
                             candidates.Keys,
-                            name => candidates[name].Plugin!,
                             name => GetArtifact(candidates[name].Bundle, DefinitionExport(replacements[name])));
                         try
                         {

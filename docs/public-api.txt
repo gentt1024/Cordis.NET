@@ -2317,7 +2317,6 @@ Cordis.Clr: Cordis.Clr.ClrModuleResolver : System.Object [Cordis.Composition.IMo
   Method Void Register(System.String, Cordis.Clr.ClrModuleDefinition) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=specifier:NotNull/NotNull ;definition:NotNull/NotNull  return=NotNull/NotNull
 Cordis.Clr: Cordis.Clr.ClrReplacementCandidate : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Cordis.Composition.TypertContribution GetContribution(System.String) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=specifier:NotNull/NotNull  return=Nullable/Nullable
-  Method Cordis.IPlugin GetPlugin(System.String) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=specifier:NotNull/NotNull  return=NotNull/NotNull
   Property System.Collections.Generic.IReadOnlyList`1[System.String] Specifiers attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False
 Cordis.Clr: Cordis.Clr.ClrUnloadObservation : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
   Property Boolean IsCollected attrs= NotNull/Unknown get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False

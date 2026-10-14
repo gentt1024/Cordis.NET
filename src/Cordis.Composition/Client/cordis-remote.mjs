@@ -19,6 +19,10 @@ export class RemoteStreamCarrierError extends Error {
 const record = value => typeof value === 'object' && value !== null && !Array.isArray(value);
 const failure = (code, message, details, options) => ({ok:false, error:new RemoteError(code, message, details, options)});
 const withdrawn = () => failure('gateway/internal', 'The Remote contribution was withdrawn.');
+const carrierMessage = error => {
+  try { return String(error); }
+  catch { return 'Remote carrier failed.'; }
+};
 
 // Fixed DSH typert/protocol json-value: allow only lossless JSON and top-level absence.
 function uplinkValue(value, ancestors = new Set()) {
@@ -396,7 +400,7 @@ export function createClient(connection, methods) {
           combined.throwIfAborted();
           return result;
         } catch (error) {
-          return failure(combined.aborted ? 'gateway/cancelled' : 'gateway/internal', String(error), {}, {cause:error});
+          return failure(combined.aborted ? 'gateway/cancelled' : 'gateway/internal', carrierMessage(error), {}, {cause:error});
         }
       })());
     };

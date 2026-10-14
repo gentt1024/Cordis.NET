@@ -9,16 +9,13 @@ public sealed class ClrReplacementCandidate
 {
     private readonly object gate = new();
     private readonly IReadOnlyList<string> specifiers;
-    private Func<string, IPlugin>? plugin;
     private Func<string, TypertContribution?>? contribution;
 
     internal ClrReplacementCandidate(
         IEnumerable<string> specifiers,
-        Func<string, IPlugin> plugin,
         Func<string, TypertContribution?> contribution)
     {
         this.specifiers = Array.AsReadOnly(specifiers.ToArray());
-        this.plugin = plugin;
         this.contribution = contribution;
     }
 
@@ -29,19 +26,9 @@ public sealed class ClrReplacementCandidate
         {
             lock (gate)
             {
-                ObjectDisposedException.ThrowIf(plugin is null, this);
+                ObjectDisposedException.ThrowIf(contribution is null, this);
                 return specifiers;
             }
-        }
-    }
-
-    /// <summary>Get the prepared plugin without activating it. Aliases return the same instance.</summary>
-    public IPlugin GetPlugin(string specifier)
-    {
-        lock (gate)
-        {
-            ObjectDisposedException.ThrowIf(plugin is null, this);
-            return plugin(specifier);
         }
     }
 
@@ -60,7 +47,6 @@ public sealed class ClrReplacementCandidate
     {
         lock (gate)
         {
-            plugin = null;
             contribution = null;
         }
     }

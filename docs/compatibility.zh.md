@@ -287,7 +287,7 @@ ScopedLayers 从传入的注册 Context 获取可见性和清理所有权。读�
 
 ## 候选准入与本地失败原因，2026-10-15
 
-固定 DSH HMR 先准备实际 import 的替代插件，再改变注册；公开 protocol descriptor 支持复用 codec。CLR `ReplaceAsync` 在现有 mutation 边界内、切换回调之前提供 `admitCandidate`。`ClrReplacementCandidate` 暴露注册名、已准备插件及缓存贡献，包含未激活出口和别名。它是回调期借用视图，没有新增事务权威。拒绝会退出候选，旧合同尚未撤回。准入可能执行作者工厂和惰性 Schema，不能回滚任意作者副作用。关闭视图阻止继续读取，不能撤销已经返回的 CLR 引用。这是 CLR 组合适配，不是上游 ABI 兼容算法。
+固定 DSH HMR 先准备实际 import 的替代插件，再改变注册；公开 protocol descriptor 支持复用 codec。CLR `ReplaceAsync` 在现有 mutation 边界内、切换回调之前提供 `admitCandidate`。`ClrReplacementCandidate` 暴露注册名及缓存贡献，包含未激活出口和别名。它是回调期借用视图，没有新增事务权威。拒绝会退出候选，旧合同尚未撤回。准入可能执行作者工厂和惰性 Schema，不能回滚任意作者副作用。关闭视图阻止继续读取，不能撤销已经返回的 CLR 引用。这是 CLR 组合适配，不是上游 ABI 兼容算法。
 
 固定 `packages/api/gateway/src/client/index.ts` 对取消保留捕获的 cause，对普通 carrier 失败不保留。共享 JS 客户端现在对两者都保留实际捕获值。取消 cause 是移植纠正，普通 carrier cause 是明确增加的进程内观察能力。分类仍为 `gateway/cancelled` 或 `gateway/internal`。`RemoteError` 接受标准 `ErrorOptions`；`cause` 不可枚举，不放入 details，不从 wire 重建，也不增加重试或重放。原有准备、撤销和流边界保持不变。
 
