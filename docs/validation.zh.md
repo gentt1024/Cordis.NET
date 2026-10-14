@@ -619,3 +619,13 @@ e44bd35 之后的本地续建接通了保存模型事件生成入口。[回执](
 这批原始 CI 字节与本地 `0.2.0-alpha.5.guid.20261014.1` 开发包分开。CI 包必须使用专属 feed 和还原缓存，避免混入已发布或较早的同号包；它们不是正式 alpha5 包。此前本地浏览器证据保留原批次身份。真实 IDE／调试、默认桌面打开、完整应用关闭／重启及 HMR 风险处置仍分别验收。当前公共文档使用领域中立表述，已有归档内容与历史证据保留原貌；文档修正不触发另一轮二进制门禁。
 
 随后，这批 Windows CI 原始包通过既有 `--management-only` 隔离消费入口，使用新的 feed／缓存输入。生成 .NET JIT 和严格 TS 实际调用通过，包含保存事件的 pack／增量／引用拒绝／恢复／Clean 检查。实际内置 Chromium 消费这些生成资产，通过 Guid 事件请求／回复、Settings、管理、adapter 变化、next/undefined/null、owned 结算及来源撤回／重装配。Host 加载的四个 Cordis DLL 与原始 nupkg 字节相符；回执绑定这些 DLL、生成浏览器资产和 PASS 截图。Settings／安装夹具仍注入 opener／准备步骤。session 已释放，临时 Host／代理进程已停止；这不是持久应用重启测试。本次浏览器补验未重复 AOT 或完整门禁。
+
+## 原始 CI 包的应用与 Rider 补验，2026-10-14
+
+[补验回执](../verification/alpha5-application-closeout-2026-10-14/evidence.json) 使用运行 38509755930 的 Windows 原始包，生产源码仍为实际检出 `5ab3ec2`。未重新打包平台。隔离副本保留 ManagedApplication／ManagedPlugin 的 C# 和页面源码，将项目引用改为精确包引用；独立构建示例插件及客户端资产。实际 Chromium 完成安装、Settings 将 limit 从 1 改为 7、模块撤回／恢复和断开。正常关闭 Host 后以同一 profile 启动新进程，确认插件激活、limit 7 持久化且新所有者 revision 为 0。逻辑移除后再次重启，插件未恢复，部署文件仍保留。五个 Host Cordis DLL 与原始包字节一致。Ctrl+C 显示正常关闭，但外层 PowerShell 返回 1，未声称捕获了零退出码。
+
+默认 Settings 打开实际启动 Windows Explorer／OpenWith，用户确认窗口出现后关闭。没有选择编辑器或观察文档内容，因此只证明原生命令交接和窗口出现。最初夹具额外禁用反射序列化造成安装失败，去除与原示例不符的覆盖后使用独立 profile；失败 profile、部署残留和一次过早重建导致的文件锁失败均保留。
+
+Rider 2026.2 首次打开时，Remote 属性和生成类型均未识别。实际还原清单及包 nuspec 证明 IDE 继承的 NUGET_PACKAGES 覆盖了 NuGet.Config 缓存配置，读取了 `ecfc5ee` 的同号已发布包。隔离项目和准备脚本增加 RestorePackagesPath 后，Rider 自动还原选中 `5ab3ec2` 原始包。用户确认未手工构建时三个符号均被识别，随后断点命中，并输出 Example.Author 与全零 Guid。首次失败保留；修正后通过不改写该失败，也不代表其他 IDE 已验收。未清理全局缓存或修改已发布包。
+
+一次原始 CI 包的冷进程 EventPipe 采样中，表达式准备为 1.199 秒、首次调用总计 1.390 秒，后续调用约 1 毫秒且恢复成功。采样定位到 Jint Engine 构造、Temporal 时区初始化、Windows 时区枚举及本地化资源读取；各栈的包含耗时重叠，不能相加。本次没有复现历史十秒超时，也不能证明历史 12.052 秒全部来自相同路径。生产代码、断言、超时和重试未变，历史风险仍待处置。本批没有重复双平台／AOT／上游完整门禁，也未形成正式 alpha5 发布身份。

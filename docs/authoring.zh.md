@@ -235,6 +235,12 @@ unary 使用固定的 `client-request`／`server-response` 封套及关联 `rpcI
 
 通过 `TypertArtifacts.GenerateClient(contribution)` 生成 `.mjs` 与 `.d.mts`，同时将 `TypertClientRuntime.Module` 保存为同目录的 `cordis-remote.mjs`，将 `TypertClientRuntime.Declaration` 保存为 `cordis-remote.d.mts`。`Cordis.ClientAssets` 为标准模块统一输出这些共享资源。
 
+这条入口读取 Host 的实际 descriptor 和 STJ Schema，再使用共享客户端 emitter；它是当前受支持的导出路线，不是保存模型后端的兼容桥。它需要作者实现及其序列化元数据可用，可以在应用的导出步骤运行，不要求每次客户端调用重新生成。独立保存模型后端则只读取声明事实和显式引用，不执行作者构造器、访问器或 converter。因此，独立后端拒绝一种 DTO 不代表 Host 或 descriptor 导出也必须拒绝；后者仍受实际 Schema 和 emitter 支持范围约束，不能据此承诺任意 CLR 类型。两种入口生成的客户端复用同一个 Connection 和调用合同。
+
+对于可预期的业务拒绝，作者可在现有服务边界抛出 `RemoteError`，明确提供可公开的 code、message 和可选 JSON details。Gateway 保留这些字段；普通未处理异常当前映射为 `gateway/internal` 并保留异常消息。这对应固定 DSH 的 [rpcFailure](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/index.ts)，不是自动脱敏或宿主统一异常映射服务。需要隐藏内部信息的应用应在其拥有的业务调用边界完成映射和诊断记录；外层 ASP.NET 异常中间件不能假设还能捕获已被 Gateway 转为结果的异常。这里不改变取消、装配失败或流的独立合同，也不承诺已有统一映射回调。
+
+公开的 `TypertCodec.Schema` 是输入方向投影；输出方向的 `ResultSchema` 当前为内部成员，由标准 emitter 使用。不要用输入 Schema 代替返回值 Schema，也不要反射内部成员。生成 Web 客户端的类型声明不等于对任意结果 DTO 执行完整运行时校验。原生 `DecodeOutput` 有自己的输出解码职责；它不提供给外部 Web 校验器导出输出 Schema 的入口。需要该入口的消费者必须单独确认支持范围，不能据此声称已存在公开输出 Schema API。
+
 ```typescript
 import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";
 
