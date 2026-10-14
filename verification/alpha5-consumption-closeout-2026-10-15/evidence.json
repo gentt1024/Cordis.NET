@@ -1,0 +1,617 @@
+{
+  "scope": "C01 prepared CLR contribution admission; C02 local generated unary causes; C03 runtime numeric metadata directions and real consumption. Includes preceding Q01-Q04 quality work.",
+  "implementationCommit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+  "initialImplementationCommit": "72649dd885e02bea1b1373d249193e7df803638b",
+  "qualityBaseCommit": "283a6bfa5243993370848c79aa9cc06622548843",
+  "upstreamCommit": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "localWindowsGate": {
+    "command": "python scripts/verify.py",
+    "status": "failed",
+    "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+    "cleanTree": true,
+    "sourceUnchanged": true,
+    "sdk": "10.0.111",
+    "rid": "win-x64",
+    "tests": {
+      "total": 921,
+      "passed": 920,
+      "failed": 1
+    },
+    "steps": [
+      {
+        "name": "sdk",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 1.006
+      },
+      {
+        "name": "sdk-version",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.738
+      },
+      {
+        "name": "restore",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 8.152
+      },
+      {
+        "name": "build",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 38.171
+      },
+      {
+        "name": "test",
+        "exitCode": 1,
+        "expectedExitCode": 0,
+        "seconds": 887.537
+      }
+    ],
+    "failures": [
+      {
+        "test": "Cordis.Extensions.Tests.HmrReconciliationTests.Best_effort_reconciliation_retains_eager_options_and_recovers(id: \"noop\", asynchronous: False)",
+        "message": "System.TimeoutException : The operation has timed out."
+      }
+    ],
+    "observedHmrTimingSeconds": {
+      "expressionEntry": 0.516,
+      "engineConfigured": 12.476,
+      "expressionExit": 12.568,
+      "errorPublished": 12.586,
+      "ownersDrained": 12.586,
+      "cleanupComplete": 12.635
+    },
+    "interpretation": "The complete gate failed. First optional JS expression preparation exceeded the unchanged ten-second regression wait; expression execution, error publication and owner cleanup then completed. This is evidence of the previously accepted cold-preparation latency risk, not an environment-failure claim or a passing gate.",
+    "receiptSha256": "6328ecb4c2d5875d5c6263bb76ab83351c144196dafef7b926e09a0c08fbf64a"
+  },
+  "postTestChecks": {
+    "scope": "Post-test checks only. The original complete gate remains failed.",
+    "sourceUnchanged": true,
+    "allSelectedChecksPassed": false,
+    "remainingNonTestChecksPassed": true,
+    "steps": [
+      {
+        "name": "test-map",
+        "exitCode": 1,
+        "expectedExitCode": 0,
+        "seconds": 3.768
+      },
+      {
+        "name": "jit-1",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.684
+      },
+      {
+        "name": "jit-2",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.629
+      },
+      {
+        "name": "jit-repeat-2",
+        "exitCode": 0
+      },
+      {
+        "name": "jit-3",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.623
+      },
+      {
+        "name": "jit-repeat-3",
+        "exitCode": 0
+      },
+      {
+        "name": "upgrade-jit",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.542
+      },
+      {
+        "name": "example",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.691
+      },
+      {
+        "name": "client-modules-build",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 32.108
+      },
+      {
+        "name": "client-modules-types",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 4.956
+      },
+      {
+        "name": "client-lifecycle",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.954
+      },
+      {
+        "name": "client-shared-modules",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 37.056
+      },
+      {
+        "name": "client-author-watch",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 12.93
+      },
+      {
+        "name": "cli-validate",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.295
+      },
+      {
+        "name": "cli-preview",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.289
+      },
+      {
+        "name": "cli-invocation",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 17.559
+      },
+      {
+        "name": "cli-usage",
+        "exitCode": 2,
+        "expectedExitCode": 2,
+        "seconds": 0.216
+      },
+      {
+        "name": "cli-invalid-option",
+        "exitCode": 1,
+        "expectedExitCode": 1,
+        "seconds": 0.297
+      },
+      {
+        "name": "api",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 1.602
+      },
+      {
+        "name": "typert-optional",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 12.266
+      },
+      {
+        "name": "whitespace",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "seconds": 0.222
+      }
+    ],
+    "testMapFailures": [
+      "test-map exited 1"
+    ],
+    "execution": "Executed the exact frozen verify.py statements from JIT through optional-parameter checks using its existing run/compare helpers, with a separate output directory; did not rerun or replace the failed test result.",
+    "runnerSha256": "cb800d88883c4fc0bea8d809174d0c04c72d201ebd9853d87f71907c6bb78ba2"
+  },
+  "packages": {
+    "version": "0.2.0-alpha.5.consumption.20261015.2",
+    "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+    "count": 9,
+    "layoutReadmeSymbolsAndOfflineDebugPassed": true,
+    "symbols": [
+      {
+        "package": "Cordis.Example.Greeting.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 1,
+        "sourceDocuments": 1,
+        "embeddedDocuments": 3
+      },
+      {
+        "package": "Cordis.NET.AspNetCore.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 1,
+        "sourceDocuments": 4,
+        "embeddedDocuments": 3
+      },
+      {
+        "package": "Cordis.NET.Clr.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 1,
+        "sourceDocuments": 8,
+        "embeddedDocuments": 3
+      },
+      {
+        "package": "Cordis.NET.Composition.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 3,
+        "sourceDocuments": 123,
+        "embeddedDocuments": 82
+      },
+      {
+        "package": "Cordis.NET.Core.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 1,
+        "sourceDocuments": 18,
+        "embeddedDocuments": 3
+      },
+      {
+        "package": "Cordis.NET.Extensions.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 1,
+        "sourceDocuments": 6,
+        "embeddedDocuments": 3
+      },
+      {
+        "package": "Cordis.NET.Hosting.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 1,
+        "sourceDocuments": 1,
+        "embeddedDocuments": 3
+      },
+      {
+        "package": "Cordis.NET.JavaScript.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 1,
+        "sourceDocuments": 2,
+        "embeddedDocuments": 3
+      },
+      {
+        "package": "Cordis.NET.Tool.0.2.0-alpha.5.consumption.20261015.2.nupkg",
+        "commit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+        "assemblyCount": 6,
+        "sourceDocuments": 122,
+        "embeddedDocuments": 167
+      }
+    ],
+    "offlineDebugFrame": {
+      "file": "src/Cordis.Core/Plugin.cs",
+      "line": 151,
+      "method": "Failure"
+    },
+    "sha256": {
+      "Cordis.Example.Greeting.0.2.0-alpha.5.consumption.20261015.2.nupkg": "a7880d2cf3ee5684a156da2318dd3c705fc0841b13842d285769a5458a9fa618",
+      "Cordis.Example.Greeting.0.2.0-alpha.5.consumption.20261015.2.snupkg": "109aacad05d1ad1222384121021ec591ea7981874d549fe87e171f7b6393b473",
+      "Cordis.NET.AspNetCore.0.2.0-alpha.5.consumption.20261015.2.nupkg": "43a2f574379bf2ad2b532acc2dfb229e658aceb484edecb0b90a58bc1cff981a",
+      "Cordis.NET.AspNetCore.0.2.0-alpha.5.consumption.20261015.2.snupkg": "39ad66a8aee6a5ab9030dfbca9240908c5a29af361236a90ca1c5a53b56efb2e",
+      "Cordis.NET.Clr.0.2.0-alpha.5.consumption.20261015.2.nupkg": "31a960ea9c607dc0520889d3c7c1ebb557d5e951e31b4606bc6c24366ee8b979",
+      "Cordis.NET.Clr.0.2.0-alpha.5.consumption.20261015.2.snupkg": "6f169a2b53758c0361024dd963943ac53139ad7f341863740d84d31f776503a3",
+      "Cordis.NET.Composition.0.2.0-alpha.5.consumption.20261015.2.nupkg": "1d0c558053189f11c1cdc73a0c66f3b88e714a6f8815f56a4ed118aa1b47944b",
+      "Cordis.NET.Composition.0.2.0-alpha.5.consumption.20261015.2.snupkg": "cae9cc67606ad604fba4d0b1ecabcc94a6905047ba17e56839278deae7c6e123",
+      "Cordis.NET.Core.0.2.0-alpha.5.consumption.20261015.2.nupkg": "b3b134853d497bcf2a4647da92ddb940db51237089fbb54d6a3228a2aedfb8d6",
+      "Cordis.NET.Core.0.2.0-alpha.5.consumption.20261015.2.snupkg": "071b790af057b485933552170a2d1ce2653168536b6d6761a5ffc5af73fdf563",
+      "Cordis.NET.Extensions.0.2.0-alpha.5.consumption.20261015.2.nupkg": "aeaa934c55b59f543d8e38f33cede09a43b528efc4d8293dc6c02e5da69dcd5e",
+      "Cordis.NET.Extensions.0.2.0-alpha.5.consumption.20261015.2.snupkg": "e6cacb41df9dce3984d9f3ba4e869a1d8c25c3edc261a04ac3bd0d78a8dddc61",
+      "Cordis.NET.Hosting.0.2.0-alpha.5.consumption.20261015.2.nupkg": "f250cb9c869f9c81affd16b131dd4c53db0ee6b5adbb1bfcfe8ea1d65e936275",
+      "Cordis.NET.Hosting.0.2.0-alpha.5.consumption.20261015.2.snupkg": "7cae740327ccd55e23d6fb4e45bc436a8affd9049c4110a95edfb4d24715b2c6",
+      "Cordis.NET.JavaScript.0.2.0-alpha.5.consumption.20261015.2.nupkg": "4bce42b00999f4ffa5ac8e4032d1616caa7d7fdd59f13fc8bf56ff3b0ab9b894",
+      "Cordis.NET.JavaScript.0.2.0-alpha.5.consumption.20261015.2.snupkg": "ff5908a81efb3c8360b0b5808f3948bc6cf97a6e82eb92a0d372a5905b773e7d",
+      "Cordis.NET.Tool.0.2.0-alpha.5.consumption.20261015.2.nupkg": "41edd3134381700d898a7baf28ce7553984c52c628d86f8e23c39dd3c8e28789",
+      "Cordis.NET.Tool.0.2.0-alpha.5.consumption.20261015.2.snupkg": "824fdca3c70fd5e1c6b73cf0477b4f064cdfb49219cef445f46b605926cd4404"
+    }
+  },
+  "actualPackageConsumers": {
+    "clr": {
+      "passed": true,
+      "steps": [
+        {
+          "label": "multi-assembly-PlainA-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-PrivateA-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-FirstB-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-SecondB-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-DelayedA-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-BridgeB-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-NativeFirst-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-NativeSecond-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-NativeDelayed-build",
+          "exitCode": 0
+        },
+        {
+          "label": "multi-assembly-consumer-run",
+          "exitCode": 0
+        },
+        {
+          "label": "author-1-pack",
+          "exitCode": 0
+        },
+        {
+          "label": "author-1-package-restore",
+          "exitCode": 0
+        },
+        {
+          "label": "author-1-package-publish",
+          "exitCode": 0
+        },
+        {
+          "label": "author-2-pack",
+          "exitCode": 0
+        },
+        {
+          "label": "author-2-package-restore",
+          "exitCode": 0
+        },
+        {
+          "label": "author-2-package-publish",
+          "exitCode": 0
+        },
+        {
+          "label": "author-3-pack",
+          "exitCode": 0
+        },
+        {
+          "label": "author-3-package-restore",
+          "exitCode": 0
+        },
+        {
+          "label": "author-3-package-publish",
+          "exitCode": 0
+        },
+        {
+          "label": "consumer-run",
+          "exitCode": 0
+        },
+        {
+          "label": "stable-publication-worker",
+          "exitCode": 0
+        }
+      ],
+      "scope": "Prepared same-candidate contribution admission, policy rejection before withdrawal, commit cache identity, independent assemblies/native dependencies, existing recovery and stable-publication workers."
+    },
+    "generatedRemote": {
+      "passed": true,
+      "steps": [
+        {
+          "name": "author-pack",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "invalid-author-rejected",
+          "exitCode": 1,
+          "expectedExitCode": 1
+        },
+        {
+          "name": "consumer-jit",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-runtime-build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typescript-and-http-client",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        }
+      ],
+      "scope": "Sixteen cancelled/ordinary captured-value combinations including unprintable objects; wire cause isolation; existing actual HTTP/stream/scoped and lifecycle checks.",
+      "aotRequested": false
+    },
+    "webContracts": {
+      "passed": true,
+      "steps": [
+        {
+          "name": "declaration-external-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-omitted-author-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-omitted-web-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-omitted-host-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-omitted-caller-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-omitted-dotnet-caller",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-false-author-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-false-web-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-false-host-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-false-caller-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-false-dotnet-caller",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-true-author-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-true-web-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-true-host-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-true-caller-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "web-contract-true-dotnet-caller",
+          "exitCode": 0,
+          "expectedFailure": false
+        }
+      ],
+      "calls": [
+        {
+          "name": "web-contract-omitted-static-caller",
+          "exitCode": 0,
+          "assets": {
+            "cordis-remote.d.mts": "58e66bcdd03b2d977864d9ac1f1c4c8bec95f13774d85465b6e121d80f34e563",
+            "cordis-remote.mjs": "2c6b024aeeea32d202db3ec930367d76d52671af320cbd952c89c9578667c275",
+            "remote.d.mts": "9574513578c0447d2f36cb2ec501db62bdfd8a150d6c620923d13c5ca1468772",
+            "remote.mjs": "d8be2a70ee86659eb0766953cb60ec994025f055f17697f0287e7bafb7809901"
+          }
+        },
+        {
+          "name": "web-contract-omitted-runtime-caller",
+          "exitCode": 0,
+          "assets": {
+            "cordis-remote.d.mts": "58e66bcdd03b2d977864d9ac1f1c4c8bec95f13774d85465b6e121d80f34e563",
+            "cordis-remote.mjs": "2c6b024aeeea32d202db3ec930367d76d52671af320cbd952c89c9578667c275",
+            "remote.d.mts": "c9fcee4028fd0eb6a632ff0802292e1e8293ba8892d02e8abccb3c5b098e5a85",
+            "remote.mjs": "14bab125f27901cd5cb8bc81abb8cd528d24d09ecad34d6125b8f91add3c59a8"
+          }
+        },
+        {
+          "name": "web-contract-false-static-caller",
+          "exitCode": 0,
+          "assets": {
+            "cordis-remote.d.mts": "58e66bcdd03b2d977864d9ac1f1c4c8bec95f13774d85465b6e121d80f34e563",
+            "cordis-remote.mjs": "2c6b024aeeea32d202db3ec930367d76d52671af320cbd952c89c9578667c275",
+            "remote.d.mts": "233fb3a58c1a1ed750efc34317e1675f1dcd446545c20d66ca7f837995d74e13",
+            "remote.mjs": "127e284baed16faa1d67a6838d980ec8f6ed6acd77990bf90dcbefb2ce2dfdae"
+          }
+        },
+        {
+          "name": "web-contract-false-runtime-caller",
+          "exitCode": 0,
+          "assets": {
+            "cordis-remote.d.mts": "58e66bcdd03b2d977864d9ac1f1c4c8bec95f13774d85465b6e121d80f34e563",
+            "cordis-remote.mjs": "2c6b024aeeea32d202db3ec930367d76d52671af320cbd952c89c9578667c275",
+            "remote.d.mts": "c9fcee4028fd0eb6a632ff0802292e1e8293ba8892d02e8abccb3c5b098e5a85",
+            "remote.mjs": "14bab125f27901cd5cb8bc81abb8cd528d24d09ecad34d6125b8f91add3c59a8"
+          }
+        },
+        {
+          "name": "web-contract-true-static-caller",
+          "exitCode": 0,
+          "assets": {
+            "cordis-remote.d.mts": "58e66bcdd03b2d977864d9ac1f1c4c8bec95f13774d85465b6e121d80f34e563",
+            "cordis-remote.mjs": "2c6b024aeeea32d202db3ec930367d76d52671af320cbd952c89c9578667c275",
+            "remote.d.mts": "9011552a2baee9315a0fb48b41c2c4efd1febb8f5a4a7a6e4cd4067bc96e770d",
+            "remote.mjs": "f33b1174d140295cab9228d8976430185a4e66d68f64a92280d74bc2939f39ee"
+          }
+        },
+        {
+          "name": "web-contract-true-runtime-caller",
+          "exitCode": 0,
+          "assets": {
+            "cordis-remote.d.mts": "58e66bcdd03b2d977864d9ac1f1c4c8bec95f13774d85465b6e121d80f34e563",
+            "cordis-remote.mjs": "2c6b024aeeea32d202db3ec930367d76d52671af320cbd952c89c9578667c275",
+            "remote.d.mts": "c9fcee4028fd0eb6a632ff0802292e1e8293ba8892d02e8abccb3c5b098e5a85",
+            "remote.mjs": "14bab125f27901cd5cb8bc81abb8cd528d24d09ecad34d6125b8f91add3c59a8"
+          }
+        },
+        {
+          "name": "web-contract-true-numeric-caller",
+          "exitCode": 0,
+          "assets": {
+            "cordis-remote.d.mts": "58e66bcdd03b2d977864d9ac1f1c4c8bec95f13774d85465b6e121d80f34e563",
+            "cordis-remote.mjs": "2c6b024aeeea32d202db3ec930367d76d52671af320cbd952c89c9578667c275",
+            "events.d.mts": "8c01b9f5dc5f9cb8472b5b58a5949e3f8a9bd1dec1a154ff952b1701ca0d4932",
+            "remote.d.mts": "faff141927777972005e0feb480b1864c3fdaee684e09fa05c015eee92c135c7",
+            "remote.mjs": "920ee286f1c1573e68517bb38087ac39e737e719e7fcd3dcda6d69cf88576b51"
+          }
+        }
+      ],
+      "scope": "Three static/runtime constructor-direction routes and runtime-reflection Web numeric DTO through generated TS, Gateway and real Node WebSocket. Event output verified in generated types, not a new event end-to-end run.",
+      "aotRequested": false
+    },
+    "numericSavedWebRefusal": {
+      "exitCode": 1,
+      "expectedDiagnostics": [
+        "TYPM111",
+        "TYPM103",
+        "TYPM115"
+      ],
+      "logSha256": "84c0cc44f9dd9d402effd419bf7ff2856187df040c1549678892e43f95498392"
+    }
+  },
+  "earlierEvidence": {
+    "ci": {
+      "run": "38533282314",
+      "branchCommit": "50cc463a2b28c102cdc32648eb21d650601e6dde",
+      "checkoutCommit": "7df28667d6e8e89ca19104b49d12965a8385bf4e",
+      "coversThisCandidate": false
+    },
+    "firstPackageVersion": "0.2.0-alpha.5.consumption.20261015.1",
+    "firstPackageCommit": "72649dd885e02bea1b1373d249193e7df803638b",
+    "retainedFailures": [
+      "Initial admission fixture expected the wrong schema-factory message.",
+      "New numeric stream author omitted Stream=true; corrected using existing author contract.",
+      "Initial static refusal probe selected a model rooted at the other service; re-extracted the numeric root before recording the actual metadata refusal.",
+      "Pre-fix generated failures lacked cause; unprintable captured values also exposed secondary String conversion failure."
+    ]
+  },
+  "boundaries": [
+    "No new hosted CI, Linux, AOT or upstream source shards for this candidate.",
+    "No new real-browser, IDE or desktop-opener observation; earlier evidence retains its own identity.",
+    "Reflection runtime metadata export does not replay arbitrary author context code in saved models or establish AOT support.",
+    "Schema admission retains declared wire-name matching; not complete Web case-insensitivity equivalence.",
+    "External applications still own their affected DTO/options and recovery acceptance.",
+    "No merge, release, deployment, formal version change or dependency addition."
+  ]
+}
