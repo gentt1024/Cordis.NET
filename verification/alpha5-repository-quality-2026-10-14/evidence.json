@@ -1,0 +1,366 @@
+{
+  "scope": "Q01-Q04 repository quality preparation; no production behavior, public signature, dependency, formal version or upstream-pin change.",
+  "baselineCommit": "50cc463a2b28c102cdc32648eb21d650601e6dde",
+  "toolingCommit": "6779d142fb4a230c84178087d34bba2a9d18c1d5",
+  "packageAndGuideCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+  "changesAfterRuntimeGate": [
+    "docs/development.zh.md",
+    "docs/getting-started.md",
+    "docs/getting-started.zh.md"
+  ],
+  "localRuntimeGate": {
+    "command": "python scripts/verify.py",
+    "commit": "6779d142fb4a230c84178087d34bba2a9d18c1d5",
+    "cleanTree": true,
+    "status": "requested-checks-passed",
+    "sdk": "10.0.111",
+    "rid": "win-x64",
+    "tests": {
+      "total": 911,
+      "passed": 911,
+      "failed": 0
+    },
+    "steps": [
+      {
+        "name": "sdk",
+        "exitCode": 0,
+        "seconds": 0.58
+      },
+      {
+        "name": "sdk-version",
+        "exitCode": 0,
+        "seconds": 0.172
+      },
+      {
+        "name": "restore",
+        "exitCode": 0,
+        "seconds": 3.789
+      },
+      {
+        "name": "build",
+        "exitCode": 0,
+        "seconds": 29.431
+      },
+      {
+        "name": "test",
+        "exitCode": 0,
+        "seconds": 588.46
+      },
+      {
+        "name": "test-map",
+        "exitCode": 0,
+        "seconds": 1.726
+      },
+      {
+        "name": "jit-1",
+        "exitCode": 0,
+        "seconds": 0.4
+      },
+      {
+        "name": "jit-2",
+        "exitCode": 0,
+        "seconds": 0.447
+      },
+      {
+        "name": "jit-repeat-2",
+        "exitCode": 0,
+        "seconds": null
+      },
+      {
+        "name": "jit-3",
+        "exitCode": 0,
+        "seconds": 0.428
+      },
+      {
+        "name": "jit-repeat-3",
+        "exitCode": 0,
+        "seconds": null
+      },
+      {
+        "name": "upgrade-jit",
+        "exitCode": 0,
+        "seconds": 0.382
+      },
+      {
+        "name": "example",
+        "exitCode": 0,
+        "seconds": 0.26
+      },
+      {
+        "name": "client-modules-build",
+        "exitCode": 0,
+        "seconds": 10.081
+      },
+      {
+        "name": "client-modules-types",
+        "exitCode": 0,
+        "seconds": 1.987
+      },
+      {
+        "name": "client-lifecycle",
+        "exitCode": 0,
+        "seconds": 0.87
+      },
+      {
+        "name": "client-shared-modules",
+        "exitCode": 0,
+        "seconds": 17.968
+      },
+      {
+        "name": "client-author-watch",
+        "exitCode": 0,
+        "seconds": 8.938
+      },
+      {
+        "name": "cli-validate",
+        "exitCode": 0,
+        "seconds": 0.187
+      },
+      {
+        "name": "cli-preview",
+        "exitCode": 0,
+        "seconds": 0.215
+      },
+      {
+        "name": "cli-invocation",
+        "exitCode": 0,
+        "seconds": 15.197
+      },
+      {
+        "name": "cli-usage",
+        "exitCode": 2,
+        "seconds": 0.185
+      },
+      {
+        "name": "cli-invalid-option",
+        "exitCode": 1,
+        "seconds": 0.288
+      },
+      {
+        "name": "api",
+        "exitCode": 0,
+        "seconds": 2.017
+      },
+      {
+        "name": "typert-optional",
+        "exitCode": 0,
+        "seconds": 10.93
+      },
+      {
+        "name": "whitespace",
+        "exitCode": 0,
+        "seconds": 0.137
+      }
+    ],
+    "aotRequested": false,
+    "upstreamRequested": false,
+    "logSha256": "b5e8fa6433384858de398ccc6a36e3890627a7b715d801d7c3195bfa179d489e"
+  },
+  "focusedChecks": {
+    "bilingualPairs": 15,
+    "packageReadmes": 9,
+    "canonicalFormatting": "3 changed C# files; all stages agree",
+    "oldApiCounterexample": "ordinary and virtual getter/method snapshots collide before the repair",
+    "newApiProbe": "getter/method virtual, abstract, final, new-slot and setter changes observed",
+    "priorApiTextUnchangedAfterRemovingNewFlags": true,
+    "oldPackagesRejected": [
+      "AspNetCore",
+      "Clr",
+      "Composition",
+      "Tool"
+    ]
+  },
+  "packageVersion": "0.2.0-alpha.5.quality.20261014.3",
+  "packages": [
+    {
+      "package": "Cordis.Example.Greeting.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "1993f1ef65deeab23a95025d6b0e66fe986c9ad0221ab83e6f0ae206c447520e",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md"
+      ]
+    },
+    {
+      "package": "Cordis.NET.AspNetCore.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "682ecd282c1662035fb89b5d603e251a64edd06477857a764524927eeec33730",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md",
+        "examples/ManagedApplication/README.md",
+        "docs/authoring.md",
+        "docs/management-remote-migration.md",
+        "docs/settings-contract-migration.md"
+      ]
+    },
+    {
+      "package": "Cordis.NET.Clr.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "2d04e918964de7fba5d9c9f28fa41818ad0548b431246b9aa591dd3972a7b719",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md",
+        "docs/clr-artifacts.md",
+        "examples/ManagedPlugin/README.md",
+        "examples/ManagedApplication/README.md"
+      ]
+    },
+    {
+      "package": "Cordis.NET.Composition.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "6ea79ff278f0cd3341876b489ea2dae68aabd62e086bb97c8b4a968adfe5b38d",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md",
+        "docs/authoring.md",
+        "docs/settings-contract-migration.md"
+      ]
+    },
+    {
+      "package": "Cordis.NET.Core.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "e5926badaad6e1ce982924acc22891cdf17fd9b864d597416685abeab609b7cf",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md"
+      ]
+    },
+    {
+      "package": "Cordis.NET.Extensions.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "c88a79439e9efe845b9a73c9fe7dd6bef189182c26929d131319ac55b6c104f7",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md"
+      ]
+    },
+    {
+      "package": "Cordis.NET.Hosting.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "8d39f1fdbf10f825c29112552db2d1c6d977a3305b8dd6b3b75ef05f76c9018d",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md"
+      ]
+    },
+    {
+      "package": "Cordis.NET.JavaScript.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "d0c50c12ca97064a63920846167aec75087c3014fbd32e4eb462f647c9ccef3a",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md"
+      ]
+    },
+    {
+      "package": "Cordis.NET.Tool.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "repositoryCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "sha256": "111bccd0e0058f51cb36a79769c66b7104898d5728770e5fc253219a9bdb0228",
+      "readmeMatchesSourceTransform": true,
+      "commitBoundTargets": [
+        "docs/getting-started.md",
+        "docs/clr-artifacts.md",
+        "examples/ManagedApplication/README.md",
+        "docs/settings-contract-migration.md"
+      ]
+    }
+  ],
+  "symbols": [
+    {
+      "package": "Cordis.Example.Greeting.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 1,
+      "sourceDocuments": 1,
+      "embeddedDocuments": 3
+    },
+    {
+      "package": "Cordis.NET.AspNetCore.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 1,
+      "sourceDocuments": 4,
+      "embeddedDocuments": 3
+    },
+    {
+      "package": "Cordis.NET.Clr.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 1,
+      "sourceDocuments": 7,
+      "embeddedDocuments": 3
+    },
+    {
+      "package": "Cordis.NET.Composition.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 3,
+      "sourceDocuments": 122,
+      "embeddedDocuments": 82
+    },
+    {
+      "package": "Cordis.NET.Core.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 1,
+      "sourceDocuments": 18,
+      "embeddedDocuments": 3
+    },
+    {
+      "package": "Cordis.NET.Extensions.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 1,
+      "sourceDocuments": 6,
+      "embeddedDocuments": 3
+    },
+    {
+      "package": "Cordis.NET.Hosting.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 1,
+      "sourceDocuments": 1,
+      "embeddedDocuments": 3
+    },
+    {
+      "package": "Cordis.NET.JavaScript.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 1,
+      "sourceDocuments": 2,
+      "embeddedDocuments": 3
+    },
+    {
+      "package": "Cordis.NET.Tool.0.2.0-alpha.5.quality.20261014.3.nupkg",
+      "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+      "assemblyCount": 6,
+      "sourceDocuments": 120,
+      "embeddedDocuments": 167
+    }
+  ],
+  "offlineDebugConsumer": {
+    "passed": true,
+    "commit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+    "file": "src/Cordis.Core/Plugin.cs",
+    "line": 151,
+    "checksum": "6835d9bc032fcf1198b00968286425e74dec0d8e5617950ace2302a498e6087f"
+  },
+  "documentationConsumer": {
+    "sourceCommit": "d311cb42040e28ecbade07bc90c8ad7fcfcb1b47",
+    "packageVersion": "0.2.0-alpha.5.quality.20261014.3",
+    "exactGuideCode": true,
+    "programSha256": "016e266f06f6dc980ae86e2ce8d4374367a306da13faeed873aa1eea14939d62",
+    "isolatedPackageCache": true,
+    "warningsAsErrors": true,
+    "output": "41",
+    "exitCode": 0
+  },
+  "retainedFailureEvidence": [
+    "old package root-relative README links",
+    "old API virtual getter/method collision",
+    "initial tool-fixture dynamic Assembly reflection refusal; fixture now emits a loadable image",
+    "initial formatting mismatch; canonical stages subsequently agree",
+    "cold documentation consumer CS8602 on nullable lookup; guide now checks the missing service and passes warnings-as-errors"
+  ],
+  "boundaries": [
+    "Windows local JIT/runtime gate at 6779d14; later changes are documentation only",
+    "Exact final packages at d311cb4 inspected including symbols, offline debug and cold package-only guide",
+    "No new hosted Windows/Linux/AOT/upstream acceptance for these commits",
+    "No live NuGet.org README preview or publication; immutable GitHub link targets checked against the packaged source commit locally",
+    "C01-C03 consumption decisions remain unresolved; no associated production changes",
+    "No merge, tag, version bump, release or deployment"
+  ]
+}

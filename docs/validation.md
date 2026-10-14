@@ -10,6 +10,8 @@ The [completed CI receipt](../verification/alpha5-rs01-2026-10-14/ci-completed.j
 
 Later repository-quality edits require their own checks. [Current support](development.md#current-support-and-release-status) and [release gates](publication-readiness.md) distinguish unresolved consumption from passed CI. Earlier browser, IDE and native application results retain their original source and packages.
 
+Repository quality Q01–Q04 has a separate [local receipt](../verification/alpha5-repository-quality-2026-10-14/evidence.json): clean 6779d14 passed the local Windows verify.py gate (911 tests plus JIT/client/CLI/API checks, without AOT or upstream). Subsequent changes through d311cb4 affect only three documentation files. The final isolated package batch passed nine README/layout/symbol checks, 21 commit-bound link targets, offline debugging and the exact cold guide program with warnings-as-errors. This does not extend the earlier hosted CI to the new commits.
+
 <details>
 <summary>Historical evidence with its original source, package and execution scope</summary>
 

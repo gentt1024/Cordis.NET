@@ -10,6 +10,8 @@
 
 后续仓库质量修改需要自己的检查。[当前支持](development.zh.md#当前支持与发行状态)和[发行门禁](publication-readiness.zh.md)区分未完成消费与已通过 CI；历史浏览器、IDE 和原生应用结果保留原源码与包身份。
 
+仓库质量 Q01–Q04 另有[本地回执](../verification/alpha5-repository-quality-2026-10-14/evidence.json)：干净 6779d14 通过本地 Windows verify.py 门禁，含 911 项测试及 JIT／客户端／CLI／API 检查，未请求 AOT 或上游。此后至 d311cb4 仅修改三份文档。最终隔离包通过九组 README／布局／符号检查、21 个提交固定链接目标、离线调试，以及 warnings-as-errors 下的文档原文冷启动程序。这不将先前托管 CI 延伸到新提交。
+
 <details>
 <summary>历史证据，保留各自源码、包与执行范围</summary>
 
