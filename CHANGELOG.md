@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0-alpha.5]
+
+Release validation candidate. Public NuGet publication has not occurred.
 
 - Unified ordinary, Remote and event declarations in the common model, with explicit references and supported independent .NET/Web generation through normal build, pack and design-time inputs.
 - Added shared unary/multipart and WebSocket mux clients, scoped Context/Peer routing, owned resources and typed event listeners with explicit cancellation and disposal.
@@ -8,7 +10,11 @@
 - Stable CLR artifacts use preparation/publication receipts, direct directory loading, restart upgrades and logical removal that retains files.
 - Exposed read-only, non-virtual output Schema reuse and corrected native readonly output metadata without changing application validation policy.
 - Improved current documentation, package README navigation and API extension-boundary inspection. Backend and remaining consumption limits are listed in the current support record.
-- These changes require a new approved package identity. Published alpha.4 packages and historical release entries remain unchanged.
+- Added prepared CLR candidate contribution admission before switching; application policy can reject the actual candidate while the old generation remains available. Existing positional cancellation-token callers use named `cancellationToken:` after the new optional callback.
+- Generated unary clients retain the captured local failure cause. Cancellation follows fixed DSH; ordinary carrier cause retention is an explicit local extension, with no wire cause or request replay.
+- Runtime author metadata supports the bounded Web numeric-string input contract while result/event output remains numeric. Static model and AOT limits remain explicit.
+- Optional trusted JavaScript expression cold preparation remains an accepted latency risk. The ten-second regression and failed-run evidence are retained; passing CI does not establish a latency bound.
+- Versioned release packages must be rebuilt and validated from this source. Published alpha.4 packages and historical release entries remain unchanged.
 
 ## [0.2.0-alpha.4]
 

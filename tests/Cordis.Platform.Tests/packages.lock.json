@@ -153,19 +153,19 @@
       "Cordis.NET.AspNetCore": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Extensions": "[0.2.0-alpha.4, )"
+          "Cordis.NET.Extensions": "[0.2.0-alpha.5, )"
         }
       },
       "Cordis.NET.Clr": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Composition": "[0.2.0-alpha.4, )"
+          "Cordis.NET.Composition": "[0.2.0-alpha.5, )"
         }
       },
       "Cordis.NET.Composition": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.2.0-alpha.4, )",
+          "Cordis.NET.Core": "[0.2.0-alpha.5, )",
           "YamlDotNet": "[16.3.0, )"
         }
       },
@@ -175,14 +175,14 @@
       "Cordis.NET.Extensions": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Composition": "[0.2.0-alpha.4, )",
-          "Cordis.NET.Core": "[0.2.0-alpha.4, )"
+          "Cordis.NET.Composition": "[0.2.0-alpha.5, )",
+          "Cordis.NET.Core": "[0.2.0-alpha.5, )"
         }
       },
       "Cordis.NET.Hosting": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.2.0-alpha.4, )",
+          "Cordis.NET.Core": "[0.2.0-alpha.5, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.0, )",
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.0, )"
         }
@@ -190,14 +190,14 @@
       "Cordis.NET.JavaScript": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Composition": "[0.2.0-alpha.4, )",
+          "Cordis.NET.Composition": "[0.2.0-alpha.5, )",
           "Jint": "[4.7.0, )"
         }
       },
       "probes.contracts": {
         "type": "Project",
         "dependencies": {
-          "Cordis.NET.Core": "[0.2.0-alpha.4, )"
+          "Cordis.NET.Core": "[0.2.0-alpha.5, )"
         }
       },
       "shared": {

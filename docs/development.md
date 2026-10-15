@@ -4,7 +4,7 @@
 
 ## Current support and release status
 
-This branch prepares alpha5; alpha5 is not published. [Validation](validation.md#current-candidate-index) identifies tested source and package batches. [Publication readiness](publication-readiness.md) owns release gates. Historical checkpoints below describe their own revisions, not current remaining work.
+This source selects `0.2.0-alpha.5` for release validation. Public NuGet publication has not occurred. [Validation](validation.md#current-candidate-index) identifies tested source and package batches. [Publication readiness](publication-readiness.md) owns release gates. Historical checkpoints below describe their own revisions, not current remaining work.
 
 | Area | Current use and boundary |
 |---|---|
