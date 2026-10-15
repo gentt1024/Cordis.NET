@@ -273,7 +273,8 @@ public sealed partial class PluginConfigurationOperations(
     /// failures reading the profile manifest or obtaining runtime mappings propagate.</remarks>
     public async Task<IReadOnlyList<BundleConfigurationInfo>> ListBundlesAsync()
     {
-        var manifest = PackageManifest.Read(ManifestPath);
+        var inputs = await CaptureProfileAsync();
+        var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
         var dependencies = manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?> ??
             new EntryOptions();
         var names = manifest
@@ -295,7 +296,7 @@ public sealed partial class PluginConfigurationOperations(
             var removable = installed && !launch.InstallationBundles.ContainsKey(name);
             try
             {
-                var info = await ReadBundleAsync(name);
+                var info = await ReadBundleAsync(name, inputs);
                 if (info is null)
                 {
                     if (enabled)
@@ -315,13 +316,19 @@ public sealed partial class PluginConfigurationOperations(
                     continue;
                 }
 
-                var (metadata, patches) = info.Value;
+                var (metadata, bundle) = info.Value;
+                var patches = bundle.Patches;
                 var declared = InsertedRows(patches)
                     .Where(p => p.Id.Length > 0 && p.Name.Length > 0)
                     .ToArray();
                 var ids = declared.Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-                if (ProtectsManager(patches))
+                var candidate = await CreateCandidateAsync(
+                    inputs,
+                    WithBundles(manifest, enabled ? manifest.Bundles : manifest.Bundles.Append(name).ToArray()));
+                if (ProtectsManager(ComposedBundleRows(candidate, bundle.PatchPaths)))
                     managementBundles.TryAdd(name, 0);
+                else
+                    managementBundles.TryRemove(name, out _);
                 var reason = managementBundles.ContainsKey(name) ? "management-required" : null;
                 result.Add(
                     new(
@@ -362,6 +369,7 @@ public sealed partial class PluginConfigurationOperations(
             }
         }
 
+        await inputs.VerifyAsync();
         return result;
     }
 
@@ -413,12 +421,14 @@ public sealed partial class PluginConfigurationOperations(
                         string.Equals(removed.Key, removed.Value(name), StringComparison.Ordinal))))
                     throw new Refusal("removed-package");
                 var inputs = await CaptureProfileAsync();
-                var manifest = PackageManifest.Read(ManifestPath);
+                var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
                 var previous = manifest.Bundles;
-                var info = await ReadBundleAsync(name);
+                var info = await ReadBundleAsync(name, inputs);
                 if ((enabled || !previous.Contains(name)) && info is null)
                     throw new Refusal("not-bundle");
-                if (!enabled && previous.Contains(name) && info is not null && ProtectsManager(info.Value.Patches))
+                if (!enabled && previous.Contains(name) && info is not null &&
+                    ProtectsManager(
+                        ComposedBundleRows(await CreateCandidateAsync(inputs, manifest), info.Value.Bundle.PatchPaths)))
                     throw new Refusal("management-required");
                 var next = enabled
                     ? previous.Concat(previous.Contains(name) ? [] : new[] { name }).ToArray()
@@ -432,7 +442,7 @@ public sealed partial class PluginConfigurationOperations(
                 }
 
                 var required = enabled && info is not null
-                    ? ComposedBundleRows(info.Value.Patches)
+                    ? ComposedBundleRows(candidate, info.Value.Bundle.PatchPaths)
                         .Select(row => row.Id)
                         .ToHashSet(StringComparer.Ordinal)
                     : null;
@@ -586,30 +596,48 @@ public sealed partial class PluginConfigurationOperations(
         return new(raw);
     }
 
-    private async Task<(PackageManifest Manifest, List<EntryOptions> Patches)?> ReadBundleAsync(string name)
+    private async Task<(PackageManifest Manifest, Bundle Bundle)?> ReadBundleAsync(string name, ProfileInputs inputs)
     {
         if (!launch.InstallationBundles.TryGetValue(name, out var directory) &&
             !(launch.LocalBundles?.TryGetValue(name, out directory) ?? false))
             throw new FileNotFoundException($"Cannot resolve bundle '{name}'.");
-        var manifest = PackageManifest.Read(Path.Combine(directory!, "package.json"));
+        var manifest = ParseManifest(await inputs.ReadAsync(Path.Combine(directory!, "package.json")));
         return manifest.HasBundleDeclaration
-            ? (manifest, (await Profiles.ReadBundleAsync(name, directory!, manifest)).Patches)
+            ? (manifest, await Profiles.ReadBundleAsync(name, directory!, manifest, inputs.ReadAsync))
             : null;
     }
 
-    private bool ProtectsManager(List<EntryOptions> patches) =>
-        ComposedBundleRows(patches)
+    private bool ProtectsManager(IEnumerable<EntryOptions> rows) =>
+        rows
             .Any(row => ProtectedModules.Contains(row.Name) || include.Owner?.Id + ":" + row.Id == ownerEntryId);
 
-    private static IEnumerable<EntryOptions> ComposedBundleRows(List<EntryOptions> patches)
+    private static IEnumerable<EntryOptions> ComposedBundleRows(
+        ProfileCandidate candidate,
+        IReadOnlyList<string> sources)
     {
-        var detached = Data.Entries(Data.Clone(patches));
-        var ownedIds = InsertedRows(detached).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (var patch in detached)
-            // An external group locates this bundle's roots; it is not owned by the bundle.
-            if (Data.Truthy(patch.GetValueOrDefault("insert")) && !ownedIds.Contains(patch.Id))
-                patch.Remove("id");
-        return Flatten(EntryPatches.Apply([], detached));
+        var layers = candidate.Composition.Layers;
+        var owned = layers
+            .Where(layer => sources.Contains(layer.Source))
+            .SelectMany(layer => PatchObjects(layer.Patches))
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        var basis = ConfigurationFile.ParseEntries(
+            candidate.BaseText,
+            Path.GetExtension(candidate.BaseSource) == ".json");
+        var composed = EntryPatches.Apply(basis, layers.SelectMany(layer => layer.Patches).ToList());
+        return Flatten(composed).Where(owned.Contains);
+    }
+
+    private static IEnumerable<EntryOptions> PatchObjects(object? value)
+    {
+        if (value is EntryOptions row)
+        {
+            yield return row;
+            foreach (var child in row.Values.SelectMany(PatchObjects))
+                yield return child;
+        }
+        else if (value is IEnumerable<object?> values)
+            foreach (var child in values.SelectMany(PatchObjects))
+                yield return child;
     }
 
     private static IEnumerable<EntryOptions> InsertedRows(IEnumerable<EntryOptions> patches) =>

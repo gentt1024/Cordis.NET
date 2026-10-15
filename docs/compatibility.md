@@ -2,6 +2,12 @@
 
 [中文](compatibility.zh.md)
 
+## Group withdrawal persistence correction, 2026-10-15
+
+The fixed DSH Loader also reproduces a group withdrawal defect: with an empty base and two bundle patches, removing the group while retaining another bundle's entry writes that effective entry into the base. A focused execution at `639ed015397290b3745d163aafe02ffee4aa3f84` observed the same result with a base-owned host group; reopening then produced duplicate retained rows. This is a shared defect, not an upstream guarantee of source preservation. The .NET correction checks the entry's existing ancestor removal intent before treating owned child cleanup as self-disposal. It does not reorder Fiber cleanup, suppress explicit Include writes, clear queued writes or change genuine self-disposal persistence. Standard bundle withdrawal persists profile selection without copying the composed tree into its base source.
+
+Bundle protection and activation requirements apply the existing patch composer to the captured base and ordered candidate layers, then select reachable row objects contributed by that bundle's patch sources. External containers retain their position and later config replacement semantics. This is a detached audit of existing configuration facts; no provenance registry or second patch algorithm is introduced. Declaration rows remain a separate inventory view.
+
 ## Output contract reuse, 2026-10-14
 
 The fixed DSH public `InvocationDescriptor` exposes its result codec, whose strict `create()` exposes a parseable schema ([protocol types](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/protocol/src/types.ts)). This supports composing the result contract; it does not prescribe a .NET JSON Schema property. The .NET adaptation exposes the existing output projection through non-virtual `TypertCodec.ResultSchema`, leaving internal directional dispatch internal. STJ input/output differences require this distinction from `Schema`. Consumers reuse the same projection as output decoding and client generation and choose validation timing themselves. No external override extension, schema service, HTTP endpoint or Gateway validation policy is added. See [authoring](authoring.md) for projection limits.

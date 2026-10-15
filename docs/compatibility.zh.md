@@ -2,6 +2,12 @@
 
 [English](compatibility.md)
 
+## Group 撤回的持久化修正，2026-10-15
+
+固定 DSH Loader 同样存在 group 撤回缺陷：空 base 加两个 bundle 补丁，撤下 group 并保留另一 bundle 的条目，会将有效条目写入 base。在 `639ed015397290b3745d163aafe02ffee4aa3f84` 上的定向执行也复现了 base 自有 host group 布局，重开后出现重复 retained 条目。这是共享缺陷，不能说成上游已经保证源文件不变。.NET 修正在将拥有的子插件清理判为自停前，检查条目及祖先已有的撤回意图。不重排 Fiber 清理，不抑制显式 Include 写入，不清空写队列，也不改变真正自停的持久化。标准 bundle 撤回持久化 Profile 选择，不将组合树复制到基础源文件。
+
+Bundle 保护和激活要求对捕获的 base 与有序候选层调用现有补丁组合器，再选取来自该 bundle 补丁源的可达条目对象。外部容器保留原位置及后续 config 整体替换语义。这是对现有配置事实的脱离运行树审计，不新增来源注册表或第二套补丁算法。声明行仍是独立的目录视图。
+
 ## 输出合同复用，2026-10-14
 
 固定 DSH 的公开 `InvocationDescriptor` 提供结果 codec，其 strict `create()` 提供可执行 parse 的 Schema（[protocol types](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/protocol/src/types.ts)）。这支持结果合同的组合复用，不直接规定 .NET 的 JSON Schema 属性。本库的平台适配以非 virtual 的 `TypertCodec.ResultSchema` 公开现有输出投影，内部方向分派仍为内部实现。STJ 的输入／输出差异要求它与 `Schema` 区分。消费者复用输出解码及客户端生成的同一投影，自行决定校验时机。不新增外部 override 扩展、Schema 服务、HTTP 端点或 Gateway 校验政策。投影限制见[作者指南](authoring.zh.md)。

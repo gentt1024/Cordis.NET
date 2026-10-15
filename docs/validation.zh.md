@@ -4,6 +4,14 @@
 
 ## 当前候选索引
 
+### 嵌套管理后续修正，2026-10-15
+
+PR #18 的分支提交 `5a199460c42a2ebd6e5ca85925c2a8568540a9a6` 在[运行 38697589724](https://github.com/gentt1024/Cordis.NET/actions/runs/38697589724) 中通过全部十二个作业。两端 runtime 日志均确认实际 merge checkout 为 `c99e6d7a343619697ccc9cb278fad83f413e6b1e`，base 为 `3d8eb966fb9066c10b5eab17639a8c511965e1c9`，两个验证脚本均完成。这些证据属于下述后续修正之前的候选。
+
+后续修正在 `PluginManagerOriginalTests` 承担外部容器覆盖及 group 撤回持久化回归。修正前，外部覆盖反例和空 base／base-host 两项撤回反例均失败。修正并完成规范格式化后，Composition 全部 541 项通过，包括新增的其他 bundle 提供容器场景，以及现有自停、显式写入和 noSave 对照。临时诊断将子插件清理写回定位到祖先正在撤回时的 `internal/plugin`，未观察到 `internal/update` 写入。固定 DSH 原始源码在两种布局上均复现 base 污染及重开后的 retained 重复。[兼容性裁决](compatibility.zh.md#group-撤回的持久化修正2026-10-15) 记录修正性适配。新开发包和完整托管验证必须绑定后续冻结源码，不能用上一轮绿色 CI 关闭这些缺陷。外部应用消费及发行身份仍需分别裁决。
+
+### 前一消费候选
+
 C01–C03 实现冻结在 `0c017f644e69a7b16ffb9e74d355e953f46551d8`，另有[消费回执](../verification/alpha5-consumption-closeout-2026-10-15/evidence.json)。九个隔离 `.consumption.20261015.2` 包通过布局、符号和离线调试检查；实际 CLR 候选准入、生成式 Remote cause 和数值 Web DTO／Node WebSocket 消费均通过。本地 Windows 完整门禁**失败**：921 项测试中 920 项通过；同步 noop HMR 场景首次表达式准备超过未修改的十秒等待。准备约耗时 11.96 秒，随后执行、错误报告和清理均完成。这符合已接纳的冷准备风险，不代表门禁通过，也不作环境失败诊断。test-map 同样拒绝该失败运行。同源码另行补完的 20 项非测试检查通过，不替代完整运行失败。后续完整托管运行已通过，见下文；它不改变这次本地失败。运行时反射 metadata 与 Node socket 证据不证明保存模型重放、AOT 或新的真实浏览器观察。
 
 [CI 38657348172](https://github.com/gentt1024/Cordis.NET/actions/runs/38657348172) 的十二个作业全部通过，分支为 `009a7174f7b9cf074dbefd6c961cf69db6acd0b7`，base 为 `3342a967f4e57206bec272684a40a437fc051b77`。两个 runtime 身份文件和两套下载的各九组包／符号均指向实际 PR 合并检出 `afb573783d8d3fc5c84d36bd8d5ed245f3826824`。Windows 921 项测试全过；Ubuntu 918 项通过、3 项明确的 Windows 专用测试跳过。双平台 runtime／包／AOT／authoring、八个固定上游分片和两个汇总均通过。上游并集在 Windows 为 5618 通过、1 项大小写敏感文件系统用例跳过，Ubuntu 为 5619 通过；这是源码执行，不等于 .NET 断言全部逐项对照。

@@ -722,6 +722,119 @@ public sealed class PluginManagerOriginalTests
         Assert.Equal(protectedChild ? "management-required" : null, bundle.ReadOnlyReason);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BundleProtectionFollowsExternalGroupOverride(bool hostFromBundle)
+    {
+        await using var f = new Fixture();
+        List<EntryOptions> host =
+        [
+            new()
+            {
+                Id = "host",
+                Name = "cordis:group",
+                Group = true,
+                Config = Array.Empty<EntryOptions>()
+            }
+        ];
+        await f.Start(baseRows: hostFromBundle ? null : host);
+        if (hostFromBundle)
+        {
+            await f.Bundle(
+                "host-bundle",
+                [
+                    new()
+                    {
+                        ["insert"] = host
+                    }
+                ]);
+            AssertChange(await f.Manager.SetBundleEnabledAsync("host-bundle", true), true, "applied");
+        }
+
+        await f.Bundle(
+            "transient",
+            [
+                new()
+                {
+                    Id = "host",
+                    ["insert"] = new[]
+                    {
+                        new EntryOptions
+                        {
+                            Id = "transient-manager",
+                            Name = "cordis:manager"
+                        }
+                    }
+                },
+                new()
+                {
+                    Id = "host",
+                    Config = Array.Empty<EntryOptions>()
+                }
+            ]);
+        AssertChange(await f.Manager.SetBundleEnabledAsync("transient", true), true, "applied");
+        Assert.DoesNotContain(f.Include.Loader.Entries(), e => e.Options.Id == "transient-manager");
+        Assert.Null((await f.Manager.ListBundlesAsync()).Single(b => b.Name == "transient").ReadOnlyReason);
+        AssertChange(await f.Manager.SetBundleEnabledAsync("transient", false), true, "applied");
+        Assert.DoesNotContain("transient", f.Manifest.Bundles);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RemovingGroupBundlePreservesBaseAcrossFlushAndReopen(bool nested)
+    {
+        await using var f = new Fixture();
+        await f.Start(
+            baseRows: nested
+                ?
+                [
+                    new()
+                    {
+                        Id = "host",
+                        Name = "cordis:group",
+                        Group = true,
+                        Config = Array.Empty<EntryOptions>()
+                    }
+                ]
+                : null);
+        await f.Bundle(
+            "group",
+            ConfiguredGroup(
+                [
+                    new()
+                    {
+                        Id = "child",
+                        Name = "managed"
+                    }
+                ],
+                nested));
+        AssertChange(await f.Manager.SetBundleEnabledAsync("group", true), true, "applied");
+        var source = await File.ReadAllTextAsync(f.Include.Filename);
+        AssertChange(await f.Manager.SetBundleEnabledAsync("group", false), true, "applied");
+        Assert.Equal(source, await File.ReadAllTextAsync(f.Include.Filename));
+        await f.Include.FlushWriteAsync();
+        Assert.Equal(source, await File.ReadAllTextAsync(f.Include.Filename));
+        await f.Context.DisposeAsync();
+        Assert.Equal(source, await File.ReadAllTextAsync(f.Include.Filename));
+
+        await using var reopened = new Context();
+        var include = await f.Mount(reopened);
+        var manager = new PluginConfigurationOperations(f.Launch, include, "root:manager")
+        {
+            RunExclusiveAsync = action => action()
+        };
+        Assert.DoesNotContain("group", f.Manifest.Bundles);
+        Assert.DoesNotContain(include.Loader.Entries(), e => e.Options.Id is "owned-group" or "child");
+        var retained = Assert.Single(await manager.ListPluginsAsync(), e => e.ModuleName == "managed");
+        Assert.Null(retained.ReadOnlyReason);
+        AssertChange(await manager.SetBundleEnabledAsync("extra", false), true, "applied");
+        await include.FlushWriteAsync();
+        await reopened.DisposeAsync();
+        Assert.Equal(source, await File.ReadAllTextAsync(include.Filename));
+    }
+
     private static List<EntryOptions> ConfiguredGroup(List<EntryOptions> children, bool nested) =>
     [
         new()
