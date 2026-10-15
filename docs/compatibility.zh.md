@@ -116,6 +116,8 @@ Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 P
 
 `PluginConfigurationOperations.AdmitProfileAsync` 接收库持有的不可变 manifest 文本和原始根配置候选，组合仍使用现有 Profile/Include 逻辑。修改分离的 composition 视图不会改变保存候选。安装与 bundle 选择在发布/持久化前准入，并通过 `ProfileSession` 应用该候选；移除分别准入其持久步骤，其中删除依赖候选在工具解除运行时映射前准入。CLR 制品保留并单独报告，直至显式离线删除。拒绝第二步时，包保持已安装、已取消选择。重复选择仍在重新应用前准入。普通消费可以省略准入。仅使用旧 `ReconcileAsync` 的宿主在未启用产品准入时保留原回调；启用产品准入时必须支持候选 reconciliation，不能静默退回重新读盘组合。
 
+单条启停将拟写入的 user patch 纳入完整候选，使用同一准入边界。拒绝时不保存补丁、不执行 reconciliation；批准后先核对捕获输入，再保存并应用该候选。既有补丁编辑器保留注释和表达式语法，manifest 与 base 不变。这是对既有 .NET 产品准入适配的覆盖补齐：固定 DSH 的 `PluginManager.setPluginEnabled` 先写入再 reload，并明确在激活失败后保留已保存修改。准入拒绝与后续激活失败分别处理；保存后的激活失败仍保留请求补丁。不提供批量启停或自动回滚合同。
+
 即使 owner 配置比较相等，捕获的基础数据变化也会进入既有 Include 更新；未变化条目保留原 fiber。候选回调与赋值时的旧回调关联。宿主随后只替换 `ReconcileAsync` 时，未启用准入的操作仍执行该定制；启用准入则拒绝，直到宿主明确为此接线设置候选应用回调。
 
 读集记录完整 Profile manifest、基础配置、选中 bundle 的 manifest/patch、Profile/Home patch、兼容输入、启动 overlays 及部署映射。Prepare 后记录准备目录中的相对文件名和内容哈希。声明的 `PublicationDirectory` 允许同一目录内容不变地移动，并增加新身份自己的本地映射。更新时保留已有运行时映射，候选则使用准备好的新版本组合；其他映射与来源保持不变。已批准 manifest 的替换是另一项计划内写入。发布后也区分这些变化与冲突。首次安装发布后但依赖尚未保存的冲突返回 installed=false、selected=false、failed 及保留的部署目录；更晚的应用失败可以保留已保存选择。不增加自动合并、重放或整个运行世界回滚，既有取消、安装等待和工具链归属继续有效。

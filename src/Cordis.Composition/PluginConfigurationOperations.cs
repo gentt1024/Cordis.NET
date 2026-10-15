@@ -220,9 +220,11 @@ public sealed partial class PluginConfigurationOperations(
     /// </summary>
     /// <remarks>Reads current profile sources without refreshing the runtime or evaluating configuration expressions.
     /// Protected or ambiguous entries remain listed with a read-only reason. Base configuration, profile manifest and user patch read or parse failures propagate.</remarks>
-    public async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync()
+    public async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync() =>
+        await ListPluginsAsync(await CaptureProfileAsync());
+
+    private async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync(ProfileInputs inputs)
     {
-        var inputs = await CaptureProfileAsync();
         var profile = await Profiles.LoadAsync(
             inputs.Launch.Profile.Directory,
             inputs.Launch.InstallationBundles,
@@ -376,8 +378,9 @@ public sealed partial class PluginConfigurationOperations(
     /// <summary>
     /// Persist enablement for an addressable profile entry and reconcile through the host lifecycle queue.
     /// </summary>
-    /// <remarks>Protected or unaddressable entries are refused. Persistence precedes reconciliation; a failed result may
-    /// leave the requested patch saved. With no lifecycle queue, the change requires restart. Later overlays may override it.</remarks>
+    /// <remarks>Protected or unaddressable entries are refused. Product admission checks the complete candidate before
+    /// saving the user patch. Persistence precedes reconciliation; an activation failure may leave the patch saved.
+    /// With no lifecycle queue, the change requires restart. Later overlays may override it.</remarks>
     public Task<ConfigurationChange> SetPluginEnabledAsync(
         string entryId,
         bool enabled,
@@ -388,12 +391,35 @@ public sealed partial class PluginConfigurationOperations(
             "plugin",
             async () =>
             {
-                var row = (await ListPluginsAsync()).FirstOrDefault(row => row.EntryId == entryId) ??
+                var inputs = await CaptureProfileAsync();
+                var row = (await ListPluginsAsync(inputs)).FirstOrDefault(row => row.EntryId == entryId) ??
                     throw new Refusal("unknown-plugin");
                 if (row.ReadOnlyReason is not null)
                     throw new Refusal(row.ReadOnlyReason);
-                await ProfileMaintenance.WriteEnabledAsync(PatchPath, row.PatchId!, row.ModuleName, enabled);
-                var warnings = await ReloadAsync(
+                string previous;
+                try
+                {
+                    previous = await inputs.ReadAsync(PatchPath);
+                }
+                catch (FileNotFoundException)
+                {
+                    previous = "[]\n";
+                }
+
+                var patch = ProfileMaintenance.WithEnabled(previous, row.PatchId!, row.ModuleName, enabled);
+                var candidate = await CreateCandidateAsync(
+                    inputs,
+                    ParseManifest(await inputs.ReadAsync(ManifestPath)),
+                    userPatch: patch);
+                await AdmitCandidateAsync(inputs, candidate);
+                if (patch != previous)
+                {
+                    await SaveUserPatchAsync(inputs, patch);
+                    await inputs.VerifyAsync(savedPatch: patch);
+                }
+
+                var warnings = await ApplyCandidateAsync(
+                    candidate,
                     enabled ? new HashSet<string>([row.PatchId!], StringComparer.Ordinal) : null);
                 var current = (await ListPluginsAsync()).FirstOrDefault(item => item.EntryId == entryId);
                 return (RunExclusiveAsync is not null && current?.Enabled != enabled ? "overridden" : null, warnings);

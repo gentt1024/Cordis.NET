@@ -32,7 +32,7 @@ public sealed class ProfileCandidate
         get;
     }
 
-    /// <summary>The exact manifest text this operation will save.</summary>
+    /// <summary>The proposed profile manifest serialized as JSON; entry enablement does not rewrite the manifest.</summary>
     public string ManifestJson
     {
         get;

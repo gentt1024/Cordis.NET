@@ -7,6 +7,77 @@ namespace Cordis.Extensions.Tests;
 public sealed class ProfileSessionTests
 {
     [Fact]
+    public async Task Plugin_enablement_admits_the_complete_candidate_before_saving()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        scenario.Resolver.Register(
+            "other",
+            new Plugin<object?>
+            {
+                Apply = (_, _) =>
+                {
+                }
+            });
+        await File.AppendAllTextAsync(scenario.Config, "- id: q\n  name: other\n  disabled: true\n");
+        const string patch = "# personal preferences\n[]\n";
+        await File.WriteAllTextAsync(scenario.ProfilePatch, patch);
+        var original = await File.ReadAllTextAsync(scenario.Config);
+        var manifestPath = Path.Combine(scenario.Launch.Profile.Directory, "package.json");
+        var manifest = await File.ReadAllTextAsync(manifestPath);
+        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
+        var owner = session.ConfigurationOperations;
+        var initial = session.Loader.Resolve("root:p").Fiber;
+        owner.AdmitProfileAsync = candidate =>
+        {
+            var rows = ConfigurationFile.ParseEntries(candidate.ConfigurationJson, true);
+            if (rows.Count(row => row.Disabled is not true) > 1)
+                throw new InvalidOperationException("exclusive providers");
+            return Task.CompletedTask;
+        };
+        var rejected = await owner.SetPluginEnabledAsync("root:q", true);
+        Assert.Equal("failed", rejected.Application);
+        Assert.Contains("exclusive providers", rejected.Diagnostic, StringComparison.Ordinal);
+        Assert.False(rejected.Changed);
+        Assert.Equal(patch, await File.ReadAllTextAsync(scenario.ProfilePatch));
+        Assert.Same(initial, session.Loader.Resolve("root:p").Fiber);
+        Assert.Null(session.Loader.Resolve("root:q").Fiber);
+
+        Assert.Null((await owner.SetPluginEnabledAsync("root:p", false)).Error);
+        var accepted = await owner.SetPluginEnabledAsync("root:q", true);
+        Assert.Null(accepted.Error);
+        Assert.True(accepted.Changed);
+        Assert.Equal("applied", accepted.Application);
+        Assert.True(session.Loader.Resolve("root:p").Disabled);
+        Assert.NotNull(session.Loader.Resolve("root:q").Fiber);
+        Assert.Contains(
+            "# personal preferences",
+            await File.ReadAllTextAsync(scenario.ProfilePatch),
+            StringComparison.Ordinal);
+        Assert.Equal(original, await File.ReadAllTextAsync(scenario.Config));
+        Assert.Equal(manifest, await File.ReadAllTextAsync(manifestPath));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Plugin_enablement_refuses_sources_changed_during_admission(bool changeBase)
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
+        var initial = session.Loader.Resolve("root:p").Fiber;
+        var patch = await File.ReadAllTextAsync(scenario.ProfilePatch);
+        var source = changeBase ? scenario.Config : scenario.ProfilePatch;
+        var edited = await File.ReadAllTextAsync(source) + "# another writer\n";
+        session.ConfigurationOperations.AdmitProfileAsync = _ => File.WriteAllTextAsync(source, edited);
+        var result = await session.ConfigurationOperations.SetPluginEnabledAsync("root:p", false);
+        Assert.Equal("profile-conflict", result.Error);
+        Assert.Equal("failed", result.Application);
+        Assert.Equal(edited, await File.ReadAllTextAsync(source));
+        Assert.Equal(changeBase ? patch : edited, await File.ReadAllTextAsync(scenario.ProfilePatch));
+        Assert.Same(initial, session.Loader.Resolve("root:p").Fiber);
+    }
+
+    [Fact]
     public async Task Candidate_applies_changed_base_with_equal_patches_and_preserves_unchanged_entries()
     {
         await using var scenario = await Scenario.CreateAsync();
@@ -55,8 +126,10 @@ public sealed class ProfileSessionTests
         Assert.Equal(1, stableApplies);
     }
 
-    [Fact]
-    public async Task Candidate_application_does_not_mark_a_later_source_as_already_applied()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Candidate_application_does_not_mark_a_later_source_as_already_applied(bool pluginEnablement)
     {
         await using var scenario = await Scenario.CreateAsync();
         var bundle = System.IO.Directory.CreateDirectory(Path.Combine(scenario.Directory, "empty")).FullName;
@@ -75,15 +148,20 @@ public sealed class ProfileSessionTests
             await File.WriteAllTextAsync(scenario.ProfilePatch, "- id: p\n  config: later\n");
             return await apply(candidate, required);
         };
-        var result = await owner.SetBundleEnabledAsync("empty", true);
-        Assert.Null(result.Error);
+        var result = pluginEnablement
+            ? await owner.SetPluginEnabledAsync("root:p", true)
+            : await owner.SetBundleEnabledAsync("empty", true);
+        Assert.True(result.Error is null, System.Text.Json.JsonSerializer.Serialize(result));
         await scenario.ExpectAsync("approved");
         await session.RefreshAsync();
         await scenario.ExpectAsync("later");
     }
 
-    [Fact]
-    public async Task Legacy_reconciliation_remains_available_but_product_admission_requires_candidate_support()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Legacy_reconciliation_remains_available_but_product_admission_requires_candidate_support(
+        bool pluginEnablement)
     {
         await using var scenario = await Scenario.CreateAsync();
         var bundle = System.IO.Directory.CreateDirectory(Path.Combine(scenario.Directory, "empty")).FullName;
@@ -95,18 +173,25 @@ public sealed class ProfileSessionTests
         await using var session = await ProfileSession.StartAsync(scenario.Config, scenario.Launch, scenario.Resolver);
         var owner = session.ConfigurationOperations;
         var reconcile = owner.ReconcileAsync!;
+
+        Task<ConfigurationChange> Change(bool enabled) => pluginEnablement
+            ? owner.SetPluginEnabledAsync("root:p", enabled)
+            : owner.SetBundleEnabledAsync("empty", enabled);
+
         var calls = 0;
         owner.ReconcileAsync = async required =>
         {
             calls++;
             return await reconcile(required);
         };
-        Assert.Null((await owner.SetBundleEnabledAsync("empty", true)).Error);
+        Assert.Null((await Change(true)).Error);
         Assert.Equal(1, calls);
-        var path = Path.Combine(scenario.Launch.Profile.Directory, "package.json");
+        var path = pluginEnablement
+            ? scenario.ProfilePatch
+            : Path.Combine(scenario.Launch.Profile.Directory, "package.json");
         var before = await File.ReadAllTextAsync(path);
         owner.AdmitProfileAsync = _ => Task.CompletedTask;
-        Assert.Equal("candidate-reconciliation-required", (await owner.SetBundleEnabledAsync("empty", false)).Error);
+        Assert.Equal("candidate-reconciliation-required", (await Change(false)).Error);
         Assert.Equal(before, await File.ReadAllTextAsync(path));
         Assert.Equal(1, calls);
         var candidateReconcile = owner.ReconcileCandidateAsync!;
@@ -116,7 +201,7 @@ public sealed class ProfileSessionTests
             candidateCalls++;
             return await candidateReconcile(candidate, required);
         };
-        Assert.Null((await owner.SetBundleEnabledAsync("empty", false)).Error);
+        Assert.Null((await Change(false)).Error);
         Assert.Equal(1, candidateCalls);
         Assert.Equal(1, calls);
     }

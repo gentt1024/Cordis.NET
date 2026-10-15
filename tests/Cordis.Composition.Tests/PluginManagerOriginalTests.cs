@@ -217,8 +217,10 @@ public sealed class PluginManagerOriginalTests
         Assert.Equal(patch, File.ReadAllText(f.Patch));
     }
 
-    [Fact]
-    public async Task ActivationFailureKeepsSavedChangeAndCorrectedConfigRetries()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ActivationFailureKeepsSavedChangeAndCorrectedConfigRetries(bool productAdmission)
     {
         await using var f = new Fixture();
         f.Modules.Register(
@@ -232,6 +234,8 @@ public sealed class PluginManagerOriginalTests
                 }
             });
         await f.Start(initiallyDisabled: true);
+        if (productAdmission)
+            f.Manager.AdmitProfileAsync = _ => Task.CompletedTask;
         await File.WriteAllTextAsync(f.Patch, "- id: managed\n  disabled: true\n");
         AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", true), true, "failed");
         Assert.Contains("disabled: false", File.ReadAllText(f.Patch));
