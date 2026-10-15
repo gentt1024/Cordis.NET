@@ -445,7 +445,9 @@ public sealed class PluginManagerOriginalTests
             ]);
         var grouped = await f.Manager.SetBundleEnabledAsync("grouped", true);
         Assert.True(grouped.Application == "applied", grouped.Diagnostic);
-        var mounted = (await f.Manager.ListPluginsAsync()).Single(row => row.ModuleName == "managed" && row.EntryId == "root:child");
+        var mounted =
+            (await f.Manager.ListPluginsAsync()).Single(row =>
+                row.ModuleName == "managed" && row.EntryId == "root:child");
         Assert.Null(mounted.ReadOnlyReason);
         Assert.Equal("child", mounted.PatchId);
         Assert.Equal(FiberState.Active, mounted.State);
@@ -488,24 +490,40 @@ public sealed class PluginManagerOriginalTests
     public async Task NestedBundleProtectionUsesItsOwnDeclarations(string module, bool protectedBundle)
     {
         await using var f = new Fixture();
-        await f.Start(baseRows:
-        [
-            new()
-            {
-                Id = "host",
-                Name = "cordis:group",
-                Group = true,
-                Config = new[] { new EntryOptions { Id = "base-manager", Name = "cordis:manager" } }
-            }
-        ]);
-        await f.Bundle("nested",
-        [
-            new()
-            {
-                Id = "host",
-                ["insert"] = new[] { new EntryOptions { Id = "nested-entry", Name = module } }
-            }
-        ]);
+        await f.Start(
+            baseRows:
+            [
+                new()
+                {
+                    Id = "host",
+                    Name = "cordis:group",
+                    Group = true,
+                    Config = new[]
+                    {
+                        new EntryOptions
+                        {
+                            Id = "base-manager",
+                            Name = "cordis:manager"
+                        }
+                    }
+                }
+            ]);
+        await f.Bundle(
+            "nested",
+            [
+                new()
+                {
+                    Id = "host",
+                    ["insert"] = new[]
+                    {
+                        new EntryOptions
+                        {
+                            Id = "nested-entry",
+                            Name = module
+                        }
+                    }
+                }
+            ]);
         AssertChange(await f.Manager.SetBundleEnabledAsync("nested", true), true, "applied");
         var bundle = (await f.Manager.ListBundlesAsync()).Single(row => row.Name == "nested");
         Assert.Equal(protectedBundle ? "management-required" : null, bundle.ReadOnlyReason);
@@ -560,16 +578,19 @@ public sealed class PluginManagerOriginalTests
     public async Task UnchangedFailuresRemainWarningsForUnrelatedChanges(bool nested)
     {
         await using var f = new Fixture();
-        await f.Start(baseRows: nested ?
-        [
-            new()
-            {
-                Id = "host",
-                Name = "cordis:group",
-                Group = true,
-                Config = Array.Empty<EntryOptions>()
-            }
-        ] : null);
+        await f.Start(
+            baseRows: nested
+                ?
+                [
+                    new()
+                    {
+                        Id = "host",
+                        Name = "cordis:group",
+                        Group = true,
+                        Config = Array.Empty<EntryOptions>()
+                    }
+                ]
+                : null);
         f.Modules.Register(
             "broken",
             new Plugin<object?>

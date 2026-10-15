@@ -233,7 +233,8 @@ public sealed partial class PluginConfigurationOperations(
             inputs.ReadAsync);
         var profileLayers = profile
             .Bundles.SelectMany(bundle => bundle.PatchLayers)
-            .Append(new ConfigurationLayer(PatchPath, await Profiles.ReadPatchesAsync(PatchPath, true, inputs.ReadAsync)));
+            .Append(
+                new ConfigurationLayer(PatchPath, await Profiles.ReadPatchesAsync(PatchPath, true, inputs.ReadAsync)));
         var baseRows = ConfigurationFile.ParseEntries(
             await inputs.ReadAsync(include.Filename),
             Path.GetExtension(include.Filename) == ".json");
@@ -601,8 +602,10 @@ public sealed partial class PluginConfigurationOperations(
             .Any(row => ProtectedModules.Contains(row.Name) || include.Owner?.Id + ":" + row.Id == ownerEntryId);
 
     private static IEnumerable<EntryOptions> InsertedRows(IEnumerable<EntryOptions> patches) =>
-        Flatten(patches.Where(patch => Data.Truthy(patch.GetValueOrDefault("insert")))
-            .SelectMany(patch => Data.Entries(patch["insert"])));
+        Flatten(
+            patches
+                .Where(patch => Data.Truthy(patch.GetValueOrDefault("insert")))
+                .SelectMany(patch => Data.Entries(patch["insert"])));
 
     private static IEnumerable<EntryOptions> Flatten(IEnumerable<EntryOptions> rows)
     {
