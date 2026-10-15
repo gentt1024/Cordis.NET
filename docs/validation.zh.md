@@ -4,13 +4,17 @@
 
 ## 当前候选索引
 
-C01–C03 实现冻结在 `0c017f644e69a7b16ffb9e74d355e953f46551d8`，另有[消费回执](../verification/alpha5-consumption-closeout-2026-10-15/evidence.json)。九个隔离 `.consumption.20261015.2` 包通过布局、符号和离线调试检查；实际 CLR 候选准入、生成式 Remote cause 和数值 Web DTO／Node WebSocket 消费均通过。本地 Windows 完整门禁**失败**：921 项测试中 920 项通过；同步 noop HMR 场景首次表达式准备超过未修改的十秒等待。准备约耗时 11.96 秒，随后执行、错误报告和清理均完成。这符合已接纳的冷准备风险，不代表门禁通过，也不作环境失败诊断。test-map 同样拒绝该失败运行。同源码另行补完的 20 项非测试检查通过，不替代完整运行失败。新候选的托管 CI、Linux、AOT 和上游分片尚未执行。运行时反射 metadata 与 Node socket 证据不证明保存模型重放、AOT 或新的真实浏览器观察。
+C01–C03 实现冻结在 `0c017f644e69a7b16ffb9e74d355e953f46551d8`，另有[消费回执](../verification/alpha5-consumption-closeout-2026-10-15/evidence.json)。九个隔离 `.consumption.20261015.2` 包通过布局、符号和离线调试检查；实际 CLR 候选准入、生成式 Remote cause 和数值 Web DTO／Node WebSocket 消费均通过。本地 Windows 完整门禁**失败**：921 项测试中 920 项通过；同步 noop HMR 场景首次表达式准备超过未修改的十秒等待。准备约耗时 11.96 秒，随后执行、错误报告和清理均完成。这符合已接纳的冷准备风险，不代表门禁通过，也不作环境失败诊断。test-map 同样拒绝该失败运行。同源码另行补完的 20 项非测试检查通过，不替代完整运行失败。后续完整托管运行已通过，见下文；它不改变这次本地失败。运行时反射 metadata 与 Node socket 证据不证明保存模型重放、AOT 或新的真实浏览器观察。
+
+[CI 38657348172](https://github.com/gentt1024/Cordis.NET/actions/runs/38657348172) 的十二个作业全部通过，分支为 `009a7174f7b9cf074dbefd6c961cf69db6acd0b7`，base 为 `3342a967f4e57206bec272684a40a437fc051b77`。两个 runtime 身份文件和两套下载的各九组包／符号均指向实际 PR 合并检出 `afb573783d8d3fc5c84d36bd8d5ed245f3826824`。Windows 921 项测试全过；Ubuntu 918 项通过、3 项明确的 Windows 专用测试跳过。双平台 runtime／包／AOT／authoring、八个固定上游分片和两个汇总均通过。上游并集在 Windows 为 5618 通过、1 项大小写敏感文件系统用例跳过，Ubuntu 为 5619 通过；这是源码执行，不等于 .NET 断言全部逐项对照。
+
+[完成 CI 回执](../verification/alpha5-consumption-closeout-2026-10-15/ci-completed.json)绑定作业结果、双平台检出身份、下载制品摘要、包哈希、符号／调试报告和上游汇总。ZIP SHA-256 已与 GitHub 核对；runtime／AOT／符号执行由 CI 完成。CI 包仍标记 `0.2.0-alpha.4`：消费时须使用同一完整包／工具批次及隔离 feed／缓存，不得覆盖已发布 alpha.4。这里不声称外部应用已验收、新增真实浏览器观察或已正式发布。通过的 AOT 夹具不将有界运行时数值反射路径扩展成静态模型重放或 AOT 支持。本次托管源码覆盖 C01–C03 与 Q01–Q04；记录完成状态的文档校正仅需自己的文档检查。
 
 [CI 38533282314](https://github.com/gentt1024/Cordis.NET/actions/runs/38533282314) 十二个作业全部通过：双平台 runtime／包／AOT／authoring、八个固定上游分片和两个汇总。分支为 50cc463a2b28c102cdc32648eb21d650601e6dde，实际 PR 检出为 7df28667d6e8e89ca19104b49d12965a8385bf4e，base 为 3342a967f4e57206bec272684a40a437fc051b77。Windows 上游 5618 通过、1 个依赖大小写敏感文件系统的跳过；Ubuntu 5619 通过。上游执行不等于 .NET 断言全部逐项对照。
 
 [完成 CI 回执](../verification/alpha5-rs01-2026-10-14/ci-completed.json)记录日志、下载包身份和哈希。两套各九个包均标记检出 7df2866，alpha.4 文字不授权覆盖已发布包。生产实现为 23ecbab，50cc463 只增加记录。[原 RS01 回执](../verification/alpha5-rs01-2026-10-14/evidence.json)保留本地包身份和当时 pending 的 CI 状态。
 
-后续仓库质量修改需要自己的检查。[当前支持](development.zh.md#当前支持与发行状态)和[发行门禁](publication-readiness.zh.md)区分未完成消费与已通过 CI；历史浏览器、IDE 和原生应用结果保留原源码与包身份。
+[当前支持](development.zh.md#当前支持与发行状态)和[发行门禁](publication-readiness.zh.md)区分已实现消费合同、外部应用验收与发行授权；历史浏览器、IDE 和原生应用结果保留原源码与包身份。
 
 仓库质量 Q01–Q04 另有[本地回执](../verification/alpha5-repository-quality-2026-10-14/evidence.json)：干净 6779d14 通过本地 Windows verify.py 门禁，含 911 项测试及 JIT／客户端／CLI／API 检查，未请求 AOT 或上游。此后至 d311cb4 仅修改三份文档。最终隔离包通过九组 README／布局／符号检查、21 个提交固定链接目标、离线调试，以及 warnings-as-errors 下的文档原文冷启动程序。这不将先前托管 CI 延伸到新提交。
 

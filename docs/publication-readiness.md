@@ -2,7 +2,7 @@
 
 [中文](publication-readiness.zh.md)
 
-Current preparation: the RS01 candidate completed [all twelve PR CI jobs](validation.md#current-candidate-index). Repository-quality changes and the unresolved consumption decisions in [current support](development.md#current-support-and-release-status) remain separate release exits. A green PR does not authorize merging or publishing.
+Current preparation: C01–C03 and repository quality Q01–Q04 completed [all twelve PR CI jobs](validation.md#current-candidate-index) on branch `009a717`, actual checkout `afb5737`. The earlier local HMR gate failure remains recorded separately, with cold preparation an accepted residual risk. [Current support](development.md#current-support-and-release-status) distinguishes implemented contracts from external application acceptance. Consume only a matching isolated package/tool batch; external acceptance and authorization for the final release commit, new version and publication remain separate exits. A green PR does not authorize merging or publishing.
 
 The current tree is prepared as a reviewable public source snapshot. Documentation, package metadata, package-specific readmes, community templates, public validation evidence, license material, and local release checks are present.
 

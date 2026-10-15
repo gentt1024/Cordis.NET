@@ -1,0 +1,2197 @@
+{
+  "checkedAt": "2026-10-15T00:39:57.004654+00:00",
+  "pr": "https://github.com/gentt1024/Cordis.NET/pull/16",
+  "runId": 38657348172,
+  "runUrl": "https://github.com/gentt1024/Cordis.NET/actions/runs/38657348172",
+  "conclusion": "success",
+  "branchCommit": "009a7174f7b9cf074dbefd6c961cf69db6acd0b7",
+  "productionCommit": "0c017f644e69a7b16ffb9e74d355e953f46551d8",
+  "baseCommit": "3342a967f4e57206bec272684a40a437fc051b77",
+  "actualCheckout": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+  "jobs": [
+    {
+      "id": 116170151316,
+      "name": "runtime (ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151494,
+      "name": "upstream (windows-latest, shard 4)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151552,
+      "name": "runtime (windows-latest)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151579,
+      "name": "upstream (ubuntu-24.04, shard 1)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151608,
+      "name": "upstream (ubuntu-24.04, shard 4)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151620,
+      "name": "upstream (windows-latest, shard 2)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151660,
+      "name": "upstream (windows-latest, shard 1)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151668,
+      "name": "upstream (ubuntu-24.04, shard 3)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151670,
+      "name": "upstream (ubuntu-24.04, shard 2)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116170151706,
+      "name": "upstream (windows-latest, shard 3)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116181596272,
+      "name": "verify (ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116181596299,
+      "name": "verify (windows-latest)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 11939130615,
+      "name": "upstream-summary-windows-latest",
+      "size_in_bytes": 77410,
+      "digest": "sha256:9e5349779e704ae83604f70f634b8344b5ba777a8df214f3d474cb105c283e97",
+      "expires_at": "2026-10-29T00:35:32Z"
+    },
+    {
+      "id": 11938990773,
+      "name": "validated-packages-windows-latest",
+      "size_in_bytes": 4214329,
+      "digest": "sha256:e3dd5e367374756223e544bac7753601a108ca34a750f307832aa1ebcc7df7e7",
+      "expires_at": "2026-10-29T00:34:57Z"
+    },
+    {
+      "id": 11938492478,
+      "name": "evidence-ubuntu-24.04",
+      "size_in_bytes": 174506082,
+      "digest": "sha256:6d042541a5d70ae0f7d6dc6f5e838d6c2900444d9bc487a8e70ff8d5360c49eb",
+      "expires_at": "2026-10-29T00:25:45Z"
+    },
+    {
+      "id": 11938427796,
+      "name": "validated-packages-ubuntu-24.04",
+      "size_in_bytes": 4207004,
+      "digest": "sha256:004fb49f20dac2af2a843d449a2b4b38b19b662e33da4cd8b1c690a514625aa2",
+      "expires_at": "2026-10-29T00:25:44Z"
+    },
+    {
+      "id": 11938238694,
+      "name": "evidence-windows-latest",
+      "size_in_bytes": 181331118,
+      "digest": "sha256:5331fac70c73207b5f91b1c7735797cabd147abea0542fa60090b19db9456fd3",
+      "expires_at": "2026-10-29T00:35:00Z"
+    },
+    {
+      "id": 11937694248,
+      "name": "upstream-summary-ubuntu-24.04",
+      "size_in_bytes": 77342,
+      "digest": "sha256:03d1f3bb6826baf1197b750123f91c41fc86f05ed3ed051b087e506aa9c228e7",
+      "expires_at": "2026-10-29T00:35:34Z"
+    }
+  ],
+  "platforms": [
+    {
+      "platform": "windows-latest",
+      "identity": {
+        "event": "pull_request",
+        "checkoutCommit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+        "branchCommit": "009a7174f7b9cf074dbefd6c961cf69db6acd0b7",
+        "checkoutRef": "refs/pull/16/merge",
+        "baseCommit": "3342a967f4e57206bec272684a40a437fc051b77",
+        "runId": "38657348172"
+      },
+      "runtimeStatus": "requested-checks-passed",
+      "authoringStatus": "requested-checks-passed",
+      "sourceUnchanged": true,
+      "tests": {
+        "testCount": 921,
+        "passedCount": 921,
+        "skippedCount": 0,
+        "countsByAssembly": {
+          "Cordis.Composition.Tests": 527,
+          "Cordis.Core.Tests": 148,
+          "Cordis.Extensions.Tests": 113,
+          "Cordis.Platform.Tests": 133
+        }
+      },
+      "runtimeSteps": [
+        {
+          "name": "sdk",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "sdk-version",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test-map",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-1",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-2",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-2",
+          "exitCode": 0
+        },
+        {
+          "name": "jit-3",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-3",
+          "exitCode": 0
+        },
+        {
+          "name": "upgrade-jit",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "example",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-types",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-lifecycle",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-shared-modules",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-author-watch",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-validate",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-preview",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-invocation",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-usage",
+          "exitCode": 2,
+          "expectedExitCode": 2
+        },
+        {
+          "name": "cli-invalid-option",
+          "exitCode": 1,
+          "expectedExitCode": 1
+        },
+        {
+          "name": "api",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-optional",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-core",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-core-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "dsh-upgrade",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-upgrade-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "upstream-source-tests",
+          "status": "deferred-to-required-shard-gate"
+        },
+        {
+          "name": "aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-aot-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "upgrade-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-jit-aot-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "pack",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-symbols-and-debug-consumer",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-content-boundaries",
+          "exitCode": 0
+        },
+        {
+          "name": "consumer-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-install",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-package-preview",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-retained-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republished-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-retained-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republished-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "independent-consumer-location",
+          "exitCode": 0
+        },
+        {
+          "name": "clr-deployment",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "clr-multi-entry",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-package-consumer",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-dotnet-settings",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "whitespace",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        }
+      ],
+      "authoringSteps": [
+        {
+          "name": "sdk",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "sdk-version",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "reused-solution-tests",
+          "status": "passed"
+        },
+        {
+          "name": "native-platform-results",
+          "status": "passed"
+        },
+        {
+          "name": "required-authoring-suites",
+          "status": "passed"
+        },
+        {
+          "name": "compiler-fixture-location",
+          "status": "passed"
+        },
+        {
+          "name": "compile-positive-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "compile-positive",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "compile-wrong-payload-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "compile-wrong-payload",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "compile-wrong-listener-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "compile-wrong-listener",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-live-binding-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-live-binding-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-live-binding-rejected",
+          "exitCode": 3762504530,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-live-binding",
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-ordinary-equality-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-ordinary-equality-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-ordinary-equality-rejected",
+          "exitCode": 3762504530,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-ordinary-equality",
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-persistence-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-persistence-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-persistence-rejected",
+          "exitCode": 3762504530,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-persistence",
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-revision-fence-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-revision-fence-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-revision-fence-rejected",
+          "exitCode": 3762504530,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-revision-fence",
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-field-validation-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-field-validation-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-field-validation-rejected",
+          "exitCode": 3762504530,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-field-validation",
+          "status": "passed"
+        },
+        {
+          "name": "fixed-client-source-identity",
+          "status": "passed"
+        },
+        {
+          "name": "client-settings-generation",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "client-types",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-real-client",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-real-client",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "client-fence-mutant-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "client-fence-mutant-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "client-fence-mutant-real-client",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "client-fence-mutant-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "client-boundary-mutant-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "client-boundary-mutant-rejected",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "clr-jit-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "clr-jit-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "clr-jit-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "clr-deployment-boundaries",
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-real-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-real-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-aot-output-parity",
+          "status": "passed"
+        },
+        {
+          "name": "existing-package-content-boundaries",
+          "status": "passed"
+        },
+        {
+          "name": "independent-package-consumer",
+          "status": "passed"
+        },
+        {
+          "name": "package-consumer-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-consumer-isolation",
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-real-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-real-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-aot-output-parity",
+          "status": "passed"
+        },
+        {
+          "name": "git-head",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "git-status",
+          "exitCode": 0,
+          "status": "passed"
+        }
+      ],
+      "packages": [
+        {
+          "file": "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg",
+          "sha256": "18d568c0a4a93798c126a0d2567ba373038f3a2ea7e0cc13a34ae5defb41506e"
+        },
+        {
+          "file": "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg",
+          "sha256": "d84aafe1c5a90a7ffaa607638ba9670d4ca63ab5b3749bba0da7e8884c4129db"
+        },
+        {
+          "file": "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+          "sha256": "70a449640e6c6aea905fb2cef22e617fa18de540a0a983fdeb0446779161078b"
+        },
+        {
+          "file": "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg",
+          "sha256": "e072f84d07cc241eba29d446a17378e09dcb704f7f3273c45db36696cbf64507"
+        },
+        {
+          "file": "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+          "sha256": "7ce5b8569760f79eac1b82f70a19d7e33cea250261d0b1e52ac9c4162fb20be7"
+        },
+        {
+          "file": "Cordis.NET.Clr.0.2.0-alpha.4.snupkg",
+          "sha256": "b9c904fe24db9ba6d872343ed54051404b1b413f8f04baadbd61d382dff0352b"
+        },
+        {
+          "file": "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+          "sha256": "834bf7b21808366932bf0c02ab414919b796b2b9b0dff40a7ff477536f4d9a35"
+        },
+        {
+          "file": "Cordis.NET.Composition.0.2.0-alpha.4.snupkg",
+          "sha256": "424a785365d85074403b0b82d69dba6142cfd588401f2e4c453e7a02f195a3a1"
+        },
+        {
+          "file": "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+          "sha256": "113d660ba3cbb3f6a9bd578f58cf505cc834bcb1a6c41b9272e24b9dcdef7075"
+        },
+        {
+          "file": "Cordis.NET.Core.0.2.0-alpha.4.snupkg",
+          "sha256": "329b68473d5201af146dc45a9f9383c410587fa6ecb95c9ea8cbc35b0bca4f3f"
+        },
+        {
+          "file": "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+          "sha256": "b55ee09223c818f68610f1be49ae1df20c195bd8b3667fd41fb3a8b53e16f557"
+        },
+        {
+          "file": "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg",
+          "sha256": "09916b369ee0582f000ac09bd7afab43c785788b284a9435fee7a405371499e6"
+        },
+        {
+          "file": "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg",
+          "sha256": "320abb9be827ee951697d1d07741e548741ee8ae893a9feaee66433ca743a5be"
+        },
+        {
+          "file": "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg",
+          "sha256": "5228b6ac60fc21ad7d81cc17e9fa2b3af2bb63455739118e1ddef36d03fc6099"
+        },
+        {
+          "file": "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg",
+          "sha256": "1426684814964e924d0d5e9c71454d3f587ea69f078254062378dc6371367c2f"
+        },
+        {
+          "file": "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg",
+          "sha256": "6e97758dddfe1e28b7a5615267592c537fa870f4ed2b66b09c2102f62782fa66"
+        },
+        {
+          "file": "Cordis.NET.Tool.0.2.0-alpha.4.nupkg",
+          "sha256": "97d8a798300411c4edfcb44927ae90d3ed87cae63817789e4f2ad3e8d2b0edda"
+        },
+        {
+          "file": "Cordis.NET.Tool.0.2.0-alpha.4.snupkg",
+          "sha256": "13bac8bd5a575ba0f5b127be2d11677a37112a563089b5a9e469bde8ed7af4de"
+        }
+      ],
+      "symbolChecksFromCI": [
+        {
+          "package": "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 1,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 4,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 8,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 3,
+          "sourceDocuments": 123,
+          "embeddedDocuments": 82
+        },
+        {
+          "package": "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 18,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 6,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 1,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 2,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Tool.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 6,
+          "sourceDocuments": 122,
+          "embeddedDocuments": 167
+        }
+      ],
+      "offlineDebugFromCI": {
+        "method": "Failure",
+        "line": 151
+      },
+      "downloadSha256": {
+        "evidence-windows-latest.zip": "5331fac70c73207b5f91b1c7735797cabd147abea0542fa60090b19db9456fd3",
+        "validated-packages-windows-latest.zip": "e3dd5e367374756223e544bac7753601a108ca34a750f307832aa1ebcc7df7e7"
+      },
+      "evidenceFileSha256": {
+        "ci-source.json": "2425221e47102898a9cd0729e6de86f34887ad2b35c08b3e3d3ee2a14887d627",
+        "verification/verification.json": "d00e7a2a5518222834e2fac680996780fc4ee99a38a91402bfb7f5913c8d9377",
+        "authoring/results.json": "9091a7c8843442a62a91f0810acb2b9f34b3cd96f98001896edfa2b41ed5656d",
+        "verification/test-map-evidence.json": "b0a52b24889bf9daf62d94c7e8c996d8dbddfd8f9f4bc6d9535628a04bf9874f",
+        "verification/package-symbols-and-debug-consumer.stdout.log": "b41036dae14c2b2dafbd1ae5baeb8d88bdf8af7818eedc440e781e6c86bedcfa"
+      },
+      "inspectionBoundary": "Downloaded ZIP SHA-256 checked against GitHub artifact digests. Actual package nuspec revisions, paired symbols, and the CI symbol/source/offline-debug receipt were checked locally; runtime, AOT and symbol execution was performed by CI, not rerun locally.",
+      "upstream": {
+        "status": "passed",
+        "passed": 5618,
+        "skipped": [
+          {
+            "case": [
+              "composition",
+              "packages/boot/app-boot/tests/package-meta.spec.ts",
+              "plugin locale display metadata > rejects case-equivalent language files on case-sensitive filesystems",
+              0
+            ],
+            "status": "skipped"
+          }
+        ],
+        "meaning": "Complete fixed-source execution on this platform; not .NET assertion-review closure.",
+        "shards": [
+          {
+            "shard": 1,
+            "steps": [
+              {
+                "name": "collect-composition",
+                "seconds": 13.028,
+                "exitCode": 0
+              },
+              {
+                "name": "collect-core",
+                "seconds": 4.506,
+                "exitCode": 0
+              },
+              {
+                "name": "linked-resolution-matrix",
+                "seconds": 320.439,
+                "exitCode": 0
+              },
+              {
+                "name": "original-composition",
+                "seconds": 100.775,
+                "exitCode": 0
+              },
+              {
+                "name": "original-core",
+                "seconds": 5.108,
+                "exitCode": 0
+              }
+            ]
+          },
+          {
+            "shard": 2,
+            "steps": [
+              {
+                "name": "collect-composition",
+                "seconds": 12.944,
+                "exitCode": 0
+              },
+              {
+                "name": "collect-core",
+                "seconds": 4.507,
+                "exitCode": 0
+              },
+              {
+                "name": "linked-resolution-matrix",
+                "seconds": 330.174,
+                "exitCode": 0
+              }
+            ]
+          },
+          {
+            "shard": 3,
+            "steps": [
+              {
+                "name": "collect-composition",
+                "seconds": 12.192,
+                "exitCode": 0
+              },
+              {
+                "name": "collect-core",
+                "seconds": 4.302,
+                "exitCode": 0
+              },
+              {
+                "name": "linked-resolution-matrix",
+                "seconds": 322.124,
+                "exitCode": 0
+              }
+            ]
+          },
+          {
+            "shard": 4,
+            "steps": [
+              {
+                "name": "collect-composition",
+                "seconds": 7.539,
+                "exitCode": 0
+              },
+              {
+                "name": "collect-core",
+                "seconds": 2.669,
+                "exitCode": 0
+              },
+              {
+                "name": "linked-resolution-matrix",
+                "seconds": 158.03,
+                "exitCode": 0
+              }
+            ]
+          }
+        ],
+        "summarySha256": "11bb336522fdd3831b3c68566888eed7e06a221b879f86fa1f7163c022275ab0",
+        "fixedDsh": "639ed015397290b3745d163aafe02ffee4aa3f84",
+        "fixedCordisOrigin": "56b3d4f725681cf4556c1a8695a709cc3b6eed74"
+      }
+    },
+    {
+      "platform": "ubuntu-24.04",
+      "identity": {
+        "runId": "38657348172",
+        "branchCommit": "009a7174f7b9cf074dbefd6c961cf69db6acd0b7",
+        "baseCommit": "3342a967f4e57206bec272684a40a437fc051b77",
+        "checkoutRef": "refs/pull/16/merge",
+        "checkoutCommit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+        "event": "pull_request"
+      },
+      "runtimeStatus": "requested-checks-passed",
+      "authoringStatus": "requested-checks-passed",
+      "sourceUnchanged": true,
+      "tests": {
+        "testCount": 921,
+        "passedCount": 918,
+        "skippedCount": 3,
+        "countsByAssembly": {
+          "Cordis.Composition.Tests": 527,
+          "Cordis.Core.Tests": 148,
+          "Cordis.Extensions.Tests": 113,
+          "Cordis.Platform.Tests": 133
+        }
+      },
+      "runtimeSteps": [
+        {
+          "name": "sdk",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "sdk-version",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "test-map",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-1",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-2",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-2",
+          "exitCode": 0
+        },
+        {
+          "name": "jit-3",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-repeat-3",
+          "exitCode": 0
+        },
+        {
+          "name": "upgrade-jit",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "example",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-build",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-modules-types",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-lifecycle",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-shared-modules",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "client-author-watch",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-validate",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-preview",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-invocation",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "cli-usage",
+          "exitCode": 2,
+          "expectedExitCode": 2
+        },
+        {
+          "name": "cli-invalid-option",
+          "exitCode": 1,
+          "expectedExitCode": 1
+        },
+        {
+          "name": "api",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-optional",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-core",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-core-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "dsh-upgrade",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "dsh-upgrade-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "upstream-source-tests",
+          "status": "deferred-to-required-shard-gate"
+        },
+        {
+          "name": "aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "jit-aot-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "upgrade-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "upgrade-jit-aot-differential",
+          "exitCode": 0
+        },
+        {
+          "name": "pack",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-symbols-and-debug-consumer",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "package-content-boundaries",
+          "exitCode": 0
+        },
+        {
+          "name": "consumer-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "consumer-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "adapters-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-install",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "tool-package-preview",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-restore",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-publish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-retained-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-jit-republished-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-retained-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republish",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "http-consumer-aot-republished-run",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "independent-consumer-location",
+          "exitCode": 0
+        },
+        {
+          "name": "clr-deployment",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "clr-multi-entry",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-package-consumer",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "typert-dotnet-settings",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        },
+        {
+          "name": "whitespace",
+          "exitCode": 0,
+          "expectedExitCode": 0
+        }
+      ],
+      "authoringSteps": [
+        {
+          "name": "sdk",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "sdk-version",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "reused-solution-tests",
+          "status": "passed"
+        },
+        {
+          "name": "native-platform-results",
+          "status": "passed"
+        },
+        {
+          "name": "required-authoring-suites",
+          "status": "passed"
+        },
+        {
+          "name": "compiler-fixture-location",
+          "status": "passed"
+        },
+        {
+          "name": "compile-positive-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "compile-positive",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "compile-wrong-payload-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "compile-wrong-payload",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "compile-wrong-listener-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "compile-wrong-listener",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-live-binding-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-live-binding-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-live-binding-rejected",
+          "exitCode": 134,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-live-binding",
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-ordinary-equality-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-ordinary-equality-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-ordinary-equality-rejected",
+          "exitCode": 134,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-ordinary-equality",
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-persistence-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-persistence-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-persistence-rejected",
+          "exitCode": 134,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-persistence",
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-revision-fence-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-revision-fence-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-revision-fence-rejected",
+          "exitCode": 134,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-revision-fence",
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-field-validation-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-field-validation-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-field-validation-rejected",
+          "exitCode": 134,
+          "status": "passed"
+        },
+        {
+          "name": "configuration-mutant-field-validation",
+          "status": "passed"
+        },
+        {
+          "name": "fixed-client-source-identity",
+          "status": "passed"
+        },
+        {
+          "name": "client-settings-generation",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "client-types",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-real-client",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "redaction-mutant-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-real-client",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "artifact-identity-mutant-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "client-fence-mutant-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "client-fence-mutant-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "client-fence-mutant-real-client",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "client-fence-mutant-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "client-boundary-mutant-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "client-boundary-mutant-rejected",
+          "exitCode": 1,
+          "status": "passed"
+        },
+        {
+          "name": "clr-jit-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "clr-jit-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "clr-jit-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "clr-deployment-boundaries",
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-real-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-real-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "example-aot-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "example-jit-aot-output-parity",
+          "status": "passed"
+        },
+        {
+          "name": "existing-package-content-boundaries",
+          "status": "passed"
+        },
+        {
+          "name": "independent-package-consumer",
+          "status": "passed"
+        },
+        {
+          "name": "package-consumer-restore",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-consumer-isolation",
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-real-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-publish",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-run",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-scenario",
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-settings-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-client-build",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-real-client",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "package-aot-delivery",
+          "status": "passed"
+        },
+        {
+          "name": "package-jit-aot-output-parity",
+          "status": "passed"
+        },
+        {
+          "name": "git-head",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        {
+          "name": "git-status",
+          "exitCode": 0,
+          "status": "passed"
+        }
+      ],
+      "packages": [
+        {
+          "file": "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg",
+          "sha256": "2ee72a250217ac82302c9e8195fe2dbdd4bb51363de71b0bf8c25481a0b1dc94"
+        },
+        {
+          "file": "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+          "sha256": "065ca273848d60cba9aa9f27c07e67c4ee9368f76ad8333dc9f9c93dcd92641c"
+        },
+        {
+          "file": "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg",
+          "sha256": "ad30dd43d8429065ddcafac81c3fc1bff120461c12d2c4241915b560f0cc927d"
+        },
+        {
+          "file": "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg",
+          "sha256": "fe6016f20e4aab0f1dcb4e9e985bd657a801344e2842660726247f75b84c53c7"
+        },
+        {
+          "file": "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+          "sha256": "a78cc3b3b8691b786aa641b427c56a5d1506c390c49e3548c7d7e47d41f93f76"
+        },
+        {
+          "file": "Cordis.NET.Clr.0.2.0-alpha.4.snupkg",
+          "sha256": "ef7aff567d2509185eaa4631a87a9354bb4f97815528bbc0e16b67eb0b71304f"
+        },
+        {
+          "file": "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+          "sha256": "2e4114b9e106076f7c94de73ca314ff678356a1410e585647b328ee48191942a"
+        },
+        {
+          "file": "Cordis.NET.Composition.0.2.0-alpha.4.snupkg",
+          "sha256": "a4f5f4b7236f0ec5715084d18e49b34fb766fe4c171e2b277102d199404cba52"
+        },
+        {
+          "file": "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+          "sha256": "6e9eaf6a8a8819086b34882df85f2857d5940f8303c5e526ff90aab39c2946ee"
+        },
+        {
+          "file": "Cordis.NET.Core.0.2.0-alpha.4.snupkg",
+          "sha256": "3e656a4080dcd96ef7e9459516edf53bd689a0fd043d4d969129d73ea32a1ae7"
+        },
+        {
+          "file": "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+          "sha256": "3042210659d1a2a59dda4b4f273cff60e4435606a57717c87ef5a9826b3f746e"
+        },
+        {
+          "file": "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg",
+          "sha256": "d82c8f90d831bbd396c1365022045f7f5e1ae70be75315bd7df0abe107c2e57c"
+        },
+        {
+          "file": "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg",
+          "sha256": "4ae1f09934f4077ac03314c86a1e35ba84c7ceb41abae50c163c977f46d6a9df"
+        },
+        {
+          "file": "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg",
+          "sha256": "4c85bdbd3627dd7d58673023e46f43fda816808c060082605214b36162e43323"
+        },
+        {
+          "file": "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg",
+          "sha256": "76183d7b112b197a2cdef8a0ce650418638f12c4c02e7b262010dbf7f9cf93f5"
+        },
+        {
+          "file": "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg",
+          "sha256": "ef687d6c9e1552b5be17f9c99b1edf1e983defb6b6b47f989f6c58ba904692bb"
+        },
+        {
+          "file": "Cordis.NET.Tool.0.2.0-alpha.4.nupkg",
+          "sha256": "68186d43758386b5d123e5be1cc6e37b2c3f3348ad3432a89177b6f5194d2f2e"
+        },
+        {
+          "file": "Cordis.NET.Tool.0.2.0-alpha.4.snupkg",
+          "sha256": "572ff3ca0e75ba24c479ae944019325e1d927f3b4ba380178056f75c001c5a05"
+        }
+      ],
+      "symbolChecksFromCI": [
+        {
+          "package": "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 1,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 4,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 8,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 3,
+          "sourceDocuments": 123,
+          "embeddedDocuments": 82
+        },
+        {
+          "package": "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 18,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 6,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 1,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 1,
+          "sourceDocuments": 2,
+          "embeddedDocuments": 3
+        },
+        {
+          "package": "Cordis.NET.Tool.0.2.0-alpha.4.nupkg",
+          "commit": "afb573783d8d3fc5c84d36bd8d5ed245f3826824",
+          "assemblyCount": 6,
+          "sourceDocuments": 122,
+          "embeddedDocuments": 167
+        }
+      ],
+      "offlineDebugFromCI": {
+        "method": "Failure",
+        "line": 151
+      },
+      "downloadSha256": {
+        "evidence-ubuntu-24.04.zip": "6d042541a5d70ae0f7d6dc6f5e838d6c2900444d9bc487a8e70ff8d5360c49eb",
+        "validated-packages-ubuntu-24.04.zip": "004fb49f20dac2af2a843d449a2b4b38b19b662e33da4cd8b1c690a514625aa2"
+      },
+      "evidenceFileSha256": {
+        "ci-source.json": "f04d7c4d4d2a96cd7d7021ffc30e5c8c4203e830acc900d49febec9c27619e33",
+        "verification/verification.json": "159e8148a42c4ae81d5285eabd3899dbc9e4380ac83f454f199d59113739bf74",
+        "authoring/results.json": "0430aab22e53228daefb68446073eb265fb9fca6366d999a95d3b05c2e01385b",
+        "verification/test-map-evidence.json": "55ffb31ffcf3504d3ca95ca1240a2effb318f78e4c78de51ae9689f248dac016",
+        "verification/package-symbols-and-debug-consumer.stdout.log": "17a8a7427417afbb4440f689d6af17d2b19d85fa47693e4a8c92b8636564804e"
+      },
+      "inspectionBoundary": "Downloaded ZIP SHA-256 checked against GitHub artifact digests. Actual package nuspec revisions, paired symbols, and the CI symbol/source/offline-debug receipt were checked locally; runtime, AOT and symbol execution was performed by CI, not rerun locally.",
+      "upstream": {
+        "status": "passed",
+        "passed": 5619,
+        "skipped": [],
+        "meaning": "Complete fixed-source execution on this platform; not .NET assertion-review closure.",
+        "shards": [
+          {
+            "shard": 1,
+            "steps": [
+              {
+                "name": "collect-composition",
+                "seconds": 7.721,
+                "exitCode": 0
+              },
+              {
+                "name": "collect-core",
+                "seconds": 2.436,
+                "exitCode": 0
+              },
+              {
+                "name": "linked-resolution-matrix",
+                "seconds": 21.582,
+                "exitCode": 0
+              },
+              {
+                "name": "original-composition",
+                "seconds": 25.083,
+                "exitCode": 0
+              },
+              {
+                "name": "original-core",
+                "seconds": 2.78,
+                "exitCode": 0
+              }
+            ]
+          },
+          {
+            "shard": 2,
+            "steps": [
+              {
+                "name": "collect-composition",
+                "seconds": 10.025,
+                "exitCode": 0
+              },
+              {
+                "name": "collect-core",
+                "seconds": 3.279,
+                "exitCode": 0
+              },
+              {
+                "name": "linked-resolution-matrix",
+                "seconds": 24.432,
+                "exitCode": 0
+              }
+            ]
+          },
+          {
+            "shard": 3,
+            "steps": [
+              {
+                "name": "collect-composition",
+                "seconds": 9.793,
+                "exitCode": 0
+              },
+              {
+                "name": "collect-core",
+                "seconds": 3.153,
+                "exitCode": 0
+              },
+              {
+                "name": "linked-resolution-matrix",
+                "seconds": 23.687,
+                "exitCode": 0
+              }
+            ]
+          },
+          {
+            "shard": 4,
+            "steps": [
+              {
+                "name": "collect-composition",
+                "seconds": 9.843,
+                "exitCode": 0
+              },
+              {
+                "name": "collect-core",
+                "seconds": 3.199,
+                "exitCode": 0
+              },
+              {
+                "name": "linked-resolution-matrix",
+                "seconds": 24.407,
+                "exitCode": 0
+              }
+            ]
+          }
+        ],
+        "summarySha256": "4f20a23f1da9e50a9655d6ecc2244a2978f0d47da6f31d96755cab54ca455c06",
+        "fixedDsh": "639ed015397290b3745d163aafe02ffee4aa3f84",
+        "fixedCordisOrigin": "56b3d4f725681cf4556c1a8695a709cc3b6eed74"
+      }
+    }
+  ],
+  "boundary": [
+    "This is an independent complete hosted execution, not a replacement for the failed local Windows gate in evidence.json. No rerun or timeout/assertion change was used for this closeout.",
+    "The local 920/921 HMR failure and twenty separately completed non-test checks remain distinct. Cold preparation remains an accepted risk without a proven upper bound.",
+    "Both runtime ci-source.json files, package nuspec revisions and CI symbol/debug reports bind the actual PR merge checkout, not the branch SHA. Production/package source is unchanged from 0c017f6; intervening changes are evidence and validation indexes.",
+    "Runtime and authoring AOT checks passed within their supported fixtures. Runtime numeric reflection metadata does not gain arbitrary static/saved-model replay or AOT support from unrelated passing AOT fixtures.",
+    "Node socket consumption is not a new real-browser observation. Earlier browser, Rider and native application evidence retain their original commits and package batches.",
+    "Downloaded batches contain nine nupkg/snupkg pairs per platform, including the non-release example package. Version text is 0.2.0-alpha.4; these are isolated CI artifacts, not the published alpha.4 bytes and not a formal alpha5 release.",
+    "External applications must use one complete matching package/tool batch with an isolated feed and cache. External application acceptance was not executed by this closeout.",
+    "No merge, release version change, tag, publication or deployment is recorded or authorized by this receipt."
+  ]
+}

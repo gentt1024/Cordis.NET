@@ -13,7 +13,7 @@
 | 声明 | 共同模型、显式引用、普通 build／pack 和首次 design-time 生成；下表列出支持和拒绝形状。 |
 | Remote | 共享 unary／multipart 和文本 mux Connection、scoped 客户端、反向 Context／owned value、Peer 路由及固定事件；互通有明确范围，不包含所有 DSH SDK 传输。 |
 | CLR | 准备／发布回执、稳定 LoadDirectory、重启升级、逻辑移除保留文件；要求普通运行时，业务排空／就绪归应用。 |
-| 待验消费 | 实际已准备候选的合同访问、unary 本地 transport cause 和 Web 数值 metadata 消费仍待裁决。泛型 DTO／静态后端限制保持明确；具名 UI／平台需要自己的证据。 |
+| 消费状态 | 实际已准备候选的合同访问、unary 本地 transport cause 和有限 Web 数值 metadata 已在本候选实现。[验证记录](validation.zh.md#当前候选索引)区分本地消费、完整 CI 与发行状态；外部应用使用一致的包／工具批次验证受影响调用。泛型 DTO／静态后端限制保持明确；具名 UI／平台需要自己的证据。 |
 
 ## 维护导航
 
@@ -21,7 +21,7 @@
 
 | 职责 | 固定上游／.NET 适配 | 源码所有者 | 主要检查与独立消费 |
 |---|---|---|---|
-| 执行与服务视图 | vendor/cordis/packages/core；类型化视图替代上下文 JS 重绑定 | [Core](../src/Cordis.Core)：Context、Fiber、ReflectService | [CoreTests](../tests/Cordis.Core.Tests/CoreTests.cs)；隔离包消费 |
+| 执行与服务视图 | [vendor/cordis/src](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84/vendor/cordis/src)；类型化视图替代上下文 JS 重绑定 | [Core](../src/Cordis.Core)：Context、Fiber、ReflectService | [CoreTests](../tests/Cordis.Core.Tests/CoreTests.cs)；隔离包消费 |
 | 配置／Settings | packages/boot、packages/api；typed 字段和 STJ 复用现有写入者 | [Composition](../src/Cordis.Composition)：配置操作、SettingsForms | [ConfigurationEditTests](../tests/Cordis.Composition.Tests/ConfigurationEditTests.cs)；[Settings 调用方](../scripts/verify-typert-dotnet.py) |
 | 安装 | packages/boot；NuGet／SDK 准备保留操作／任务所有权 | [Extensions](../src/Cordis.Extensions)、[Clr](../src/Cordis.Clr) 工具链 | [ConfigurationSessionTests](../tests/Cordis.Extensions.Tests/ConfigurationSessionTests.cs)；[部署](../scripts/verify-clr-deployment.py) |
 | 模型／后端 | packages/typert/generator；Roslyn 和 STJ 替代 TS 分析／codec | [Model](../tools/Cordis.Typert.Generator/Model)、[Generation](../src/Cordis.Composition/Generation)、MSBuild targets | [独立调用方](../scripts/verify-typert-dotnet.py)，含构建／打包／design-time 接线 |

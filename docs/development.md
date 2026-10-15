@@ -13,7 +13,7 @@ This branch prepares alpha5; alpha5 is not published. [Validation](validation.md
 | Declarations | One common model, explicit references, normal build/pack and first design-time generation. The backend table below lists supported and refused shapes. |
 | Remote | Shared unary/multipart and text mux Connection, scoped clients, reverse Context/owned values, Peer routing and fixed events. Interoperability is bounded, not all DSH SDK transports. |
 | CLR | Prepared/published receipts, stable LoadDirectory, restart upgrades and retained files after logical removal. Ordinary runtime only; business drain/readiness stays application-owned. |
-| Pending consumption | Actual prepared-candidate contract access, unary local transport cause and Web-number metadata consumption need decisions. Generic DTO/static backend limits remain explicit; named UI/platform acceptance requires its own evidence. |
+| Consumption status | Prepared-candidate contract access, unary local transport cause and bounded Web-number metadata are implemented in this candidate. [Validation](validation.md#current-candidate-index) separates local consumption, complete CI and release status; external applications verify their affected calls against one matching package/tool batch. Generic DTO/static backend limits remain explicit; named UI/platform acceptance requires its own evidence. |
 
 ## Maintenance navigation
 
@@ -21,7 +21,7 @@ Every upstream path below uses [upstream.lock.json](../upstream.lock.json). This
 
 | Responsibility | Fixed upstream / .NET adaptation | Source owner | Primary check and distinct consumer |
 |---|---|---|---|
-| Execution and service views | vendor/cordis/packages/core; typed views replace contextual JS rebinding | [Core](../src/Cordis.Core): Context, Fiber, ReflectService | [CoreTests](../tests/Cordis.Core.Tests/CoreTests.cs); isolated package consumer |
+| Execution and service views | [vendor/cordis/src](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84/vendor/cordis/src); typed views replace contextual JS rebinding | [Core](../src/Cordis.Core): Context, Fiber, ReflectService | [CoreTests](../tests/Cordis.Core.Tests/CoreTests.cs); isolated package consumer |
 | Configuration / Settings | packages/boot and packages/api; typed fields and STJ over the existing writer | [Composition](../src/Cordis.Composition): configuration operations, SettingsForms | [ConfigurationEditTests](../tests/Cordis.Composition.Tests/ConfigurationEditTests.cs); [Settings caller](../scripts/verify-typert-dotnet.py) |
 | Installation | packages/boot; NuGet/SDK preparation retains operation/task ownership | [Extensions](../src/Cordis.Extensions), [Clr](../src/Cordis.Clr) toolchain | [ConfigurationSessionTests](../tests/Cordis.Extensions.Tests/ConfigurationSessionTests.cs); [deployment](../scripts/verify-clr-deployment.py) |
 | Model / backends | packages/typert/generator; Roslyn and STJ replace TS analysis/codecs | [Model](../tools/Cordis.Typert.Generator/Model), [Generation](../src/Cordis.Composition/Generation), MSBuild targets | [Independent callers](../scripts/verify-typert-dotnet.py), including build/pack/design-time wiring |
