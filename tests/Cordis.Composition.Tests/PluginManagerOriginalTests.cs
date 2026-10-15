@@ -573,9 +573,11 @@ public sealed class PluginManagerOriginalTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task UnchangedFailuresRemainWarningsForUnrelatedChanges(bool nested)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task UnchangedFailuresRemainWarningsForUnrelatedChanges(bool nested, bool configuredLater)
     {
         await using var f = new Fixture();
         await f.Start(
@@ -606,32 +608,34 @@ public sealed class PluginManagerOriginalTests
                 {
                 }
             });
-        await f.Bundle(
-            "broken",
-            [
-                new()
+        List<EntryOptions> patches =
+        [
+            new()
+            {
+                Id = nested ? "host" : "",
+                ["insert"] = new[]
                 {
-                    Id = nested ? "host" : "",
-                    ["insert"] = new[]
+                    new EntryOptions
                     {
-                        new EntryOptions
-                        {
-                            Id = "broken",
-                            Name = "broken"
-                        },
-                        new EntryOptions
-                        {
-                            Id = "missing",
-                            Name = "absent"
-                        },
-                        new EntryOptions
-                        {
-                            Id = "pending",
-                            Name = "pending"
-                        }
+                        Id = "broken",
+                        Name = "broken"
+                    },
+                    new EntryOptions
+                    {
+                        Id = "missing",
+                        Name = "absent"
+                    },
+                    new EntryOptions
+                    {
+                        Id = "pending",
+                        Name = "pending"
                     }
                 }
-            ]);
+            }
+        ];
+        if (configuredLater)
+            patches = ConfiguredGroup(Data.Entries(patches[0]["insert"]), nested);
+        await f.Bundle("broken", patches);
         Assert.Equal("failed", (await f.Manager.SetBundleEnabledAsync("broken", true)).Application);
         Assert.Equal("failed", (await f.Manager.SetPluginEnabledAsync("root:broken", true)).Application);
         Assert.Equal("failed", (await f.Manager.SetBundleEnabledAsync("broken", true)).Application);
@@ -642,6 +646,104 @@ public sealed class PluginManagerOriginalTests
             string.Join("; ", changed.Warnings.Select(w => w.Id + ":" + w.Error?.Message)));
         Assert.Equal("applied", (await f.Manager.SetPluginEnabledAsync("root:managed", true)).Application);
     }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    public async Task BundleProtectionFollowsOwnedGroupOverrides(bool nested, bool protectedChild)
+    {
+        await using var f = new Fixture();
+        await f.Start(
+            baseRows: nested
+                ?
+                [
+                    new()
+                    {
+                        Id = "host",
+                        Name = "cordis:group",
+                        Group = true,
+                        Config = new[]
+                        {
+                            new EntryOptions
+                            {
+                                Id = "base-manager",
+                                Name = "cordis:manager"
+                            }
+                        }
+                    }
+                ]
+                : null);
+        var patches = ConfiguredGroup(
+            [
+                new()
+                {
+                    Id = "final-child",
+                    Name = protectedChild ? "cordis:manager" : "managed"
+                }
+            ],
+            nested);
+        if (!protectedChild)
+            Data.Entries(patches[0]["insert"])[0].Config =
+                new[]
+                {
+                    new EntryOptions
+                    {
+                        Id = "removed-child",
+                        Name = "cordis:manager"
+                    }
+                };
+        await f.Bundle("configured", patches);
+        AssertChange(await f.Manager.SetBundleEnabledAsync("configured", true), true, "applied");
+        var entry = Assert.Single(f.Include.Loader.Entries(), e => e.Options.Id == "final-child");
+        Assert.Equal(FiberState.Active, entry.Fiber!.State);
+        Assert.DoesNotContain(f.Include.Loader.Entries(), e => e.Options.Id == "removed-child");
+        var fiber = entry.Fiber;
+        var manifest = await File.ReadAllTextAsync(f.ManifestPath);
+        var user = await File.ReadAllTextAsync(f.Patch);
+        var source = await File.ReadAllTextAsync(f.Include.Filename);
+        var result = await f.Manager.SetBundleEnabledAsync("configured", false);
+        Assert.Equal(protectedChild ? "management-required" : null, result.Error);
+        Assert.Equal(!protectedChild, result.Changed);
+        Assert.Equal(protectedChild ? "failed" : "applied", result.Application);
+        Assert.Equal(user, await File.ReadAllTextAsync(f.Patch));
+        if (protectedChild)
+        {
+            Assert.Equal(source, await File.ReadAllTextAsync(f.Include.Filename));
+            Assert.Equal(manifest, await File.ReadAllTextAsync(f.ManifestPath));
+            Assert.Same(fiber, entry.Fiber);
+            Assert.Equal(FiberState.Active, fiber.State);
+        }
+        else
+            Assert.DoesNotContain("configured", f.Manifest.Bundles);
+
+        var bundle = (await f.Manager.ListBundlesAsync()).Single(b => b.Name == "configured");
+        Assert.Equal(protectedChild ? "management-required" : null, bundle.ReadOnlyReason);
+    }
+
+    private static List<EntryOptions> ConfiguredGroup(List<EntryOptions> children, bool nested) =>
+    [
+        new()
+        {
+            Id = nested ? "host" : "",
+            ["insert"] = new[]
+            {
+                new EntryOptions
+                {
+                    Id = "owned-group",
+                    Name = "cordis:group",
+                    Group = true,
+                    Config = Array.Empty<EntryOptions>()
+                }
+            }
+        },
+        new()
+        {
+            Id = "owned-group",
+            Config = children
+        }
+    ];
 
     [Fact]
     public async Task ReconcileActivatesNewBundlesAndPreservesRetainedDisabledOnes()

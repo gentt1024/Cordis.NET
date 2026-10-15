@@ -432,7 +432,7 @@ public sealed partial class PluginConfigurationOperations(
                 }
 
                 var required = enabled && info is not null
-                    ? InsertedRows(info.Value.Patches)
+                    ? ComposedBundleRows(info.Value.Patches)
                         .Select(row => row.Id)
                         .ToHashSet(StringComparer.Ordinal)
                     : null;
@@ -598,8 +598,19 @@ public sealed partial class PluginConfigurationOperations(
     }
 
     private bool ProtectsManager(List<EntryOptions> patches) =>
-        InsertedRows(patches)
+        ComposedBundleRows(patches)
             .Any(row => ProtectedModules.Contains(row.Name) || include.Owner?.Id + ":" + row.Id == ownerEntryId);
+
+    private static IEnumerable<EntryOptions> ComposedBundleRows(List<EntryOptions> patches)
+    {
+        var detached = Data.Entries(Data.Clone(patches));
+        var ownedIds = InsertedRows(detached).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var patch in detached)
+            // An external group locates this bundle's roots; it is not owned by the bundle.
+            if (Data.Truthy(patch.GetValueOrDefault("insert")) && !ownedIds.Contains(patch.Id))
+                patch.Remove("id");
+        return Flatten(EntryPatches.Apply([], detached));
+    }
 
     private static IEnumerable<EntryOptions> InsertedRows(IEnumerable<EntryOptions> patches) =>
         Flatten(
