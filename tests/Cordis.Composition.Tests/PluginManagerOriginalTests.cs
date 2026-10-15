@@ -412,44 +412,111 @@ public sealed class PluginManagerOriginalTests
         Assert.Empty(extra.Overrides);
     }
 
-    [Fact]
-    public async Task GroupChildrenAreAddressableAndDuplicateIdsAreReadOnly()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GroupChildrenAreAddressableAndDuplicateIdsAreReadOnly(bool groupInBaseFile)
     {
         await using var f = new Fixture();
-        await f.Start();
+        var group = new EntryOptions
+        {
+            Id = "group",
+            Name = "cordis:group",
+            Group = true,
+            Config = Array.Empty<EntryOptions>()
+        };
+        var child = new EntryOptions
+        {
+            Id = "child",
+            Name = "managed"
+        };
+        await f.Start(baseRows: groupInBaseFile ? [group] : null);
+        var baseSource = await File.ReadAllTextAsync(f.Include.Filename);
+        if (!groupInBaseFile)
+            group.Config = new[] { child };
         await f.Bundle(
             "grouped",
             [
                 new()
                 {
-                    ["insert"] = new[]
-                    {
-                        new EntryOptions
-                        {
-                            Id = "group",
-                            Name = "cordis:group",
-                            Group = true,
-                            Config = new[]
-                            {
-                                new EntryOptions
-                                {
-                                    Id = "child",
-                                    Name = "managed"
-                                }
-                            }
-                        }
-                    }
+                    Id = groupInBaseFile ? "group" : "",
+                    ["insert"] = new[] { groupInBaseFile ? child : group }
                 }
             ]);
         var grouped = await f.Manager.SetBundleEnabledAsync("grouped", true);
         Assert.True(grouped.Application == "applied", grouped.Diagnostic);
-        Assert.Contains(await f.Manager.ListPluginsAsync(), row => row.PatchId == "child");
+        var mounted = (await f.Manager.ListPluginsAsync()).Single(row => row.ModuleName == "managed" && row.EntryId == "root:child");
+        Assert.Null(mounted.ReadOnlyReason);
+        Assert.Equal("child", mounted.PatchId);
+        Assert.Equal(FiberState.Active, mounted.State);
+        var bundle = (await f.Manager.ListBundlesAsync()).Single(row => row.Name == "grouped");
+        Assert.Contains(bundle.Rows, row => row.RowId == "child" && row.EntryId == mounted.EntryId);
+        Assert.DoesNotContain(bundle.Rows, row => row.RowId == "manager" || row.RowId == "managed");
+        var preview = ConfigurationFile.ParseEntries(await f.Manager.PreviewAsync());
+        Assert.Equal("child", Assert.Single(Data.Entries(preview.Single(row => row.Id == "group").Config)).Id);
+        AssertChange(await f.Manager.SetPluginEnabledAsync(mounted.EntryId, false), true, "applied");
+        var disabled = (await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == mounted.EntryId);
+        Assert.False(disabled.Enabled);
+        Assert.NotEqual(FiberState.Active, disabled.State);
+        Assert.Equal(true, Assert.Single(await Profiles.ReadPatchesAsync(f.Patch), row => row.Id == "child").Disabled);
+        AssertChange(await f.Manager.SetPluginEnabledAsync(mounted.EntryId, true), true, "applied");
+        var enabled = (await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == mounted.EntryId);
+        Assert.True(enabled.Enabled);
+        Assert.Equal(FiberState.Active, enabled.State);
+        Assert.Equal(false, Assert.Single(await Profiles.ReadPatchesAsync(f.Patch), row => row.Id == "child").Disabled);
+        Assert.Equal(baseSource, await File.ReadAllTextAsync(f.Include.Filename));
+        await using (var reopenedContext = new Context())
+        {
+            var reopened = await f.Mount(reopenedContext);
+            var inventory = await new PluginConfigurationOperations(f.Launch, reopened).ListPluginsAsync();
+            var restored = Assert.Single(inventory, row => row.PatchId == "child");
+            Assert.True(restored.Enabled);
+            Assert.Equal(FiberState.Active, restored.State);
+        }
+
         await File.WriteAllTextAsync(
             f.Patch,
             "- insert:\n    - id: duplicate-group\n      name: group\n      group: true\n      config:\n        - id: managed\n          name: managed\n");
         Assert.Equal(
             "unaddressable",
             (await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == "root:managed").ReadOnlyReason);
+    }
+
+    [Theory]
+    [InlineData("managed", false)]
+    [InlineData("cordis:manager", true)]
+    public async Task NestedBundleProtectionUsesItsOwnDeclarations(string module, bool protectedBundle)
+    {
+        await using var f = new Fixture();
+        await f.Start(baseRows:
+        [
+            new()
+            {
+                Id = "host",
+                Name = "cordis:group",
+                Group = true,
+                Config = new[] { new EntryOptions { Id = "base-manager", Name = "cordis:manager" } }
+            }
+        ]);
+        await f.Bundle("nested",
+        [
+            new()
+            {
+                Id = "host",
+                ["insert"] = new[] { new EntryOptions { Id = "nested-entry", Name = module } }
+            }
+        ]);
+        AssertChange(await f.Manager.SetBundleEnabledAsync("nested", true), true, "applied");
+        var bundle = (await f.Manager.ListBundlesAsync()).Single(row => row.Name == "nested");
+        Assert.Equal(protectedBundle ? "management-required" : null, bundle.ReadOnlyReason);
+        var declared = Assert.Single(bundle.Rows);
+        Assert.Equal("nested-entry", declared.RowId);
+        Assert.Equal(module, declared.ModuleName);
+        var before = await File.ReadAllTextAsync(f.ManifestPath);
+        var result = await f.Manager.SetBundleEnabledAsync("nested", false);
+        Assert.Equal(protectedBundle ? "management-required" : null, result.Error);
+        Assert.Equal(!protectedBundle, result.Changed);
+        Assert.Equal(!protectedBundle, before != await File.ReadAllTextAsync(f.ManifestPath));
     }
 
     [Fact]
@@ -487,11 +554,22 @@ public sealed class PluginManagerOriginalTests
         await Assert.ThrowsAnyAsync<Exception>(() => f.Manager.SetPluginEnabledAsync("root:managed", true));
     }
 
-    [Fact]
-    public async Task UnchangedFailuresRemainWarningsForUnrelatedChanges()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UnchangedFailuresRemainWarningsForUnrelatedChanges(bool nested)
     {
         await using var f = new Fixture();
-        await f.Start();
+        await f.Start(baseRows: nested ?
+        [
+            new()
+            {
+                Id = "host",
+                Name = "cordis:group",
+                Group = true,
+                Config = Array.Empty<EntryOptions>()
+            }
+        ] : null);
         f.Modules.Register(
             "broken",
             new Plugin<object?>
@@ -512,6 +590,7 @@ public sealed class PluginManagerOriginalTests
             [
                 new()
                 {
+                    Id = nested ? "host" : "",
                     ["insert"] = new[]
                     {
                         new EntryOptions
@@ -823,7 +902,8 @@ public sealed class PluginManagerOriginalTests
             bool live = true,
             IReadOnlyList<ConfigurationLayer>? overlays = null,
             string module = "managed",
-            bool initiallyDisabled = false)
+            bool initiallyDisabled = false,
+            IReadOnlyList<EntryOptions>? baseRows = null)
         {
             Installation["core"] = await Bundle(
                 "core",
@@ -863,11 +943,20 @@ public sealed class PluginManagerOriginalTests
             Directory.CreateDirectory(home);
             Launch = new(profile, home, overlays ?? [], Installation, Packages);
             var path = Path.Combine(DirectoryPath, "cordis.yml");
-            await File.WriteAllTextAsync(path, "[]\n");
-            Loader loader = null!;
-            await Context.RunAsync(_ =>
+            await File.WriteAllTextAsync(path, ConfigurationFile.Write(baseRows ?? []));
+            Include = await Mount(Context);
+            Manager = new(Launch, Include, "root:manager")
             {
-                loader = new Loader(Context, Modules);
+                RunExclusiveAsync = live ? action => action() : null
+            };
+        }
+
+        public async Task<Include> Mount(Context context)
+        {
+            Loader loader = null!;
+            await context.RunAsync(_ =>
+            {
+                loader = new Loader(context, Modules);
                 loader.Builtins["manager"] = new Plugin<object?>
                 {
                     Apply = (_, _) =>
@@ -876,14 +965,10 @@ public sealed class PluginManagerOriginalTests
                 };
                 return Task.CompletedTask;
             });
-            Include = await ApplicationBoot.MountAsync(
+            return await ApplicationBoot.MountAsync(
                 loader,
-                path,
+                Path.Combine(DirectoryPath, "cordis.yml"),
                 ProfileComposition.Flatten((await ProfileComposition.RefreshAsync(Launch)).Layers));
-            Manager = new(Launch, Include, "root:manager")
-            {
-                RunExclusiveAsync = live ? action => action() : null
-            };
         }
 
         public async ValueTask DisposeAsync()

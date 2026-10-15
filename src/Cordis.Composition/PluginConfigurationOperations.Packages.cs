@@ -297,7 +297,7 @@ public sealed partial class PluginConfigurationOperations
                 ReportPackageProgress(requestId, stage);
                 if (enabled)
                 {
-                    var required = Flatten(Profiles.Compose(bundle.PatchLayers))
+                    var required = InsertedRows(bundle.Patches)
                         .Select(row => row.Id)
                         .ToHashSet(StringComparer.Ordinal);
                     await ApplyCandidateAsync(candidate, required);

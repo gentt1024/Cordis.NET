@@ -219,18 +219,25 @@ public sealed partial class PluginConfigurationOperations(
     /// List mounted entries with their current state and profile management addresses.
     /// </summary>
     /// <remarks>Reads current profile sources without refreshing the runtime or evaluating configuration expressions.
-    /// Protected or ambiguous entries remain listed with a read-only reason. Profile manifest and user patch read or parse failures propagate.</remarks>
+    /// Protected or ambiguous entries remain listed with a read-only reason. Base configuration, profile manifest and user patch read or parse failures propagate.</remarks>
     public async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync()
     {
+        var inputs = await CaptureProfileAsync();
         var profile = await Profiles.LoadAsync(
-            launch.Profile.Directory,
-            launch.InstallationBundles,
-            launch.LocalBundles,
-            userLayer: false);
+            inputs.Launch.Profile.Directory,
+            inputs.Launch.InstallationBundles,
+            inputs.Launch.LocalBundles,
+            false,
+            null,
+            ParseManifest(await inputs.ReadAsync(ManifestPath)),
+            inputs.ReadAsync);
         var profileLayers = profile
             .Bundles.SelectMany(bundle => bundle.PatchLayers)
-            .Append(new ConfigurationLayer(PatchPath, await Profiles.ReadPatchesAsync(PatchPath, true)));
-        var rows = Flatten(Profiles.Compose(profileLayers)).ToArray();
+            .Append(new ConfigurationLayer(PatchPath, await Profiles.ReadPatchesAsync(PatchPath, true, inputs.ReadAsync)));
+        var baseRows = ConfigurationFile.ParseEntries(
+            await inputs.ReadAsync(include.Filename),
+            Path.GetExtension(include.Filename) == ".json");
+        var rows = Flatten(EntryPatches.Apply(baseRows, ProfileComposition.Flatten(profileLayers))).ToArray();
         var result = new List<PluginConfigurationInfo>();
         await include.Context.RunAsync(_ =>
         {
@@ -254,6 +261,7 @@ public sealed partial class PluginConfigurationOperations(
 
             return Task.CompletedTask;
         });
+        await inputs.VerifyAsync();
         return result;
     }
 
@@ -307,10 +315,9 @@ public sealed partial class PluginConfigurationOperations(
                 }
 
                 var (metadata, patches) = info.Value;
-                var declared =
-                    Flatten(Profiles.Compose([new("bundle", patches.Where(p => p.ContainsKey("insert")).ToList())]))
-                        .Where(p => p.Id.Length > 0 && p.Name.Length > 0)
-                        .ToArray();
+                var declared = InsertedRows(patches)
+                    .Where(p => p.Id.Length > 0 && p.Name.Length > 0)
+                    .ToArray();
                 var ids = declared.Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
                 if (ProtectsManager(patches))
                     managementBundles.TryAdd(name, 0);
@@ -424,7 +431,7 @@ public sealed partial class PluginConfigurationOperations(
                 }
 
                 var required = enabled && info is not null
-                    ? Flatten(Profiles.Compose([new("bundle", info.Value.Patches)]))
+                    ? InsertedRows(info.Value.Patches)
                         .Select(row => row.Id)
                         .ToHashSet(StringComparer.Ordinal)
                     : null;
@@ -433,8 +440,20 @@ public sealed partial class PluginConfigurationOperations(
             cancellationToken);
 
     /// <summary>Read the effective raw configuration without modifying files or evaluating expressions.</summary>
-    public async Task<string> PreviewAsync(bool json = false) =>
-        Profiles.Preview((await ProfileComposition.RefreshAsync(launch)).Layers, json);
+    public async Task<string> PreviewAsync(bool json = false)
+    {
+        var inputs = await CaptureProfileAsync();
+        var refresh = await ProfileComposition.RefreshAsync(
+            inputs.Launch,
+            ParseManifest(await inputs.ReadAsync(ManifestPath)),
+            inputs.ReadAsync);
+        var baseRows = ConfigurationFile.ParseEntries(
+            await inputs.ReadAsync(include.Filename),
+            Path.GetExtension(include.Filename) == ".json");
+        var rows = EntryPatches.Apply(baseRows, ProfileComposition.Flatten(refresh.Layers));
+        await inputs.VerifyAsync();
+        return ConfigurationFile.Write(rows, json);
+    }
 
     private async Task<IReadOnlyList<EntryDiagnostic>> ReloadAsync(IReadOnlySet<string>? required)
     {
@@ -578,8 +597,12 @@ public sealed partial class PluginConfigurationOperations(
     }
 
     private bool ProtectsManager(List<EntryOptions> patches) =>
-        Flatten(Profiles.Compose([new("bundle", patches)]))
+        InsertedRows(patches)
             .Any(row => ProtectedModules.Contains(row.Name) || include.Owner?.Id + ":" + row.Id == ownerEntryId);
+
+    private static IEnumerable<EntryOptions> InsertedRows(IEnumerable<EntryOptions> patches) =>
+        Flatten(patches.Where(patch => Data.Truthy(patch.GetValueOrDefault("insert")))
+            .SelectMany(patch => Data.Entries(patch["insert"])));
 
     private static IEnumerable<EntryOptions> Flatten(IEnumerable<EntryOptions> rows)
     {

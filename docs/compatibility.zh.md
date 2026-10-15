@@ -94,6 +94,10 @@ DSH-enabled NuGet 宿主应显式将 `ProfileLaunch.CompatibilityPackageName` �
 
 原生管理 `Changed` 事件逐个隔离同步观察者异常，记录日志，既不替换已完成操作的结果，也不阻止后续观察者。它不改变 Core 事件语义。启停与 bundle 选择先持久化、再协调；应用失败仍可能保留已保存文件。字段编辑恢复继续遵循其独立合同。
 
+原生管理寻址先纳入绑定 Include 的基础文件声明，再应用 bundle 和 Profile 用户补丁。因此，基础文件定义的组可以接收 bundle 插入的子项，并以其现有 patch ID 执行启停。这是通用 .NET 宿主适配，不能宣称固定 DSH PluginManager 已有相同行为：其 `listPlugins()` 使用 `composeEntries([readProfilePatches(...)])` 从空根组合。固定上游 Include 本身会对解析后的基础数据应用补丁；.NET 管理沿用该补丁算法和实际基础源，不刷新运行时或求值表达式，也不对已经组合的运行树重复应用补丁。基础文件缺失或格式错误会使读取失败。既有树所有者、唯一 ID、模块名及管理保护检查继续保留，修改队列、持久化和协调流程不变。Home／启动 overlays 仍保持后置优先级，可能覆盖已保存的启停值，但不据此建立 Profile 管理地址。
+
+管理读取复用捕获的 Profile 输入，并检查这些源未发生变化。Preview 将原始基础数据与全部有序层组合，包括 Home 和启动 overlays。Bundle 条目、管理保护与必需条目审计则读取该 bundle 自己的插入声明，包括以基础文件中的组为目标的 insert，不把整个宿主树归给每个 bundle。新安装 bundle 的审计也使用相同声明选择。这些视图共用补丁与 group 事实，保留仅组合补丁的 `Profiles.Compose`，不新增公共地址 API。
+
 ## 证据
 
 保存模型的 DTO 和 client 生成也在 MSBuild 设计时构建的 `CoreCompile` 前执行，使用相同共同模型后端和显式引用模型，通过独立输出目录避免语言服务生成写入普通 build/pack 产物。这是 .NET 编译输入适配：STJ 必须在输入 compilation 中看到生成声明；不增加第二套模型权威或回退解析器。打包所需的源码模型提取仍属于普通构建，source generator 继续分析实时作者 compilation。MSBuild 语言服务输入检查与实际 IDE、UI 平台验收分别记录。
