@@ -1,0 +1,527 @@
+{
+  "sourceCommit": "707fddeaaeaa3316f44fef76a15a3c76e335a00d",
+  "sourceTree": "592a52b78f1f75e4d7b3506e4aa913460e2798cb",
+  "upstream": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "status": "windows-package-gate-and-browser-passed",
+  "platform": "win-x64",
+  "sdkVersion": "10.0.111",
+  "regression": {
+    "baselineProductionCommit": "ffa24e96fc2e0105dc5306cf38a5aa6ecabf04b6",
+    "primaryTest": "Generated_waterfall_preserves_subject_identity_through_caller_tracing",
+    "red": {
+      "sha256": "83a56a8eabaa6dcf2fd29b540f5c117178d598311b8e32a53e5c911b5fe215e8",
+      "total": 2,
+      "passed": 1,
+      "failed": 1,
+      "cases": [
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Generated_waterfall_preserves_subject_identity_through_caller_tracing(freshView: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Generated_waterfall_preserves_subject_identity_through_caller_tracing(freshView: True)",
+          "outcome": "Failed"
+        }
+      ]
+    },
+    "green": {
+      "sha256": "99053a06d8c0504c2fd66cb1dc3b18b6d11fb96430194b6db5129dfb812a2933",
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Generated_waterfall_preserves_subject_identity_through_caller_tracing(freshView: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Resolved_context_survives_handler_and_reply_settlement(owned: True, cancel: False, closeConnection: False, result: \"undefined\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Resolved_context_survives_handler_and_reply_settlement(owned: True, cancel: True, closeConnection: True, result: \"null\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Resolved_context_survives_handler_and_reply_settlement(owned: True, cancel: False, closeConnection: False, result: \"null\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Resolved_context_survives_handler_and_reply_settlement(owned: False, cancel: False, closeConnection: False, result: \"null\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Resolved_context_survives_handler_and_reply_settlement(owned: True, cancel: True, closeConnection: False, result: \"null\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Generated_waterfall_preserves_subject_identity_through_caller_tracing(freshView: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Platform.Tests.RemoteEventsTests.Resolved_context_survives_handler_and_reply_settlement(owned: True, cancel: False, closeConnection: False, result: \"next\")",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    "relatedNative": {
+      "sha256": "25339c087f6d8cfa941c3206c20675c2e75523f8525d09ad88ba3e3421d23283",
+      "total": 27,
+      "passed": 27,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Pending_waterfall_survives_disconnect_and_settles_once_from_current_delivery(reply: \"{\\\"kind\\\":\\\"result\\\",\\\"value\\\":null}\", expected: \"null\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Scoped_forwarding_checks_the_key_before_projecting(kind: \"different-subject-type\", rejected: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Selected_Cordis_events_reach_two_fixed_event_streams_after_subscription_readiness",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Source_disposal_failure_is_retained_by_its_Fiber_and_blocks_plugin_replacement(cleanupMode: \"dispose\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Pending_waterfall_survives_disconnect_and_settles_once_from_current_delivery(reply: \"{\\\"kind\\\":\\\"rejected\\\",\\\"error\\\":{\\\"name\\\":\\\"Busin\"···, expected: \"rejected\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Pending_waterfall_survives_disconnect_and_settles_once_from_current_delivery(reply: \"{\\\"kind\\\":\\\"next\\\"}\", expected: \"next\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Gateway_owns_json_snapshots_before_broadcasting_to_later_readers",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Source_disposal_failure_is_retained_by_its_Fiber_and_blocks_plugin_replacement(cleanupMode: \"natural-finally\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Withdrawing_selected_source_settles_every_queued_waterfall",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.TypertGatewayPeerTests.A_stream_keeps_its_initial_peer_through_reads_and_cleanup(mounted: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Disconnect_removes_only_its_observer_and_reconnection_does_not_replay_events",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Source_owner_withdrawal_closes_all_pending_observers_and_joins_source_cleanup",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Pending_waterfall_survives_disconnect_and_settles_once_from_current_delivery(reply: \"{\\\"kind\\\":\\\"result\\\"}\", expected: \"undefined\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Source_disposal_failure_is_retained_by_its_Fiber_and_blocks_plugin_replacement(cleanupMode: \"cancelled-finally\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Typed_event_encoding_failure_ends_delivery_without_failing_the_triggering_emit",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Source_failure_or_unexpected_completion_closes_observers_and_retains_the_owner_failure(fail: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.TypertGatewayPeerTests.Direct_calls_read_current_connection_and_reuse_the_owned_fallback",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Scoped_forwarding_checks_the_key_before_projecting(kind: \"unkeyed\", rejected: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Source_failure_or_unexpected_completion_closes_observers_and_retains_the_owner_failure(fail: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Scoped_forwarding_checks_the_key_before_projecting(kind: \"different-key\", rejected: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.ScopeTests.Raw_and_repeat_disposal_join_the_same_async_cleanup(activated: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Undefined_source_arguments_are_rejected_instead_of_serialized_or_dropped",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.TypertGatewayPeerTests.A_stream_keeps_its_initial_peer_through_reads_and_cleanup(mounted: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.ScopeTests.Raw_and_repeat_disposal_join_the_same_async_cleanup(activated: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Event_source_cannot_cross_the_Gateway_root",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.RemoteEventsGatewayTests.Scoped_forwarding_checks_the_key_before_projecting(kind: \"ordinary\", rejected: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "Cordis.Composition.Tests.ScopeTests.Routing_preserves_identity_ancestry_filters_and_global_listeners",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    "initialFixtureBuildFailure": {
+      "logSha256": "cd0e94bce549b9a375be61f1ade3ea94ee15e64d2925e912168ed1faa4ea4f57",
+      "meaning": "Fixture used synchronous using for an async-only EffectHandle and had formatting diagnostics. No product assertion ran. Fixed before the red runtime result."
+    }
+  },
+  "gate": {
+    "reportSha256": "7da57f0dc0225ec0439fd726b43bba434c2bd6165f3d0844c843ee60688552e7",
+    "sourceUnchanged": true,
+    "cleanWorkingTree": true,
+    "steps": [
+      {
+        "name": "sdk",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "sdk-version",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "restore",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "build",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "test",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "test-map",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-1",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-2",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-repeat-2",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-3",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "jit-repeat-3",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "upgrade-jit",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "example",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-modules-build",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-modules-types",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-lifecycle",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-shared-modules",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "client-author-watch",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "cli-validate",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "cli-preview",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "cli-invocation",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "cli-usage",
+        "exitCode": 2,
+        "expectedExitCode": 2
+      },
+      {
+        "name": "cli-invalid-option",
+        "exitCode": 1,
+        "expectedExitCode": 1
+      },
+      {
+        "name": "api",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "typert-optional",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "pack",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "package-symbols-and-debug-consumer",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "package-content-boundaries",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "consumer-restore",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "consumer-publish",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "consumer-run",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "adapters-restore",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "adapters-run",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "tool-install",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "tool-package-preview",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "http-consumer-restore",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-publish",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-run",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-retained-run",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-republish",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-republished-run",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "independent-consumer-location",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "clr-deployment",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "clr-multi-entry",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "typert-package-consumer",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "typert-dotnet-settings",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "name": "whitespace",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      }
+    ],
+    "tests": [
+      {
+        "sha256": "7d7f63480b4cc396a86135ed2a84575057244c938dd2989c2c27cc2087daafc5",
+        "total": 148,
+        "passed": 148,
+        "failed": 0
+      },
+      {
+        "sha256": "44f15df3d0a223df7348482e0359e0a61eb8c5ed76163be9b20fb62e3f3a52cd",
+        "total": 113,
+        "passed": 113,
+        "failed": 0
+      },
+      {
+        "sha256": "10b73498cbb5d1c4817c7309d3369da9a6f8b2fa27f25196fe37b97e13b7d035",
+        "total": 503,
+        "passed": 503,
+        "failed": 0
+      },
+      {
+        "sha256": "2a4c4898937a0e1e257bb9b922493859a16cd6f3eadafaad93d5a4485ae70c2f",
+        "total": 128,
+        "passed": 128,
+        "failed": 0
+      }
+    ]
+  },
+  "packages": {
+    "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "ee12bf5393aa6c1dfeff49b487e95d9cadc9bc1ee10d8607f49bca367c269807",
+    "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "ee00860589a27f0660608ed1bfb0261f0b070ea45cb8dcd7ea315fca520fbf98",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "04d879b12728886cc2f1dc61f24ab3170348a84f9dde4e71b47f4d5757091316",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "b714b5b400923eb18ace5eb3a0d6df44c4375d9ae31b22e9d0b2249325d4a698",
+    "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "ea66164eaa7bc39a643570021adc9aa674fa48d66431d11faf2d55ad49742d9c",
+    "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "bb2f1c435c95cf2f659c55fbe44c8f9a814c568d6b8ed7af7b189661ba4c82f1",
+    "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "cbf1fbc8bcbd38838448786d49157160a93308f6b0eba1704628c2088240f19b",
+    "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "b3e8394ad12fee9ba4cee201394f8ed42f2a401d73262b03441cd9523fb53c64",
+    "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "6b2a27550ff6897d5509e70c792ac9425756a25d5af2e7dfd72abd8cb24c302f",
+    "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "c20e3ee552d9be59f5089da49b4a7fe86583306910b18a8a18f154cd827293d0",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "11bff0226abb208525d70323cd5471f49279a07d8424b924ec06ec61fda14935",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "a99009a950406177885daa212572355e6d52fd573245388e976b624aba4c8b4f",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "56999a3069a27b8e202ce1fc18f80a8309bfc0092a0cce351f0d5af5defa4fa0",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "7aad345ebe1a5f127973a92bc08db77a45c0b7d763889025ce2bcac9ba0677be",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "d902768b96ec76df9ecd7087e1cc23709602f422a8389b3224976254b2e445c2",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "8b559daa20aac39e19568f80bc8ee6b69daed91d5cfb67b238a640fb9cb78628",
+    "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "ce2b8d4849ff885d5a12aad8d478c287c75f9b730bcbb78afb745feabb17ea6f",
+    "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "4c895e81fcfa4941751779203315ef85a5e54d660a1ccf11a06548555ff3470a"
+  },
+  "format": {
+    "logSha256": "fe8345fa53af93abd0786c5d0744a2e8cb91a3c8575514e817252d48b40840df",
+    "status": "passed",
+    "allStagesAgree": true
+  },
+  "limits": [
+    "No Linux, Native AOT, hosted CI, live IDE or named UI-framework acceptance for this candidate.",
+    "The original source-tracing correspondence was read from the fixed local DSH checkout; no new full upstream test run is claimed.",
+    "Older candidate receipts and failures retain their original identities."
+  ],
+  "nextExit": "Reference Schema/TS package consumers and live IDE remain separate duties; scope store/layer is not part of SC01.",
+  "generatedConsumers": {
+    "status": "requested-checks-passed",
+    "reportSha256": "8a37e27cfa8d0b6e55ed94ddfc73786ddb81d74f0fb4f3369eb3da3810228f53",
+    "packageReferencesOnly": true,
+    "providerImplementationReferencedByCaller": false,
+    "stepCount": 160
+  },
+  "managementEvents": {
+    "reportSha256": "6df1e779c71699893bbcf1274af8a344c855cf040e67e70250292f5c0f8e21b0",
+    "status": "requested-checks-passed",
+    "packageReferencesOnly": true,
+    "ordinaryContractsReferencedOnly": true,
+    "nodeCommands": [
+      {
+        "name": "standard-management-typescript",
+        "exitCode": 0
+      }
+    ],
+    "platformAdapter": "explicit fixture toolchain with actual prepared files; SDK execution is covered separately",
+    "aotRequested": false,
+    "failures": []
+  },
+  "browser": {
+    "status": "passed",
+    "sourceCommit": "707fddeaaeaa3316f44fef76a15a3c76e335a00d",
+    "driver": "scripts/typert-browser-consumer.mjs",
+    "mode": "events",
+    "surface": "Codex in-app browser",
+    "observedResult": "PASS generated package events: current adapter, borrowed Context, next/undefined/null, owned reply and cancelled-handler settlement",
+    "assets": {
+      "compiled/Client.js": "0833dd89561618f1757ad5054a227f98ed4988f7b9748296fac6f6384d5e5b98",
+      "compiled/management.mjs": "de6f956e2fe4b0da60f67a8cda69f890b5404519ebc381b2e907f52da1d460ba",
+      "compiled/events.mjs": "bc33ba5b51cf2bb6d22127633a0bd81579db7b9fcf270297c91b4716fb9e5f5e",
+      "compiled/cordis-remote.mjs": "07b5eab746093aca0ca727cbd2f7906603571d1c2990dc51a9b98475684bbe7b",
+      "cordis-context.mjs": "7705077b27345f78a4f03bcdd13defd42f50b358a213657b18275ee63f512541"
+    },
+    "screenshotSha256": "f86778cb6b5dfdd5a34e1cf28c3fc584ddd21835ca7203de10067a2a8f366c88",
+    "hostAndProxyStopped": true,
+    "boundary": "Actual package Host uses a fresh-view IContextualService subject; no browser-side scope implementation or full Peer coverage is claimed."
+  }
+}

@@ -1,0 +1,413 @@
+{
+  "source": "a11cb73ec584405612170ea9b690bf56c1f3834c",
+  "status": "incomplete-acceptance",
+  "windows": {
+    "status": "failed",
+    "reportSha256": "e829c27110cbad40e4786396f3ee87442f02bf648b12b846c9cfcefcbf9f01ba",
+    "tests": [
+      {
+        "assembly": "Cordis.Core.Tests.dll",
+        "total": 148,
+        "passed": 148,
+        "failed": 0,
+        "sha256": "2241caa08716d2e3916046ff48822e053f442dc21a3581b704b6bb3fac3d833e"
+      },
+      {
+        "assembly": "Cordis.Extensions.Tests.dll",
+        "total": 113,
+        "passed": 112,
+        "failed": 1,
+        "sha256": "d818545278b0c6dad65441ee975af8aab9af2d39368e69af3ba787291d528055"
+      },
+      {
+        "assembly": "Cordis.Composition.Tests.dll",
+        "total": 508,
+        "passed": 508,
+        "failed": 0,
+        "sha256": "b497334d7bf6dd27d45eb83c1c2fa0c9a28f407cb0b1da82b82a2e617c3faf45"
+      },
+      {
+        "assembly": "Cordis.Platform.Tests.dll",
+        "total": 128,
+        "passed": 128,
+        "failed": 0,
+        "sha256": "6f0299ce2a9b07bb004c890f5db1e1cafdc521875e9e1aa66ff01285cb682a07"
+      }
+    ],
+    "failure": "HmrReconciliationTests noop/synchronous third change timed out at the unchanged 10-second wait; root cause unresolved.",
+    "sameBinaryExtensionsIsolation": [
+      {
+        "assembly": "Cordis.Extensions.Tests.dll",
+        "total": 113,
+        "passed": 113,
+        "failed": 0,
+        "sha256": "be988b891c58de8a8f497dbcfc419b2cc986fe9d0f4661ebd3ed19b3b57f7628"
+      }
+    ],
+    "packagingRan": false
+  },
+  "linux": {
+    "status": "failed",
+    "commit": "a11cb73ec584405612170ea9b690bf56c1f3834c",
+    "sdkVersion": "10.0.111",
+    "reportSha256": "d4eb87452880edba7c6c5df8f54291dfe6a9e63ced68b13fe75a643003e8d898",
+    "steps": [
+      {
+        "name": "sdk",
+        "exitCode": 0
+      },
+      {
+        "name": "sdk-version",
+        "exitCode": 0
+      },
+      {
+        "name": "restore",
+        "exitCode": 0
+      },
+      {
+        "name": "build",
+        "exitCode": 0
+      },
+      {
+        "name": "test",
+        "exitCode": 0
+      },
+      {
+        "name": "test-map",
+        "exitCode": 0
+      },
+      {
+        "name": "jit-1",
+        "exitCode": 0
+      },
+      {
+        "name": "jit-2",
+        "exitCode": 0
+      },
+      {
+        "name": "jit-repeat-2",
+        "exitCode": 0
+      },
+      {
+        "name": "jit-3",
+        "exitCode": 0
+      },
+      {
+        "name": "jit-repeat-3",
+        "exitCode": 0
+      },
+      {
+        "name": "upgrade-jit",
+        "exitCode": 0
+      },
+      {
+        "name": "example",
+        "exitCode": 0
+      },
+      {
+        "name": "client-modules-build",
+        "exitCode": 0
+      },
+      {
+        "name": "client-modules-types",
+        "exitCode": 0
+      },
+      {
+        "name": "client-lifecycle",
+        "exitCode": 0
+      },
+      {
+        "name": "client-shared-modules",
+        "exitCode": 0
+      },
+      {
+        "name": "client-author-watch",
+        "exitCode": 0
+      },
+      {
+        "name": "cli-validate",
+        "exitCode": 0
+      },
+      {
+        "name": "cli-preview",
+        "exitCode": 0
+      },
+      {
+        "name": "cli-invocation",
+        "exitCode": 0
+      },
+      {
+        "name": "cli-usage",
+        "exitCode": 2
+      },
+      {
+        "name": "cli-invalid-option",
+        "exitCode": 1
+      },
+      {
+        "name": "api",
+        "exitCode": 0
+      },
+      {
+        "name": "typert-optional",
+        "exitCode": 0
+      },
+      {
+        "name": "aot-publish",
+        "exitCode": 0
+      },
+      {
+        "name": "aot-run",
+        "exitCode": 0
+      },
+      {
+        "name": "jit-aot-differential",
+        "exitCode": 0
+      },
+      {
+        "name": "upgrade-aot-run",
+        "exitCode": 0
+      },
+      {
+        "name": "upgrade-jit-aot-differential",
+        "exitCode": 0
+      },
+      {
+        "name": "pack",
+        "exitCode": 0
+      },
+      {
+        "name": "package-symbols-and-debug-consumer",
+        "exitCode": 0
+      },
+      {
+        "name": "package-content-boundaries",
+        "exitCode": 0
+      },
+      {
+        "name": "consumer-restore",
+        "exitCode": 0
+      },
+      {
+        "name": "consumer-publish",
+        "exitCode": 0
+      },
+      {
+        "name": "consumer-run",
+        "exitCode": 0
+      },
+      {
+        "name": "consumer-aot-publish",
+        "exitCode": 0
+      },
+      {
+        "name": "consumer-aot-run",
+        "exitCode": 0
+      },
+      {
+        "name": "adapters-restore",
+        "exitCode": 0
+      },
+      {
+        "name": "adapters-run",
+        "exitCode": 0
+      },
+      {
+        "name": "tool-install",
+        "exitCode": 0
+      },
+      {
+        "name": "tool-package-preview",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-restore",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-publish",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-run",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-aot-publish",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-aot-run",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-retained-run",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-republish",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-jit-republished-run",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-aot-retained-run",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-aot-republish",
+        "exitCode": 0
+      },
+      {
+        "name": "http-consumer-aot-republished-run",
+        "exitCode": 0
+      },
+      {
+        "name": "independent-consumer-location",
+        "exitCode": 0
+      },
+      {
+        "name": "clr-deployment",
+        "exitCode": 0
+      },
+      {
+        "name": "clr-multi-entry",
+        "exitCode": 0
+      },
+      {
+        "name": "typert-package-consumer",
+        "exitCode": 0
+      },
+      {
+        "name": "typert-dotnet-settings",
+        "exitCode": 1
+      }
+    ],
+    "packages": [
+      {
+        "name": "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg",
+        "sha256": "76b886a4bf28f1b0e9da6b4fa95cd1af909f6ef4cedb4cb490bde83160f48f94"
+      },
+      {
+        "name": "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg",
+        "sha256": "77ffc3b813b7195d66cb31b664509bf3b66f9690c3c7252741d05c99525be74e"
+      },
+      {
+        "name": "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+        "sha256": "992800301efcbd5f38191518a416b9345eea31382a350fad0c8b640148865d5c"
+      },
+      {
+        "name": "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg",
+        "sha256": "12d0f93108534f4ac317ba488c83fc6d0a61e646697c9b544bafe734b881eda4"
+      },
+      {
+        "name": "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+        "sha256": "b33ec6528863b76d22d04aa1610971ddc40f30871f745ff814a1393d3d56415d"
+      },
+      {
+        "name": "Cordis.NET.Clr.0.2.0-alpha.4.snupkg",
+        "sha256": "09629be3f5b43a816ccec733f0c5fec2bda1e3b747cdf1a3307c95b30db5d15e"
+      },
+      {
+        "name": "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+        "sha256": "0fa8f79ca81939bd373866b574727ee6b17b447c50f8457d474899ee8ca7598b"
+      },
+      {
+        "name": "Cordis.NET.Composition.0.2.0-alpha.4.snupkg",
+        "sha256": "b2f8417ea5bcb639acdd856307013e81464058e3cab85ca66ad64aab9ccc891f"
+      },
+      {
+        "name": "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+        "sha256": "1c5534ccd8e61fcded6328c79b5359a9973e845d8745292699b5a85b1500618e"
+      },
+      {
+        "name": "Cordis.NET.Core.0.2.0-alpha.4.snupkg",
+        "sha256": "5460ccf7401a3a637da565d2f8cd8c8bf5a1136d97cd45a6d224a44a6e3befa4"
+      },
+      {
+        "name": "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+        "sha256": "48de3e31096c01eaaa236ee75f99c30a88c86288e3f27182a2537dbca6a54081"
+      },
+      {
+        "name": "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg",
+        "sha256": "0fb243277115e49f8a8600cbdfa932a841c1659b5ecb64874cc9a4533b606dc5"
+      },
+      {
+        "name": "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg",
+        "sha256": "f0e86ae92a5de33ea0b5c09c5f1c53a1be95a02d2587e77fb4a254276b7b5c37"
+      },
+      {
+        "name": "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg",
+        "sha256": "3759c3d521de0f9aadfa1bd10795744e25c8ffc27b2260d2e515827df16d665b"
+      },
+      {
+        "name": "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg",
+        "sha256": "edf5bc8125e4791c5584e01c97ed177b23095e0d2e7d0d98b1de1b5ad7e3c3dc"
+      },
+      {
+        "name": "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg",
+        "sha256": "c71938ae5f7e592a13b55e0aad5b9c8c6643ef9f136666ffbe90651d6b200b42"
+      },
+      {
+        "name": "Cordis.NET.Tool.0.2.0-alpha.4.nupkg",
+        "sha256": "f8a6f4efab0f8b9db8b0e6a7993ca7ded08bb8d62b4e295a09e00380c36d59ed"
+      },
+      {
+        "name": "Cordis.NET.Tool.0.2.0-alpha.4.snupkg",
+        "sha256": "66b1df74c028349aa2254860398babd87484fcd66d1107e036996204a278cb38"
+      }
+    ],
+    "supplements": [
+      {
+        "name": "a11cb73-linux-web",
+        "status": "requested-checks-passed",
+        "aotRequested": false,
+        "reportSha256": "3bd57cd10ddfe621d8f128e80fa5dacf7a61044a8b42a4dd2cd45d727128197c"
+      },
+      {
+        "name": "a11cb73-linux-remainder",
+        "status": "requested-checks-passed",
+        "aotRequested": true,
+        "reportSha256": "f4587cb4210c8a955e3753497c2f715cae16db06c6c6f95e79d6d2fdb2de0b8d"
+      }
+    ]
+  },
+  "linuxFailure": "Existing output directory collided at web-contract-omitted; the two supplements use unchanged source and the identical frozen package batch in fresh outputs. They do not convert the original gate into a pass.",
+  "browser": {
+    "status": "passed",
+    "buildPlatform": "Linux",
+    "hostPlatform": "Windows",
+    "browser": "Chromium",
+    "sharedScoped": {
+      "sha256": {
+        "host\\SharedRemoteHost.dll": "042cffa8a127464f3bfa3edab1c801b57cf9cca738359a732be19db206c35607",
+        "host\\Cordis.Composition.dll": "754afde2f1d7067a71cfb4c45f2a0a4d4a5df3645a94416d35b6f5a4f5149641",
+        "client\\compiled\\cordis-remote.mjs": "7e72b561d045eafd8b3447205bbf3db0f432331b853f44f6fb5d58cd5373be18",
+        "client\\compiled\\shared.mjs": "82240de40bc499daade5a0dffec99a9a6a4479ae675c116663d80f5dc190bf0c",
+        "client\\compiled\\SharedClient.js": "59648f451ba71fe81a862143dbd851fa020a9a99517b5ac8626a378e2671645b"
+      },
+      "screenshotSha256": "415d909b7f1e4137172fc1c940c01d3484034c9f35b74ddad28d2eb2388620bf"
+    },
+    "webFetch": {
+      "hostAssemblySha256": "c460538c9c62ef6fd562768c7f60bcf666e71a56d4c0a7998f084c72d4fc3529",
+      "compositionAssemblySha256": "754afde2f1d7067a71cfb4c45f2a0a4d4a5df3645a94416d35b6f5a4f5149641",
+      "assets": {
+        "cordis-remote.mjs": "7e72b561d045eafd8b3447205bbf3db0f432331b853f44f6fb5d58cd5373be18",
+        "index.html": "f77b5114dfdd15baa34f040c0163d95fd9762b78ec01e3f953c2fc006fb61d2d",
+        "ReferencedWebClient.js": "b2292bd8bf6c2ceeea31f5e3adee045166bdfaab0113e379f16a35785f66ce21",
+        "remote.mjs": "4b345867d2276b2dd8bcb2901d446ba1f52e144169dfebf3ce1f1cbbf5658fe1"
+      },
+      "screenshotSha256": "117bd87049f17022729cf4550e92b2cba753a91d7eb35317424d5c5d9cdab14e"
+    },
+    "helpersStopped": true
+  },
+  "excludes": [
+    "Later Settings document and CLR consumer changes",
+    "A successful complete Windows gate",
+    "Windows-built frozen packages",
+    "macOS or named UI platform acceptance",
+    "alpha5 release or publication"
+  ]
+}

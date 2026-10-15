@@ -7,7 +7,14 @@ import { createHash, randomUUID } from 'node:crypto'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const source = resolve(root, 'clients/modules')
-const output = resolve(process.argv[2] ?? resolve(source, 'lib'))
+const declarationsOnly = process.argv[2] === '--types-only'
+const output = resolve(declarationsOnly ? resolve(source, 'lib') : process.argv[2] ?? resolve(source, 'lib'))
+const standard = resolve(source, '.types/standard')
+const generateStandard = spawnSync(process.env.DOTNET_HOST_PATH ?? 'dotnet', [
+  'run', '--project', resolve(root, 'tools/Cordis.ClientAssets/Cordis.ClientAssets.csproj'),
+  '-c', 'Release', '--', '--output', standard,
+], { stdio: 'inherit' })
+if (generateStandard.status !== 0) throw new Error('Standard generated client assets failed')
 let requireTools = createRequire(resolve(source, 'package.json'))
 let build
 let buildContext
@@ -30,6 +37,7 @@ for (const config of ['tsconfig.vendor.json', 'tsconfig.json']) {
   const result = spawnSync(process.execPath, [requireTools.resolve('typescript/bin/tsc'), '-p', resolve(source, config)], { stdio: 'inherit' })
   if (result.status !== 0) throw new Error(`Client type declaration build failed: ${config}`)
 }
+if (declarationsOnly) process.exit(0)
 await mkdir(output, { recursive: true })
 await build({ entryPoints: [resolve(source, 'src/index.ts')], bundle: true, format: 'esm', platform: 'browser',
   outfile: resolve(output, 'client.mjs'), alias, define, legalComments: 'eof' })
@@ -40,6 +48,13 @@ const standardSchema = dirname(dirname(requireTools.resolve('@standard-schema/sp
 licenses.push(`@standard-schema/spec 1.0.0\n${await readFile(resolve(standardSchema, 'LICENSE'), 'utf8')}`)
 await writeFile(resolve(output, 'LICENSES.txt'), licenses.join('\n'))
 await cp(resolve(source, '.types/vendor'), resolve(output, 'types/vendor'), { recursive: true })
+await cp(standard, resolve(output, 'types/standard'), { recursive: true })
+await cp(resolve(standard, 'cordis-remote.mjs'), resolve(output, 'cordis-remote.mjs'))
+await cp(resolve(standard, 'cordis-remote.d.mts'), resolve(output, 'cordis-remote.d.mts'))
+for (const name of ['management', 'events', 'settings']) {
+  await cp(resolve(standard, name + '.mjs'), resolve(output, name + '.mjs'))
+  await cp(resolve(standard, name + '.d.ts'), resolve(output, name + '.d.ts'))
+}
 await cp(resolve(standardSchema, 'dist/index.d.ts'), resolve(output, 'types/vendor/contracts/standard-schema.d.ts'))
 await cp(resolve(source, 'vendor/contracts/schema-metadata.d.ts'), resolve(output, 'types/vendor/contracts/schema-metadata.d.ts'))
 for (const [name, files] of Object.entries({ '@types/react': ['index.d.ts', 'global.d.ts'], '@types/prop-types': ['index.d.ts'], csstype: ['index.d.ts'] })) {
@@ -72,6 +87,7 @@ const typeAliases = {
   'react': 'vendor/contracts/react/index.d.ts',
   'prop-types': 'vendor/contracts/prop-types/index.d.ts',
   'csstype': 'vendor/contracts/csstype/index.d.ts',
+  '../.types/standard/events.js': 'standard/events.d.ts',
 }
 async function rewriteTypes(directory) {
   for (const item of await readdir(directory, { withFileTypes: true })) {
@@ -91,7 +107,10 @@ async function rewriteTypes(directory) {
 await rewriteTypes(resolve(output, 'types'))
 await writeFile(resolve(output, 'package.json'), JSON.stringify({ name: '@cordis-net/client-modules',
   private: true, type: 'module', exports: { '.': { types: './types/src/index.d.ts', default: './client.mjs' },
-    './slots': { types: './types/vendor/slots/index.d.ts', default: './client.mjs' } } }, null, 2) + '\n')
+    './slots': { types: './types/vendor/slots/index.d.ts', default: './client.mjs' },
+    ...Object.fromEntries(['management', 'events', 'settings'].map(name => [
+      './' + name, { types: './types/standard/' + name + '.d.ts', default: './' + name + '.mjs' },
+    ])) } }, null, 2) + '\n')
 
 // Optional author build: preserve declared cross-package requests instead of bundling dependency copies.
 // Usage: node scripts/build-client-modules.mjs <runtime-output> <author-package> <plugin-output>

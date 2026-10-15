@@ -319,6 +319,8 @@ def main():
         run("cli-usage", cli, expected_exit=2)
         run("cli-invalid-option", [*cli, "validate", fixture, "--unknown"], expected_exit=1)
         run("api", ["dotnet", "run", "--project", "tools/Cordis.ApiCheck", "-c", "Release", "--no-build", "--", "--check"])
+        run("typert-optional", [sys.executable, "scripts/verify-typert-optional.py", "--dotnet", shutil.which("dotnet"),
+                               "--output", OUT / "typert-optional"])
         if options.dsh:
             target = json.loads((ROOT / "upstream.lock.json").read_text(encoding="utf-8"))["harness"]["commit"]
             upgrade = target == "639ed015397290b3745d163aafe02ffee4aa3f84"
@@ -387,11 +389,11 @@ def main():
             run("clr-deployment", [sys.executable, "scripts/verify-clr-deployment.py", "--dotnet", shutil.which("dotnet"),
                 "--rid", rid, "--packages", package_dir, "--output", deployment_dir])
             run("clr-multi-entry", [sys.executable, "scripts/verify-clr-multi-entry.py", "--dotnet", shutil.which("dotnet"),
-                "--packages", package_dir, "--output", OUT / "clr-multi-entry"])
+                "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="clr-multi-entry-", dir=OUT)])
             run("typert-package-consumer", [sys.executable, "scripts/verify-typert.py", "--dotnet", shutil.which("dotnet"),
-                "--packages", package_dir, "--output", OUT / "typert-consumer", *(["--aot"] if options.aot else [])])
+                "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="typert-consumer-", dir=OUT), *(["--aot"] if options.aot else [])])
             run("typert-dotnet-settings", [sys.executable, "scripts/verify-typert-dotnet.py", "--dotnet", shutil.which("dotnet"),
-                "--packages", package_dir, "--output", OUT / "typert-dotnet-settings", *(["--aot"] if options.aot else [])])
+                "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="typert-dotnet-settings-", dir=OUT), *(["--aot"] if options.aot else [])])
         if git_checkout():
             run("whitespace", ["git", "diff", "--check"])
         else:

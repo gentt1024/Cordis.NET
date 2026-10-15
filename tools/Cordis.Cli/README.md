@@ -1,9 +1,11 @@
 # Cordis.NET.Tool
 
+Choose the exact version and feed for this package batch; see [getting started](../../docs/getting-started.md) for package-only use and ownership. Published packages and unreleased candidate feeds are distinct.
+
 CLR startup uses installed files directly. Package upgrades prepare and save the new version, then require a host restart. Removal retains deployment files. After stopping every host, Worker and other consumer, use `cordis delete-retained <profile> <package> <version>` to physically delete an unreferenced version and its receipt. See the [artifact workflow](../../docs/clr-artifacts.md).
 
 ```console
-dotnet tool install --global Cordis.NET.Tool --prerelease
+dotnet tool install --global Cordis.NET.Tool --version <selected-version>
 ```
 
 The published tool validates and previews entry configuration with `cordis validate <path>` and `cordis preview <path>`.
@@ -19,7 +21,7 @@ $env:CORDIS_MANAGEMENT = 'Bearer local-development-token'
 First build the local feed using the [independent managed application example](../../examples/ManagedApplication/README.md). Use a separate CLI profile; the CLI does not supply that example's browser client mapping. Start the host in the first terminal:
 
 ```console
-cordis run artifacts/cli-profile --source artifacts/managed-feed --url http://127.0.0.1:5080 --authorization-env CORDIS_MANAGEMENT --allow-build Example.ManagedPlugin@1.0.0-alpha.1 --settings root:example.managedplugin=limit,credential
+cordis run artifacts/cli-profile --source artifacts/managed-feed --url http://127.0.0.1:5080 --authorization-env CORDIS_MANAGEMENT --allow-build Example.ManagedPlugin@1.0.0-alpha.1 --settings example.managedplugin=limit,credential
 ```
 
 Keep it running and issue management commands from the second terminal:
@@ -27,7 +29,7 @@ Keep it running and issue management commands from the second terminal:
 ```console
 cordis inspect http://127.0.0.1:5080/cordis Example.ManagedPlugin 1.0.0-alpha.1 --source artifacts/managed-feed --authorization-env CORDIS_MANAGEMENT
 cordis install http://127.0.0.1:5080/cordis Example.ManagedPlugin 1.0.0-alpha.1 --source artifacts/managed-feed --approve-build --authorization-env CORDIS_MANAGEMENT
-cordis settings http://127.0.0.1:5080/cordis root:example.managedplugin --authorization-env CORDIS_MANAGEMENT
+cordis settings http://127.0.0.1:5080/cordis example.managedplugin --authorization-env CORDIS_MANAGEMENT
 cordis remove http://127.0.0.1:5080/cordis Example.ManagedPlugin --authorization-env CORDIS_MANAGEMENT
 ```
 
@@ -37,6 +39,6 @@ Online commands use the running host. A second CLI host cannot own the same prof
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
 
-Full configuration and Settings are separate permissions. `configuration <endpoint> <entry>` reads raw configuration; `schema <endpoint> configuration|settings <entry>` exports declarations. `edit <endpoint> configuration|settings <entry> <revision> <operations.json>` submits one ordered JSON array, for example `[{"op":"set","path":["label"],"value":"worker"}]` or `[{"op":"unset","path":["label"]}]`. The revision must come from the original read; the CLI does not silently refresh it before writing. Full configuration can restart an activation; Settings permits only the host-selected live fields.
+Full configuration and Settings are separate permissions. `configuration <endpoint> <entry>` reads raw configuration with a string hash and runtime address. `settings <endpoint> <namespace>` calls the generated standard Remote and returns a numeric form revision; its namespace is the profile entry id. `schema <endpoint> configuration|settings <entry>` exports declarations; the Settings schema comes from the same describe snapshot. `edit <endpoint> configuration|settings <entry> <revision> <operations.json>` submits one ordered JSON array, for example `[{"op":"set","path":["label"],"value":"worker"}]` or `[{"op":"unset","path":["label"]}]`. Normal edits submit the revision from their original read; the CLI does not refresh it before writing. Settings accepts a numeric revision or `-` to omit the expected revision, and rejects null/string hashes. Omission retains authorization, candidate validation, write coordination and source-consistency checks. Full configuration can restart an activation; Settings permits only the host-selected live fields. See [Settings migration](../../docs/settings-contract-migration.md).
 
 `sources` and `versions <endpoint> <name> --source <feed>` expose the host's selected feeds. `compatibility <endpoint>` reads exact DSH grants and corruption diagnostics. `grant <endpoint> <package@version> <runtime-version> <enabled> <accept-risk>` takes two positional Boolean values, each spelled `true` or `false`; the first enables or revokes the grant, and the second acknowledges the compatibility risk. It uses the existing DSH policy and refuses generic profiles. A compatibility grant never approves build execution. Add `--authorization-env` to these online commands as required by the host.

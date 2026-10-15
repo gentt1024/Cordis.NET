@@ -1,16 +1,18 @@
 # Cordis.NET.AspNetCore
 
-Optional ASP.NET Core management endpoints over a running Cordis profile. Package, configuration and lifecycle operations use the session's existing owners.
+Choose the exact version and feed for this package batch; see [getting started](../../docs/getting-started.md) for package-only use and ownership. Published packages and unreleased candidate feeds are distinct.
+
+Authorized HTTP unary and WebSocket mux hosting for generated Remote services, plus management endpoints over a running Cordis profile. Package, configuration and lifecycle operations use the session's existing owners.
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
 
-The host supplies an authorization callback for every operation, a settings visibility policy per entry and an optional platform package toolchain. Build permission is checked separately from installation permission. The adapter does not provide accounts or login policy.
+The host supplies an authorization callback for every operation and an optional platform package toolchain. Build permission is checked separately from installation permission. The adapter does not provide accounts or login policy.
 
-See `examples/ManagedApplication` for the maintained application example and `docs/authoring.md` for configuration authoring. This package is introduced in `0.2.0-alpha.3`; it is not included in the published `0.2.0-alpha.1` batch.
+See the [managed application](../../examples/ManagedApplication/README.md) and [authoring guide](../../docs/authoring.md).
 
-`Map` exposes management reads, settings and complete configuration edits, package progress and active installation queries. Full configuration and its schema use separate `configuration-read`/`configuration-write` permissions because raw data and defaults can contain secrets. Settings reads and exports use the host's selection/redaction policy.
+`Map` exposes host state, complete configuration edits and client artifacts. Full configuration and its schema use separate `configuration-read`/`configuration-write` permissions because raw data and defaults can contain secrets. Mount the generated `PluginManager` with `MountPluginManagerAsync` over the same profile operations and toolchain. Settings uses the generated Remote over `SettingsForms`; notifications use the host-selected emit source registered on the same Gateway. `MapCordisRemote` supplies their physical HTTP carrier with host authorization. See the [management](../../docs/management-remote-migration.md) and [Settings](../../docs/settings-contract-migration.md) migration guides; the matching handwritten routes are removed.
 
-Every mutation requires the generation returned by `/state`; reads may also supply `If-Cordis-Generation`. A replacement host refuses the old generation. HTTP/SSE is a native contract, not a Typert wire implementation. Reconnect reads current state and the full client graph; events are bounded notifications, not a durable log.
+Every management mutation requires the generation returned by `/state`; reads may also supply `If-Cordis-Generation`. `MountPluginManagerAsync` applies this fence and parses the actual generated resource arguments before host policy. A replacement host refuses the old generation. Remote calls use the fixed HTTP envelope and streams use WebSocket mux. Reconnect subscribes before reading current state and the full client graph; notifications have no durable delivery or replay promise.
 
 Build authority permits one preparation, including dependency targets resolved from selected sources. The root archive hash binds inspection to preparation; it does not lock or approve every transitive dependency hash. Hosts can inspect the request source and root hash in the separate `build` permission callback.
 

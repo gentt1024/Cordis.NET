@@ -4,6 +4,23 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Cordis.Composition;
 
+/// <summary>Declare a Context key and its wire identity type, corresponding to the upstream TypertContextMap.</summary>
+[AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
+public sealed class TypertContextAttribute(string key, Type wireType) : Attribute
+{
+    /// <summary>Gets the Context adapter key.</summary>
+    public string Key
+    {
+        get;
+    } = key;
+
+    /// <summary>Gets the identity type used by Host and Client adapters.</summary>
+    public Type WireType
+    {
+        get;
+    } = wireType;
+}
+
 /// <summary>Declare the Cordis service key, namespace and source-generated serialization context of a Remote service.</summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class RemoteServiceAttribute(string service, Type? jsonContext = null) : Attribute
@@ -64,6 +81,10 @@ public sealed class RemoteMethodAttribute : Attribute
     } = "contextId";
 }
 
+/// <summary>Declare the single Client-to-Host item source of a streaming method.</summary>
+[AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
+public sealed class RemoteUplinkAttribute : Attribute;
+
 /// <summary>Declare the wire identity and provider of a non-JSON Host object parameter.</summary>
 [AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
 public sealed class RemoteLookupAttribute(string key, string wire, Type wireType) : Attribute
@@ -92,8 +113,36 @@ public sealed class RemoteLookupAttribute(string key, string wire, Type wireType
 /// The native schema subset validates decoded inputs. Encoding uses the supplied serializer metadata without
 /// a second schema admission check. This codec does not implement an arbitrary Typert wire protocol.
 /// </remarks>
-public abstract class TypertCodec
+public abstract partial class TypertCodec
 {
+    /// <summary>The absent result of an authored Task method. An explicit JSON null is not absence.</summary>
+    public static TypertCodec Void
+    {
+        get;
+    } = new VoidCodec();
+
+    private sealed class VoidCodec : TypertCodec
+    {
+        private static readonly JsonElement EmptySchema = CreateSchema();
+
+        private static JsonElement CreateSchema()
+        {
+            using var document = JsonDocument.Parse("false");
+            return document.RootElement.Clone();
+        }
+
+        public override string TypeSymbol => "void";
+        public override JsonElement Schema => EmptySchema;
+
+        public override object Decode(JsonElement value) => value.ValueKind == JsonValueKind.Undefined
+            ? Undefined.Value
+            : throw new JsonException("A void result must be absent.");
+
+        public override JsonElement Encode(object? value) => ReferenceEquals(value, Undefined.Value)
+            ? default
+            : throw new JsonException("A void result must be absent.");
+    }
+
     /// <summary>Gets the stable declaration identity used to match dependency providers.</summary>
     public abstract string TypeSymbol
     {
@@ -124,6 +173,33 @@ public abstract class TypertCodec
     /// input validation to the result. Invalid native values and serialization failures propagate to the caller.
     /// </remarks>
     public abstract JsonElement Encode(object? value);
+
+    /// <summary>Encode a caller's input using the receiver's read contract.</summary>
+    public virtual JsonElement EncodeInput(object? value) => Encode(value);
+
+    /// <summary>Decode a peer's output using its write contract.</summary>
+    public virtual object? DecodeOutput(JsonElement value) => Decode(value);
+
+    /// <summary>Encode a unary result, extracting typed byte arrays into binary attachments.</summary>
+    public virtual TypertRemoteResult EncodeResult(object? value) => TypertRemoteResult.Success(Encode(value));
+
+    internal virtual JsonTypeInfo? ResultMetadata => null;
+
+    /// <summary>Gets the codec's output/write-direction JSON Schema projection.</summary>
+    /// <remarks>
+    /// This read-only JSON value can be saved independently of the codec and its provider. Projection is
+    /// prepared lazily and retains the supported schema subset and NotSupportedException behavior of Schema.
+    /// Input and output requiredness, omission and nullability can differ. Top-level absence is described by
+    /// AcceptsUndefined, not JSON Schema. Format annotations do not promise validation by every consumer.
+    /// This describes JSON output, not the multipart carrier envelope or restored binary JavaScript values.
+    /// Reading it does not validate encoded results or change invocation and business commit ordering.
+    /// This property exposes consumption only; it does not introduce an output-projection override contract.
+    /// </remarks>
+    public JsonElement ResultSchema => ResultSchemaCore;
+
+    internal virtual JsonElement ResultSchemaCore => Schema;
+
+    internal virtual TypertNullability? DeclarationQuery => null;
 
     /// <summary>Create an AOT-compatible codec from source-generated JSON metadata and an optional explicit schema.</summary>
     /// <remarks>
@@ -157,6 +233,7 @@ public abstract class TypertCodec
     private sealed class NullableCodec(TypertCodec inner) : TypertCodec
     {
         private JsonElement? schema;
+        private JsonElement? resultSchema;
         public override string TypeSymbol => inner.TypeSymbol;
         public override JsonElement Schema => schema ??= ExportSchema();
 
@@ -167,15 +244,27 @@ public abstract class TypertCodec
         }
 
         public override JsonElement Encode(object? value) => inner.Encode(value);
+        public override JsonElement EncodeInput(object? value) => inner.EncodeInput(value);
 
-        private JsonElement ExportSchema()
+        public override object? DecodeOutput(JsonElement value)
+        {
+            _ = inner.ResultSchema;
+            return value.ValueKind == JsonValueKind.Null ? null : inner.DecodeOutput(value);
+        }
+
+        internal override TypertNullability? DeclarationQuery => inner.DeclarationQuery;
+        public override TypertRemoteResult EncodeResult(object? value) => inner.EncodeResult(value);
+        internal override JsonTypeInfo? ResultMetadata => inner.ResultMetadata;
+        internal override JsonElement ResultSchemaCore => resultSchema ??= ExportSchema(output: true);
+
+        private JsonElement ExportSchema(bool output = false)
         {
             using var buffer = new MemoryStream();
             using (var writer = new Utf8JsonWriter(buffer))
             {
                 writer.WriteStartObject();
                 writer.WriteStartArray("anyOf");
-                WriteSchema(writer, inner.Schema);
+                WriteNestedSchema(writer, output ? inner.ResultSchema : inner.Schema, "#/anyOf/0");
                 writer.WriteStartObject();
                 writer.WriteString("type", "null");
                 writer.WriteEndObject();
@@ -186,64 +275,69 @@ public abstract class TypertCodec
             using var document = JsonDocument.Parse(buffer.ToArray());
             return document.RootElement.Clone();
         }
-
-        private static void WriteSchema(Utf8JsonWriter writer, JsonElement value)
-        {
-            if (value.ValueKind != JsonValueKind.Object)
-            {
-                value.WriteTo(writer);
-                return;
-            }
-
-            writer.WriteStartObject();
-            foreach (var field in value.EnumerateObject())
-            {
-                writer.WritePropertyName(field.Name);
-                switch (field.Name)
-                {
-                    case "$ref":
-                        writer.WriteStringValue("#/anyOf/0" + field.Value.GetString()![1..]);
-                        break;
-                    case "properties":
-                    case "$defs":
-                    case "definitions":
-                        writer.WriteStartObject();
-                        foreach (var child in field.Value.EnumerateObject())
-                        {
-                            writer.WritePropertyName(child.Name);
-                            WriteSchema(writer, child.Value);
-                        }
-
-                        writer.WriteEndObject();
-                        break;
-                    case "items":
-                    case "additionalProperties":
-                    case "not":
-                        WriteSchema(writer, field.Value);
-                        break;
-                    case "allOf":
-                    case "anyOf":
-                    case "oneOf":
-                    case "prefixItems":
-                        writer.WriteStartArray();
-                        foreach (var child in field.Value.EnumerateArray())
-                            WriteSchema(writer, child);
-                        writer.WriteEndArray();
-                        break;
-                    default:
-                        field.Value.WriteTo(writer);
-                        break;
-                }
-            }
-
-            writer.WriteEndObject();
-        }
     }
 
-    private sealed class TypedCodec<T>(JsonTypeInfo<T> metadata, string symbol, JsonElement? explicitSchema)
+    private static void WriteNestedSchema(Utf8JsonWriter writer, JsonElement value, string prefix)
+    {
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            value.WriteTo(writer);
+            return;
+        }
+
+        writer.WriteStartObject();
+        foreach (var field in value.EnumerateObject())
+        {
+            writer.WritePropertyName(field.Name);
+            switch (field.Name)
+            {
+                case "$ref":
+                    writer.WriteStringValue(prefix + field.Value.GetString()![1..]);
+                    break;
+                case "properties":
+                case "$defs":
+                case "definitions":
+                    writer.WriteStartObject();
+                    foreach (var child in field.Value.EnumerateObject())
+                    {
+                        writer.WritePropertyName(child.Name);
+                        WriteNestedSchema(writer, child.Value, prefix);
+                    }
+
+                    writer.WriteEndObject();
+                    break;
+                case "items":
+                case "additionalProperties":
+                case "not":
+                    WriteNestedSchema(writer, field.Value, prefix);
+                    break;
+                case "allOf":
+                case "anyOf":
+                case "oneOf":
+                case "prefixItems":
+                    writer.WriteStartArray();
+                    foreach (var child in field.Value.EnumerateArray())
+                        WriteNestedSchema(writer, child, prefix);
+                    writer.WriteEndArray();
+                    break;
+                default:
+                    field.Value.WriteTo(writer);
+                    break;
+            }
+        }
+
+        writer.WriteEndObject();
+    }
+
+    private sealed class TypedCodec<T>(
+        JsonTypeInfo<T> metadata,
+        string symbol,
+        JsonElement? explicitSchema,
+        TypertNullability? nullability = null)
         : TypertCodec
     {
         private JsonElement? schema;
+        private JsonElement? resultSchema;
         public override string TypeSymbol => symbol;
         public override JsonElement Schema => schema ??= PrepareSchema(explicitSchema?.Clone() ?? ExportSchema());
 
@@ -255,13 +349,40 @@ public abstract class TypertCodec
 
         public override JsonElement Encode(object? value) => JsonSerializer.SerializeToElement((T)value!, metadata);
 
-        private JsonElement ExportSchema()
+        public override JsonElement EncodeInput(object? value) =>
+            JsonSerializer.SerializeToElement((T)value!, TypertJsonMetadata.WriteInput(metadata));
+
+        public override object? DecodeOutput(JsonElement value)
+        {
+            Validate(value, ResultSchema, ResultSchema, 0);
+            return JsonSerializer.Deserialize(value, TypertJsonMetadata.ReadOutput(metadata));
+        }
+
+        internal override TypertNullability? DeclarationQuery => nullability;
+
+        public override TypertRemoteResult EncodeResult(object? value) =>
+            TypertBinaryResult.Encode((T)value!, metadata);
+
+        internal override JsonTypeInfo ResultMetadata => metadata;
+
+        internal override JsonElement ResultSchemaCore =>
+            resultSchema ??= PrepareSchema(explicitSchema?.Clone() ?? ExportSchema(output: true));
+
+        private JsonElement ExportSchema(bool output = false)
         {
             var node = metadata.GetJsonSchemaAsNode(
                 new JsonSchemaExporterOptions
                 {
-                    TreatNullObliviousAsNonNullable = true
+                    TreatNullObliviousAsNonNullable = true,
+                    TransformSchemaNode = (context, node) => ProjectNumbers(
+                        context,
+                        output ? ProjectOutputObject(context, node) : node,
+                        output)
                 });
+            if (output)
+                node = ProjectNullability(node, path => OutputNullability(metadata, nullability, path));
+            else if (nullability is not null)
+                node = ProjectNullability(node, nullability);
             using var document = JsonDocument.Parse(node.ToJsonString());
             return document.RootElement.Clone();
         }
@@ -307,6 +428,10 @@ public abstract class TypertCodec
                 case "prefixItems":
                     foreach (var child in field.Value.EnumerateArray())
                         ValidateSchema(child, root, references);
+                    break;
+                case "pattern":
+                    if (!numericPatterns.ContainsKey(field.Value.GetString()!))
+                        throw new NotSupportedException("Only recognized numeric string patterns are supported.");
                     break;
                 case "$schema":
                 case "$comment":
@@ -377,6 +502,10 @@ public abstract class TypertCodec
             throw new JsonException("The boundary value does not match a declared enum member.");
         if (schema.TryGetProperty("const", out var constant) && !JsonElement.DeepEquals(constant, value))
             throw new JsonException("The boundary value does not match the declared constant.");
+        if (value.ValueKind == JsonValueKind.String && schema.TryGetProperty("pattern", out var pattern) &&
+            (!numericPatterns[pattern.GetString()!].IsMatch(value.GetString()!) ||
+                !FiniteNumericText(value.GetString()!, schema)))
+            throw new JsonException("The boundary string does not match its numeric pattern.");
         if (schema.TryGetProperty("type", out var type))
         {
             var matches = type.ValueKind == JsonValueKind.Array
@@ -438,6 +567,9 @@ public abstract class TypertCodec
 
         if (value.ValueKind == JsonValueKind.Number)
         {
+            if (schema.TryGetProperty("format", out var numericFormat) && numericFormat.GetString() == "float" &&
+                (!value.TryGetSingle(out var single) || !float.IsFinite(single)))
+                throw new JsonException("The boundary number is not a finite float.");
             var number = value.GetDouble();
             if (!double.IsFinite(number) ||
                 (schema.TryGetProperty("minimum", out var minimum) && number < minimum.GetDouble()) ||
@@ -657,7 +789,9 @@ public sealed record TypertHostContextAdapter(
     Func<object?, ValueTask<Context?>> Resolve);
 
 /// <summary>Client Context-to-wire and wire-to-Context provider.</summary>
-public sealed record TypertClientContextAdapter(Func<Context, object?> Identity, Func<object?, Context?> Resolve);
+public sealed record TypertClientContextAdapter(
+    Func<Context, object?> Identity,
+    Func<object?, TypertResolvedContext?> Resolve);
 
 /// <summary>Committed registry notification.</summary>
 public sealed record TypertRegistryChange(string Kind, string Key);

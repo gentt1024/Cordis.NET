@@ -19,22 +19,10 @@ public sealed partial class PluginConfigurationOperations
     public Task<ConfigurationSchemaView> ReadConfigurationSchemasAsync(
         string entryId,
         CancellationToken cancellationToken = default) =>
-        ReadSchemasCoreAsync(entryId, null, cancellationToken);
-
-    /// <summary>Export only offered live fields, with hidden fields and every declared default removed.</summary>
-    /// <remarks>Secret fields remain write-only in the form. The same mandatory host policy used for settings reads controls export.</remarks>
-    public Task<ConfigurationSchemaView> ReadSettingsSchemasAsync(
-        string entryId,
-        SettingsPolicy policy,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        return ReadSchemasCoreAsync(entryId, policy, cancellationToken);
-    }
+        ReadSchemasCoreAsync(entryId, cancellationToken);
 
     private async Task<ConfigurationSchemaView> ReadSchemasCoreAsync(
         string entryId,
-        SettingsPolicy? policy,
         CancellationToken cancellationToken)
     {
         ConfigurationSchemaView result = null!;
@@ -48,14 +36,11 @@ public sealed partial class PluginConfigurationOperations
                     var entry = EditableEntry(entryId);
                     var descriptor = entry.Fiber!.ConfigDescription ??
                         throw new Refusal("no-configuration-description");
-                    if (policy is not null)
-                        descriptor = SelectedSettingsDescriptor(SelectSettingsFields(entry, policy));
-
                     result = new(
                         entryId,
                         Revision(entry, layers),
-                        ConfigurationSchemaExporter.ToSchemastery(descriptor, policy is not null, policy is not null),
-                        ConfigurationSchemaExporter.ToJsonSchema(descriptor, policy is not null));
+                        ConfigurationSchemaExporter.ToSchemastery(descriptor),
+                        ConfigurationSchemaExporter.ToJsonSchema(descriptor));
                     return Task.CompletedTask;
                 });
             },

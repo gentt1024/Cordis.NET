@@ -1,0 +1,91 @@
+{
+  "reviewedBase": "f0d38f5f890dddd27e1b52ed815f125577824930",
+  "sourceCommit": "2a5a6e4bc86156416a2cbef2fc7b1c234f74f9a8",
+  "sourceTree": "47e6a1fdd7e24955c21970b2e4daab827449cf75",
+  "upstream": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "commits": [
+    {
+      "commit": "0a722f65a7fa3ecd742ff0d2b4e498044140a27f",
+      "change": "Direct Gateway operatorPeer fallback, existing connection service assembly, string dictionary data projection and browser consumer driver. Its original full gates failed and remain failed."
+    },
+    {
+      "commit": "2a5a6e4bc86156416a2cbef2fc7b1c234f74f9a8",
+      "change": "Apply common declared nullability in lazy codecs and TS schema projection; qualified event hint names; return unused event input at the real carrier inbox; source/saved/package listener regressions."
+    }
+  ],
+  "findings": [
+    {
+      "id": "E01",
+      "disposition": "Reproduced and repaired",
+      "proof": "Generated declaration codec, source On over ASP.NET, independent saved-model On, strict TS declarations and real .NET/TS events; legal null roots/elements accepted and required occurrences remain non-null."
+    },
+    {
+      "id": "E02",
+      "disposition": "Reproduced and repaired",
+      "proof": "Two namespace-qualified Changed delegates with separate keys compile and run from cold/incremental package builds. The actual pre-fix diagnostic was CS8785."
+    },
+    {
+      "id": "E03",
+      "disposition": "Reproduced and repaired",
+      "proof": "Real mux end-then-item and over-limit valid input leave event observation and sibling calls live. Existing ordinary uplink protocol/overflow refusal and cancellation consumers remain in the full gate."
+    }
+  ],
+  "retained": "One common declaration model, STJ converters/metadata, existing Gateway/Connection/Cordis events, adapter and owned/borrowed ownership, configuration and installation operation authorities.",
+  "publicUse": "RemoteEvent delegates and generated Definition/Forward/On remain the author surface. CreateDeclared(metadata, query) is the generated-code boundary retaining declaration nullability erased by CLR metadata; explicit-schema Create remains an independent authored codec API. No new model format or wire version.",
+  "retired": [
+    "Root-only nullability inference for generated metadata codecs",
+    "Simple-name-only event hint naming",
+    "Unstarted async-iterator cleanup as the carrier input release guarantee"
+  ],
+  "verification": {
+    "windows": "windows.json",
+    "linux": "linux.json",
+    "browser": "browser-scoped.json",
+    "formatStages": 4,
+    "csharpFiles": 277,
+    "formatLogSha256": "eb6257dfdc55138cf88e5fabde55905967d0e958f72542c5a9fb586ac9ae7117"
+  },
+  "failedEvidence": [
+    {
+      "name": "prior-windows-gate",
+      "observation": "0a722f6: real referenced Remote rejected a legal null dictionary value after all 875 source tests passed.",
+      "logSha256": "43bb6e362752c809f490e8266bf2aef8f0192bfbb381e35376fcfe3e09ba7003"
+    },
+    {
+      "name": "prior-linux-gate",
+      "observation": "0a722f6: same referenced Remote boundary failure after 872 source passes and three named Windows-only skips.",
+      "logSha256": "c2287b612bf20d39becde2f5f220841ca7a699ca0f0aa9d970e7bbaba3dd2391"
+    },
+    {
+      "name": "E01-red",
+      "observation": "Before the nullability repair, the actual generated List<string?> event codec rejected its encoded null element. Qualified names were already repaired to isolate this failure.",
+      "logSha256": "eccfcc19612ed24e151e10f142b9556268eb730fa65e021f0306de7ac170467c"
+    },
+    {
+      "name": "E02-red",
+      "observation": "Original hint naming caused Roslyn CS8785: Changed.Events.g.cs must be unique, with legal same-name delegates in different namespaces.",
+      "logSha256": "4cd72dede13d6f26b8051d101e0769d040b997e372f10219836a219ff4d63ef7"
+    },
+    {
+      "name": "E03-red",
+      "observation": "Both real mux cases failed before repair: unused event input after end and overflow terminated the event observer.",
+      "logSha256": "f5927907f8cf21b9e1af7df36fd1749f57cfa6e790114d739d21016f3c512e44"
+    },
+    {
+      "name": "initial-final-gate",
+      "observation": "2a5a6e4: first default Windows gate stopped at locked restore because NuGet TLS/vulnerability data was unavailable. No test result was produced.",
+      "logSha256": "6318588c1cafa6c4209df0a3229ee57a1f31935602ea4771338864ac9de0e6d7"
+    },
+    {
+      "name": "offline-focused",
+      "observation": "Pre-freeze final focused run: 11 passes with NU1900 retained as a warning. This is not the default full gate.",
+      "logSha256": "17102fe8e3ec4aadd96e59cdc99b8d19d7c2a6abd25983f575428ef2c0ef6e40"
+    },
+    {
+      "name": "typescript-tooling",
+      "observation": "The new worktree lacked the locked TypeScript tool dependency; npm ci and a fresh actual Host run corrected the verification environment.",
+      "logSha256": "81ed02862672004d5e2a1cc60ccf879fdf1988581d88ec1d27514e4312866f78"
+    }
+  ],
+  "remaining": "Outbound browser scoped facade, remaining model backends, full Peer/scope-targeting and named platform integration continue in the original scope. No new Native AOT, hosted CI, whole fixed-DSH suite/differential, remote SourceLink retrieval, source archive or external applications execution. No dependency, package version or upstream pin change, merge, release or deployment."
+}

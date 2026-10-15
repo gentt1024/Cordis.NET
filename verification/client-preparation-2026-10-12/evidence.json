@@ -1,0 +1,417 @@
+{
+  "sourceCommit": "dfee9489af89a9badbc9e0845a5ec2da82c4f125",
+  "sourceTree": "e9176396272bd8dfacf2ebadae9202c494eba18c",
+  "reviewedBase": "aa47d142a4d1c6d41cdca2ac50ffe35d74ec325e",
+  "upstream": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "command": "python scripts/verify.py --package --package-output artifacts/preparation-final-pack",
+  "status": "same-source-checks-completed-with-environment-exception",
+  "initialFullGateStatus": "failed",
+  "rid": "win-x64",
+  "sdkVersion": "10.0.111",
+  "sourceUnchanged": true,
+  "workingTreeClean": true,
+  "verificationReportSha256": "e2e7c981e79c574775983395427b2f4b0e3c4132ba7c5a593ac551834b160a90",
+  "tests": [
+    {
+      "assembly": "Cordis.Extensions.Tests.dll",
+      "counts": {
+        "total": 113,
+        "executed": 113,
+        "passed": 113,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "skipped": [],
+      "sha256": "4ebc1663c629811054896afea2b428b7e1c4fd040f0f382889f6442af48d62c8"
+    },
+    {
+      "assembly": "Cordis.Core.Tests.dll",
+      "counts": {
+        "total": 148,
+        "executed": 148,
+        "passed": 148,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "skipped": [],
+      "sha256": "da95743b8ae2ee399d9d3875a5c98aa792224a4e413904340af648fadbfb57b2"
+    },
+    {
+      "assembly": "Cordis.Composition.Tests.dll",
+      "counts": {
+        "total": 496,
+        "executed": 496,
+        "passed": 496,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "skipped": [],
+      "sha256": "906de580f87ed113d4f22067d5eeb1324bb0a29a8cbee3c3e3a5b75d7ec60224"
+    },
+    {
+      "assembly": "Cordis.Platform.Tests.dll",
+      "counts": {
+        "total": 126,
+        "executed": 126,
+        "passed": 126,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "skipped": [],
+      "sha256": "0328afa834dcba03078bcac0f715396d40bf66e2d74841bbcb6007c79568c7f9"
+    }
+  ],
+  "steps": [
+    {
+      "name": "sdk",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "sdk-version",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "restore",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "test",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "test-map",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "jit-1",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "jit-2",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "jit-repeat-2",
+      "exitCode": 0
+    },
+    {
+      "name": "jit-3",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "jit-repeat-3",
+      "exitCode": 0
+    },
+    {
+      "name": "upgrade-jit",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "example",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-modules-build",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-modules-types",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-lifecycle",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-shared-modules",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-author-watch",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "cli-validate",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "cli-preview",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "cli-invocation",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "cli-usage",
+      "exitCode": 2,
+      "expectedExitCode": 2
+    },
+    {
+      "name": "cli-invalid-option",
+      "exitCode": 1,
+      "expectedExitCode": 1
+    },
+    {
+      "name": "api",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "typert-optional",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "pack",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "package-symbols-and-debug-consumer",
+      "exitCode": 1,
+      "expectedExitCode": 0
+    }
+  ],
+  "remainingSteps": [
+    {
+      "name": "package-content-boundaries",
+      "exitCode": 0
+    },
+    {
+      "name": "consumer-restore",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "consumer-publish",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "consumer-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "adapters-restore",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "adapters-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "tool-install",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "tool-package-preview",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-restore",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-publish",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-retained-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-republish",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-republished-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "independent-consumer-location",
+      "exitCode": 0
+    },
+    {
+      "name": "clr-deployment",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "clr-multi-entry",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "typert-package-consumer",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "typert-dotnet-settings",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "whitespace",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    }
+  ],
+  "completionReportSha256": "e3236ae66a735ce691dcd2fe2d6f8be070db2e76fdbe1ac6e610bdf8315edac2",
+  "packages": {
+    "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "3d4c17f4e449ccf271f4690a8a1080946413a36a7881c2d44ebf00187127faf7",
+    "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "e17f95cc69571b2d1ba9f4b308dd88bd9e2bec5c3a8bfa61c4904fbaf08dd7a7",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "7dcb95459e40cbcc8d037c293cbc9a9c9c83c8c6de5990ac56d9d708d0fb8631",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "b746b6c747cc01c59f145f70e154da57bb567dc59b45fcf0b28a6e0544c4bd26",
+    "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "c4fda8f22d090d3881c340b0d29848be98e086e9dbdb34fe73e4056ce6315863",
+    "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "f27643bf03427f35962a91da7251ac25c73d00eb4895c877b3b57ec6b2a3063f",
+    "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "21cf7e52d7cf535a5b701589d1bbf49949a165d644bf17060fcab22b8bd5e41c",
+    "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "edd924ae0227141b207b7f34e12262914eaf6a3fd166db0989862c9095513742",
+    "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "d2e18f8398382ec81c6ec23a9bd7c73d99771f288ef60d7e6649186830b535df",
+    "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "5795b98e7170c3aedbad96e0c2947f77b11d013e741731f7f34c37db3f0ebf93",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "6a233ab5352a829a8d9a67858132bae5b92b397496d5e1c24216e8f3f1c2db6c",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "6d12366f0037b4c23817911373fe628826ba9205b04120cd22994914a8b9cd4c",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "1124e03a267188b7ee29547bdf1dd64a04fdf9a9010b9da6c358414498e0adff",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "95f23e106ea54db951e0a12cfd10c805e680043c2b3738ca6e5969de61c8a2bb",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "78590bb83c7bbd18ec5bfd19ff019ac052dd7ae12a0cf351a4650367731f2544",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "cf285a406c9fc43066cc009fd4a866908ac3a5c265bb8690674f796eb5d50492",
+    "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "e222aaacef8d68dfc2df4ffef3428c29736616f9d0507b569ba2dc81a7e9d1f7",
+    "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "c81f7c1b0b2ed0b6394c257d979106e472b64ae13d60a4497121e4b08a8db116"
+  },
+  "findings": {
+    "S01": "Generated required wire slots are checked before dispatch after scoped selection. Unary rejects its Promise; streams fail at creation, including pre-cancelled calls. Absent slots issue no HTTP/open. Explicit undefined remains a supplied slot; serializer omission and Host required-field rejection remain. Null, defaults and valid direct fallback retain their existing meanings.",
+    "S02": "Closed Connection rejects selected unary preparation outside the RemoteResult carrier catch; stream preparation and adapter selection exceptions retain their synchronous boundaries.",
+    "N01/N02": "Prior closures retained. No model reconstruction in this batch."
+  },
+  "primaryConsumer": "tests/fixtures/DeclarationModel/SharedClient.ts: scopedCalls, executed from generated package assets with actual Cordis and ASP.NET Host",
+  "red": {
+    "sourceCommit": "19ff2b60b883911f3f3579006c0128319902d4ae",
+    "logSha256": "f1d9fccc672ee89d912342816edece711f045297000083f05fcbe7f60e0e5691",
+    "observations": "Eight missing direct-slot cases fail, covering missing adapter/undefined identity, unary/stream and pre-cancellation; closed Connection unary throws synchronously. Same consumer passes with the correction.",
+    "setupCorrection": "The first test draft expected gateway/args-invalid for explicit undefined. Host uses gateway/arguments-invalid; corrected the literal before the product red run."
+  },
+  "format": {
+    "command": "python scripts/format.py --check",
+    "stages": 4,
+    "csharpFiles": 277,
+    "logSha256": "d9b44e1772a005f72bd0055c7998678dcac3b73665e92a282912ffec2031f81a"
+  },
+  "limits": [
+    "Windows x64 checks completed in recorded segments after process-launch failure; no uninterrupted green full-gate run; Linux not rerun on this candidate",
+    "No static AOT, hosted CI, remote SourceLink retrieval or full DSH original-source suite on this candidate",
+    "Browser evidence is recorded separately; no full Context/Peer matrix",
+    "No dependency, version, pin, external applications, push, merge, publication or deployment change"
+  ],
+  "generatedConsumer": {
+    "status": "requested-checks-passed",
+    "packageReferencesOnly": true,
+    "providerImplementationReferencedByCaller": false,
+    "aotRequested": false,
+    "reportSha256": "19d36faeefdc9092282b6d4d9883a9bc8e1596721eb2cf2c3350b474dfbc5bc6"
+  },
+  "environmentException": {
+    "initial": "The full gate failed when PackageSymbols could not start git (WinError 5). Repeated invocations also encountered apphost/git startup refusal. No source assertion or system protection was changed.",
+    "resolution": "Read frozen Git blobs once with git cat-file --batch, verify every blob object hash, and feed the existing SOURCE_SHA256 manifest path to unchanged package_inspection.py. The same package bytes pass DLL/PDB, SourceLink/source checksum and actual offline debug consumer checks.",
+    "status": "Symbol contents verified through the existing archive path; repeated Git child launch root cause remains unresolved. Original full-gate failure retained.",
+    "symbolReportSha256": "ce89e6e0f01438e14b50fcd127453f91190cd73d8c873e8b6afd893583945341",
+    "sourceManifestSha256": "191540953ad98881096be5f3347bd1651419a05a4bb19a0703328589ad245c4e",
+    "batchSourceLogSha256": "17911f77eb2e7601345835f859980a458cbe6da31495c2c7283efdb3736d32e1",
+    "failedRetryLogSha256": [
+      "4557ca4552257c0f8eab7d8160340834b79b0fb793b96e09f9a7a5e10b60f5e3",
+      "16b0763036355a94ff684d1e696576f45db458cede62c09e31cc2315a975e14d",
+      "de441181ee71c0d6cb36ff7048ff897b6f4d23ca1386274f8fc8ec31846929ce",
+      "92702405f16339866f5d2938024734ef5da1066ead53ceea0a07bc0380949382"
+    ],
+    "continuationSetupCorrection": "First isolated remainder omitted the pre-existing CLI fixture; copied the exact fixture to the separate output and reran that consumer unit. Failed setup retained.",
+    "setupReportSha256": "629d01af54a23425700d1122bdce1a08774390f04fd03fb1dae16404e239f7f9"
+  },
+  "nextAuthoringGap": {
+    "result": "First independent design-time Compile has no generated DTO/client inputs; a following normal build generates both and compiles the consumer.",
+    "source": "Preliminary package probe before final freeze; not final package acceptance or a live IDE run",
+    "designTimeLogSha256": "05c61afe0a7a62014b5952b65dc2f517b866d357db522824a3070e9e7a0700f0",
+    "normalBuildLogSha256": "0b9118b6d11c919428ed1a54b06271dbb22c7db9c76e0d451898f000f1e6a2cd"
+  }
+}

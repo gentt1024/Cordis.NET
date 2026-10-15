@@ -6,7 +6,7 @@ These optional .NET authoring helpers use the existing Cordis runtime. A package
 
 ## Start with the runnable example
 
-The authoring helpers on this page require the authoring release listed in the [release notes](../CHANGELOG.md); older NuGet packages do not include them. Until that release is available on NuGet, use this source checkout. The commands below run the repository examples through project references with the SDK selected by `global.json`; installing packages alone does not provide the example projects.
+For a first package-only application, start with [getting started](getting-started.md). This guide describes the current selected batch, including generated Remote and model consumers. Choose the exact feed/version from [validation](validation.md#current-candidate-index); do not assume published alpha.4 contains later changes. The optional examples below use source project references and the SDK in global.json.
 
 The [shared contracts](../examples/Probes.Contracts/Probes.cs), [provider and configuration](../examples/Probes.Plugin/ProbeModule.cs), and [static host with two consumers](../examples/Probes/Program.cs) are the authoritative source examples. They show a plain formatting capability, a caller-bound probe registry, typed events, early revocation, provider disappearance and consumer reactivation.
 
@@ -102,16 +102,17 @@ Use an explicit assembly and manifest resource name with `PatchResources.Read`; 
 
 For the complete plugin lifecycle, start with [ManagedPlugin](../examples/ManagedPlugin/README.md), then follow [ManagedApplication](../examples/ManagedApplication/README.md) to build a local feed, install the plugin, edit its configuration and remove it. The [CLI guide](../tools/Cordis.Cli/README.md) uses the same host operations. The Probes example below demonstrates a smaller client consumption boundary.
 
-Use the session's existing `ConfigurationOperations`. Read a fresh configuration revision, then submit ordered SET/unset paths through `MutateConfigurationAsync` or the selected `MutateSettingsAsync`. The library validates the complete final candidate and saves once; object unset restores inheritance, while array unset removes an element. Ordinary fields keep normal restart behavior; `liveOnly` additionally requires a captured live boundary and compatible ordinary effective values. Handle `Saved`, `Applied` and recovery diagnostics separately. The original Config delegate and advanced `ConfigSchema<T>` authoring remain available.
+Use the session's existing `ConfigurationOperations`. Read a fresh configuration revision, then submit ordered SET/unset paths through `MutateConfigurationAsync`. The library validates the complete final candidate and saves once; object unset restores inheritance, while array unset removes an element. Ordinary fields keep normal restart behavior; `liveOnly` additionally requires a captured live boundary and compatible ordinary effective values. Handle `Saved`, `Applied` and recovery diagnostics separately. The original Config delegate and advanced `ConfigSchema<T>` authoring remain available.
 
-Declare application metadata with `descriptor.WithMetadata(new ConfigurationMetadata { ... })`. Renderer roles, localized descriptions, badges, hidden/disabled/collapse, links/comments, extra plain data and explicit min/max/step/pattern/loose hints travel through immutable Core annotations. They describe the existing validator and do not add validation behavior. Nested fixed live paths use `ConfigSchema<T>.WithVolatile(path, projection)`; Settings omits ordinary siblings and redacts secret values into presence-only sidecars. Every edit checks its visible declared path; replacing an ancestor containing unreadable secret/hidden fields is refused. See the [complete declaration, settings and discovery examples](configuration-description.md).
+Declare application metadata with `descriptor.WithMetadata(new ConfigurationMetadata { ... })`. Renderer roles, localized descriptions, badges, hidden/disabled/collapse, links/comments, extra plain data and explicit min/max/step/pattern/loose hints travel through immutable Core annotations. They describe the existing validator and do not add validation behavior. Nested fixed live paths use `ConfigSchema<T>.WithVolatile(path, projection)`; Settings omits ordinary siblings and redacts secret values into presence-only sidecars. Submitted edits check offered paths. Host-hidden paths cannot be replaced indirectly; secrets remain writable, and whole replacement may reset omitted secrets. See the [complete declaration, settings and discovery examples](configuration-description.md).
 
-The two exports are separate contracts: `ToSchemastery` produces the browser form's uid/refs envelope, while `ToJsonSchema` produces a JSON Schema 2020-12 declaration with explicit runtime limitations. `ReadSettingsSchemasAsync` selects live fields and removes hidden properties and defaults; the full configuration export requires separate host authorization. For discovery before activation, `ConfigurationSchemaDiscovery.DiscoverAsync` uses an explicit resolver and reads native group/include sources without starting a Context or writing fallback include files. Import/capture are trusted code; validators, Apply, raw expressions and lazy builders remain unexecuted.
+The two exports are separate contracts: `ToSchemastery` produces the browser form's uid/refs envelope, while `ToJsonSchema` produces a JSON Schema 2020-12 declaration with explicit runtime limitations. The standard Settings describe response includes the selected live schema with hidden properties omitted, safe defaults preserved, and secret defaults and required metadata removed; the full configuration export requires separate host authorization. For discovery before activation, `ConfigurationSchemaDiscovery.DiscoverAsync` uses an explicit resolver and reads native group/include sources without starting a Context or writing fallback include files. Import/capture are trusted code; validators, Apply, raw expressions and lazy builders remain unexecuted.
 
-The example's primitive live view requires explicit host selection and hidden fields. Do not expose a raw configuration read as a browser settings response. Its transport is loopback-only demonstration code; deployed hosts provide authentication, authorization, request limits and their policy. The retained DSH form model stages drafts and saves through the real host. SET-only does not support inherited reset or splitting multi-field saves into sequential writes. Build and run from the repository root:
+The example's primitive live view requires explicit host selection and hidden fields. Do not expose a raw configuration read as a browser settings response. Its loopback host uses the existing ASP.NET Core Remote adapter and shared Connection; deployed hosts provide authentication, authorization, request limits and their policy. The Settings generation command writes both the generated wrapper and its shared runtime/type declarations. The retained DSH form model stages drafts and saves through the real host. SET-only does not support inherited reset or splitting multi-field saves into sequential writes. Build and run from the repository root:
 
 ```console
 npm ci --prefix reference --ignore-scripts
+dotnet run --project examples/Probes/Probes.csproj -c Release -- --settings-client artifacts/settings-client
 node reference/node_modules/typescript/bin/tsc -p examples/Probes/client/tsconfig.json
 node scripts/build-application-client.mjs artifacts/application-client
 dotnet run --project examples/Probes/Probes.csproj -c Release -- --application-host http://127.0.0.1:17639/ artifacts/application-client
@@ -122,7 +123,7 @@ The final command runs in another terminal and mutates only the generated exampl
 
 ## Deployment and verification boundaries
 
-The candidate admission and coordinated metadata-save APIs below require `0.2.0-alpha.4` or later. Alpha.4 is currently a release candidate; the published alpha.3 packages do not provide this contract.
+The candidate admission and coordinated metadata-save APIs below were introduced for `0.2.0-alpha.4`; alpha.3 does not provide them. The current source also contains later contract corrections, including [standard Settings migration](settings-contract-migration.md), that require a future package version. Use current project references or an isolated local validation feed for those changes; do not replace the published alpha.4 packages.
 
 For package and bundle-selection policy, set `session.ConfigurationOperations.AdmitProfileAsync`. The callback receives `ProfileCandidate.ManifestJson` (the exact proposed saved text), `ConfigurationJson` (the effective raw root rows, without evaluating expressions), and a detached `Composition` view with source layers and skipped selections. During installation, `Package` also exposes the prepared directory and planned publication destination so policy can inspect artifacts before Publish. It is null for other operations. Throw to refuse. Validate this library candidate instead of re-reading the profile and predicting another candidate in `IProfilePackageToolchain.PublishAsync`. Do not re-enter configuration operations from admission. Keep product-owned policy inputs stable until the operation settles; this callback does not freeze external SDK or application state. `ProfileSession` supplies candidate-aware application automatically.
 
@@ -210,11 +211,11 @@ The generator emits `EchoServiceTypert.Contribution("IndependentRemote")`, descr
 
 An explicit Remote class may derive from `Service<TState>`. Its `CreateView` can create a fresh caller-bound view sharing the provider's State, as in the [independent author](../tests/fixtures/TypertConsumer/Author.cs). Generated bindings invoke that view. The Gateway checks the underlying registration and original provider value; view allocation does not retire a provider. Ordinary in-process Service consumption still uses the Core API directly.
 
-Root nullable reference annotations, such as a `string?` argument or `Task<string?>` result, are supplied by Roslyn through `TypertCodec.CreateNullable`: runtime JSON type metadata erases these annotations. The codec adds a null branch and relocates local schema references, preserving non-null recursive children. Generated declarations therefore expose `string | null` for these boundaries. This does not claim complete nested generic nullability analysis or add result-schema validation to the Gateway.
+Generated metadata codecs use `TypertCodec.CreateDeclared` to retain nullability from the common declaration model where CLR metadata erases it, including supported collection elements and dictionary values. The generated query identifies complete declaration uses at concrete Schema paths, so nested nullable and non-null uses remain distinct even when STJ reuses a reference. Always-ignored members do not override active JSON properties. No additional author annotation is required. STJ still owns naming, converters and serialization; this does not claim arbitrary generic type support or add result-schema validation to the Gateway.
 
 `TypertCodec` prepares and checks its schema lazily when `Schema` or `Decode` is first used, including nullable input. Decode validates the supported native subset and then deserializes. Encode serializes with the supplied metadata without preparing or validating the result schema. Unsupported schema features fail explicitly. Client projection preserves `prefixItems` as readonly tuples, including bounded optional prefix elements, nested local references, and unbounded typed or unknown tails. A minimum beyond the prefix or a finite tail length limit is rejected. The [tuple fixture](../tests/fixtures/TypertConsumer/TupleContract.cs) supplies an explicit schema to a generated binding and distinguishes the real closed-tuple HTTP call from codec/projection-only variants. It does not demonstrate Roslyn inference of CLR tuple types or the complete source type graph.
 
-Remote methods currently use required ordinary parameters and `Task<T>`, or explicit `RemoteMethod(Stream = true)` with `IAsyncEnumerable<T>`. A final `CancellationToken` parameter may be included for cooperative cancellation, without a default value. Explicit Context and object lookup declarations have host-owned registration APIs; the complete scoped/lookup example is in the same fixture.
+Remote methods support required ordinary parameters and optional parameters with supported constant defaults, returning `Task`, `Task<T>` or, with explicit `RemoteMethod(Stream = true)`, `IAsyncEnumerable<T>`. Omitting an optional argument uses its authored default; explicit null remains a separate wire value subject to the parameter's null contract. A final `CancellationToken` parameter supplies cooperative cancellation and may declare `= default`; it is not a wire argument. See the [optional-parameter consumer](../tests/fixtures/TypertOptional/OptionalConsumer.cs) for omission, null and required-input cases. Explicit Context and object lookup declarations have host-owned registration APIs; the scoped/lookup example remains in the Typert fixture.
 
 ### Register, call and withdraw contracts
 
@@ -226,36 +227,59 @@ The native Gateway also checks provider generations after successful resolution 
 
 For dynamic bundle replacement, keep the Typert loader owner and call `SuspendAsync` with the affected exact Loader request names after candidate preparation and before switching provider Fibers. These names can differ from CLR resolver keys when deployment routing supplies aliases. After the resolver returns and commits, call `ResumeAsync` for those requests. On failure, resume only when `PluginReplacementFailure.Recovery` confirms `Succeeded`; otherwise keep that scope suspended. Resume propagates registration errors and withdraws its selected batch on failure. Same-request lifecycle reentry from registration or withdrawal observers is refused. Suspension detaches unfinished imports without forcibly stopping resolver code; retained tasks can still retain their old code until they settle. The independent multi-entry consumer verifies unchanged contribution identity and calls for an unrelated package, refreshed CLR codecs after replacement, recovery ordering and old invocation rejection. Retained contributions, clients, service objects or errors can still keep collectible code alive; release them when their ownership ends.
 
-`MapCordisRemote` maps a host-authorized `TypertGateway` to native unary JSON and downlink NDJSON routes. The host supplies the authorization callback. Request abort and generated-client `AbortSignal` convey cancellation; `byte[]` results use JSON base64. Host unary dispatch passes the signal to the binding and normalizes a business failure while cancelled; it does not preempt successful business execution. Downlink reads race cancellation, then cleanup waits for a pending native read before disposing the enumerator in its invocation Context. A body or cleanup that never settles can prevent termination, as in the pinned stream cleanup boundary. This carrier does not promise the complete pinned Typert wire protocol.
+`MapCordisRemote` maps a Host-owned `TypertHostConnection` to standard HTTP unary and text WebSocket mux routes. Create the Connection inside the existing Context execution domain, and register ASP.NET WebSocket middleware with `UseWebSockets()`. The Connection owns its operator Peer; requests and sockets borrow it. Authorization remains the Host's callback. Socket exit releases its Peer registration; it does not dispose the Peer.
 
-Dispose or drain active Gateway iterators before closing their Cordis root. Iterator cleanup re-enters that execution domain; a closed root cannot run it.
+Publish that Connection with `owner.Provide("connection", connection)` in the same execution domain. Direct Gateway calls then borrow its operator, including after a current service replacement. Without a mounted Connection, the Gateway lazily owns one operator under its Context. A stream keeps its initial operator through cleanup. The host must withdraw the service registration when disposing its Connection; a borrowed Peer does not transfer that responsibility to the Gateway.
 
-Generate `.mjs` and `.d.mts` artifacts with `TypertArtifacts.GenerateClient(contribution)`. The result uses the same descriptors and schemas as the host. Generated clients expose typed calls and the Remote result/error envelope:
+Unary uses the fixed `client-request` / `server-response` envelope and correlated `rpcId`. Host authors return business values, `Task`, or their declared stream. The shared runtime owns framing and failures. A cancelled business failure is normalized by the Gateway; cancellation does not prove that a write never executed. Stream cleanup waits for pending native reads before disposing the iterator in its invocation Context. Drain active iterators before closing that Context.
 
-```typescript
-import { createRemote, mountRemote } from "./remote.mjs";
+Generate `.mjs` and `.d.mts` artifacts with `TypertArtifacts.GenerateClient(contribution)`. Ship `TypertClientRuntime.Module` as `cordis-remote.mjs` and `TypertClientRuntime.Declaration` as `cordis-remote.d.mts` beside them. `Cordis.ClientAssets` writes these shared assets once for its standard modules.
 
-const client = createRemote("/remote");
-const echo = client["sample/Echo"];
-const result = await echo({
-  request: { Text: "hello", Count: 1 },
-});
-client.dispose();
+This entry reads actual Host descriptors and STJ Schema, then uses the shared client emitter. It is a supported export route, not a compatibility bridge for the saved-model backend. It requires the author implementation and serialization metadata and can run during application export; it does not regenerate clients for each call. The independent saved-model backend reads declaration facts and explicit references without executing author constructors, accessors or converters. Its refusal of a DTO does not automatically prohibit that DTO on the Host or descriptor export route. Descriptor export still depends on the supported Schema and emitter constructs; it does not promise arbitrary CLR types. Clients from both routes share the Connection and invocation contract.
 
-const mounted = await mountRemote(ctx, "/remote");
-await mounted.dispose();
+For expected business rejection, authors can throw `RemoteError` at their existing service boundary with a public code, message and optional JSON details. Gateway preserves those fields. Ordinary unhandled exceptions currently become `gateway/internal` with their exception message retained, matching fixed DSH [rpcFailure](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/index.ts). This is not automatic redaction or a host-wide exception mapping service. Applications that must conceal internal information should map failures and record diagnostics at their owned business invocation boundary. Outer ASP.NET exception middleware cannot assume it will catch an exception already converted into a Gateway result. This does not change the separate cancellation, assembly-failure or stream contracts, or promise an existing global mapping callback.
+
+`TypertCodec.Schema` describes input; the public read-only, non-virtual `ResultSchema` describes JSON output. Export the result codec from the actual generated contribution:
+
+```csharp
+var contribution = EchoServiceTypert.Contribution("Example.Author");
+var resultCodec = contribution.Invocations.Single(method => method.Endpoint == "example/echo").Result;
+File.WriteAllText("echo-result.schema.json", resultCodec.ResultSchema.GetRawText());
 ```
 
-Here `ctx` is the client Cordis owner. Await `mountRemote`: it registers owner cleanup and contributes methods to the shared root `remote.<namespace>` service. Contributions with disjoint methods can share that namespace; duplicate methods or an unrelated existing service are refused. Withdrawal removes only that contribution's methods, and final withdrawal removes the namespace service. Disposing either client stops admission and aborts its active fetches.
+Use the endpoint declared by your service. The exported JSON can be stored and consumed without the provider or its `JsonTypeInfo`. It is the same output projection used by native `DecodeOutput` and the client emitter, not a second schema declaration. Input and output differ for conditional omission, read-only/computed members and accessor nullability. Supported local references resolve within the exported schema. Nullable and Optional codecs preserve their existing composition; top-level `Undefined` remains an absence contract (`AcceptsUndefined`), not a JSON null value.
+
+Access preserves lazy projection and precise `NotSupportedException` diagnostics for unsupported schema constructs. Format annotations do not promise validation by every external validator. This describes serialized JSON, not multipart framing or restored JavaScript binary values. It exposes reading, not a new external override protocol or an HTTP endpoint. Generated Web type declarations alone do not validate arbitrary result DTOs. ResultSchema validates JSON presence and nullability before DecodeOutput uses native STJ metadata. Getter-only members are not marked as required native assignments: a constant getter retains its authored value, and a JsonConstructor-bound getter is restored by the constructor. This does not reconstruct arbitrary computed state or expand the static DTO backend.
+
+Applications choose when to validate and how to handle failure, including recording business acceptance before validation. Read or export this schema for that purpose; do not substitute input Schema, reflect DTOs or duplicate the output rules. Reading the property adds no Gateway result validation and changes no acceptance, cancellation, reply or cleanup ordering.
+
+```typescript
+import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";
+
+const connection = new TypertConnection(new URL("/remote", location.href));
+const client = createRemote(connection);
+const result = await client["sample/Echo"]({ request: { Text: "hello", Count: 1 } });
+if (!result.ok) console.error(result.error.code, result.error.message);
+await client.dispose();
+const mounted = await mountRemote(ctx, connection);
+await mounted.dispose();
+await connection.dispose();
+```
+
+Await `mountRemote`: it registers owner cleanup and contributes methods to the shared root `remote.<namespace>` service. Disjoint contributions can share a namespace; duplicate methods or unrelated services are refused. Withdrawal removes only that contribution, then removes the namespace when its last contribution leaves. Client disposal drains its work without closing the borrowed Connection. The application owns Connection disposal. Optional fetch and WebSocket factories configure the application's carrier identity, without changing generated methods or Host authorization.
+
+The shared runtime supports unary results, unary multipart attachment recovery, downlink and typed uplink mux, with generated .NET/TS clients. The [validation record](validation.md#shared-remote-connection-package-gate-2026-10-12) separates the frozen package gate, fixed DSH interoperability and Native AOT evidence. Selected reverse Context/owned-value and fixed event forwarding are described in [Remote events](remote-events.md). The previous base64 wire and per-method NDJSON paths are removed.
 
 ### Consumer evidence and remaining scope
 
 The [multi-entry gate](../scripts/verify-clr-multi-entry.py) independently packs an author package, consumes it through `PackageReference`, installs its root/subpath entries and exercises shared identity, separate configurations, failed and successful replacement, withdrawal, generated TypeScript calls over real HTTP and invalid arguments. The separate [Remote gate](../scripts/verify-typert.py) covers the native Remote author chain. Use a fresh local package batch and the required Node/TypeScript dependencies. Platform acceptance remains governed by the completed results in [validation](validation.md); these examples alone do not establish Windows/Linux or Native AOT closure. Dynamic CLR loading requires the ordinary runtime.
 
-The remaining source type graph, rich Context/owned-value graph, Peer/uplink/event remotes and binary attachment protocol remain open scope. Migration of existing PluginManager, Settings/configuration and client management consumers to generated Typert contracts remains open. Existing handwritten `MapCordisService` endpoints are still usable, but do not close those gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
+The selected fixed event workflow, reverse Context and owned-value handling use the common declarations described in [Remote events](remote-events.md). Browser outbound scoped calls, native Peer routing and Scope stores/layers have bounded consumer evidence; their recorded candidates and remaining exits are in [development](development.md#remote-semantics-and-interoperability-d-wire) and [validation](validation.md). Operator Peer ownership, typed uplink and unary multipart are also implemented. These results do not establish arbitrary type graphs or every Peer workflow. Settings, PluginManager and selected host emit notifications use generated contracts over the existing profile owners; see [management migration](management-remote-migration.md). Native raw configuration, host state and artifact delivery retain their independent duties. Existing application-specific `MapCordisService` endpoints do not close the remaining wire gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
 
 
 ## Native authored models and .NET consumers, 2026-10-10
+
+Ordinary and Remote declarations use one common model and purpose-specific projections. The [current support table](development.md#current-support-and-release-status) and backend disposition distinguish runtime metadata from independent generation.
 
 Ordinary Plugin, Service and Config use remains in process. Remote is an optional boundary for consumers in another environment. A C# author keeps the existing Remote attributes and explicit STJ context; setting `CordisTypertService` opts that project into source-model extraction. Composition supplies the SDK compiler tool and build target. Node and TypeScript are not prerequisites for this path.
 
@@ -265,34 +289,330 @@ Ordinary Plugin, Service and Config use remains in process. Remote is an optiona
 </PropertyGroup>
 ```
 
-The build publishes `cordis/typert/settingsController.cordis.typert.json` in the author package. This versioned, compiler-independent artifact retains declaration and serializer facts instead of reconstructing them from RPC descriptors. The normal Remote generator compares it with the current compilation and refuses stale source facts with `CORDISREMOTE002`. Referenced declarations use CLR metadata and adjacent XML documentation; source-only initializer/getter bodies unavailable from metadata are not reconstructed. Full referenced-model composition remains open.
+The build publishes `cordis/typert/$(AssemblyName).cordis.model.json` in the author package. Service selection and ordinary roots feed the same `extract-model` entry and declaration graph. For an author assembly named `Example`, the file is `Example.cordis.model.json`. The Remote generator compares selected service facts with the current compilation and refuses drift with `CORDISREMOTE002`; unrelated declarations are not a second service contract. Referenced declarations keep their CLR metadata provenance and adjacent XML documentation. Missing source initializers or implementations are not reconstructed from metadata. Referenced source definitions compose through the explicit reference-model inputs below.
 
 A separate contract package can consume a copy of that artifact without referencing the provider implementation:
 
 ```xml
 <PropertyGroup>
   <CordisTypertService>settingsController</CordisTypertService>
-  <CordisTypertClientModel>settingsController.cordis.typert.json</CordisTypertClientModel>
+  <CordisTypertClientModel>Example.cordis.model.json</CordisTypertClientModel>
   <CordisTypertClientNamespace>IndependentSettings.Client</CordisTypertClientNamespace>
   <CordisTypertClientName>SettingsClient</CordisTypertClientName>
   <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
 </PropertyGroup>
 ```
 
-The target writes ordinary DTO/client source before `CoreCompile`, so STJ sees it in the same compilation. Same-round source-generator output cannot serve as STJ input. Generated source is owned by `Clean`; identical incremental emission preserves its bytes and timestamp. This opt-in command-line build is the verified boundary; first-build IDE/design-time integration still needs separate evidence. The selected SDK must provide the matching Roslyn assemblies; the package does not redistribute them.
+For external DTO declarations, add explicit reference models to the client project:
 
-Nullable float and decimal constant initializers retain their authored types and defaults. An absent JSON member keeps its initializer; explicit null replaces it. Caller DTOs share the selected target namespace with generated helper types. A conflicting name, such as `DemoClientFailure` when `CordisTypertClientName` is `DemoClient`, is rejected before compilation with both origins in the diagnostic. Choose a distinct DTO or client name; the emitter does not silently rename public types and removes its previous generated output when it refuses a projection.
+```xml
+<ItemGroup>
+  <CordisTypertClientReferenceModel Include="Shared.cordis.model.json" />
+</ItemGroup>
+```
+
+The CLI equivalent is `emit-dotnet --reference-models references.rsp`, with one model path per line. Remote selection stays in the primary model. Referenced source definitions resolve by complete assembly-qualified identity through the same composition used by ordinary data emission. Metadata signatures alone do not preserve initializers and cannot replace the source model. Missing or conflicting definitions reject generation and remove stale client output. References are build inputs; their response file and generated source belong to `Clean`. The independent caller consumes the generated contract package without loading provider assemblies.
+
+The target writes ordinary DTO/client source before `CoreCompile`, so STJ sees it in the same compilation. Same-round source-generator output cannot serve as STJ input. The same properties also generate language-service inputs on the first design-time build after restore, without a preceding normal build. Design-time projections use the `design-time` subdirectory of `CordisTypertOutputDirectory`; ordinary build/pack owns the regular outputs. Both consume the same explicit model and reference inputs. `Clean` removes both sets of generated files; identical incremental emission preserves bytes and timestamps. Source-model extraction for packing remains a normal-build operation; the live source generator reads the current author compilation. MSBuild design-time input and actual compiler checks do not establish live IDE interaction or named UI-platform acceptance. The selected SDK must provide the matching Roslyn assemblies; the package does not redistribute them.
+
+Nullable float and decimal constant initializers retain their authored types and defaults. An absent JSON member keeps its initializer; explicit null replaces it. Caller DTOs share the selected target namespace with generated helper types. A conflicting name, such as `DemoClient` when `CordisTypertClientName` is `DemoClient`, is rejected before compilation with both origins in the diagnostic. Choose a distinct DTO or client name; the emitter does not silently rename public types and removes its previous generated output when it refuses a projection.
 
 ```csharp
 using var http = new HttpClient();
-using var remote = new SettingsClient(http, new Uri("http://localhost:5000/remote"));
-var view = await remote.DescribeAsync();
+await using var connection = new TypertConnection(http, new Uri("http://localhost:5000/remote"));
+await using var remote = new SettingsClient(connection);
+var reply = await remote.DescribeAsync();
+if (!reply.Ok) throw reply.Error;
+var view = reply.Value;
 ```
 
-The caller owns the supplied HttpClient. Direct unary calls return typed values or throw the existing `RemoteError`, preserving owner codes and detached JSON details. This is a native adaptation of the existing result envelope. Client disposal stops admission, cancels its transport requests and rejects late successful completions; it does not dispose the borrowed HttpClient or promise forced Host termination.
+The caller owns the supplied HttpClient and shared `TypertConnection`. Ordinary calls return `Task<RemoteResult<T>>`; inspect `Ok` before reading `Value` or `Error`. No-value authors return `Task`, projected as `Task<RemoteResult>`; absent success and explicit null remain distinct. Missing adapters or an absent Connection are local assembly exceptions. Remote failures preserve arbitrary owner codes and detached details; carrier failure and cancellation become unary outcomes. Downlink calls asynchronously prepare an eagerly opened `RemoteStreamHandle<T>`. Iterate raw business items once and await disposal. Stream Remote errors, carrier failures, local misuse and external cancellation remain distinct exceptions. Client disposal awaits its own calls and cleanup without disposing borrowed resources.
 
-The production `SettingsController` resolves the optional ordinary `ISettingsDescribeProvider` service named `settings` on each call. `ProfileSettingsDescribeProvider` reads all host-selected namespaces through one existing profile transaction. It publishes redacted live values and Schemastery declarations without defaults, keeps genuine JSON null distinct from absent secrets, and retains native projection diagnostics outside the fixed response. The host supplies namespace/page policy, writability and document-presence facts. Base/user reconstruction and the pinned monotonic revision are not supplied: this adapter omits those optional layers and retains the existing native revision string.
+The production `SettingsController` resolves the optional ordinary `ISettingsProvider` named `settings` on every call. Mount `SettingsForms` over the session's existing `ConfigurationOperations`; it derives uniquely addressable active forms from the authors' live Config declarations. Its numeric revisions observe Fiber identity, complete schema and raw configuration. The same profile queue owns layered redacted reads, complete candidate validation and writes. Describe/update/replace/mutate use the one generated contract. See [Settings contract migration](settings-contract-migration.md) for public calls and removed hash-only Settings paths.
 
 The [independent .NET Settings gate](../scripts/verify-typert-dotnet.py) packs an author and contract package, then builds a package-only caller outside this repository. The caller does not reference the provider implementation and uses static metadata with reflection fallback disabled. It covers typed describe, redaction, missing/failed provider, retry, held-view invalidation, definition withdrawal/re-registration, scoped suspension and borrowed-client ownership. Primitive roots, null/default arguments, nullable-state annotations and unsupported projections have separate cases. Run with `--aot` for the static caller; the dynamic CLR Host remains an ordinary-runtime boundary. Formal platform results belong to the exact completed checkpoint in [validation](validation.md).
 
-This path covers direct ordinary unary callers and the exercised Settings data shapes. Complete Settings writes/editors, PluginManager/client-management migration, rich graphs, full source-type analysis and TS generation from this new model remain open. Existing TS/Web output stays available and retains its separate gate.
+This route covers supported unary/stream, Settings, PluginManager and event consumers. Consult the [backend disposition](development.md#alpha5-independent-backend-disposition) for refused shapes and [validation](validation.md#current-candidate-index) for named platform evidence.
+
+
+## Typed Remote uplink
+
+Declare the uplink on the author method, separately from ordinary wire arguments:
+
+```csharp
+[RemoteMethod("exchange", Stream = true)]
+public async IAsyncEnumerable<string> Exchange(
+    string prefix,
+    [RemoteUplink] IAsyncEnumerable<string?> input,
+    [EnumeratorCancellation] CancellationToken cancellationToken = default)
+{
+    await foreach (var item in input.WithCancellation(cancellationToken))
+        yield return prefix + (item ?? "null");
+    yield return "complete";
+}
+```
+
+Register the input value type in the author's STJ context, here `typeof(string)`. The ordinary parameter remains an argument; the input sequence is supplied by the Invocation. The common declaration model retains the input's root and supported collection element nullability. `typeof(T)` alone cannot express nullable reference inputs. For explicitly absent items use `IAsyncEnumerable<RemoteOptional<string?>>`: `HasValue` distinguishes an absent item from a present null. This value is not an extra wire object.
+
+```csharp
+await using var stream = await client.ExchangeAsync("prefix:", cancellationToken);
+stream.Send(null);
+stream.Send("first");
+stream.End();
+await foreach (var item in stream.WithCancellation(cancellationToken))
+    Console.WriteLine(item);
+```
+
+`Send` validates and enqueues locally, including before the first read; it does not acknowledge Host receipt. `End` half-closes the input after queued sends while output remains readable. The generated return type is `Task<RemoteStreamHandle<string, string?>>`. Downlink-only methods retain `RemoteStreamHandle<T>` without send/end capabilities. Both have one output consumer. `End` is idempotent, including after termination. Sending after half-close or retirement fails locally. `DisposeAsync` cancels this logical call and awaits owned local work; it does not acknowledge remote business retirement. Host input codec failure terminates the logical stream even when the author catches the input exception. Sibling streams and the Connection remain active.
+
+Generated TypeScript returns `RemoteDuplexHandle<Output, Input>` with `send`, `end`, and awaited `dispose`; optional items use `undefined`, independently of `null`. Its send boundary checks lossless JSON, and the Host validates the declared codec. .NET also validates its generated input codec before enqueueing. Text mux uses ordinary item values and omits `value` for absence; it adds no binary frame or wrapper. Primitive, nullable value, supported collection/dictionary and existing bounded DTO codecs retain their actual backend limits. Selected reverse Context/event delivery and owned-value settlement use the same Connection; see [Remote events](remote-events.md).
+
+Composition's package supplies its own declaration model to the MSBuild client reference set. Other source models remain explicit `CordisTypertClientReferenceModel` inputs. A direct compiler invocation must supply the corresponding models with `--reference-models`; it cannot recover authored defaults from assembly metadata.
+
+## Ordinary declaration models
+
+Select ordinary Plugin, Service, Config and object declarations by exact CLR metadata name in a project referencing Composition:
+
+```xml
+<ItemGroup>
+  <CordisTypertModelRoot Include="Example.Options" />
+  <CordisTypertModelRoot Include="Example.Store`1" />
+</ItemGroup>
+```
+
+Generic arity uses the CLR backtick form; nested names use `+`. Ordinary roots must be authored in the project and publicly accessible through their containers. An explicitly selected source type marked `RemoteService` may also be non-public, so analysis can retain its complete contract and diagnostics. Selection does not register a capability. Runtime service generation still requires a public top-level non-generic partial class. Ordinary analysis requires no Remote attribute, partial declaration or serializer context, and executes no constructor, initializer or method.
+
+Normal build/pack writes the same `$(AssemblyName).cordis.model.json` under `cordis/typert/` for ordinary and Remote roots. `CordisTypertModelPath` controls the local output path. Definitions and applied references are distinct. Generic parameter owners/ordinals/constraints, direct bases/interfaces, member signatures, overloads, events/delegates, required/accessor/nullability/default facts, initializers and documentation are retained. Attributes include return, getter/setter and setter-value targets; parameter facts include extension `this` and `scoped`. Attribute types and `typeof` values retain complete declaration references, including array values, and enter the referenced graph. Source partial declarations, implicit/member provenance, instance constructors, explicitly marked non-public Remote methods and authored JSON metadata signatures remain facts rather than copied method bodies. External declarations keep complete assembly/metadata identity and their recorded signature provenance; absent source initializers and implementations are not reconstructed.
+
+The packaged compiler validates and projects an artifact-only declaration catalog without loading or referencing the provider implementation:
+
+```console
+dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-model --model Example.cordis.model.json --output catalog.json
+```
+
+The catalog retains analysis diagnostics and generates no binding, Remote registration, DTO serializer or executable Service. Syntax errors and duplicate declaration identities refuse extraction and remove owned stale output. Other pre-generator compilation errors are recorded explicitly because a valid build can depend on neighboring generator output. Source graph limits are 256 named definitions and 64 nested references; unresolved/function-pointer signatures are diagnosed as analysis gaps. This is not complete C# compiler or reflection coverage. The existing .NET Typert gate verifies package-only consumption, incremental timestamps, Clean including a failed first extraction, cold rebuild, reference identities and refused inputs.
+
+`CordisTypertService=*` selects the authored services into the same declaration artifact; `CordisTypertModelRoot` adds explicit roots. The CLI entry is `extract-model`, with `--roots` for the root response file and `--service` for service selection; either or both may contribute roots. A selected service's reachable graph is retained. Source and saved inputs share service, method, DTO, constructor, naming and default-value interpretation. Conflicting JSON naming policies for a shared DTO, including nested and recursive references, fail with `TYPM113` in the affected projection. The old `extract` entry, `.cordis.typert.json` artifact and `CordisTypertDeclarationModelPath` are retired; they are not compatibility routes.
+
+Selected ordinary classes can generate DTOs and a static STJ context from the saved artifact without a Remote declaration or provider assembly:
+
+```xml
+<PropertyGroup>
+  <CordisTypertDataModel>Example.cordis.model.json</CordisTypertDataModel>
+  <CordisTypertDataNamespace>Example.Consumer.Data</CordisTypertDataNamespace>
+  <CordisTypertDataJsonContext>ExampleDataJson</CordisTypertDataJsonContext>
+</PropertyGroup>
+<ItemGroup>
+  <CordisTypertDataRoot Include="Example.Options" />
+  <CordisTypertDataReferenceModel Include="Shared.cordis.model.json" />
+</ItemGroup>
+```
+
+The optional `CordisTypertDataReferenceModel` items supply saved models for external data definitions reached from the selected roots. Each input is checked with its model identity. Resolution requires an exact assembly-qualified declaration identity, including the assembly version and public-key token; names alone do not match. A referenced model supplies source facts for its own declarations. A metadata placeholder by itself remains insufficient. References do not add public roots: `CordisTypertDataRoot` still selects only roots published by the primary model.
+
+The equivalent CLI accepts `emit-dotnet-data ... --reference-models reference-models.rsp`. The response file lists one model path per line; relative paths are resolved from the response file's directory. Omit this option when no reference models are needed. Every explicitly supplied reference identity is recorded in the generated source, in deterministic order. Conflicting source definitions for the same identity are refused; identical definitions may occur in several inputs, and different source locations alone do not conflict. Missing definitions, incompatible declaration shapes and generated type-name collisions are also refused. This validates declared identities and artifact contents, not correspondence to an arbitrary implementation DLL; publish each model with the source build that produced it.
+
+The target invokes `emit-dotnet-data` before `CoreCompile`, using the same supported JSON projection as the Remote caller. Each build reads the primary and reference model contents; unchanged generated output retains its bytes and timestamp. Generation failure removes stale source, and `Clean` removes generated source and owned response files. Missing members retain supported constant defaults; explicit null remains distinct. These generated data carriers do not replay authored constructor or accessor behavior. Referenced DTOs use the same bounded public class/property subset as local DTOs; composition does not enable generic DTOs, inheritance, custom converters or other refused shapes. Extraction records `TYPM202` on a source type whose non-public instance data member has explicit `JsonInclude` but falls outside the public analysis surface. Projection rejects that type, including through a reference model, rather than silently dropping the JSON member; unrelated declarations remain usable.
+
+A saved Remote model can also produce web artifacts without loading the Provider assembly:
+
+```xml
+<PropertyGroup>
+  <CordisTypertWebModel>Example.cordis.model.json</CordisTypertWebModel>
+  <CordisTypertService>example</CordisTypertService>
+</PropertyGroup>
+<ItemGroup>
+  <CordisTypertWebReferenceModel Include="Shared.cordis.model.json" />
+</ItemGroup>
+```
+
+Normal build emits `remote.schema.json`, `remote.mjs`, `remote.d.mts` and the existing `cordis-remote` runtime pair into `$(CordisTypertOutputDirectory)web/`. Pack includes these files under `cordis/typert/web/`; deliver that directory together. `emit-web --model Example.cordis.model.json --service example --reference-models references.rsp --output web` is the equivalent compiler command. It owns those five named files in its output directory. Failed generation removes them; Clean also removes the response file. The web target does not generate C# IDE inputs.
+
+Import `createRemote` and `TypertConnection` from `remote.mjs`, construct a Connection for the Host's Remote address, then call the generated endpoint methods. The methods use the existing `RemoteResult`, streams, cancellation and borrowed Connection contract. The emitter is shared with runtime-descriptor generation; the saved-model route obtains its types directly from common declarations and explicit referenced source models. It does not load or execute author code, and it adds no wire protocol or model format.
+
+The Schema file is a JSON Schema 2020-12 definition catalog. Select `#/$defs/<escaped namespace/method/arguments>` for a complete argument object, or the `parameters/<wire>`, `result` and optional `uplink` definitions. Escape `/` as `~1` and `~` as `~0` in a definition key. Local recursive references remain within this document. Artifact comments record the input identities; unchanged outputs retain their timestamps. Declaration initializers are not advertised as Host defaults: constructors and accessors are not executed by this backend.
+
+For an event, set `CordisTypertService` to its declared event name (for example `alpha/changed`) or exact delegate metadata name. Use the same primary/reference model properties and the same five package assets. The module exports `createEvents`; it borrows the shared Connection:
+
+```ts
+import { createEvents } from './remote.mjs'
+const events = createEvents(owner, connection, adapters)
+events.on(owner, 'alpha/changed', (values, labels, required) => { /* consume typed arguments */ })
+await events.run(signal, host => onReady(host.home))
+```
+
+The Host must still explicitly select the generated forwarder. A declaration in a model does not expose the event. Ordinary arguments and waterfall requests describe Host output; a handler reply describes Host input; `next()` describes output from the remaining chain. Conditional omission can therefore make the reply and continuation types different. `undefined`, explicit `null` and calling `next()` remain separate choices. The event Schema catalog uses `<event>/args/<index>`, `request`, `reply` and `next` keys. A JSON Schema describes present JSON values; optional `undefined` remains in the generated TypeScript contract.
+
+This backend currently accepts ordinary closed public DTO classes/records, supported scalar types, recursive references, arrays, framework collection interfaces and string-key dictionaries. It preserves wire names, required/nullable fields and supported serializer inclusion options. It rejects unsupported serializer policies, custom converters, polymorphism, data inheritance, applied generic DTOs, non-string dictionary keys, multidimensional arrays and binary attachment metadata. A refusal is not a completion claim; runtime bindings and the existing runtime artifact emitter retain their established support. The [backend disposition](development.md#alpha5-independent-backend-disposition) separates these limits by their actual facts and use.
+
+Re-extract declaration models with the current compiler and rebuild maintained consumers. Inputs missing the required structured references or provenance, and obsolete model inputs, are rejected rather than converted. A saved artifact's identity validates its saved facts; it cannot recover omissions, prove every authored JSON configuration or establish correspondence to an arbitrary DLL. There is one current contract, with no historical format reader or versioned Remote compatibility route.
+
+To generate a direct unary client from the same declaration artifact, select both the DTO and its marked service in the author project:
+
+```xml
+<ItemGroup>
+  <CordisTypertModelRoot Include="Example.SharedData" />
+  <CordisTypertModelRoot Include="Example.SharedRemote" />
+</ItemGroup>
+```
+
+The service's `typeof` JSON context and its registered data enter the closure, including an internal source context. In the independent contract project, use that one model for the ordinary data properties above and the client:
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>sharedData</CordisTypertService>
+  <CordisTypertClientModel>Example.cordis.model.json</CordisTypertClientModel>
+  <CordisTypertClientNamespace>Example.Consumer.Remote</CordisTypertClientNamespace>
+  <CordisTypertClientName>SharedClient</CordisTypertClientName>
+  <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+</PropertyGroup>
+```
+
+The equivalent command is `emit-dotnet --model Example.cordis.model.json --service sharedData --namespace Example.Consumer.Remote --client SharedClient --output SharedClient.g.cs`. It consumes the saved facts without the author's implementation assembly. The .NET caller backend covers supported unary methods, downlink streams, lookup wire parameters, scoped Context views, data/constants and trailing CancellationToken parameters. Independent callers must refuse serializer behavior they cannot reproduce, including custom metadata/converters or insufficient DTO facts; this does not remove analysis facts or automatically reject a Host using the author's actual implementation and explicit STJ metadata. The Host and caller share facts, not the intersection of their restrictions. An explicitly marked non-public method remains visible to analysis and is refused by Remote binding. Only a selected, valid annotation-only partial STJ context may defer its pre-generator abstract-member obligations; unrelated errors are not suppressed. Successful projection does not prove the author build or register a live service.
+
+Declare Context keys and wire identity types with assembly attributes, the .NET equivalent of the fixed upstream `TypertContextMap`:
+
+```csharp
+[assembly: TypertContext("document", typeof(string))]
+```
+
+Declarations in the author assembly and its compiler references enter the same saved model. Missing receiver declarations and conflicting key/type declarations are refused. These declarations do not register live adapters. The Host continues to register `TypertHostContextAdapter` and `TypertLookupProvider`; the Client registers `TypertClientContextAdapter` in its existing `TypertRegistry`, owned by a Fiber effect.
+
+```csharp
+await callerContext.RunAsync(owner =>
+{
+    registry.RegisterClientContext(owner, "document", new(
+        ctx => ctx.Metadata.TryGetValue("documentId", out var id) ? id : Undefined.Value,
+        _ => null)); // Reverse lookup is unused by this outbound-only example.
+    return Task.CompletedTask;
+});
+await using var connection = new TypertConnection(httpClient, remoteBase);
+await using var client = new DocumentClient(connection);
+await client.ReadAsync("doc-1");
+var scoped = client.ForContext(callerContext, registry);
+await scoped.ReadAsync();
+```
+
+Two scoped contracts remain distinct. A method with `RemoteMethod(Context = "...")` appears on the scoped view: the adapter identity selects the Host receiver. A direct method gains a scoped projection only when it has exactly one lookup parameter whose key has a Context declaration with the same wire type. Its ordinary client method still accepts the lookup identity; the scoped method omits that argument, while the Host receiver remains direct. Methods with multiple lookups retain their explicit wire arguments. A lookup's Host object is never reconstructed as a client DTO merely to pass its identity.
+
+`ForContext` borrows the Context and registry, which must share a Cordis execution domain. It reads the current adapter and identity on each invocation inside `Context.RunAsync`. `Undefined.Value` means the Context does not supply an identity; explicit null remains a present wire value for reference-type identities and is subject to Host codec validation. Value-type identities require the declared CLR type. Missing adapters or identities refuse the call before transmission. Replacing an adapter affects existing views. The view owns neither its Context, adapters nor HttpClient; disposing the parent client cancels its requests and invalidates its views. Ending a scoped downlink uses the existing stream cleanup path. Explicit views provide C# signatures instead of upstream's dynamic direct/scoped selection; use the parent client for an explicit direct call. See the [shared package consumer](../tests/fixtures/DeclarationModel/SharedConsumer.cs) for both contracts and withdrawal.
+
+For independent callers, a JSON context available only as assembly metadata lacks the source facts needed to reproduce its serializer and is refused with `TYPM115`. The Host may still bind that actual context. A non-finite optional numeric default is retained as an author fact and works for omitted Host arguments. If the selected JSON number handling cannot transmit it, standalone .NET caller generation refuses with `TYPM116`; it does not emit a method whose default call fails during serialization.
+
+The independent consumer uses an authored DTO as both an ordinary root and a Remote argument/result through a real HTTP Host and package-only caller. Data consumers own DTO behavior; this route checks model and transport wiring. Backend limits and named IDE/UI evidence remain in the current support and validation records.
+
+## Browser scoped Remote consumption
+
+Mount the generated contribution once in its owning Cordis Fiber. Read the generated typed namespace through the consuming Context:
+
+```typescript
+import { mountRemote, getRemote } from './shared.mjs'
+
+const mounted = await mountRemote(owner, connection, contextAdapters)
+const remote = getRemote(agentContext, 'sharedData')
+const result = await remote.scopedRead({ text: 'hello' })
+const document = await remote.read({ suffix: '!' })
+await mounted.dispose()
+```
+
+`getRemote` reads the existing `remote.sharedData` service; it creates no connection, registry or owner. Cordis tracing retains the consuming Context even when a method is saved as a callback. The borrowed adapter source supplies `getClient(key)` and an adapter's synchronous `identity(caller)`; both adapter and identity are read again on every invocation. It can be the same context-adapter owner used by reverse events when it provides both identity and resolve operations.
+
+A receiver-scoped method supplies the declared identity field to select the Host Context. A lookup-scoped method supplies the declared lookup argument without changing that receiver. A defined identity, including null, selects the scoped route. Undefined or a missing adapter permits direct lookup only when the method also declares that direct route; receiver-only methods report an assembly failure. The direct lookup overload still requires its wire identity. Unary failures and stream failures retain their existing separate contracts. Generated argument objects retain omitted fields and explicit null rather than normalizing them.
+
+The mounted contribution owns its methods and cancellation. Disposing it rejects retained callbacks and ends its work, while the borrowed Context, adapters and Connection keep their own owners. Namespace registrations continue to compose and retire through the existing mount queue. The `ctx` member is reserved for Cordis tracing. The explicit endpoint client remains available for direct wire calls; scoped application code uses the Context service above.
+
+The ordinary DTO/STJ backend also accepts the framework `IEnumerable<T>`, `ICollection<T>`, `IReadOnlyCollection<T>` and `IList<T>` projections already recognized by the common wire model, alongside lists, arrays and string-key dictionaries. Referenced element declarations retain defaults and nullability. These are data carriers serialized by STJ, not execution of an author's enumerable implementation or arbitrary generic classes.
+
+## Registration scopes and Peer event routing
+
+Inside the owner's Cordis execution domain, create a registration scope and route an event to its opaque key:
+
+```csharp
+await using var scoped = Scope.Create(owner, subject);
+scoped.Context.On("app/changed", (_, args) => {
+    Observe(args[0]);
+    return Undefined.Value;
+});
+owner.Events.EmitWith(Scope.Target(subject, subject), "app/changed", change);
+```
+
+The subject may implement `IEventFilter`; its filter is retained by the carrier. A carrier exposes no subject properties. Pass the actual subject in event arguments when the listener needs it. Generated Remote waterfall helpers do this automatically; their public invocation signature is unchanged.
+
+`Scope.Of(context)` reads the nearest inherited tag. Supply `parent` to `Scope.Create` to bind routing ancestry, or keep the handle from `Scope.BindParent(key, parent)` when controlled reparenting is needed. Routing parents do not transfer ownership. `DisposeAsync` waits for owned cleanup, including a prior `DisposeRawAsync` call used by an ordered composite effect.
+
+Remote methods use `TypertInvocation.Current!.Peer!` for the admitted Peer and register through `peer.Context`. A child scope with `parent: peer` routes upward to those Peer listeners. Do not dispose the borrowed Peer Context. A socket, logical stream or caller does not own the shared Connection's Peer, and no request argument is needed to identify it. The same mechanism serves the direct Gateway's owner-bound fallback.
+
+### Guid in saved-model clients
+
+Use `System.Guid` directly in ordinary data and Remote/event values with the default source-generated STJ context. For example, add this method to the normal `RemoteService` author and register `Item` with `JsonSerializable`:
+
+```csharp
+public sealed record Item(Guid Id);
+
+[RemoteMethod("echo")]
+public Task<Item> EchoAsync(Item value) => Task.FromResult(value);
+```
+
+Normal extract/build/pack preserves the Guid declaration identity. Independent C# data/callers use `global::System.Guid`; Web callers accept and return strings with string/uuid Schema. No framework source model, mapping annotation or Provider assembly is needed by the independent generator. Explicit references remain required for authored DTOs from another model.
+
+`Guid?`, arrays, supported lists and string-key dictionary values compose with the same mapping. An omitted optional `Guid value = default` uses Guid.Empty; explicit null requires a nullable declaration. TypeScript string typing does not establish UUID validity: the Host's existing STJ codec admits or rejects actual values. A custom converter changes the contract and remains unsupported by the saved-model projection. Guid keys and application ID wrappers are not included.
+
+### Directional Web data contracts
+
+Optional parameters and nullable values are independent. `[DisallowNull] double? expectedRevision = null!` accepts omission or a number, but rejects explicit JSON null. The generated TypeScript parameter is `expectedRevision?: number`.
+
+A DTO may have different input and result shapes without a second declaration. `[JsonRequired, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int Count { get; set; }` requires Count on input and allows Count to be absent on output. A nullable getter with DisallowNull still permits null in the result while rejecting it on input. Use the generated method's parameter and result types instead of reusing one directional type for both. Constructor defaults apply at the real Host; non-optional constructor parameters must be supplied even when RespectRequiredConstructorParameters is false or omitted.
+
+`new TypertConnection(base)` and `new TypertConnection(base, globalThis.fetch)` both use the standard Connection. Bound functions and arrow overrides remain supported; consumers do not need to bind a native function to compensate for the library's call site.
+
+Generated .NET methods use the same directional contracts automatically. Pass required zero/default values normally; input encoding includes them even when the author omits them when writing results. Returned DTOs accept the author's permitted nulls and omitted default fields. Do not override serializer options to compensate for these directions.
+
+For optional JsonElement fields, Undefined can represent omission when the author declares conditional omission. Explicit JSON null is a present value. For example, a Settings unset operation leaves Value undefined; a set operation assigns a JSON value and still undergoes the existing form validation.
+
+### Scope-aware contribution registries
+
+Use the registration Context for both visibility and cleanup. A registry can keep several tables in one layer:
+
+```csharp
+sealed class MenuLayer : IScopeLayer
+{
+    public NamedEntries<string> Commands { get; } =
+        new(name => new InvalidOperationException($"Duplicate command: {name}"));
+    public AnonymousEntries<string> Hints { get; } = new();
+    public bool IsEmpty => Commands.IsEmpty && Hints.IsEmpty;
+}
+
+var layers = new ScopedLayers<MenuLayer>(_ => new(), NotifyChanged);
+var registration = layers.Effect(caller,
+    layer => layer.Commands.Insert("refresh", "Refresh"), "refresh-command");
+var visible = layers.Merge(Scope.Of(caller), layer => layer.Commands);
+await registration.DisposeAsync();
+```
+
+Run registration in the owner's Cordis execution domain. The returned EffectHandle is also owned by caller; explicit disposal is optional and idempotent. Values remain borrowed. Use Peek for only one scope's own contributions, and ChainLayers for inherited overlays. Reads never create layers. Named and anonymous views remain live while their table generation is nonempty; a drained generation does not follow later registrations. A Remote method can use its current Peer Context without accepting an explicit identity argument.
+
+### Open the Settings document
+
+Mount SettingsForms over the session's ConfigurationOperations and SettingsController over the same Context. The default controller opens the provider's document on the host desktop. An embedded host can pass its own `Func<string, CancellationToken, Task>` as the controller's second constructor argument. That function receives the actual provider path, not a copy of redacted form data.
+
+The generated .NET call is `await settingsClient.OpenSettingsDocumentAsync(cancellationToken: token)`. The standard TS call is:
+
+```ts
+const result = await settings['settings/openSettingsDocument']({})
+```
+
+Both return the ordinary RemoteResult with `{ opened: true }` on accepted handoff. Check `hasDocument` when presenting the action, and handle failure like other Settings operations. The managed application example exposes this host action; it does not download a document to the browser. Document opening does not bypass Gateway authorization or grant permission to edit arbitrary paths.
+
+## Runtime numeric metadata and local causes
+
+For a JIT author whose initializer semantics require reflection metadata, an explicit `JsonSerializerContext.GetTypeInfo` may return metadata from the application's configured `DefaultJsonTypeInfoResolver`. Keep declared naming/nullability facts aligned with that metadata. The generated binding still uses the same codec and Gateway; `TypertArtifacts.GenerateClient(contribution)` exports the runtime contract through the shared emitter. This route does not replay arbitrary reflection logic in saved-model clients or promise Native AOT support.
+
+| Numeric policy | Input | Result and event output |
+|---|---|---|
+| Strict | JSON number, then native type/range admission | JSON number |
+| AllowReadingFromString | JSON number or finite native numeric string | JSON number |
+| WriteAsString / AllowNamedFloatingPointLiterals / other combinations | Affected metadata projection refused | Affected metadata projection refused |
+
+Supported scalars are byte/sbyte, short/ushort, int/uint, long/ulong, float/double and decimal, in existing nullable and container shapes. Numeric string grammar is type-sensitive; native parsing still checks width and overflow. Unknown patterns are refused. Omitted members keep the actual serializer's defaults; explicit zero and false remain present. Use declared wire names. Current schema admission is not fully case-insensitive even when the underlying Web serializer is. See [compatibility](compatibility.md#metadata-numeric-directions-2026-10-15) for that boundary and the exporter/native-parser difference.
+
+Generated JS unary failures keep classification in `result.error.code`. Locally caught transport errors are also available unchanged in `result.error.cause`, including non-Error values. Cancellation preservation follows fixed DSH; preserving ordinary carrier causes is an explicit Cordis.NET extension. Remote business errors are rebuilt only from code/message/details. Cause is not wire data or an automatic logging policy, and no call is replayed automatically. Applications can inspect a reason they own without bypassing generated calls or Connection lifetimes; retain resource-bearing errors only as long as needed.

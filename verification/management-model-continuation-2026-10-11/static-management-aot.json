@@ -1,0 +1,462 @@
+{
+  "sourceCheckpoint": "6ad9d7f1aac2b4546e23ea5e16ff290d4be312c8",
+  "scope": "Windows x64 static generated management caller Native AOT; host remains JIT",
+  "status": "passed",
+  "steps": [
+    {
+      "name": "standard-pluginManager-client-pack",
+      "exitCode": 0,
+      "expectedFailure": false
+    },
+    {
+      "name": "standard-remoteNotifications-client-pack",
+      "exitCode": 0,
+      "expectedFailure": false
+    },
+    {
+      "name": "standard-management-host-build",
+      "exitCode": 0,
+      "expectedFailure": false
+    },
+    {
+      "name": "standard-management-caller-build",
+      "exitCode": 0,
+      "expectedFailure": false
+    },
+    {
+      "name": "standard-management-caller-aot-publish",
+      "exitCode": 0,
+      "expectedFailure": false
+    },
+    {
+      "name": "standard-management-jit",
+      "exitCode": 0,
+      "expectedFailure": false
+    },
+    {
+      "name": "standard-management-aot",
+      "exitCode": 0,
+      "expectedFailure": false
+    }
+  ],
+  "packageReferencesOnly": true,
+  "ordinaryContractsReferencedOnly": true,
+  "scriptInputs": [
+    {
+      "path": "scripts/verify-typert-dotnet.py",
+      "sha256": "fc89491772fd1fcd9953f3fc88b367cfca2040ccfb07d5388ae5e603d6e5d8b9",
+      "gitBlobSha256": "fc89491772fd1fcd9953f3fc88b367cfca2040ccfb07d5388ae5e603d6e5d8b9"
+    },
+    {
+      "path": "scripts/typert_management_consumer.py",
+      "sha256": "c9ed5244d03debd1d4c22cc5128fb7cc9bcdecfbbbe43799157d20890536864e",
+      "gitBlobSha256": "c9ed5244d03debd1d4c22cc5128fb7cc9bcdecfbbbe43799157d20890536864e"
+    },
+    {
+      "path": "tests/fixtures/ManagementDotnet/Host.cs",
+      "sha256": "7d1cfd629f2d594e529e70e6ff6595d80e4b32d731d909fd1a917ea84e5fbc50",
+      "gitBlobSha256": "7d1cfd629f2d594e529e70e6ff6595d80e4b32d731d909fd1a917ea84e5fbc50"
+    },
+    {
+      "path": "tests/fixtures/ManagementDotnet/Client.cs",
+      "sha256": "71c22ad1ed0e3d5006d98ecd1c310040017e25580078389e3f51b3a1453221f7",
+      "gitBlobSha256": "71c22ad1ed0e3d5006d98ecd1c310040017e25580078389e3f51b3a1453221f7"
+    },
+    {
+      "path": "tests/fixtures/ManagementDotnet/Client.ts",
+      "sha256": "3966652ecf8054baa87c59eb348a1d34d02c0f7d6613030d3de0cea43749a45e",
+      "gitBlobSha256": "3966652ecf8054baa87c59eb348a1d34d02c0f7d6613030d3de0cea43749a45e"
+    }
+  ],
+  "reports": [
+    {
+      "path": "results.json",
+      "sha256": "d54f73d6d25375c6c1b81262a7bd67137d36a648bed62a1d00a350a6bbff9514"
+    },
+    {
+      "path": "standard-management-aot.log",
+      "sha256": "46022d782e163f85c9ab655dbf43859b8802afbd84129d9100ad5b465145d39c"
+    },
+    {
+      "path": "standard-management-caller-aot-publish.log",
+      "sha256": "164a746a8cb84228c771da5623f9ee18362e628a426c6554f3a8ca1972120073"
+    },
+    {
+      "path": "standard-management-caller-build.log",
+      "sha256": "d50ed9ca756fd25792ce8fb3af277fa273640a0076c713fd288b111de6a72af0"
+    },
+    {
+      "path": "standard-management-host-aot.log",
+      "sha256": "8b264007f5e88eb592c2a2525882de3033065fadc377f06c7f4524b44f2d3f7c"
+    },
+    {
+      "path": "standard-management-host-build.log",
+      "sha256": "aefdf76323c85893330636a410293fc077a1af496c0897c9e4c823bb33546ddf"
+    },
+    {
+      "path": "standard-management-host-jit.log",
+      "sha256": "1f2b5472d160dbf3a14e71877406409c492d7010f6ba14cf0f845c472231d008"
+    },
+    {
+      "path": "standard-management-host-typescript.log",
+      "sha256": "d50ea0a1f3c8d2b06c0c0e7e22d188b61fe40437f6994190fe2a99da3655cdc8"
+    },
+    {
+      "path": "standard-management-jit.log",
+      "sha256": "46022d782e163f85c9ab655dbf43859b8802afbd84129d9100ad5b465145d39c"
+    },
+    {
+      "path": "standard-management-results.json",
+      "sha256": "fcfe81bf836def56e5d0671620d92fcabfd2fef6b6d4fb4f086c5b9c1ec36e0e"
+    },
+    {
+      "path": "standard-management-typescript.log",
+      "sha256": "3850cfc7470b6fbc5555a49a72d979b1812f3781b97003b42391b873a9df50e8"
+    },
+    {
+      "path": "standard-pluginManager-client-pack.log",
+      "sha256": "f8ebd66bb50d88898856b941e402a71a3ac7e7f00d577f209427cbe386f72bc0"
+    },
+    {
+      "path": "standard-remoteNotifications-client-pack.log",
+      "sha256": "b1097a8f17d1396888bc732cbbcc9698aa60f330c685b81804376b75af3e9fcf"
+    }
+  ],
+  "packageFeedArchives": [
+    {
+      "path": "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg",
+      "sha256": "7ca78811cf28b5ed47e8074bfa9b1b24f08d8b34a32fe20ffee1e81e663fd603"
+    },
+    {
+      "path": "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+      "sha256": "6cd39d2422e187b9b89ce3f87f1a760305ecbc8d099a55213d7014bddaf25027"
+    },
+    {
+      "path": "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+      "sha256": "342ea96cfc0339587ddad622f3a7c5575c0f6d3308e89b909a7c888356766b33"
+    },
+    {
+      "path": "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+      "sha256": "e4d2dc8a6d1890694870d733285d137d7b23c40e671b772d0179c3e2bbf98758"
+    },
+    {
+      "path": "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+      "sha256": "be27461d0c54c514d404f7b18273604ef4122291ccd3ae8ae602aee45fa67371"
+    },
+    {
+      "path": "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+      "sha256": "3dd14e00907ed3c900ecb2a6381be42f94b6ec89f27d555970106c98bcff465a"
+    },
+    {
+      "path": "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg",
+      "sha256": "31769c2a862ded66dd1839c89ec61e875b861d7ba84b6165e21c67502804c540"
+    },
+    {
+      "path": "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg",
+      "sha256": "e85661134f9b0d00ad97523f4f034146d34735d4dfb59e14eaa7fd42318fac03"
+    },
+    {
+      "path": "Cordis.NET.Tool.0.2.0-alpha.4.nupkg",
+      "sha256": "29a8aa614c8be7b7b02aedb64fc5a3255218ec8b321cd1e67c92252e6b2b0f6b"
+    }
+  ],
+  "actualRestoredCordisArchives": [
+    {
+      "path": "cordis.net.aspnetcore.0.2.0-alpha.4.nupkg",
+      "sha256": "6cd39d2422e187b9b89ce3f87f1a760305ecbc8d099a55213d7014bddaf25027"
+    },
+    {
+      "path": "cordis.net.composition.0.2.0-alpha.4.nupkg",
+      "sha256": "e4d2dc8a6d1890694870d733285d137d7b23c40e671b772d0179c3e2bbf98758"
+    },
+    {
+      "path": "cordis.net.core.0.2.0-alpha.4.nupkg",
+      "sha256": "be27461d0c54c514d404f7b18273604ef4122291ccd3ae8ae602aee45fa67371"
+    },
+    {
+      "path": "cordis.net.extensions.0.2.0-alpha.4.nupkg",
+      "sha256": "3dd14e00907ed3c900ecb2a6381be42f94b6ec89f27d555970106c98bcff465a"
+    }
+  ],
+  "nativeExecutableSha256": "2aae989601635e18ec02fd18061e2ccaf4da86ca5149db8e4439e946d67728b9",
+  "actualConsumerInputs": [
+    {
+      "path": "ManagementCaller/ManagementCaller.csproj",
+      "sha256": "c60036ead3093ae44bee50edbbeb743bdd926665d6b2320a6f0e4241fdf4e740"
+    },
+    {
+      "path": "ManagementCaller/Program.cs",
+      "sha256": "71c22ad1ed0e3d5006d98ecd1c310040017e25580078389e3f51b3a1453221f7"
+    },
+    {
+      "path": "ManagementCaller/obj/ManagementCaller.csproj.nuget.dgspec.json",
+      "sha256": "3815595437523e399266b451ec905a085c456f6a1300da6d6424172a056e2286"
+    },
+    {
+      "path": "ManagementCaller/obj/ManagementCaller.csproj.nuget.g.props",
+      "sha256": "09d6340b6897ede28dccbb00f535d8b50ca4a817cb65a401adc90543b4585cd6"
+    },
+    {
+      "path": "ManagementCaller/obj/ManagementCaller.csproj.nuget.g.targets",
+      "sha256": "a9363693da38f6968e5bf6a9001010c03a325c3545e8b7b7c13788db16e97a31"
+    },
+    {
+      "path": "ManagementCaller/obj/Release/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+      "sha256": "93d67476196ebfc80d1d7d8844b91146cfd678d105f5ce635eb900ca40610c9b"
+    },
+    {
+      "path": "ManagementCaller/obj/Release/net10.0/ManagementCaller.AssemblyInfo.cs",
+      "sha256": "9e220d8e7d1cf27e37381df5d54bb66f82e5bf707accb1e8133f966647a89d3e"
+    },
+    {
+      "path": "ManagementCaller/obj/Release/net10.0/ManagementCaller.GlobalUsings.g.cs",
+      "sha256": "a3c6048bb4d922b1799a9977f84362a3787b68810cac67aa86ac3aa23295f227"
+    },
+    {
+      "path": "ManagementCaller/obj/Release/net10.0/win-x64/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+      "sha256": "93d67476196ebfc80d1d7d8844b91146cfd678d105f5ce635eb900ca40610c9b"
+    },
+    {
+      "path": "ManagementCaller/obj/Release/net10.0/win-x64/ManagementCaller.AssemblyInfo.cs",
+      "sha256": "9e220d8e7d1cf27e37381df5d54bb66f82e5bf707accb1e8133f966647a89d3e"
+    },
+    {
+      "path": "ManagementCaller/obj/Release/net10.0/win-x64/ManagementCaller.GlobalUsings.g.cs",
+      "sha256": "a3c6048bb4d922b1799a9977f84362a3787b68810cac67aa86ac3aa23295f227"
+    },
+    {
+      "path": "ManagementCaller/obj/project.assets.json",
+      "sha256": "59e426f78945890aa0deebf7d89a591c8bb2024d52bb8a3546aba6adfa386706"
+    },
+    {
+      "path": "ManagementContracts/ManagementContracts.csproj",
+      "sha256": "b724e7addc146fa8b4864c4b6ecb2e18c574970357439eb96aa926d1897081ae"
+    },
+    {
+      "path": "ManagementContracts/obj/ManagementContracts.csproj.nuget.dgspec.json",
+      "sha256": "4025d155cb4a9132cfefaa5433928a6245076a5d411578a322b6e249972e1632"
+    },
+    {
+      "path": "ManagementContracts/obj/ManagementContracts.csproj.nuget.g.props",
+      "sha256": "434df83628efcaab9ab88e5d4b3f15449207526444f5d8fe5b85ff8ae4246818"
+    },
+    {
+      "path": "ManagementContracts/obj/ManagementContracts.csproj.nuget.g.targets",
+      "sha256": "a9363693da38f6968e5bf6a9001010c03a325c3545e8b7b7c13788db16e97a31"
+    },
+    {
+      "path": "ManagementContracts/obj/Release/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+      "sha256": "93d67476196ebfc80d1d7d8844b91146cfd678d105f5ce635eb900ca40610c9b"
+    },
+    {
+      "path": "ManagementContracts/obj/Release/net10.0/ManagementContracts.AssemblyInfo.cs",
+      "sha256": "f824a21e8e4a3705ca774a726f036d2d0543f635019b20bfed4c7208868687c3"
+    },
+    {
+      "path": "ManagementContracts/obj/Release/net10.0/ManagementContracts.GlobalUsings.g.cs",
+      "sha256": "a3c6048bb4d922b1799a9977f84362a3787b68810cac67aa86ac3aa23295f227"
+    },
+    {
+      "path": "ManagementContracts/obj/Release/net10.0/cordis-typert/PluginManagerClient.Generated.g.cs",
+      "sha256": "1c178a1f5f1f73911dbb9edf0ce5c8cb1a45ef406836294db9f9540e1b7698b4"
+    },
+    {
+      "path": "ManagementContracts/obj/project.assets.json",
+      "sha256": "3fa59e7b0cfe62ab256ee7741a5b5f76564ad4926e3dc28a5802173d17810cd8"
+    },
+    {
+      "path": "ManagementContracts/standard.cordis.typert.json",
+      "sha256": "53bbca29b4cdf03e0ed17c57badc5d9bdd80273588072bbc64027803f968aa9b"
+    },
+    {
+      "path": "ManagementHost/ManagementHost.csproj",
+      "sha256": "f1d267210a7e112b700bfa387fa82968a08de80987e8f6a742fbb516ef78cdbb"
+    },
+    {
+      "path": "ManagementHost/Program.cs",
+      "sha256": "7d1cfd629f2d594e529e70e6ff6595d80e4b32d731d909fd1a917ea84e5fbc50"
+    },
+    {
+      "path": "ManagementHost/obj/ManagementHost.csproj.nuget.dgspec.json",
+      "sha256": "c64c49f00133a0a7fc971cd7b9b447a29826d514e6db270bb8569d5d9e848613"
+    },
+    {
+      "path": "ManagementHost/obj/ManagementHost.csproj.nuget.g.props",
+      "sha256": "434df83628efcaab9ab88e5d4b3f15449207526444f5d8fe5b85ff8ae4246818"
+    },
+    {
+      "path": "ManagementHost/obj/ManagementHost.csproj.nuget.g.targets",
+      "sha256": "a9363693da38f6968e5bf6a9001010c03a325c3545e8b7b7c13788db16e97a31"
+    },
+    {
+      "path": "ManagementHost/obj/Release/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+      "sha256": "93d67476196ebfc80d1d7d8844b91146cfd678d105f5ce635eb900ca40610c9b"
+    },
+    {
+      "path": "ManagementHost/obj/Release/net10.0/ManagementHost.AssemblyInfo.cs",
+      "sha256": "68f388f77564ebf725a763e6cb7969f31a813e665591afddba9ea476f1a47ad4"
+    },
+    {
+      "path": "ManagementHost/obj/Release/net10.0/ManagementHost.GlobalUsings.g.cs",
+      "sha256": "a3c6048bb4d922b1799a9977f84362a3787b68810cac67aa86ac3aa23295f227"
+    },
+    {
+      "path": "ManagementHost/obj/project.assets.json",
+      "sha256": "4f446557d19f139a66feeaed86e8fffa5f19d96e0f929af3706a9b49c6c9e2af"
+    },
+    {
+      "path": "ManagementTypescript/Client.ts",
+      "sha256": "3966652ecf8054baa87c59eb348a1d34d02c0f7d6613030d3de0cea43749a45e"
+    },
+    {
+      "path": "ManagementTypescript/compiled/management.mjs",
+      "sha256": "4c730cade74a87a30b613207736b6760f38549ce46fa4e2673a111b7342ee4dc"
+    },
+    {
+      "path": "ManagementTypescript/compiled/notifications.mjs",
+      "sha256": "8f7bcd76dcefc1038febfd9744b4823236d6ba1d3e5ccc6c0bafd3551f6d758e"
+    },
+    {
+      "path": "ManagementTypescript/management.mjs",
+      "sha256": "4c730cade74a87a30b613207736b6760f38549ce46fa4e2673a111b7342ee4dc"
+    },
+    {
+      "path": "ManagementTypescript/notifications.mjs",
+      "sha256": "8f7bcd76dcefc1038febfd9744b4823236d6ba1d3e5ccc6c0bafd3551f6d758e"
+    },
+    {
+      "path": "ManagementTypescript/package.json",
+      "sha256": "a90fc33418afa2b9cbf4768524b021135b965ecdf993457505bfae3ac44a8428"
+    },
+    {
+      "path": "NotificationContracts/NotificationContracts.csproj",
+      "sha256": "90e543084431e33724c58418dcff205cc0e7eeff98e8420b998e287caabc8d5b"
+    },
+    {
+      "path": "NotificationContracts/obj/NotificationContracts.csproj.nuget.dgspec.json",
+      "sha256": "8261e9fb6b3370bd41bb97e97f2fb54d8ccc125317fe2f827c796c8d62767141"
+    },
+    {
+      "path": "NotificationContracts/obj/NotificationContracts.csproj.nuget.g.props",
+      "sha256": "434df83628efcaab9ab88e5d4b3f15449207526444f5d8fe5b85ff8ae4246818"
+    },
+    {
+      "path": "NotificationContracts/obj/NotificationContracts.csproj.nuget.g.targets",
+      "sha256": "a9363693da38f6968e5bf6a9001010c03a325c3545e8b7b7c13788db16e97a31"
+    },
+    {
+      "path": "NotificationContracts/obj/Release/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+      "sha256": "93d67476196ebfc80d1d7d8844b91146cfd678d105f5ce635eb900ca40610c9b"
+    },
+    {
+      "path": "NotificationContracts/obj/Release/net10.0/NotificationContracts.AssemblyInfo.cs",
+      "sha256": "4e2d70bdfb477a41a692bc63117b705f0dc9b7e90c32c057db21076feafe677e"
+    },
+    {
+      "path": "NotificationContracts/obj/Release/net10.0/NotificationContracts.GlobalUsings.g.cs",
+      "sha256": "a3c6048bb4d922b1799a9977f84362a3787b68810cac67aa86ac3aa23295f227"
+    },
+    {
+      "path": "NotificationContracts/obj/Release/net10.0/cordis-typert/NotificationsClient.Generated.g.cs",
+      "sha256": "a967aea175e701cec84f44be0209819897c8f2f9805c8d398ec04431902b2b4a"
+    },
+    {
+      "path": "NotificationContracts/obj/project.assets.json",
+      "sha256": "fe7996a1bf2876e02cb8c02161603de48e8750f7d34f5b2f48ad07434445f1a2"
+    },
+    {
+      "path": "NotificationContracts/standard.cordis.typert.json",
+      "sha256": "53bbca29b4cdf03e0ed17c57badc5d9bdd80273588072bbc64027803f968aa9b"
+    },
+    {
+      "path": "NuGet.Config",
+      "sha256": "ea425e3a424b3c68d37881ee4319b3c7295c66f211f930f32c94fc5ee5355fbf"
+    },
+    {
+      "path": "global.json",
+      "sha256": "d1f1581ce8129ec0c39c7340ae3ebd0a9066d21c88e02a13653732968ca49287"
+    },
+    {
+      "path": "management-profile-aot/prepared/cleanup-cancelled@1.0.0/package.json",
+      "sha256": "7e6fb6673ee0ec9f637b71c79c3ebc0e243ba38fe6fc41ccb19b361951a0d2f8"
+    },
+    {
+      "path": "management-profile-aot/prepared/cleanup-failed@1.0.0/package.json",
+      "sha256": "17097e5496318aaa1a712329ba7776dd7d2d40a1b43ddae95df3d70b8d0a0e40"
+    },
+    {
+      "path": "management-profile-aot/prepared/existing@1.0.0/package.json",
+      "sha256": "2de47c18fd3d3d17128555062fb1c38f0709fee4629babc10a7f78cd23dd783d"
+    },
+    {
+      "path": "management-profile-aot/prepared/existing@2.0.0/package.json",
+      "sha256": "7ace44d1971cad66dc50544c089d03a955a57c555ea682de45417c16e06ef0b7"
+    },
+    {
+      "path": "management-profile-aot/profile/compatibility.json",
+      "sha256": "4363bb2767aec813f17a5956e7956bc74f29559774bf4bc64cb5c328f70e032b"
+    },
+    {
+      "path": "management-profile-aot/profile/package.json",
+      "sha256": "8f8e578b7a6603f650bddc17afd11f878e970e1a61290e36c6ed6fa804da4317"
+    },
+    {
+      "path": "management-profile-jit/prepared/cleanup-cancelled@1.0.0/package.json",
+      "sha256": "7e6fb6673ee0ec9f637b71c79c3ebc0e243ba38fe6fc41ccb19b361951a0d2f8"
+    },
+    {
+      "path": "management-profile-jit/prepared/cleanup-failed@1.0.0/package.json",
+      "sha256": "17097e5496318aaa1a712329ba7776dd7d2d40a1b43ddae95df3d70b8d0a0e40"
+    },
+    {
+      "path": "management-profile-jit/prepared/existing@1.0.0/package.json",
+      "sha256": "2de47c18fd3d3d17128555062fb1c38f0709fee4629babc10a7f78cd23dd783d"
+    },
+    {
+      "path": "management-profile-jit/prepared/existing@2.0.0/package.json",
+      "sha256": "7ace44d1971cad66dc50544c089d03a955a57c555ea682de45417c16e06ef0b7"
+    },
+    {
+      "path": "management-profile-jit/profile/compatibility.json",
+      "sha256": "4363bb2767aec813f17a5956e7956bc74f29559774bf4bc64cb5c328f70e032b"
+    },
+    {
+      "path": "management-profile-jit/profile/package.json",
+      "sha256": "8f8e578b7a6603f650bddc17afd11f878e970e1a61290e36c6ed6fa804da4317"
+    },
+    {
+      "path": "management-profile-typescript/prepared/existing@1.0.0/package.json",
+      "sha256": "2de47c18fd3d3d17128555062fb1c38f0709fee4629babc10a7f78cd23dd783d"
+    },
+    {
+      "path": "management-profile-typescript/prepared/existing@2.0.0/package.json",
+      "sha256": "7ace44d1971cad66dc50544c089d03a955a57c555ea682de45417c16e06ef0b7"
+    },
+    {
+      "path": "management-profile-typescript/profile/compatibility.json",
+      "sha256": "4363bb2767aec813f17a5956e7956bc74f29559774bf4bc64cb5c328f70e032b"
+    },
+    {
+      "path": "management-profile-typescript/profile/package.json",
+      "sha256": "8f8e578b7a6603f650bddc17afd11f878e970e1a61290e36c6ed6fa804da4317"
+    }
+  ],
+  "privateConsumerArchive": {
+    "fileName": "management-static-aot-6ad9d7f-inputs.zip",
+    "sha256": "d5f4fa1d2f91e6587d3fb1d615680fe4a5319fb7692c354ba8ff42765d27937b"
+  },
+  "boundaries": [
+    "no Linux or hosted CI",
+    "no dynamic CLR Native AOT claim",
+    "not validation of the subsequent reference-model source changes"
+  ],
+  "collectionCorrection": "A first metadata collection referenced Client.mjs; the source fixture is Client.ts. Validation was already complete and was not rerun.",
+  "managementTypeScriptCommands": [
+    {
+      "name": "standard-management-typescript",
+      "exitCode": 0
+    }
+  ],
+  "sdk": "10.0.111",
+  "upstreamCommit": "639ed015397290b3745d163aafe02ffee4aa3f84"
+}

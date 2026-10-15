@@ -2,7 +2,15 @@
 
 ## [Unreleased]
 
-## [0.2.0-alpha.4] - Unreleased
+- Unified ordinary, Remote and event declarations in the common model, with explicit references and supported independent .NET/Web generation through normal build, pack and design-time inputs.
+- Added shared unary/multipart and WebSocket mux clients, scoped Context/Peer routing, owned resources and typed event listeners with explicit cancellation and disposal.
+- Standard Settings uses numeric observation revisions and optional expected revisions. Generated PluginManager and notifications reuse existing operations and task ownership. Maintained clients regenerate against the corrected contracts.
+- Stable CLR artifacts use preparation/publication receipts, direct directory loading, restart upgrades and logical removal that retains files.
+- Exposed read-only, non-virtual output Schema reuse and corrected native readonly output metadata without changing application validation policy.
+- Improved current documentation, package README navigation and API extension-boundary inspection. Backend and remaining consumption limits are listed in the current support record.
+- These changes require a new approved package identity. Published alpha.4 packages and historical release entries remain unchanged.
+
+## [0.2.0-alpha.4]
 
 - Added coordinated Profile/Session writes and immutable profile candidates. Installation refuses stale inputs rather than overwriting concurrent edits; publication permits only the planned package and mapping changes. Admission, persistence and application use the same candidate.
 - Applied captured base configuration when Include patches compare equal, preserved legacy reconciliation customization without admission, and required explicit candidate-aware reconciliation when admission is enabled.

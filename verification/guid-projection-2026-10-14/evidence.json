@@ -1,0 +1,480 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-14",
+  "sourceBase": "a66b7845760670545e0d7a056185f67be561af3a",
+  "sourceIdentity": "The implementation and consumer file hashes below identify this local working-tree candidate.",
+  "sdk": "10.0.111",
+  "platform": "Windows x64",
+  "packageVersion": "0.2.0-alpha.5.guid.20261014.1",
+  "packageIdentity": "Unique local development candidate, not a published alpha5 release. All eighteen package/symbol files were built together.",
+  "sourceFiles": {
+    "scripts/typert-referenced-web-consumer.mjs": "6016342b6cb753adb3a0b1733db7ef4a4fb613f9643d49b589b712503a5db3e4",
+    "scripts/typert_declaration_consumer.py": "c0683c76396707e7cb67dead672790fcb81baa65d363e09eac1a1784c7b96601",
+    "scripts/verify-typert-dotnet.py": "edf7322a2648bb8878e1fa99de4c4da4ea4f97c4d0f32dbeb6cee4ba734bb4af",
+    "tests/fixtures/DeclarationModel/DataAuthor.cs": "d30875e6a8f8e0cc95fbfd10ae1c7a585255fd45d2da882108e77083f03d3654",
+    "tests/fixtures/DeclarationModel/External.cs": "d2acca35f4bff9eb4d2f94f2dd8237eeb94b5eeb880bb6b6ffda15e1a2e8eee1",
+    "tests/fixtures/DeclarationModel/ReferencedConsumer.cs": "876f114017c1c048aca3af5f8f3454a741d694610257b53d1e200393ba1cc009",
+    "tests/fixtures/DeclarationModel/ReferencedRemote.cs": "3baba14e2006bf129e451c291f20c5a96e8951f15eb3290433d7555bacb143a4",
+    "tests/fixtures/DeclarationModel/ReferencedRemoteConsumer.cs": "227a9a3878a4d29fdd00a47c4250f04e967425477c8ba44a5dd61c4d2b37b936",
+    "tests/fixtures/DeclarationModel/ReferencedRemoteHost.cs": "8f0b96bbda09ad144164b8bdfb0149dc8687b48ecf99725b00b40b3f513c7a5b",
+    "tests/fixtures/DeclarationModel/ReferencedWebClient.ts": "988a27cec1fd743c4ce779a5edbaa0345f630da8278e493b52e3a0cc7439221a",
+    "tests/fixtures/EventDeclarations/Author.cs": "ca2601eb55dc3a2c482b0fa0fca9e50fcc44df7f3bc97c35238def6e31dd65c9",
+    "tests/fixtures/ManagementDotnet/Client.cs": "3168511943934c2718c083645d3396d67cad65af8e0d9bd57329a3ce8b207d57",
+    "tests/fixtures/ManagementDotnet/Client.ts": "0dca1e4305fdf230fdfee8b57672abaade2b53a0e58d493dd2a1f65d82c2fd19",
+    "tests/fixtures/ManagementDotnet/Host.cs": "29af0bbc05a92358e6de42fa33b9fddfe7965a586eab50dd41b078a0cc4c7675",
+    "tools/Cordis.Typert.Compiler/WebProjection.cs": "9531633b52f947382da4423b0d127d2b7eb957be45e87318616dc3ee4aeecb37",
+    "tools/Cordis.Typert.Generator/Model/DeclarationConstantEmitter.cs": "3d0fd495c824aa9502d03a630a8e9ab8083e736d696872738c4914fb3a8da3bf",
+    "tools/Cordis.Typert.Generator/Model/DeclarationWireProjection.cs": "75059e3d265c577a38e94a7a0bc63c7805add938b4212204717cdb1998a02aa3",
+    "tools/Cordis.Typert.Generator/Model/DotnetProjectionEmitter.cs": "0351065226e8d54bb008d6d0dba5812356e47db0cc221efc895f1952c547ff4d"
+  },
+  "packages": {
+    "Cordis.Example.Greeting.0.2.0-alpha.5.guid.20261014.1.nupkg": "78e59af15d8f58fbe0c9eb4fcca7a10eb399caaa1d3ca66773d349daa90ae9ac",
+    "Cordis.Example.Greeting.0.2.0-alpha.5.guid.20261014.1.snupkg": "a6ccd934503f433d4f0219fd4eca4407a4c8fdeac20a805f53685b8e1d6cd67e",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.5.guid.20261014.1.nupkg": "9a5182a1e3d1a5958c5812360d20fd575afaf4a2b723cbbb325a1a04ef9b8c3e",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.5.guid.20261014.1.snupkg": "122c00aec2705954fd852469b78e2dc1398b649b46a413fe234f05946d24cc4a",
+    "Cordis.NET.Clr.0.2.0-alpha.5.guid.20261014.1.nupkg": "cefc1ddae1c1a9056ba1ce0476a0e4d510a74ea61144eaffd85d0e3013a19e2a",
+    "Cordis.NET.Clr.0.2.0-alpha.5.guid.20261014.1.snupkg": "3e5a15e57a167f63168a4d910a53b4393928ffbfe91d61bfd915d196af6bc3a1",
+    "Cordis.NET.Composition.0.2.0-alpha.5.guid.20261014.1.nupkg": "2c717a6ad2840cadabfa60f157c39c992786450e45257b215770b6a8c55c2d4f",
+    "Cordis.NET.Composition.0.2.0-alpha.5.guid.20261014.1.snupkg": "56b22f63175f85c17fe2ec3eb542e87f81f21170085698eb6219258719e81438",
+    "Cordis.NET.Core.0.2.0-alpha.5.guid.20261014.1.nupkg": "b82b5d4483f8e03ecccc16937be04fa7294a5866d75532a9ac841f40c1cf7132",
+    "Cordis.NET.Core.0.2.0-alpha.5.guid.20261014.1.snupkg": "ef2dc14724ae7738f49424fa531d7d40f7f10a7bce4622f9dbf76bc6a0bf0693",
+    "Cordis.NET.Extensions.0.2.0-alpha.5.guid.20261014.1.nupkg": "66d3afe844c41269475f3b1db6afeaccc90d91bc33cbeb52c25d5eee13f401a1",
+    "Cordis.NET.Extensions.0.2.0-alpha.5.guid.20261014.1.snupkg": "d1e22c462878167010b8d504fcae352dbeb49780ec6fa55aea250ed064d4cb03",
+    "Cordis.NET.Hosting.0.2.0-alpha.5.guid.20261014.1.nupkg": "12051b4edced5a144832dd3307c54e4c510c667b0eddc62e82ba4faa4841bc1b",
+    "Cordis.NET.Hosting.0.2.0-alpha.5.guid.20261014.1.snupkg": "1e7c01431a0284a00c9750c0da532403d11c34a79cd4f133b9b6d54322c07b6b",
+    "Cordis.NET.JavaScript.0.2.0-alpha.5.guid.20261014.1.nupkg": "f961bff5fec0867a526d9480354e3116898c6fbd384b4e4db3c54e2c98a53544",
+    "Cordis.NET.JavaScript.0.2.0-alpha.5.guid.20261014.1.snupkg": "63e3afa1040b2929e53de17876cd4159316715dca70dfa4e4567d514e95658b8",
+    "Cordis.NET.Tool.0.2.0-alpha.5.guid.20261014.1.nupkg": "6485cafe4521a589e9524189542b1cf37a4996f977952cf7d140edb15bafeb55",
+    "Cordis.NET.Tool.0.2.0-alpha.5.guid.20261014.1.snupkg": "2b48caf348f5afb62f0362075982431988a9e0f4b5a471371eb571be472e4bd3"
+  },
+  "consumers": {
+    "references-3": {
+      "status": "requested-checks-passed",
+      "aotRequested": true,
+      "steps": [
+        {
+          "name": "declaration-external-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-selected-sdk",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-author-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-first-design-time",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-contracts-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-contracts-incremental",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-caller-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-caller",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-aot-publish",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-aot",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-first-design-time",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-contracts-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-incremental",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-caller-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-aot-publish",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-host-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-caller",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-aot",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-web-incremental",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-source-change-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-changed-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-changed-caller-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-changed-caller",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-web-missing",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-web-missing-recovery",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-web-conflict",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-web-conflict-recovery",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-missing-model",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-remote-failed-clean",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-remote-cold-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-changed-design-time",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-reference-change-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-changed-contracts-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-changed-caller-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-changed-caller",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-refuse-missing",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-refuse-conflicting-source",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-refuse-reference-identity",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-refuse-reference-root",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-refuse-reference-generic",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-refuse-private-json-include",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-refuse-dictionary-key",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-msbuild-missing-model",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-design-time-missing-model",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-data-failed-build-clean",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-data-cold-rebuild",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-guid-converter-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "referenced-guid-converter-dotnet",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "referenced-guid-converter-web",
+          "exitCode": 1,
+          "expectedFailure": true
+        }
+      ],
+      "typescript": []
+    },
+    "events-3": {
+      "status": "requested-checks-passed",
+      "aotRequested": true,
+      "steps": [
+        {
+          "name": "event-author-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "event-author-incremental",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-pluginManager-client-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-settingsController-client-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-plugin-manager-changed-client-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-alpha-changed-client-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-alpha-nested-client-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-management-host-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "saved-web-events-collections-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "saved-web-events-collections-incremental",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "saved-web-events-decision-pack",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "saved-web-events-decision-incremental",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "saved-web-events-missing-reference",
+          "exitCode": 1,
+          "expectedFailure": true
+        },
+        {
+          "name": "saved-web-events-reference-restored",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "saved-web-events-clean",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "saved-web-events-cold-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-management-caller-build",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-management-caller-aot-publish",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-management-jit",
+          "exitCode": 0,
+          "expectedFailure": false
+        },
+        {
+          "name": "standard-management-aot",
+          "exitCode": 0,
+          "expectedFailure": false
+        }
+      ],
+      "typescript": [
+        {
+          "name": "standard-management-typescript",
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "browser": {
+    "result": "passed",
+    "route": "saved-model events and standard management in actual in-app Chromium",
+    "guidAssertions": "Guid request reaches the Web handler; its Guid reply reaches the Host. Existing scoped/owned/cancellation/recovery checks remain.",
+    "assets": {
+      "ManagementHost/bin/Release/net10.0/ManagementHost.dll": "cabc577cf63691db78c4c26f26379aeecca6fb97085ae33a05c639b5ca582e78",
+      "ManagementTypescript/compiled/Client.js": "a471f5dcfbe7006e2eb357fb6dfedd1ce156e5457d041eb3c10ce70f22c4c769",
+      "ManagementTypescript/compiled/collections.mjs": "d118eb9c08b57f6c54d054d5adb35a0cac3fc901ae0819ebba723e8dff4cb625",
+      "ManagementTypescript/compiled/cordis-remote.mjs": "7e72b561d045eafd8b3447205bbf3db0f432331b853f44f6fb5d58cd5373be18",
+      "ManagementTypescript/compiled/decision.mjs": "9a8258636deb7d9c8aa2970cc0bd4252b5459b21843975817635374f998f14d0",
+      "ManagementTypescript/compiled/events.mjs": "bc33ba5b51cf2bb6d22127633a0bd81579db7b9fcf270297c91b4716fb9e5f5e",
+      "ManagementTypescript/compiled/management.mjs": "de6f956e2fe4b0da60f67a8cda69f890b5404519ebc381b2e907f52da1d460ba",
+      "ManagementTypescript/compiled/settings.mjs": "ba5e463b3a1aa74d664ba69e016772f2289bd03d1c95e403170c589b23963b3a",
+      "ManagementTypescript/cordis-context.mjs": "8d2aa20f182715a8aa7db4956dd5baab94520246c5c8cf31fcbd6d4608443ffd"
+    },
+    "temporaryHostAndProxyStopped": true
+  },
+  "focusedTests": {
+    "EventDeclarationTestsAndRemoteEventsTests": {
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "checks": {
+    "formatStages": 4,
+    "formattedFiles": 13,
+    "bilingualPairs": 15,
+    "packageReadmes": 9,
+    "pythonAndNodeSyntax": "passed",
+    "diffWhitespace": "passed"
+  },
+  "retainedFailures": [
+    {
+      "name": "before-web.log",
+      "sha256": "66f1b465b45270c424c296c9da2742c0f5376293d4de5836cec8dd6873c6ed41",
+      "classification": "Old packaged compiler on the pinned SDK rejects System.Guid with TYPM114."
+    },
+    {
+      "name": "before",
+      "classification": "Initial ordinary-data fixture selected a record outside that backend's support; corrected to a Guid member. This is not the Guid red proof."
+    },
+    {
+      "name": "references-1",
+      "classification": "Fixture Host admitted only the old echo endpoint; added exact new endpoints, without changing production admission."
+    },
+    {
+      "name": "references-2",
+      "classification": "Static AOT exposed the old fixture's dynamic Assembly.GetType lookup; constant Type.GetType preserves the root-scope assertion."
+    },
+    {
+      "name": "events-2",
+      "classification": "New public fixture member lacked required XML documentation; added it, preserving warnings-as-errors."
+    }
+  ],
+  "boundaries": [
+    "Data, methods and events share the framework classification. Common declaration facts keep Guid identity; no model format or public wrapper was added.",
+    "Independent data and Remote callers passed JIT and static Native AOT. The actual Host remains JIT.",
+    "Guid.Empty, nonzero values, nullable values, defaults, arrays/lists/dictionary values and Host rejection of malformed/invalid-null inputs passed.",
+    "Custom member converter refusals passed for both .NET and Web; existing reference/refusal/Clean/drift checks remain.",
+    "This is focused Windows package/AOT/browser evidence. New complete Windows/Linux CI is separate and pending; a66b784 CI is predecessor evidence.",
+    "Live IDE, actual default desktop opener, complete application restart, HMR risk disposition and final release identity remain separate exits.",
+    "No dependency, fixed upstream or repository release version change; no merge, publication or deployment."
+  ]
+}

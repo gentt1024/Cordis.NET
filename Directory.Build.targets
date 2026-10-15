@@ -7,9 +7,19 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
-    <None Include="$(MSBuildProjectDirectory)/README.md" Pack="true" PackagePath="/" />
+    <None Include="$(IntermediateOutputPath)package-readme/README.md" Pack="true" PackagePath="/" Visible="false" />
     <None Include="$(MSBuildThisFileDirectory)NOTICE.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildThisFileDirectory)LICENSES/*" Pack="true" PackagePath="LICENSES/" />
   </ItemGroup>
+  <Target Name="PreparePackageReadme" BeforeTargets="_GetPackageFiles"
+          DependsOnTargets="InitializeSourceControlInformation" Condition="'$(IsPackable)' == 'true'">
+    <Error Condition="'$(SourceRevisionId)' == ''" Text="Package documentation requires the source revision." />
+    <PropertyGroup>
+      <_CordisReadme>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/README.md'))</_CordisReadme>
+      <_CordisReadme>$(_CordisReadme.Replace('](../../', '](https://github.com/gentt1024/Cordis.NET/blob/$(SourceRevisionId)/'))</_CordisReadme>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)package-readme/README.md"
+                      Lines="$([MSBuild]::Escape('$(_CordisReadme)'))" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+  </Target>
 </Project>

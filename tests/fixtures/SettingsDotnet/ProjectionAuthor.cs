@@ -107,10 +107,7 @@ public sealed record HelperCollisions(
     ClientCollision Client,
     JsonCollisionJson Json,
     CarrierCollisionCarrierJson Carrier,
-    DemoClientFailure Failure,
-    ArgsCollisionValueArgs Args,
-    RequestCollisionValueRequest Request,
-    ResponseCollisionValueResponse Response);
+    ArgsCollisionValueArgs Args);
 
 public sealed record ClientCollision(int Count);
 
@@ -118,13 +115,7 @@ public sealed record JsonCollisionJson(int Count);
 
 public sealed record CarrierCollisionCarrierJson(int Count);
 
-public sealed record DemoClientFailure(int Count);
-
 public sealed record ArgsCollisionValueArgs(int Count);
-
-public sealed record RequestCollisionValueRequest(int Count);
-
-public sealed record ResponseCollisionValueResponse(int Count);
 
 [JsonSerializable(typeof(HelperCollisions))]
 public partial class HelperCollisionJson : JsonSerializerContext;

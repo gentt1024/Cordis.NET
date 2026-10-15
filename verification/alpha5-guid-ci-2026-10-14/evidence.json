@@ -1,0 +1,350 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-14",
+  "branch": "codex/alpha5-settings",
+  "event": "pull_request",
+  "runId": "38509755930",
+  "checkoutRef": "refs/pull/16/merge",
+  "baseCommit": "3342a967f4e57206bec272684a40a437fc051b77",
+  "branchCommit": "a6cf07b708fc7b3b1cf18ff45440310c33a52b89",
+  "checkoutCommit": "5ab3ec2bf67f3409c62f5e8ecb399378ccafcb81",
+  "pullRequest": "https://github.com/gentt1024/Cordis.NET/pull/16",
+  "run": "https://github.com/gentt1024/Cordis.NET/actions/runs/38509755930",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 115675307136,
+      "name": "runtime (windows-latest)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307221,
+      "name": "upstream (ubuntu-24.04, shard 1)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307259,
+      "name": "runtime (ubuntu-24.04)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307269,
+      "name": "upstream (windows-latest, shard 3)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307294,
+      "name": "upstream (ubuntu-24.04, shard 4)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307307,
+      "name": "upstream (windows-latest, shard 1)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307311,
+      "name": "upstream (ubuntu-24.04, shard 3)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307319,
+      "name": "upstream (windows-latest, shard 4)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307359,
+      "name": "upstream (ubuntu-24.04, shard 2)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115675307452,
+      "name": "upstream (windows-latest, shard 2)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115685041156,
+      "name": "verify (windows-latest)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115685041301,
+      "name": "verify (ubuntu-24.04)",
+      "conclusion": "success"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 11871031472,
+      "name": "evidence-windows-latest",
+      "sha256": "077cce958caa2b3577a0494414ac90efd5de1abbf9b305e892eb0a37d753db8a",
+      "expiresAt": "2026-10-28T04:42:56Z"
+    },
+    {
+      "id": 11870981401,
+      "name": "validated-packages-windows-latest",
+      "sha256": "8b3c954159bd38b4474a443c75014f52a96d6b5618cc067c60d304b5766a473d",
+      "expiresAt": "2026-10-28T04:42:54Z"
+    },
+    {
+      "id": 11870771885,
+      "name": "upstream-summary-ubuntu-24.04",
+      "sha256": "612ab13d187867feb8fbfb698ac279f5de6f9983704c7efbc2de472ca6a8781c",
+      "expiresAt": "2026-10-28T04:43:28Z"
+    },
+    {
+      "id": 11870596502,
+      "name": "upstream-summary-windows-latest",
+      "sha256": "2979a13c6c6b72a6d21bcc3bb2c9372c4bd80a64eae4832ae80f995a7ff6afc6",
+      "expiresAt": "2026-10-28T04:43:27Z"
+    },
+    {
+      "id": 11869718392,
+      "name": "evidence-ubuntu-24.04",
+      "sha256": "fac20ea09f1752e6cac1ce875100159e39ccc37b4a9fa4703a4f9b91e3417b3d",
+      "expiresAt": "2026-10-28T04:23:31Z"
+    },
+    {
+      "id": 11869701058,
+      "name": "upstream-ubuntu-24.04-3",
+      "sha256": "f7d4c95a2bbefcf5a3c6ed7ae78734d4b027794882f739def9f906edb6b2682a",
+      "expiresAt": "2026-10-28T04:08:09Z"
+    },
+    {
+      "id": 11869656891,
+      "name": "upstream-windows-latest-3",
+      "sha256": "2e9045dc5cc79ad4d9a8f65d5720360b55b87395cc4cfdb91def4c6061cfd38e",
+      "expiresAt": "2026-10-28T04:13:38Z"
+    },
+    {
+      "id": 11869607051,
+      "name": "upstream-windows-latest-2",
+      "sha256": "2fd71a459afa2c0896bd735cdf16aefc683c08012aca7713c5f4e1e6e9ddf4d6",
+      "expiresAt": "2026-10-28T04:13:18Z"
+    },
+    {
+      "id": 11869563738,
+      "name": "validated-packages-ubuntu-24.04",
+      "sha256": "7c82490018a58c648bc7b411774d01e7da0ab27cc67d32bd297f617c9ac44b3d",
+      "expiresAt": "2026-10-28T04:23:29Z"
+    },
+    {
+      "id": 11869496884,
+      "name": "upstream-windows-latest-1",
+      "sha256": "f7f2c452fad65238eb39beebd1651a00f737ce6f8e1d3e2fb258607f90e7522c",
+      "expiresAt": "2026-10-28T04:11:49Z"
+    },
+    {
+      "id": 11869302875,
+      "name": "upstream-ubuntu-24.04-1",
+      "sha256": "e0aeb671e7de107fdfff10176c3165c2e68861a1ef2246985ee27fb396ae25a1",
+      "expiresAt": "2026-10-28T04:08:41Z"
+    },
+    {
+      "id": 11869174459,
+      "name": "upstream-windows-latest-4",
+      "sha256": "17338dc63f543755f8de63c7e452e5f58356bad5e193baf69251ed59195ae018",
+      "expiresAt": "2026-10-28T04:13:45Z"
+    },
+    {
+      "id": 11869018372,
+      "name": "upstream-ubuntu-24.04-2",
+      "sha256": "20aad83dcf3dd9e22194a1df7f602638b4b39f14013aa5812a372e9772be2ff9",
+      "expiresAt": "2026-10-28T04:08:02Z"
+    },
+    {
+      "id": 11868758757,
+      "name": "upstream-ubuntu-24.04-4",
+      "sha256": "d00d15053efd6f19fc60d66ee3984b661b971760b163c70f33623eb5df3a93cd",
+      "expiresAt": "2026-10-28T04:08:09Z"
+    }
+  ],
+  "localArchiveVerification": {
+    "platform": "Windows",
+    "archiveIds": [
+      11870981401,
+      11871031472
+    ],
+    "sha256MatchesGitHub": true,
+    "verificationStatus": "requested-checks-passed",
+    "authoringStatus": "requested-checks-passed",
+    "sdk": "10.0.111",
+    "sourceUnchanged": true,
+    "trxPassed": 907,
+    "packageVersion": "0.2.0-alpha.4",
+    "packageRepositoryCommit": "5ab3ec2bf67f3409c62f5e8ecb399378ccafcb81",
+    "packages": {
+      "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "164ab0742ffaabc65cd9808f838278aed1b850bda9d4c0d5f4efbced1ad5796a",
+      "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "95c85155ade3c99bb7daae143f298276f0ddfe386a064a7c4a001c43d64828e0",
+      "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "d553c7dea2e24fc90b7abf632e3b3c30b6629db08114c77c6a8d02e73e8f91aa",
+      "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "f7166e4db80cc0f34c5fc46b94958b960dd35004cca52e8ebfde126ca7a7e53b",
+      "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "f40690af110b5a114d26b98f5821cf8dec9d8e2ecebb785ab17eeaea40e4e4b3",
+      "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "436f67b137f489a04ee88375f3995b47f36df37c84c7f651e03cb29e451831af",
+      "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "3d06b2e6a5d1c5db80d243950f3ee28c97847189f14ae599a37a1bb0e262b427",
+      "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "286854378ad6a83108e616b31b17913946f694ddf749145a7e68ad43b58fc409",
+      "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "c87e3f7630a5e870b91f257ad1720bf3eb1fc6d754b8985b99ab485ea015b7cd",
+      "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "13b4255baa69f0900255494f427b1749af8a03f903cbb030408906692eb3dc6c",
+      "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "0197639dddbd46f9b0317963a0e28ba93cb72eda40f23c049a485962fea38592",
+      "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "ebe42891475e26d94b5a9ff2024f5bdc585486ac3e6f8af956b85f05b82f641d",
+      "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "a3dc2ddaaa4838f9b852a17ffc538098fda8b275f74f92b1d1f3b87eb0c6b93e",
+      "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "42cdc3b96bf6f8e4262bdfc498c2b9e2f62d86ee64f49d8b35b81a1f9587c13e",
+      "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "ec6221863e5ab9ffba1749177c2f0b73c5cec2e218dc6432dfe30964432c7010",
+      "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "b289fd2a1373459790631a8cca3f58edaafab7f286a53270aea802f10d53e6d3",
+      "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "acc0bf7afdf13d0b887dca73bca5ca87a0137840b2090875674c18799115cd34",
+      "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "df40d3c67eba2b3464dc38037e8db9e9621c886d76382685971aaaaede4eccb1"
+    }
+  },
+  "otherPlatformEvidence": "Ubuntu runtime and upstream jobs succeeded according to GitHub. The independent review counted 904 Passed and three existing Windows-only NotExecuted from its downloaded TRX. This local receipt did not download the Ubuntu archives.",
+  "boundaries": [
+    "The unique local Guid development package batch has its own receipt; these are the original CI bytes.",
+    "No full gate was rerun for this documentation update.",
+    "Live IDE, default desktop opening, complete application restart and HMR risk disposition are separate exits."
+  ],
+  "windowsCiPackageConsumption": {
+    "status": "requested-checks-passed",
+    "aotRerun": false,
+    "entryPoint": "python scripts/verify-typert-dotnet.py --packages <original-ci-feed> --output <empty-directory> --management-only",
+    "steps": [
+      {
+        "name": "event-author-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "event-author-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-pluginManager-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-settingsController-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-plugin-manager-changed-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-alpha-changed-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-alpha-nested-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-host-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-collections-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-collections-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-decision-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-decision-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-missing-reference",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-web-events-reference-restored",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-web-events-cold-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-jit",
+        "exitCode": 0,
+        "expectedFailure": false
+      }
+    ],
+    "browser": "Actual in-app Chromium passed the freshly generated package consumer.",
+    "browserObservedText": "PASS saved-model package events and standard management: directional data, current adapter, next/undefined/null, owned settlement, settings, installation observation and source recovery",
+    "assets": {
+      "ManagementHost/bin/Release/net10.0/ManagementHost.dll": "0ab229197b6bec42a734fe86b1661b581e1eaaaa16c9a3e1e6b628171168ff8b",
+      "ManagementTypescript/compiled/Client.js": "a471f5dcfbe7006e2eb357fb6dfedd1ce156e5457d041eb3c10ce70f22c4c769",
+      "ManagementTypescript/compiled/collections.mjs": "d118eb9c08b57f6c54d054d5adb35a0cac3fc901ae0819ebba723e8dff4cb625",
+      "ManagementTypescript/compiled/cordis-remote.mjs": "7e72b561d045eafd8b3447205bbf3db0f432331b853f44f6fb5d58cd5373be18",
+      "ManagementTypescript/compiled/decision.mjs": "9a8258636deb7d9c8aa2970cc0bd4252b5459b21843975817635374f998f14d0",
+      "ManagementTypescript/compiled/events.mjs": "bc33ba5b51cf2bb6d22127633a0bd81579db7b9fcf270297c91b4716fb9e5f5e",
+      "ManagementTypescript/compiled/management.mjs": "de6f956e2fe4b0da60f67a8cda69f890b5404519ebc381b2e907f52da1d460ba",
+      "ManagementTypescript/compiled/settings.mjs": "ba5e463b3a1aa74d664ba69e016772f2289bd03d1c95e403170c589b23963b3a",
+      "ManagementTypescript/cordis-context.mjs": "8d2aa20f182715a8aa7db4956dd5baab94520246c5c8cf31fcbd6d4608443ffd"
+    },
+    "hostPackageMatches": {
+      "Cordis.AspNetCore.dll": {
+        "sha256": "5f10b09f8a6ee73cc892191b8b0978a2edf6dfd9f32f22e8c0311128d527c566",
+        "packages": [
+          "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      },
+      "Cordis.Composition.dll": {
+        "sha256": "7fff8bcbf3c8a93a31cac3d24284809c163c94081ace13c57c66582cb18cb837",
+        "packages": [
+          "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      },
+      "Cordis.Core.dll": {
+        "sha256": "29edb8955c56b661834186dc69f1da96a609fd8a17d5976815bf9b47eb3999c3",
+        "packages": [
+          "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      },
+      "Cordis.Extensions.dll": {
+        "sha256": "4800b3ca0235f8db7e2bf19b49ebcbb7d472c2f5987d0c17f24c18bceecfa20b",
+        "packages": [
+          "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      }
+    },
+    "screenshotSha256": "fcf31727db3d64294e9d5535dd397a3e0f67b76e0e37252f0450afb9c1d38b54",
+    "boundary": "Install preparation and document opening are injected. This does not establish actual desktop opening, complete application shutdown/restart or a new AOT run."
+  },
+  "publicContentCheck": {
+    "currentTrackedText": "No remaining matches for the private audit terms in the scanned tracked text extensions. The private term list/report stays outside tracked source.",
+    "ciPackageDocumentation": "No matches in the nine original package README/nuspec sets. Existing bytes were preserved.",
+    "scope": "Current tracked text and selected package documentation only; not a claim to rewrite or cleanse Git history."
+  }
+}

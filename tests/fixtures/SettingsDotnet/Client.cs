@@ -1,3 +1,4 @@
+using TypertConnection = Cordis.Composition.TypertConnection;
 using System.Text;
 using System.Text.Json;
 using IndependentSettings.Client;
@@ -12,11 +13,16 @@ using var http = new HttpClient
     Timeout = TimeSpan.FromSeconds(30)
 };
 var host = new Uri(args[0]);
-using var remote = new SettingsClient(http, new Uri(host, "/remote"));
+await using var connection = new TypertConnection(http, new Uri(host, "/remote"));
+await using var remote = new SettingsClient(connection);
 var mirror = new DescribeMirror(remote);
 await mirror.LoadAsync();
 var initial = mirror.View ?? throw new InvalidOperationException("Describe did not publish a complete view.");
 VerifyView(initial);
+Assert(initial.Namespaces.All(row => row.Revision == 0), "New Settings owner did not start at revision zero.");
+var opened = await remote.OpenSettingsDocumentAsync();
+Assert(opened.Ok && opened.Value.Opened, "The generated Settings client failed to open the provider document.");
+await Control("assert-document-opened");
 
 var serialized = JsonSerializer.Serialize(initial, SettingsClientJson.Default.SettingsDescribeValue);
 using (var document = JsonDocument.Parse(serialized))
@@ -27,7 +33,6 @@ using (var document = JsonDocument.Parse(serialized))
         !serialized.Contains("root-default-secret", StringComparison.Ordinal) &&
         !serialized.Contains("nested-default-secret", StringComparison.Ordinal),
         "Secret values leaked.");
-    Assert(!serialized.Contains("\"default\":", StringComparison.Ordinal), "Schema defaults leaked.");
     Assert(!wire.TryGetProperty("diagnostics", out _), "Native diagnostics changed the fixed Remote result.");
 }
 
@@ -37,13 +42,19 @@ var missingSecrets = serialized.Replace("\"secrets\":", "\"omittedSecrets\":", S
 ExpectJsonFailure(missingSecrets, "Missing required secrets was accepted.");
 var missingApplies = serialized.Replace("\"applies\":", "\"omittedApplies\":", StringComparison.Ordinal);
 ExpectJsonFailure(missingApplies, "Missing required applies was accepted.");
-using (var bad = new StringContent("""{"args":{"unexpected":1}}""", Encoding.UTF8, "application/json"))
+using (var bad = new StringContent(
+           """{"type":"client-request","rpcId":"bad-argument","method":"settings/describe","payload":{"args":{"unexpected":1}}}""",
+           Encoding.UTF8,
+           "application/json"))
 using (var response = await http.PostAsync(new Uri(host, "/remote/settings/describe"), bad))
 using (var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync()))
 {
-    Assert(!document.RootElement.GetProperty("ok").GetBoolean(), "Unexpected Remote argument was accepted.");
     Assert(
-        document.RootElement.GetProperty("error").GetProperty("code").GetString() == "gateway/arguments-invalid",
+        !document.RootElement.GetProperty("result").GetProperty("ok").GetBoolean(),
+        "Unexpected Remote argument was accepted.");
+    Assert(
+        document.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString() ==
+        "gateway/arguments-invalid",
         "Argument rejection lost its contract code.");
 }
 
@@ -73,7 +84,7 @@ var accepted = remote.DescribeAsync();
 await Control("wait-held");
 await Control("withdraw");
 await Control("release");
-VerifyView(await accepted);
+VerifyView((await accepted).Value);
 await Control("reprovide");
 
 // Follow the pinned Settings mirror's held-view and invalidation oracle with the typed caller.
@@ -96,30 +107,206 @@ await Control("release");
 await Failure(() => oldDefinition, "gateway/definition-unavailable");
 await Control("reregister");
 await Control("reprovide");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 await Control("suspend");
 await Failure(() => remote.DescribeAsync(), "gateway/definition-unavailable");
 await Control("resume");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 
 await Control("logger-fail");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 await Control("logger-restore");
 
 await Control("hold");
-using var retiringClient = new SettingsClient(http, new Uri(host, "/remote"));
+await using var retiringClient = new SettingsClient(connection);
 var lateClientCall = retiringClient.DescribeAsync();
 await Control("wait-held");
-retiringClient.Dispose();
+var retiring = retiringClient.DisposeAsync().AsTask();
 await Control("release");
-await Failure(() => lateClientCall, "gateway/internal");
+await Failure(() => lateClientCall, "gateway/cancelled");
+await retiring;
 await Failure(() => retiringClient.DescribeAsync(), "gateway/internal");
 await Control("reprovide");
-VerifyView(await remote.DescribeAsync());
+VerifyView((await remote.DescribeAsync()).Value);
 using (var stillBorrowed = await http.PostAsync(new Uri(host, "/control/status"), null))
     Assert(stillBorrowed.IsSuccessStatusCode, "Disposing one client disposed its borrowed HttpClient.");
+var forms = (await remote.DescribeAsync()).Value;
+var one = forms.Namespaces.Single(row => row.Ns == "one");
+var two = forms.Namespaces.Single(row => row.Ns == "two");
+var changed = (await remote.UpdateAsync("one", Json("""{"label":"edited"}"""), one.Revision)).Value;
+Assert(
+    changed.Revision == one.Revision + 1 && changed.Value.GetProperty("label").GetString() == "edited",
+    "Numeric update did not publish the committed form revision.");
+Assert(
+    changed.Base!.Value.GetProperty("label").GetString() == "default-label" &&
+    changed.User!.Value.GetProperty("label").GetString() == "edited",
+    "Base/user override ownership changed.");
+var saved = await Source();
+Assert(saved.Contains("edited", StringComparison.Ordinal), "Successful update did not reach the profile document.");
+var stale = await Failure(
+    () => remote.UpdateAsync("one", Json("""{"label":"stale"}"""), one.Revision),
+    "settings/conflict");
+Assert(
+    stale.Details!.Value.GetProperty("expected").GetDouble() == one.Revision &&
+    stale.Details.Value.GetProperty("actual").GetDouble() == changed.Revision,
+    "Numeric conflict details changed.");
+Assert(await Source() == saved, "A stale form request was persisted.");
+forms = (await remote.DescribeAsync()).Value;
+Assert(
+    forms.Namespaces.Single(row => row.Ns == "two").Revision == two.Revision,
+    "Editing one entry advanced another entry.");
+changed = (await remote.UpdateAsync("one", Json("""{"nested":{"visible":"without-prior-check"}}"""))).Value;
+Assert(
+    changed.Value.GetProperty("nested").GetProperty("visible").GetString() == "without-prior-check" &&
+    changed.Secrets.All(secret => secret.Set),
+    "Omitted expectedRevision bypassed or damaged form editing.");
+changed = (await remote.MutateAsync(
+    "one",
+    new[]
+    {
+        new SettingsPathOp("set", new[] { "rootSecret" })
+        {
+            Value = Json("\"written-secret\"")
+        }
+    },
+    changed.Revision)).Value;
+Assert(
+    !changed.Value.TryGetProperty("rootSecret", out _) && changed.Secrets.All(secret => secret.Set),
+    "A writable secret was returned by the form.");
+saved = await Source();
+Assert(saved.Contains("written-secret", StringComparison.Ordinal), "Secret write did not persist.");
+changed = (await remote.MutateAsync(
+    "one",
+    new[]
+    {
+        new SettingsPathOp("set", new[] { "nested", "visible" })
+        {
+            Value = Json("\"path-edit\"")
+        },
+        new SettingsPathOp("set", new[] { "genuineNull" })
+        {
+            Value = Json("null")
+        }
+    },
+    changed.Revision)).Value;
+Assert(
+    changed.Value.GetProperty("nested").GetProperty("visible").GetString() == "path-edit" &&
+    changed.Value.GetProperty("genuineNull").ValueKind == JsonValueKind.Null,
+    "Ordered form edits or explicit null changed.");
+Assert(
+    (await Source()).Contains("written-secret", StringComparison.Ordinal),
+    "An omitted secret was lost by a path edit.");
+var beforeRefusal = await Source();
+await Failure(() => remote.UpdateAsync("one", Json("""{"hidden":"must-not-save"}""")), "settings/rejected");
+Assert(await Source() == beforeRefusal, "Omission of expectedRevision bypassed selection authorization.");
+foreach (var (method, field) in new[] { ("update", "patch"), ("replace", "section"), ("mutate", "ops") })
+{
+    foreach (var revision in new[] { "null", "\"0\"", "\"sha256:old\"" })
+    {
+        var value = method == "mutate" ? "[]" : "{}";
+        await RawFailure(
+            method,
+            "{\"ns\":\"one\",\"" + field + "\":" + value +
+            ",\"expectedRevision\":" + revision + "}",
+            "gateway/input-invalid");
+    }
+}
+
+await RawFailure("mutate", """{"ns":"one","ops":[{"op":"set","path":["label"]}]}""", "settings/rejected");
+await RawFailure(
+    "mutate",
+    """{"ns":"one","ops":[{"op":"unset","path":["label"],"value":null}]}""",
+    "settings/rejected");
+await RawFailure("mutate", """{"ns":"one","ops":[{"op":"set","path":[],"value":null}]}""", "settings/rejected");
+Assert(await Source() == beforeRefusal, "Invalid wire input changed the profile document.");
+changed = (await remote.MutateAsync(
+    "one",
+    new[] { new SettingsPathOp("unset", new[] { "rootSecret" }) },
+    changed.Revision)).Value;
+Assert(
+    changed.Secrets.Single(secret => secret.Path.SequenceEqual(new[] { "rootSecret" })).Set &&
+    !(await Source()).Contains("written-secret", StringComparison.Ordinal),
+    "A generated unset did not omit its value or restore inherited secret presence.");
+await Control("fail");
+await Failure(
+    () => remote.UpdateAsync("one", Json("""{"label":"committed-before-result-failure"}"""), changed.Revision),
+    "fixture/refused");
+Assert(
+    (await Source()).Contains("committed-before-result-failure", StringComparison.Ordinal),
+    "A post-commit describe failure was mistaken for a rejected write.");
+await Control("reprovide");
+changed = ((await remote.DescribeAsync()).Value).Namespaces.Single(row => row.Ns == "one");
+changed = (await remote.ReplaceAsync("one", Json("{}"), changed.Revision)).Value;
+Assert(
+    changed.Value.GetProperty("label").GetString() == "default-label" &&
+    changed.Value.GetProperty("nested").GetProperty("visible").GetString() == "nested-visible",
+    "Replace did not restore inherited live fields.");
+await Control("two-disable");
+Assert(
+    ((await remote.DescribeAsync()).Value).Namespaces.All(row => row.Ns != "two"),
+    "A disappeared namespace remained available.");
+await Control("two-enable");
+var reentered = ((await remote.DescribeAsync()).Value).Namespaces.Single(row => row.Ns == "two");
+Assert(
+    reentered.Revision > two.Revision && !reentered.AutoGenerate,
+    "Entry reentry lost its owner revision or presentation policy.");
+await Control("settings-restart");
+Assert(
+    ((await remote.DescribeAsync()).Value).Namespaces.All(row => row.Revision == 0),
+    "Form revisions persisted across Settings owner restart.");
+await Control("readonly");
+saved = await Source();
+await Failure(() => remote.UpdateAsync("one", Json("""{"label":"read-only-refused"}""")), "settings/rejected");
+Assert(await Source() == saved, "Omitted expectedRevision bypassed the read-only owner.");
+await Control("settings-restart");
+VerifyView((await remote.DescribeAsync()).Value);
 Console.WriteLine(
-    "Typed Settings describe passed: real profile, two entries, redaction, static metadata, retry, invalidation and separate provider/definition/client retirement.");
+    "Typed Settings passed: numeric update/replace/mutate; stale/omitted revision; null/string refusal; layered redaction; ordered secret/null edits; independent entries and owner lifecycle; static metadata and provider/definition/client retirement.");
+
+async Task<string> Source()
+{
+    using var response = await http.PostAsync(new Uri(host, "/control/source"), null);
+    response.EnsureSuccessStatusCode();
+    using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+    return document.RootElement.GetProperty("document").GetString()!;
+}
+
+async Task RawFailure(string method, string arguments, string code)
+{
+    using var body = new StringContent(
+        "{\"type\":\"client-request\",\"rpcId\":\"raw-check\",\"method\":\"settings/" + method +
+        "\",\"payload\":{\"args\":" + arguments + "}}",
+        Encoding.UTF8,
+        "application/json");
+    using var response = await http.PostAsync(new Uri(host, "/remote/settings/" + method), body);
+    response.EnsureSuccessStatusCode();
+    using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+    Assert(
+        !document.RootElement.GetProperty("result").GetProperty("ok").GetBoolean() &&
+        document.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString() == code,
+        "Invalid standard Settings input changed its refusal: " + method + " " + arguments);
+}
+
+static JsonElement Json(string text)
+{
+    using var document = JsonDocument.Parse(text);
+    return document.RootElement.Clone();
+}
+
+static JsonElement SchemaNode(JsonElement schema, params string[] path)
+{
+    var refs = schema.GetProperty("refs");
+    var node = refs.GetProperty(
+        schema.GetProperty("uid").GetInt32().ToString(System.Globalization.CultureInfo.InvariantCulture));
+    foreach (var key in path)
+        node = refs.GetProperty(
+            node
+                .GetProperty("dict")
+                .GetProperty(key)
+                .GetInt32()
+                .ToString(System.Globalization.CultureInfo.InvariantCulture));
+    return node;
+}
 
 async Task Control(string command)
 {
@@ -129,32 +316,42 @@ async Task Control(string command)
             "Fixture control " + command + " failed: " + await response.Content.ReadAsStringAsync());
 }
 
-static async Task<RemoteError> Failure(Func<Task<SettingsDescribeValue>> call, string code)
+static async Task<RemoteError> Failure<T>(Func<Task<Cordis.Composition.RemoteResult<T>>> call, string code)
 {
-    try
-    {
-        await call().WaitAsync(TimeSpan.FromSeconds(15));
-    }
-    catch (RemoteError failure)
-    {
-        Assert(failure.Code == code, "Expected " + code + ", got " + failure.Code + ": " + failure.Message);
-        return failure;
-    }
-
-    throw new InvalidOperationException("Expected Remote failure " + code + ".");
+    var result = await call().WaitAsync(TimeSpan.FromSeconds(15));
+    Assert(!result.Ok, "Expected Remote failure " + code);
+    Assert(result.Error.Code == code, "Expected " + code + ", got " + result.Error.Code);
+    return result.Error;
 }
 
 static void VerifyView(SettingsDescribeValue value)
 {
-    Assert(!value.Writable && value.HasDocument, "Host deployment facts were inferred or changed.");
+    Assert(value.Writable && value.HasDocument, "Host deployment facts were inferred or changed.");
     Assert(value.Namespaces.Count == 2, "A selected entry was omitted.");
     foreach (var row in value.Namespaces)
     {
         Assert(
-            row.Ns is "one" or "two" && row.Applies == "live" && row.Revision.Length > 0,
+            row.Ns is "one" or "two" && row.Applies == "live" && double.IsFinite(row.Revision) && row.Revision >= 0,
             "Native namespace facts changed.");
         Assert(row.AutoGenerate == (row.Ns == "one"), "Host page selection was lost.");
-        Assert(row.Base is null && row.User is null, "Unavailable base/user data was fabricated.");
+        Assert(
+            SchemaNode(row.Schema, "label").GetProperty("meta").GetProperty("default").GetString() == "default-label" &&
+            SchemaNode(row.Schema, "defaulted").GetProperty("meta").GetProperty("default").GetInt32() == 7,
+            "Public form defaults were lost by the generated client.");
+        var secretMeta = SchemaNode(row.Schema, "rootSecret").GetProperty("meta");
+        Assert(
+            !secretMeta.TryGetProperty("default", out _) && !secretMeta.TryGetProperty("required", out _),
+            "Secret schema metadata leaked.");
+        var nestedDefault = SchemaNode(row.Schema, "nested").GetProperty("meta").GetProperty("default");
+        Assert(
+            nestedDefault.GetProperty("visible").GetString() == "nested-visible" &&
+            !nestedDefault.TryGetProperty("secret", out _),
+            "A composite default lost its public value or exposed a secret.");
+        Assert(row.Base is not null && row.User is not null, "Available base/user layers were omitted.");
+        Assert(
+            !row.Base!.Value.TryGetProperty("rootSecret", out _) &&
+            !row.User!.Value.TryGetProperty("rootSecret", out _),
+            "A secret leaked through a configuration layer.");
         Assert(row.Value.GetProperty("label").GetString() == "default-label", "Ordinary configuration was lost.");
         Assert(row.Value.GetProperty("defaulted").GetInt32() == 7, "Resolved defaults were lost.");
         Assert(
@@ -245,14 +442,11 @@ internal sealed class DescribeMirror(SettingsClient remote)
                 Reads++;
                 SettingsDescribeValue? result = null;
                 string? error = null;
-                try
-                {
-                    result = await remote.DescribeAsync();
-                }
-                catch (RemoteError failure)
-                {
-                    error = failure.Message;
-                }
+                var response = await remote.DescribeAsync();
+                if (response.Ok)
+                    result = response.Value;
+                else
+                    error = response.Error.Message;
 
                 if (readGeneration != generation)
                     continue;

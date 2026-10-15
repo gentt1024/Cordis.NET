@@ -15,7 +15,7 @@ internal static class CompilerRunner
         try
         {
             if (args.Length == 0 || args.Length % 2 != 1)
-                throw new InvalidDataException("Expected extract or emit-dotnet followed by --name value options.");
+                throw new InvalidDataException("Expected a native compiler command followed by --name value options.");
             options = new(StringComparer.Ordinal);
             for (var index = 1;index < args.Length;index += 2)
             {
@@ -26,7 +26,7 @@ internal static class CompilerRunner
 
             var allowed = args[0] switch
             {
-                "extract" => new[]
+                "extract-model" => new[]
                 {
                     "project-directory",
                     "sources",
@@ -36,6 +36,7 @@ internal static class CompilerRunner
                     "nullable",
                     "defines",
                     "service",
+                    "roots",
                     "output",
                     "allow-unsafe",
                     "check-overflow",
@@ -43,21 +44,42 @@ internal static class CompilerRunner
                     "platform",
                     "optimize"
                 },
-                "emit-dotnet" => new[] { "model", "namespace", "service", "client", "output" },
+                "emit-dotnet" => new[] { "model", "namespace", "service", "client", "reference-models", "output" },
+                "emit-web" => new[] { "model", "service", "reference-models", "output" },
+                "emit-dotnet-data" => new[] { "model", "roots", "namespace", "context", "reference-models", "output" },
+                "inspect-model" => new[] { "model", "output" },
                 _ => throw new InvalidDataException("Unknown native compiler command " + args[0])
             };
             foreach (var option in options.Keys)
                 if (!allowed.Contains(option, StringComparer.Ordinal))
                     throw new InvalidDataException("Unknown --" + option + " for " + args[0]);
             var output = Required(options, "output");
+            if (args[0] == "emit-web")
+            {
+                EmitWeb(options);
+                Console.WriteLine("CORDISTYPERT emit-web completed.");
+                return 0;
+            }
+
             var content = args[0] switch
             {
-                "extract" => Extract(options),
-                "emit-dotnet" => DotnetProjectionEmitter.Emit(
-                    NativeModelJson.Deserialize(File.ReadAllText(Required(options, "model"))),
+                "extract-model" => Extract(options),
+                "inspect-model" => DeclarationModelJson.Catalog(
+                    DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model")))),
+                "emit-dotnet-data" => DeclarationDataProjection.Emit(
+                    DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model"))),
+                    File
+                        .ReadAllLines(Required(options, "roots"))
+                        .Where(line => !string.IsNullOrWhiteSpace(line))
+                        .Select(line => line.Trim()),
                     Required(options, "namespace"),
-                    Required(options, "service"),
-                    Required(options, "client")),
+                    Required(options, "context"),
+                    options.TryGetValue("reference-models", out var referenceModels)
+                        ? ResponseFile(referenceModels, Path.GetDirectoryName(Path.GetFullPath(referenceModels))!)
+                            .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
+                            .ToArray()
+                        : []),
+                "emit-dotnet" => EmitDotnet(options),
                 _ => throw new InvalidDataException("Unknown native compiler command " + args[0])
             };
             WriteAtomic(output, content);
@@ -70,7 +92,11 @@ internal static class CompilerRunner
             {
                 try
                 {
-                    File.Delete(Path.GetFullPath(output));
+                    if (args[0] == "emit-web")
+                        foreach (var name in WebFiles)
+                            File.Delete(Path.Combine(Path.GetFullPath(output), name));
+                    else
+                        File.Delete(Path.GetFullPath(output));
                 }
                 catch (Exception cleanup)
                 {
@@ -81,6 +107,79 @@ internal static class CompilerRunner
             Console.Error.WriteLine("CORDISTYPERT: " + error.Message);
             return 1;
         }
+    }
+
+    private static readonly string[] WebFiles =
+        ["remote.schema.json", "remote.mjs", "remote.d.mts", "cordis-remote.mjs", "cordis-remote.d.mts"];
+
+    private static void EmitWeb(Dictionary<string, string> options)
+    {
+        var model = DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model")));
+        var references = options.TryGetValue("reference-models", out var referenceModels)
+            ? ResponseFile(referenceModels, Path.GetDirectoryName(Path.GetFullPath(referenceModels))!)
+                .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
+                .ToArray()
+            : [];
+        var selection = Required(options, "service");
+        var eventDeclaration = DeclarationEventContract.Select(model, selection);
+        var artifact = eventDeclaration is null
+            ? WebProjection.Emit(DeclarationRemoteProjection.Project(model, selection, references))
+            : WebProjection.EmitEvent(model, DeclarationEventContract.Read(model, eventDeclaration.Id), references);
+        var directory = Path.GetFullPath(Required(options, "output"));
+        var identity = "Declaration models: " + string.Join(
+            ", ",
+            references
+                .Select(value => value.ContractIdentity)
+                .Prepend(model.ContractIdentity)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal));
+        var schema = System.Text.Json.Nodes.JsonNode.Parse(artifact.Schema)!;
+        schema["$comment"] = identity;
+        WriteAtomic(
+            Path.Combine(directory, "remote.schema.json"),
+            schema.ToJsonString(
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                }) + "\n");
+        WriteAtomic(Path.Combine(directory, "remote.mjs"), "// " + identity + "\n" + artifact.Client.Module);
+        WriteAtomic(Path.Combine(directory, "remote.d.mts"), "// " + identity + "\n" + artifact.Client.Declaration);
+        foreach (var name in WebFiles.Skip(3))
+        {
+            using var resource =
+                typeof(CompilerRunner).Assembly.GetManifestResourceStream("Cordis.Typert.Compiler." + name)!;
+            using var reader = new StreamReader(resource);
+            WriteAtomic(Path.Combine(directory, name), reader.ReadToEnd());
+        }
+    }
+
+    private static string EmitDotnet(Dictionary<string, string> options)
+    {
+        var service = Required(options, "service");
+        var model = DeclarationModelJson.Deserialize(File.ReadAllText(Required(options, "model")));
+        var references = options.TryGetValue("reference-models", out var referenceModels)
+            ? ResponseFile(referenceModels, Path.GetDirectoryName(Path.GetFullPath(referenceModels))!)
+                .Select(path => DeclarationModelJson.Deserialize(File.ReadAllText(path)))
+                .ToArray()
+            : [];
+        var eventDeclaration = DeclarationEventContract.Select(model, service);
+        if (eventDeclaration is not null)
+            return DotnetProjectionEmitter.EmitEvent(
+                model,
+                DeclarationEventContract.Read(model, eventDeclaration.Id),
+                references,
+                Required(options, "namespace"),
+                Required(options, "client"));
+        return DotnetProjectionEmitter.Emit(
+            DeclarationRemoteProjection.Project(model, service, references),
+            Required(options, "namespace"),
+            service,
+            Required(options, "client")) + string.Concat(
+            references
+                .Select(reference => reference.ContractIdentity)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .Select(identity => "// Referenced declaration model " + identity + "\n"));
     }
 
     private static string Extract(Dictionary<string, string> options)
@@ -127,11 +226,19 @@ internal static class CompilerRunner
                 checkOverflow: Boolean(options, "check-overflow"),
                 platform: platform,
                 optimizationLevel: Boolean(options, "optimize") ? OptimizationLevel.Release : OptimizationLevel.Debug));
-        var model = SourceContractReader.Read(compilation, directory, Required(options, "service"));
+        var roots = options.TryGetValue("roots", out var rootsFile)
+            ? File
+                .ReadAllLines(Path.GetFullPath(rootsFile, directory))
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Select(line => line.Trim())
+                .ToArray()
+            : [];
+        var model = SourceContractReader.ReadModel(compilation, directory, roots, options.GetValueOrDefault("service"));
+
         foreach (var diagnostic in model.Diagnostics)
             Console.WriteLine(
                 "CORDISTYPERT " + diagnostic.Category + " " + diagnostic.Code + ": " + diagnostic.Message);
-        return NativeModelJson.Serialize(model);
+        return DeclarationModelJson.Serialize(model);
     }
 
     private static string Required(Dictionary<string, string> options, string name) =>

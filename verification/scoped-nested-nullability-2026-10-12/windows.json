@@ -1,0 +1,1740 @@
+{
+  "sourceCommit": "19ff2b60b883911f3f3579006c0128319902d4ae",
+  "sourceTree": "1150c7f00d24ca639de4e20b4315ac0d95b203cb",
+  "status": "requested-checks-passed",
+  "rid": "win-x64",
+  "sdkVersion": "10.0.111",
+  "sourceUnchanged": true,
+  "workingTreeClean": true,
+  "command": "python scripts/verify.py --package",
+  "verificationReportSha256": "22b55664d20ae04f7a8dd07466691716d05f2742a824288b3e9ebacfd0232d48",
+  "tests": [
+    {
+      "assembly": "Cordis.Extensions.Tests.dll",
+      "counts": {
+        "total": 113,
+        "executed": 113,
+        "passed": 113,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "notExecuted": [],
+      "sha256": "1bc05bb21b2e45b112cd586c4b00ccbbb2a48741be143ab7e8c23cd2b33e1095"
+    },
+    {
+      "assembly": "Cordis.Core.Tests.dll",
+      "counts": {
+        "total": 148,
+        "executed": 148,
+        "passed": 148,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "notExecuted": [],
+      "sha256": "0470f7f181e4acf174616ff2eaddc94a19484ee6dc347f3b1599c27437af05a8"
+    },
+    {
+      "assembly": "Cordis.Composition.Tests.dll",
+      "counts": {
+        "total": 496,
+        "executed": 496,
+        "passed": 496,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "notExecuted": [],
+      "sha256": "49bf4fffe29306f30337e011c6b684f84ac0a16c3ca192dbb3400cd26f65a8f8"
+    },
+    {
+      "assembly": "Cordis.Platform.Tests.dll",
+      "counts": {
+        "total": 126,
+        "executed": 126,
+        "passed": 126,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "notExecuted": [],
+      "sha256": "99999c8b4c2d42a16edd145f9a5b9b3bac7ecb5c0136712f90c16f88513cdaf0"
+    }
+  ],
+  "steps": [
+    {
+      "name": "sdk",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "sdk-version",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "restore",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "test",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "test-map",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "jit-1",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "jit-2",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "jit-repeat-2",
+      "exitCode": 0
+    },
+    {
+      "name": "jit-3",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "jit-repeat-3",
+      "exitCode": 0
+    },
+    {
+      "name": "upgrade-jit",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "example",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-modules-build",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-modules-types",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-lifecycle",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-shared-modules",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "client-author-watch",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "cli-validate",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "cli-preview",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "cli-invocation",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "cli-usage",
+      "exitCode": 2,
+      "expectedExitCode": 2
+    },
+    {
+      "name": "cli-invalid-option",
+      "exitCode": 1,
+      "expectedExitCode": 1
+    },
+    {
+      "name": "api",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "typert-optional",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "pack",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "package-symbols-and-debug-consumer",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "package-content-boundaries",
+      "exitCode": 0
+    },
+    {
+      "name": "consumer-restore",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "consumer-publish",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "consumer-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "adapters-restore",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "adapters-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "tool-install",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "tool-package-preview",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-restore",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-publish",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-retained-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-republish",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "http-consumer-jit-republished-run",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "independent-consumer-location",
+      "exitCode": 0
+    },
+    {
+      "name": "clr-deployment",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "clr-multi-entry",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "typert-package-consumer",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "typert-dotnet-settings",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    },
+    {
+      "name": "whitespace",
+      "exitCode": 0,
+      "expectedExitCode": 0
+    }
+  ],
+  "packages": {
+    "Cordis.Example.Greeting.0.2.0-alpha.4.nupkg": "ea6777fbb528942ac10d264091c135507a147360b12b3ba4db7ee35b12914d14",
+    "Cordis.Example.Greeting.0.2.0-alpha.4.snupkg": "eb09d58bda0a8a9c482dedb32fe640091fc9aebb31d1aef5e37feddaa1691bf5",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "fdf4267c889557de5c04650c06bbf115bc753a4aea7cc2b88712b2bd80aeaf5b",
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.snupkg": "55d113f0998028e71a81da5a713815503a4d2027321d56ab9f833420d715e954",
+    "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "7419a4edd7ea778596db021a6f27f270b9a3c373987ea1fe3ef838ff661766b5",
+    "Cordis.NET.Clr.0.2.0-alpha.4.snupkg": "80948956bb712eba88f046f3f36482fe8195e1a93bead1562a3da3d59966d56c",
+    "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "01f76b6eb6889a957e3fd3c04b8ab080e6269cedaa666d440d2aab2c0f827db2",
+    "Cordis.NET.Composition.0.2.0-alpha.4.snupkg": "c0fdda5b4bd91ebe351febcb21524e1bd7925fe0c90ef74f0d7b32a664dbb487",
+    "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "db1a1d9ccd4903cb8c90b1114e8a9888660870ee3281735f278f000f63a390cf",
+    "Cordis.NET.Core.0.2.0-alpha.4.snupkg": "80a1a09383c85f3776fd58ddba89da4a9f5f109b4f45e51c4496d214a875f47d",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "fde786fb3ddcfb09b0332a2b4126cad6065a843e65f031757becb6810ce42e22",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.snupkg": "931f6e25cef8d05254735261ce284c276a4792bfada0b2850c0e3caed2a7e73f",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.nupkg": "6df3f91f3cdcd8c59e8dc3a6c855b173eb1e5b41c55eaff10ce1b5990bc7537f",
+    "Cordis.NET.Hosting.0.2.0-alpha.4.snupkg": "2ccfeff3ff31cebe3b4fb7e427f56066096135fb546c34bf934fa0501ec22904",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.nupkg": "f362ae2f403ed2ac9d7eec985c6371d582da3b815e3ef92fb9c61fc9365a66b8",
+    "Cordis.NET.JavaScript.0.2.0-alpha.4.snupkg": "b3ebd799c0386dcf4ebf3fa3fbeabeff40d1ad68085232fe151fd4fc95b8fc81",
+    "Cordis.NET.Tool.0.2.0-alpha.4.nupkg": "a15e250e8c9cb79862a3bf691140a71b9b321f0b244cb4d7253a7effe110b0ea",
+    "Cordis.NET.Tool.0.2.0-alpha.4.snupkg": "b919a68118f542b26028ed5eadc7068a902cdeff2d3cf5b28efed24901bced2f"
+  },
+  "sourceSha256": {
+    ".editorconfig": "3279fc3b71692f8ee1794b93a314ae1f375a3e223a18702551e7f7545c1a17ee",
+    ".gitattributes": "8d75fbed0329d55480242ea79c61cbdd3da312c700298bfba9572b81ec325cc6",
+    ".github/ISSUE_TEMPLATE/bug_report.yml": "1225f13787693db36fe4100ece0fcd52dcd4bc0a1a9b2d880d99107a4f03921f",
+    ".github/ISSUE_TEMPLATE/compatibility.yml": "9b35b3cbccb957512325b031c10465cd8c82b56bff69c0a674555ba74498c157",
+    ".github/ISSUE_TEMPLATE/config.yml": "13064e7bea658e01e718b414fbb7b3b244f36411fe25ee2055c151f7b534547a",
+    ".github/pull_request_template.md": "fc961d48e50dafd7833ce5072ef850159f6760405a01123161a9056e9db233df",
+    ".github/workflows/ci.yml": "c4eb71171845125146adf4263ae4628fe88111ad0ec7ccad106305c8b220eb14",
+    ".github/workflows/release.yml": "8d130655d5062fe4d89ff2b5f15c97559ae29c2a3a5c00b4a1a3b4981594298e",
+    ".gitignore": "4b80ece62c824eb1331c7a554b072d664ef10276488b54dea465d765f0b9d27e",
+    "AGENTS.md": "c5896d333ddf805cf7aa633894f7bad267623d389fc1ba337884df64f533375e",
+    "CHANGELOG.md": "94505d3aac7dbaaa42978a42a1ab37030290b6f765fc9887fea8e34a60b2e747",
+    "CONTRIBUTING.md": "30f89f8ae4a5d7b96005508c8b5fac76f17b63cd087ce77659235e1141348bff",
+    "CONTRIBUTING.zh.md": "0360c22e8206bc0cf3bae31073862091df75619da12d836148406e8a2a7e1030",
+    "Cordis.slnx": "0e50b65d937ddd091ba812160142dd94180a867f33ee3c932102bbf4ea624bc1",
+    "Directory.Build.props": "bc6eff7c64ca8af2fd5bef097f2d57c5dd176c376f5531ee116868b5f579f33b",
+    "Directory.Build.targets": "07908c9f73814d1f8ab8053545fb6722f3e9f06329cd81d3e77b19c1228c343a",
+    "Directory.Packages.props": "3c1a0b7cb949e210cb6ccc4b2cc544a6618c5fe2b76dc79c5ed37dda84b2e4fb",
+    "IMPLEMENTATION_STATUS.md": "cc48a72cc2e4c9201c1aac9bf07d2f90203e59a93a36267a8fd4730d8135a579",
+    "LICENSE": "86125a8ab7d416a2db0fa04f53e6dbecab12e65e059f3bc62462af19fb665f5e",
+    "LICENSES/cordis.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+    "LICENSES/deepseek-harness.LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+    "LICENSES/include.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+    "NOTICE.md": "e7a05b60db376891393156701e0718f8ce3119d543a042577035712b2e5b3a17",
+    "NuGet.Config": "fd6836e883aa6bf334e587a02ff7239f68713f4baac6d749f743a2b489b1769c",
+    "README.md": "93afef9b13bef149f699993aef447fad9ca1888b6b0901b348a866e69ac13ad4",
+    "README.zh.md": "90c6721cb14f28bece52911a892ca770d119bf5c662c7ae20ed3baf05ef9151a",
+    "SECURITY.md": "153871569592bfff1e599c259cbeb3be3cb76ef93b5bd8bb83bb3d147730dc40",
+    "build.ps1": "33701862b2c0424c8b908dded3cc61ae17f064f656f5c8465ac03c8f14a2fe71",
+    "build.sh": "9b9134e0df01b94338b107b5c2f2fd87bee8d7144fecdf2cb1603490285ea8a5",
+    "clients/modules/.gitignore": "a94d9165c05b1729063c2d5b427bf9e2a57a1d225ec72ee190146eeffe8ebb9a",
+    "clients/modules/README.md": "07cbc6b46910bfac033cc90b6980560f2125aa9ff622db30da69108a31c9e47d",
+    "clients/modules/examples/index.html": "09c8d74ff559c2e2fdcb1161b30eecddf002e60b0b67e69136582deff7e6adf4",
+    "clients/modules/examples/panel-broken/client.ts": "e046c7d667a4aae07b5577dd46f78d1030b486e3ea2775b11a9b9fbb765fe320",
+    "clients/modules/examples/panel-broken/package.json": "48f1df68dc9e23c3e501bde803dcb1b957194bb38184588f7cc85e4f4f329928",
+    "clients/modules/examples/panel/client.ts": "721d261fbd10713e3d963fdb2fdce35513f1a73f93d160ec5b73f4f2a05ee991",
+    "clients/modules/examples/panel/package.json": "335b9a01f9f8acac59ba11e1ee35d431001088eb1a07bd6cef5004d13a604e7c",
+    "clients/modules/examples/provider-next/client.ts": "5f4ad05d8a9b15f8d094596ffa162fdaa1e15bce928c98c538b4d5eb967a5711",
+    "clients/modules/examples/provider-next/package.json": "4a2f79043c4e5ea70762d7d9850f5d8eb1d66eb6e9f222011d5ae17719a0a44d",
+    "clients/modules/examples/provider/client.ts": "de25752ec2d4b1787a5b37d6b0c49e519bb87c01ff1d480b6d24f80a03d0d88f",
+    "clients/modules/examples/provider/package.json": "1045d8a3e04d1b724c254ba80bae71bd631e4d8e25431c3307fb3c00312f9a4a",
+    "clients/modules/examples/recovery.html": "8890984471d4618733d1c309468e6c4922da60adcb792463fb4621c1a5ce4518",
+    "clients/modules/examples/shared/check.mjs": "acc12c0620208b85e245b290c04cd456340b66e8cc09c124b6621ef18ef85900",
+    "clients/modules/examples/shared/client.ts": "0bff9416fd70af67830b8c1d63f69c10b65d247c123f25d286a919281853600f",
+    "clients/modules/examples/shared/index.html": "7d3b2e2096af99a8fd5b8ebfe0e623ff805e25619ebe48882d157d93d4888565",
+    "clients/modules/examples/shared/package.json": "3a35d3d742b09b76c2ac585123f39497d57dbff52aab787ca38401c229b99bb1",
+    "clients/modules/package-lock.json": "45b952ae601b0b179b9275821f097f88c621270c0067436fe64eb044e77c1309",
+    "clients/modules/package.json": "0231ae49722cca64d5aafc1089b01408d3b4cd58b761f773080e6ed33efc0f42",
+    "clients/modules/src/index.ts": "0884bb731aac55734da1970c5cdceab0833d4b10108e6314bcd03a91b8425992",
+    "clients/modules/src/management.ts": "aede0ca3871700bfad79dc8a67f77f03ce11e93633aff2a42a1e1264291ea393",
+    "clients/modules/tsconfig.json": "0ed05a6a319a7497034469ed51e08bf858358aaf5bb628d44be5ae72dce336cc",
+    "clients/modules/tsconfig.vendor.json": "438df3013d149c977e9c817211e3bc19ec138e123d82f7a6a3290a63b15b80e9",
+    "clients/modules/vendor/connection/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+    "clients/modules/vendor/connection/client/connection.ts": "efe3168500645825630af073428bf88f21e7b92e15d73d12fb849ba4e480bd41",
+    "clients/modules/vendor/connection/recovery-config.ts": "d6187aeec5bf83313ac99b02563a931592a349805afdcc83a858be01a59a73a1",
+    "clients/modules/vendor/contracts/node-module-stub.ts": "cf0eac2a050ca8392fab190a648f5b0c359a3b2aa5b819ec26e901900c4a532e",
+    "clients/modules/vendor/contracts/package-manifest.ts": "10568c7c456b82b0cb0f932794217bb7860f59a9e2996ec312e9ad5622a436b6",
+    "clients/modules/vendor/contracts/schema-metadata.d.ts": "936393c9dd908010e96c9ffb11f2c52dad851b3d7c49506ddd8c33cb8c2a70b7",
+    "clients/modules/vendor/contracts/store.ts": "d4ba75c2559f22713f1f3659d03fce6cf17b6f1c1fe82a9615b71f6a504e9e81",
+    "clients/modules/vendor/cordis/LICENSE": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+    "clients/modules/vendor/cordis/src/context.ts": "96b388162d6013c1898de61e35f28917abb93809de24174980f2a1a348d0b115",
+    "clients/modules/vendor/cordis/src/events.ts": "9aff93dcfcad98aebb692c19c36d3bf034a96f9085bc66900a997cda3f79e6fe",
+    "clients/modules/vendor/cordis/src/fiber.ts": "b7661d6c19be76cef6b97d88719a8112c0f8b5abe65bd9e7d5947773fd4b96d4",
+    "clients/modules/vendor/cordis/src/index.ts": "071fb226e9a21556625e4391b28e6641b9b34b1cd402155246e0437993d8b740",
+    "clients/modules/vendor/cordis/src/logger.ts": "05cb6be3e4cf8d078185b5d10c87e536c7d2b2b3ad43c270a0dbafaa28f41fef",
+    "clients/modules/vendor/cordis/src/reflect.ts": "6847b9781044023d65aebb5896a873b9f0a3d777eaf7fa0dd2a7a408eb6b74a6",
+    "clients/modules/vendor/cordis/src/registry.ts": "34bbd60ae502b4f85201c204afb52a9acabde6878d9278493478c1b2183debd3",
+    "clients/modules/vendor/cordis/src/service.ts": "614205c6ce7cf1a057b8b352e96aa4fcd734c967a3d2283a126c9c61f268e3be",
+    "clients/modules/vendor/cordis/src/utils.ts": "8fe273424583d21267ef13f248840e97454d09d836a0ac08323a9482c2069263",
+    "clients/modules/vendor/cosmokit/LICENSE": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+    "clients/modules/vendor/cosmokit/src/array.ts": "cf4de899ecffd66a90d8cef6f4c7d127d31f77f776d8e173d41c30d2d7632cf7",
+    "clients/modules/vendor/cosmokit/src/index.ts": "1087da74b9c461984e547d524ee766eebcf329a78e4720bff5b60a004ccf6e8c",
+    "clients/modules/vendor/cosmokit/src/misc.ts": "117617943074ea57c15f216905dacd2f6d1c4c2ff16586f97a7a7a87dbf2141f",
+    "clients/modules/vendor/cosmokit/src/string.ts": "5564272b3e15e49235cbe3a8b453f27306baf282d23a893982841670f65d3c04",
+    "clients/modules/vendor/cosmokit/src/time.ts": "49957c4608465a1fbd738186a92c47fffcd1fc4ba59dbf89524f8a773fe16fe2",
+    "clients/modules/vendor/cosmokit/src/types.ts": "cc49c12e4a637f7b0754ff78a8299e9c42fa40ee8c678550af0c538a80146a92",
+    "clients/modules/vendor/cosmokit/src/volatile.ts": "937433215595f89da249ec7cabb89e331ff4135a40c6686a95666d2095315e55",
+    "clients/modules/vendor/loader/LICENSE": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+    "clients/modules/vendor/loader/src/config/diff.ts": "6025a6b9798a0a16af017bb7d8d6394bbe345685b2ace56b15975add5843edb3",
+    "clients/modules/vendor/loader/src/config/entry.ts": "4e4f3be8678e74fcb9c5c6566469a26e151c8b43ff477956a5518472cc7edf73",
+    "clients/modules/vendor/loader/src/config/group.ts": "5e138e8a8fad22e21d031859345797c445efbc380559fc32d35b03c835e60ccc",
+    "clients/modules/vendor/loader/src/config/isolate.ts": "dfc9e961f61fe5f7701b5593f98902aa971884fb242e208fc0d5207794117094",
+    "clients/modules/vendor/loader/src/config/tree.ts": "761889adfb6b8a164fb12a0cec49a6ef439598b9267e85073000cfa9b7d682c8",
+    "clients/modules/vendor/loader/src/config/utils.ts": "d85b8ac1693af4667e9c0395cd1d6b15ec28387073a81f0d00bd38d909a05f8e",
+    "clients/modules/vendor/loader/src/index.ts": "a135e2189a0feb0af08ff79de761698fb8ce7b41c96fefda1d4a299e5982fef3",
+    "clients/modules/vendor/loader/src/internal.ts": "35a50d597fed58656a11e3c5294fdf99524ed8c106739b4fab522a288eefa877",
+    "clients/modules/vendor/modules/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+    "clients/modules/vendor/modules/entries.ts": "52b438c9541a470b63e41b8880fd608909117168bfcd76cbe65be6dbff651edc",
+    "clients/modules/vendor/modules/entry-lifecycle.ts": "1b6f54b4fbebf5c440e753b9c104d4741e632b744b496a6a23af6f8fc20cc198",
+    "clients/modules/vendor/modules/manifest.ts": "2e44bce01dc004fcb6a21b68445dfd3a8cb05fb2b715b1df8e75ed642609686e",
+    "clients/modules/vendor/modules/system.ts": "01ae8f4cac487eecfd5133aaaa045fd531cb21616638f3c694f1ab43c7fba8bf",
+    "clients/modules/vendor/provenance.json": "c99ebaa9f8ffee9aa342bc75c2b2755a15e2946b7167cb9a0f05ebdd2601c254",
+    "clients/modules/vendor/slots/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+    "clients/modules/vendor/slots/index.ts": "27a453937cdcc28923c37ad90cd01489e458e205dc03032629183087b5b585d0",
+    "clients/modules/vendor/slots/renderer.ts": "ee834aafc19367922c139d41f677233fbdfcc042b4deff9f616aa43220ee09ee",
+    "clients/modules/vendor/slots/store.ts": "4233ae32911848aa771910286e5f41b4c683e8c5b16da190935082ac4249cca0",
+    "clients/modules/vendor/web/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+    "clients/modules/vendor/web/boot-client.ts": "b37cd77c5d51f6bf8503e5fa3e2ebae5c367e096a97b2fc350cc6e4c2b1c6f43",
+    "clients/modules/vendor/web/loader-status.ts": "030f657975cefa65ad44a735170c2894a9d1a8f545a867e84af22eb8cf442a8c",
+    "docs/architecture.md": "8ab42881923d0aba7b1c3ed740bccfb822bc772459a50c5c255d13901faa6326",
+    "docs/assertion-review.md": "07dc85bffa8b278944a72d886bbf54ad7d0882f0675b6e7b07fb78f52b173a65",
+    "docs/authoring.md": "c6011845cc5423015010c688494015bf48cd05a68a2a0e4e86e6d5f9e7a6f1dc",
+    "docs/authoring.zh.md": "5de6faf693ff07c6f3f6a92e833851e8e0e06860b925b35c68e93212eb3219a2",
+    "docs/clr-artifacts.md": "01d9dc48fe2a1bdfe4fd11cf962bb8ab33d2517edbecba6ed324783c02bab42b",
+    "docs/clr-artifacts.zh.md": "2f1be8307177b979643d6e4c98812dad62372a9b460b062cd14d1e5333e8e3fd",
+    "docs/compatibility.md": "1368e6f3e7d849c8d402c389ab6a611182ac1f1579b6dbec6dcf8e4e27ed9cf3",
+    "docs/compatibility.zh.md": "5302d2cb0190b3f99d076a5e031700c1a90206b4051213655dd5798a497dab5b",
+    "docs/configuration-description.md": "bd1c40152e5e68e07fa1c4b11e48c04f94a73b906fedead16eebafd1af78cb52",
+    "docs/configuration-description.zh.md": "e2c8e5a957e65a5216e5e9a3068260b5695dc1bd861339413a9f43862714370c",
+    "docs/core-concepts.md": "4743dd29ca79d19e9b5eb840b1254bf5667fe25e2512638c55ffa78cd38df9ba",
+    "docs/core-concepts.zh.md": "870317e3b9ccbe6d226c2b7feba452d59a5ce1acc5d8bfcf298fc604b805f2ac",
+    "docs/development.md": "803ab8c1a2325d0fd613c966e29a0289d1c6b12a0f7e69d63538843ea97a2c2d",
+    "docs/development.zh.md": "853a0cf948a976dc104da91f0cbb05dc1e46653bce97ed58820d4ce00a3c0834",
+    "docs/getting-started.md": "60ec5ac2f226198f6109656a4385b375e364b12351aa3a1f338ed2bdbe7fe646",
+    "docs/getting-started.zh.md": "1b7db41284e1e811880115300d5fc53142213cca07dc4a63bf19ff22e549e9c2",
+    "docs/management-remote-migration.md": "3946c7236afcfaa8eeb5e1b0f725c42ca2032fc67f2ce9d7c088bbb2b52b58dd",
+    "docs/management-remote-migration.zh.md": "21abadd8c05a4cd3dcd9c2b9d93778a5dca0c0afb74e56d3aff173e9adb87273",
+    "docs/public-api.txt": "ba66eadfdc642a52ae0bcebf8557277555dbfb45f9fb84e5304e1a107b45d28a",
+    "docs/publication-readiness.md": "6420134970e7044180c9540029847ab60f190ff810a89412bc8c99a0422e3bee",
+    "docs/publication-readiness.zh.md": "2c2cf3f2a4de32512207547945e11ed0748947f30f48363b6fb787a5f7f6f9e5",
+    "docs/reference/dsh-vendor-readme.snapshot.md": "0b95cf26f592e220630e2e8531e5e2623447df0a086e2ad6ca4754a576fb4d00",
+    "docs/remote-events.md": "ccf823dacd173b44b9fd7142a021a3807503d249943f8cecf9fc174e94e01fa8",
+    "docs/remote-events.zh.md": "977f09b7da837b1ea16462e35bd85b399acedc66540d44b4ac1191e0c0edbc78",
+    "docs/scenario-map.json": "a33469d5a6e05d77f5fc0c6f1c6b6e393ee0a418f981e0aa04aa8098b3258f87",
+    "docs/settings-contract-migration.md": "073506d81c1f5a35c11b1688123f03a83b97cdfde4911cc714579e146d2ca8b2",
+    "docs/settings-contract-migration.zh.md": "d1abfb0ea33e372a16c04de0d229c36d1741d6d905073491c80c038af323bd72",
+    "docs/test-map.json": "f8611e97e475fd3593a9b32d7dcef32a62bd4841f657694c005a18060da8e41d",
+    "docs/typert-dotnet-library-research.md": "d359e97357fe70ce7e6abd6e86a3e4a1915fe729491c3c6346be4f0bc98d9a31",
+    "docs/typert-dotnet-library-research.zh.md": "c3087d4bffe8de138105401e52557bcc43c0df0fcbd24f703f12d643a3f65880",
+    "docs/updating-baseline.md": "11ba0eba9885ae9d2ec0f49a00720acacd591652fd7a244399018171dbb7c80e",
+    "docs/upgrade-0.2.0-rc.2.md": "882da1dcd466af005968efb1d17b3c764d30ca785bd808015531aada1736a912",
+    "docs/upgrade-0.2.0-rc.2.zh.md": "fd9829c3780843e5e09ad4ec70f1be1aa0ca4fe7cecf27f324d356e28c542ef9",
+    "docs/upstream-tests.json": "694da2173a08442f97317c834f0284a3ad5c1648a66415c2bb2ae3a532d44e0f",
+    "docs/upstream.md": "1313d695bf18daea2f31d8f707db2cb3583d036e8ab09baaefedcb1464f57b80",
+    "docs/upstream.zh.md": "560c003d357d4519b020e9580da1771688114c4bede85e6aa7fc571338a54ff8",
+    "docs/usage.md": "d5e2c6d903835e52bb28ad425eb63cc7eadef887c2006fdbf6fdf6eaedbf3623",
+    "docs/validation.md": "3a3e5f904bcc6ec1cca4029375368775ae0df2ba947c01f942e5f0c193edefff",
+    "docs/validation.zh.md": "545d6cf9a5c4fb9f636398bc1ad2aad58f5e494e91824a5df4e7df3d302506e4",
+    "dotnet-tools.json": "9ea21eab5aa8eea822079caa38ddb43f4acefc99ec96dca00488f7b0dc0df00c",
+    "examples/Composition/Composition.csproj": "477673550bfe9de626462f806948c7d146fc31ab07af49c68fc206d5ee8c5daf",
+    "examples/Composition/Program.cs": "cde0b49b5be381d416af82d3ce9634230a2643a25940a1f0838859a7bf06ab44",
+    "examples/Composition/packages.lock.json": "801d20561c404d9ff464e5c1e68940c3a5d7841d7e1e2782400c5378b2aad136",
+    "examples/Greeting.Plugin/Greeting.Plugin.csproj": "45eaad0014e5c0c48cf39caead698e5864da12a6cd5a64a66866e93064ad6c35",
+    "examples/Greeting.Plugin/GreetingModule.cs": "cc20aef5585f41c530a09859141714e608d171daefdf0aeb5e78c13d7d916fca",
+    "examples/Greeting.Plugin/README.md": "ed61bb02738a0d2009400710caeb8853fab7be76bf5f4602eb6435c80efdd1f5",
+    "examples/Greeting.Plugin/cordis.patch.yml": "f910c169d3119152d3b6f0e9d41e9591a3ee5fff541e582baf709dd48fb22328",
+    "examples/Greeting.Plugin/packages.lock.json": "e8f5fc330b2ea8111b247f8c34d7ee6f824209f1f4787e5eb634ae829c10be24",
+    "examples/ManagedApplication/ManagedApplication.csproj": "eb4921d599d5d32a505733713343d80232ac1627aea9b5de4f33fb12d22bec6e",
+    "examples/ManagedApplication/Program.cs": "92494792f31f62e6966fa7ac8044ee3d1efc393e01d0260321d9e9a95d364ba5",
+    "examples/ManagedApplication/README.md": "bda21fdefa46cff699317c279b9debaa32e04cd8b89cb015a29faf1c3c8c70a2",
+    "examples/ManagedApplication/index.html": "1469eb17fe1788e08a706f4023c2632b4a059420b3f0772d2be8318b4378ac60",
+    "examples/ManagedApplication/packages.lock.json": "5a9b4d5820b1b718d672a353a98e64b27c96fb415145b273fd244d941b24409b",
+    "examples/ManagedPlugin/ManagedPlugin.csproj": "4b825fba8270ebf126a803a45ee600d58d445cbb97437b85bfff9a1ed1136918",
+    "examples/ManagedPlugin/Module.cs": "d6a1ad66550948f298eff43af514c3b2733f1fb6f63fa7c0daeb00708ad27f69",
+    "examples/ManagedPlugin/README.md": "686117313563625f51546a40948f61a69045e313160040dd084f2cc5f3b7560c",
+    "examples/ManagedPlugin/cordis.plugin.json": "5e13444389b973145cb497f3db6ffe089d8507d271b6a92407838674a7b3968b",
+    "examples/ManagedPlugin/packages.lock.json": "b2472106e88d3c67cdf25c32aac6ab14eb1da5237092022cbcc10888e5da9d79",
+    "examples/Probes.Clr/Probes.Clr.csproj": "2bb2c74d0a351f8d6033fc3054cf31c7392b41ecf86da8a574eae706b5605ccd",
+    "examples/Probes.Clr/Program.cs": "da9291213ae832ebb4d41dec645b057a01328ab265330dd2f3f7cb7c39047175",
+    "examples/Probes.Clr/packages.lock.json": "b9fd6b20601fa3a9c8a309443e6a42dc2fb4de1622409db5b00f832722f96f4f",
+    "examples/Probes.Contracts/Probes.Contracts.csproj": "d0fad260c3dbf3056d998d67250965a639bfbf5def05f972dc161e5e988c14f9",
+    "examples/Probes.Contracts/Probes.cs": "4b60f8d6d132f3e1f3e2a4c9e47dbbd82f3599d50319a55821f22709c4491e8b",
+    "examples/Probes.Contracts/packages.lock.json": "1c8c6befbed80ff80f3fa8614f3a4b338831bcf8b79c67baf9da0f5b7a92a491",
+    "examples/Probes.Plugin/ProbeModule.cs": "b7e885f23d276bd5a596e0b3dcec7468cead9117dd35d8bf74087b4a014c09c8",
+    "examples/Probes.Plugin/Probes.Plugin.csproj": "86b56e2c430654c80a4237ac77749f193a3740896d3117cacdf12bd3cd53bf83",
+    "examples/Probes.Plugin/cordis.patch.yml": "cb3952867d65d8e24b3af841b18fc4028440262a2caf8691cfb75eec1e2f6b76",
+    "examples/Probes.Plugin/packages.lock.json": "0fa1a3647ab35605ad93c95e758ffe189f83163ba1f246dc1ce81837ecfee370",
+    "examples/Probes/ApplicationHost.cs": "6b8ecf6d949cbb648f7bcaa5f9db246e77b3f4423881d410bf7c8892e64ad014",
+    "examples/Probes/ConfigurationManagementScenario.cs": "4d85b3d71f0233d14581dbf569312e70e398fafd5a088f13c3178f27810dcff1",
+    "examples/Probes/ConfigurationScenario.cs": "6a727e31d7fb75ab969c7f89b9d73c0c7da40a31a190a9b833dca6131974ece1",
+    "examples/Probes/Probes.csproj": "081d940839ca0becb6328f2b656a9b7d12e9f46d9592a8d44a6a1e28ed6417f5",
+    "examples/Probes/Program.cs": "a856dd0b000f6ea6071c9b2c0ad17f2fae338b4100293f0c3694138f04e057fe",
+    "examples/Probes/client/application.ts": "2364a484640061f5d9f2a993fd91237b60994b23c3a1e7f43c1a3cd9de33e150",
+    "examples/Probes/client/environment.d.ts": "e2c20442d285cf111b9173b63bffd0cf26c3f085157e8c2520461ff67d8d0582",
+    "examples/Probes/client/tsconfig.json": "8af3e0219f9050bcd8cde6a2bfaaa0e031324ccc30619147759e47a13b06c9d5",
+    "examples/Probes/client/vendor/form-model.ts": "2dcd07c849abcd0b26d9c1855c9870a1dd1231ce58ef9a6d767ba092608ee81b",
+    "examples/Probes/client/vendor/provenance.json": "1bd896d556a91ff646026ddd9666a0fc78952a1594b2b388ddfffd01d21153fb",
+    "examples/Probes/client/vendor/store/contract.ts": "d4ba75c2559f22713f1f3659d03fce6cf17b6f1c1fe82a9615b71f6a504e9e81",
+    "examples/Probes/client/vendor/store/index.ts": "6969ed123830868c44d90b664cd40d81d4f6a8fd18245a695fdc3cca38c9da08",
+    "examples/Probes/packages.lock.json": "f811c93618732c9042142202b377cf1f07c797849a9b73124325cb27fa2819f9",
+    "global.json": "d1f1581ce8129ec0c39c7340ae3ebd0a9066d21c88e02a13653732968ca49287",
+    "reference/extended-scenarios.mjs": "b69b06e6a6a836219dbf27f03e6cfd82a8da9157dde0eda84a12970d09c5cef3",
+    "reference/inventory.mjs": "1678a1a658bf60863351b6c395c07f16b21f9f76651cdde12e5e20c339e119dc",
+    "reference/native-specifier-hooks.mjs": "3b7ce37ad5b0e919d9a2db2ad16002ca4a7b04185ddddd6d41b8c79d883f418b",
+    "reference/package-lock.json": "684f5970275f1780f8ccffb89fa4648e04bd332774dcd1ce1f12889d5618b87e",
+    "reference/package.json": "801d75cbc0497f06c13aae701ce81286c61c24ebef0280dcfd6b3c2cfb91abb0",
+    "reference/probes/acceptance-contracts.test.mjs": "4b47b63840d977f85547aade08acdc2b0de35fc2fb5616d922d9b76267e00982",
+    "reference/probes/effects.test.mjs": "8edb4d88e4686a699117acfc12e37b63428134a1a36a702df529bbf274e6779f",
+    "reference/public-review-scenarios.mjs": "6218696e5c2b96d99e6889b94af92b89e039cad864d724ca3bd58caa46754eb3",
+    "reference/run-reference.mjs": "1ea2a60518c0d3f7744e9f465708057a5798a26128c3203e3107d244da58f7ca",
+    "reference/run-upgrade-reference.mjs": "a7ba3731798277520bc7a4b1b7567a19133b032eb90694b89b9aa3ce9d8c035a",
+    "reference/scenarios.mjs": "197d4ef68ac8d6e541ccec89f4cdb3462e3e868f8d92cc4b357ec084a7a7cdd3",
+    "reference/source/effect.tsfrag": "d25604c42767d25c15a470efb15abeea9b1e7834d9139d907b583b09fbd1c32e",
+    "reference/source/execute.tsfrag": "62e3de31631002d98cf29ff955990df6103aa2c47a9670bffccffbe21eb59af8",
+    "reference/source/helpers.tsfrag": "485325ecea7d3c47adf9e6f9d2c62e42c98ccb7fd42145f14937ec3a2fece0ea",
+    "reference/timer-probes.mjs": "eb719b35878395e26987ccd295f161c3070063444c39887712658be6db11bf4d",
+    "reference/upgrade-profile.mjs": "4eba9cdec09c51eeb22925626789a2e93b8a3b6e5f4a7cd9cbe83c74c3b083e5",
+    "reference/upgrade-source.json": "dc651d806110effddb54bd0d7fc984774fe58978f07364d5247ab80081961945",
+    "reference/upgrade-volatile.mjs": "d9bc98147150b27d2b9d3ccdb548f8ce111d762d5fd4b54d459c85eb0e818dcd",
+    "reference/upstream-suite-counts.json": "cdc019ee00d49c6540cfc9e2116804aaa4a614861e8bcc01b4c6347decf79a73",
+    "reference/vitest-composition.config.mjs": "555c06a94e9bbe79452a98a1868a4ea875dc6575fa768efdb3f1e8518955e1b8",
+    "reference/vitest.config.mjs": "c03a8004e32413887aef3261f766c28471287e2a87c718f1ed7c466fe38d669e",
+    "scripts/PackageSymbols/DebugConsumer.cs": "149f762ecac5f340ca06342e3bd148b0125619ffe2eed22e62056a0fb1e17861",
+    "scripts/PackageSymbols/PackageSymbols.csproj": "b84a47fcd8a06299c0133a4107a135075b2aee656d041b59f65aee54ff4bedfe",
+    "scripts/PackageSymbols/Program.cs": "18e1e142ca1798a8b33c6603debe665bd19d9e9ced5be3a4e41c09c3ed301d97",
+    "scripts/PackageSymbols/packages.lock.json": "03eeadc5ef377c17f787ab65f41fb4c8a9c936bb7f7f4171111fdeec8a81cb46",
+    "scripts/application-client-consumer.mjs": "45e406f6dafe4996cd7d0ab234cc64ec6f639473ddc82e9dc496fa3853a65a47",
+    "scripts/build-application-client.mjs": "a7b275fd3b39444a63d840b8936ff4b7fbe6f48c33e9033d4077c08089b7cd22",
+    "scripts/build-client-modules.mjs": "d0640a3aefa7aec81c68a8f4ecf333d102fb13e34fa27f9a1c4a5f744ab77844",
+    "scripts/check-docs.py": "3731a610ac8ae0b68d0ec769f9f9cef2656ea4bfafaf352363a488ff3ed28972",
+    "scripts/client-modules-browser-host.mjs": "668ae18497d3fc6158a55463a266230e46590518efc700747b80519fdf5f5a34",
+    "scripts/format.py": "0297cb7bd58bd5e57844bbe141a27ce67ae3c3ee778918fe242a9bf6050773f1",
+    "scripts/map-launch-tests.py": "22adb9245a6d88f630f6c40a9743053c6a2a717df6e6fe6c27931b24eb4ef739",
+    "scripts/multi-entry-client-consumer.mjs": "4fd3104081710ef827ea06b734e86eb12ed0668507d7b00ef749473d8f6a5429",
+    "scripts/package_http_consumer.cs": "e841e8204aa620bc17511d57ca6343d9e7583348a4688d194b47620e48124819",
+    "scripts/package_inspection.py": "01b727b6d79d951f08e20068f9c0bc2008f51a855d6bd0cf36a021286dc9a668",
+    "scripts/release_artifact.py": "96bc93e5ef5386c3bf57661a5568879d739933c054d3e27cbb65176116e201b6",
+    "scripts/source-archive.py": "7641d2c07af32a4df777a8abfc4ef5c596bb959d0477180ee72fb6425680cca2",
+    "scripts/test-map.py": "a902f45a00e5f224670cf48c0d3aa35516d4a1ba20a0a26908a3492ee64d90cb",
+    "scripts/tests/test_authoring_reuse.py": "da57d002d512b32c9107f081887b918d7470e21a66feb891fa3d320a16c452bd",
+    "scripts/tests/test_format.py": "f19abcff86cc39947d6c22774b0d4822dde4dd42fd386e7f77873671458b800e",
+    "scripts/tests/test_native_platform_results.py": "82cfd22f6bc356a011d8a6a69b57da99cfecbfde127b1f13ed07854c8366bd93",
+    "scripts/tests/test_package_inspection.py": "5a44153eb32d55279cd390a13bf03f978f244d257af16af31742f3e2ffeef46f",
+    "scripts/tests/test_release_artifact.py": "1b1930494780379b8876cef91f6759f9878818f27157c5a060465aec6556545f",
+    "scripts/tests/test_source_archive.py": "df500e577765dddd23eef930dc9cb9ee0f72b911d5a1983a2c183be39c1959ea",
+    "scripts/tests/test_source_results.py": "dad043282c18701fd40d3386e53d6efa220157e1a7d316acb41d60b7b396250c",
+    "scripts/tests/test_verify_upstream.py": "e34c38ea537caf2c4fbe096fc51f286987d6a1d79e9f7cc532daea0170905b2d",
+    "scripts/typert-browser-consumer.mjs": "2bbe5ca20c8aaa57982b6d7b8b3517590c843b7286e968c31bfe4cfe84c81d27",
+    "scripts/typert-client-consumer.mjs": "78cbe497da1e4da590b152f25a749c6475e9d005f971465330afd0c44454826d",
+    "scripts/typert-management-client-consumer.mjs": "e3d5051efdd4ae3bb24e3cf4ab8b27c7f88f0b77f89b1ba057195cfe6cc64563",
+    "scripts/typert-shared-client-consumer.mjs": "1af570a6d0193ac9ff548f4fbcbb47fdfe7f258388454e3aaa659490b0fd09af",
+    "scripts/typert_declaration_consumer.py": "de4d6645c47d0cc8f8db79125684c6cd7b86c9f5f123459ff23db47e0d5ed07b",
+    "scripts/typert_management_consumer.py": "6a26a592757b544cd2a5af32fd3efaac65ce1e4fdaf2061a640f9e78865be7de",
+    "scripts/verify-authoring.py": "0d87f98a08bbd26159b804e298bccb534fb5d402615f91415fce91a3bdbe7159",
+    "scripts/verify-cli-invocation.py": "5070f613d831ee3c11dc2e5a8cbace741247cb03a4f44afdfa2a4e9bb5c9738c",
+    "scripts/verify-client-author-watch.mjs": "1e6ef20e60c9e398b7c45b3215a4715ed35ed250aa199531055b19e91c6f38f9",
+    "scripts/verify-client-lifecycle.mjs": "4ae73629d494b8016678fb34cb9b8c44eb2b84130c0189294c62a5620313b069",
+    "scripts/verify-client-module-types.mjs": "633ee8b38a2aa7ff600f67a45c8914f25a6296f14ca4f182d23ebfdf5b62b351",
+    "scripts/verify-client-shared-modules.mjs": "451fcb44676cb9f5f92fa393052210429638d9f99221c591f7bb74b8e2ced614",
+    "scripts/verify-clr-deployment.py": "eb946a7c2d5a633763b7f5bcddf803af9e5cafdd83ac03bec873a537a34199a2",
+    "scripts/verify-clr-multi-entry.py": "13e3338c4651f8f850db8906a42c189025e65bb973235dd3da27ab1fa6b1e990",
+    "scripts/verify-typert-dotnet.py": "b975c91d873709792060fce4eeffafd421d2d8cc51be775c727c9f6a277d6535",
+    "scripts/verify-typert-optional.py": "002b843702f0470fdaccf2d6b0fa3e425868ae65d0e4cf3e43b4eedc15a47181",
+    "scripts/verify-typert.py": "fb215e6b956153224141016d4c5bd13cc22fce659e92947159cb57d6ed054ab4",
+    "scripts/verify.py": "5f85687547e3e776ee5df572bc34b25f0276fdde72c5459c877c2fec26b7bbec",
+    "scripts/verify_upstream.py": "121c28fe6bbd617dc022f192599cbaeae4a3470f0bfeff63e01e1d4646d6dc41",
+    "src/Cordis.AspNetCore/Cordis.AspNetCore.csproj": "1489b0f09a38b0955554cea49fcd71b01e5737bed08d727b9831558e6b1b20a6",
+    "src/Cordis.AspNetCore/CordisManagement.cs": "f5ff350387850a802faf9b26462b6fd68583668bb301e895e807db9085561e94",
+    "src/Cordis.AspNetCore/CordisRemoteEndpoints.cs": "1a4bc277a191b2eb5a480cc4deb665291bf6169071a07c1112a3dba145162ab9",
+    "src/Cordis.AspNetCore/CordisRemoteMux.cs": "973440dab1a29638c7fb98f0ab93f4c7c44959c355af8c7ddc76275cdcb2185e",
+    "src/Cordis.AspNetCore/CordisServiceEndpoints.cs": "56073a27b4ca6e0c034bfbec4c32e14d328d242e55744d9a531d5d0a2a70339a",
+    "src/Cordis.AspNetCore/README.md": "30904a541d2840e57ad594a0d6d5e6e91d8c2d7fd86ee8617d805ad2e8917e35",
+    "src/Cordis.AspNetCore/packages.lock.json": "1e05898031ace79922bb47d6f481035a6d828efa35a1c5d423f02848972bd219",
+    "src/Cordis.Clr/BundleFiles.cs": "6d573b24434bde5d2d8bb8ffe6e6958330bb235132501ab283f67f0de62bdc98",
+    "src/Cordis.Clr/ClrModuleResolver.cs": "35469645515f318e1dd58ec9ad4fd486d0ed42ed91123f37c0c5a1f188b16816",
+    "src/Cordis.Clr/Cordis.Clr.csproj": "6e8ad6200f212e16da37eac62c04c543c3958a7f1a40a37e46d3591c090c1f1a",
+    "src/Cordis.Clr/DevelopmentBuildProcess.cs": "db869530457b73c20f72edaa9dc7c91c707bafa42130b42e81e866f8ec972063",
+    "src/Cordis.Clr/DotnetPackageProcess.cs": "6a1fffc1bff8a0b41296ddd5d3b844704348b8e606fb35aa92be647e9131b5dd",
+    "src/Cordis.Clr/DotnetPluginToolchain.cs": "d9e54c660ec159d0d342b3945766ddea22fe070918466be8b1128d627d24eb33",
+    "src/Cordis.Clr/PackageProcessLease.cs": "85bc675096069d607e8a575ffc59db45827767b8a0f8458f12ea3cc695e52413",
+    "src/Cordis.Clr/README.md": "651ba8512a249353d663f6987cb5b928e885ee92df9b8ad581a5b6fd5c98d3ff",
+    "src/Cordis.Clr/WindowsPackageProcess.cs": "e35e5dc76261ea6664773335982c28f3f088587f9ff6f4287ba88905216ab33c",
+    "src/Cordis.Clr/buildTransitive/Cordis.NET.Clr.targets": "21624e5f5279a26794ed908d99ab67cdce72651e5014a796524409ffa5239699",
+    "src/Cordis.Clr/packages.lock.json": "245c3292ece18178887b07b484588ea6bc7b25db22eb2b054d21dafe991a5048",
+    "src/Cordis.Composition/ApplicationBoot.cs": "8b401e44ed88a9787c9ce697fe484f5eb49f7c0cdbe853c8764a39736f05dbf3",
+    "src/Cordis.Composition/ApplicationInvocation.cs": "395d98317b97c63eb59eeec0522f3d63023d79ec244d178645274cc3524c17cf",
+    "src/Cordis.Composition/Client/cordis-remote.d.mts": "189a6622e3b556dbd69a733407f0ef70de2feb1203c74a3a104ba3c1f96ed9dc",
+    "src/Cordis.Composition/Client/cordis-remote.mjs": "424ce1db8de690032b687aae772daa567508101633429dcaa05b5c5a137f0afd",
+    "src/Cordis.Composition/ClientArtifact.cs": "cd9df89f8d6392dd32de1156cdcb473833483df8516c310ab6a00b4cf87821c6",
+    "src/Cordis.Composition/ClientModuleCatalog.cs": "224fd09b6277ad6bd3a260f3465245945971f16bbd0a8383d81990cac3bcc49c",
+    "src/Cordis.Composition/CommandLineArguments.cs": "cab2e81187f1e23a22f53cc562079c3a45dd4ed8f48866efd878aff19f304cc1",
+    "src/Cordis.Composition/ConfigBinding.cs": "26ba871f3491181b2a1f4e8b36df1607bcb0d8dc6a988387472d1e10e71c0de4",
+    "src/Cordis.Composition/ConfigObject.cs": "7e6691cbca17aa5575258349ece4aa50b682936cfbce564d576bcc5a82d2dd49",
+    "src/Cordis.Composition/Configuration.cs": "9e4d18ff6559e701b9be7ab4f3e7a2fbefbba7e1ea1b5329522dcdaf34bc6bc3",
+    "src/Cordis.Composition/ConfigurationFile.cs": "10cec1a2ef970d0dcb4200b10b4ce3eb94070b18adeadb00161984cc8a752e9c",
+    "src/Cordis.Composition/ConfigurationMetadata.cs": "b7d605ed00a074ec3ca27b22667383c4426ce7c18dfda04d07be929bc3c5ea82",
+    "src/Cordis.Composition/ConfigurationSchemaDiscovery.cs": "0ba7311c033a500cd5132960fa506446bbc5ebbf036386e539eb2b4fc851c89d",
+    "src/Cordis.Composition/ConfigurationSchemaExport.cs": "3aa0704f5a223be2bdd80dec59db9f70a8a45ebd52d0493d1cf995512e522608",
+    "src/Cordis.Composition/Cordis.Composition.csproj": "92e0cf52463704f689089c4c390bf927e102023a20175815e44ed287b22c7415",
+    "src/Cordis.Composition/DeploymentResolution.cs": "dbb1120d42418c66c6b28a165b993ba499051d58c82b622726e4f771dbda23f3",
+    "src/Cordis.Composition/DshHomePaths.cs": "2dfbcf0fc6d1349a1e56747caa8c4ad30ac5e61c879942e67f33cbee95ef1d7d",
+    "src/Cordis.Composition/DshProfileAdmission.cs": "e10bd2c58d4c5190e5372344507b7da2644e71def6f53a0f5eedbc3b8a91426f",
+    "src/Cordis.Composition/DshProfilePolicy.cs": "aa8f02223d9142a0d1e870d000bde8f1c856a1c545d660c6bfdfbe6747a1c983",
+    "src/Cordis.Composition/DshSemver.cs": "f72afc764b005a79286e6e478a230d21e31749e4ecf195d5cae429dd67b8f15c",
+    "src/Cordis.Composition/FatalLoadGuard.cs": "9fe200926739bf987447c2f82205a71249ab1ec8c068a78409e2b77d26996fe0",
+    "src/Cordis.Composition/Include.cs": "28583ed953b26f91dd4040c02f76cc5ddf4b5ee2127be56ca38bc9ee87f39554",
+    "src/Cordis.Composition/LaunchEnvironment.cs": "a7a1366920be6782a3913a9896e38167cefdd50a3c4a8c095eb6d94018c883fd",
+    "src/Cordis.Composition/Loader.cs": "5458bbf69131eb4543942f20561c96481d466c25e639cbc5a0e809e0c7b3d3b6",
+    "src/Cordis.Composition/PackageOperations.cs": "9a060a9afe8c973e23b261874ac1ae642049485236c3a381a3f8be33b756e116",
+    "src/Cordis.Composition/PatchResources.cs": "deeb408ad668fa23c609e0868d56758b1872e61212b8b1f03970e50147759c12",
+    "src/Cordis.Composition/PluginConfigurationOperations.Edit.cs": "a4fc028c9ea5f7f633a9fa1c703ac419835e2ed38019dbd414bea324c55a918f",
+    "src/Cordis.Composition/PluginConfigurationOperations.Packages.cs": "f3ca9218ca5f050b01fe86b27f021ea62f80ebcc4fdd46f17d3ebad98e10c2bb",
+    "src/Cordis.Composition/PluginConfigurationOperations.Profile.cs": "1c54b70a197091e9ad0290e262be390724fc0c03f88037a50fbc69ba5cd52efd",
+    "src/Cordis.Composition/PluginConfigurationOperations.SchemaExport.cs": "67f8bc2e020d97f4a3fb1caf727a73c78724fa277bb3e2cffe5815d37fa10c85",
+    "src/Cordis.Composition/PluginConfigurationOperations.Settings.cs": "facc7caadd14a947cad9b2cdf340417c4ee3717beb5b2cd49f7e1a9a82e300b6",
+    "src/Cordis.Composition/PluginConfigurationOperations.SettingsDescribe.cs": "c28eb3997ff08a545bde6e4313b8bbe3b44319c23f30e21f35537d0c72fa958e",
+    "src/Cordis.Composition/PluginConfigurationOperations.SettingsForms.cs": "e146ad269d147435f210a77622149508ff237c1f29585142528c971c7ba81330",
+    "src/Cordis.Composition/PluginConfigurationOperations.cs": "ff4a1a34afc3751a4414a07a9ace2716cb2a498a88d1c5636ff1d5583008e1be",
+    "src/Cordis.Composition/PluginManagerRemote.cs": "8a4eb5b56201b72f880fc3e8eb16ac2ff9b0ae8a03aff04300e340331dcbde2e",
+    "src/Cordis.Composition/PluginReplacementFailure.cs": "31343a9bea49c95c04b4694d31b782f368737df1b29db4579e0c43b03013ac6d",
+    "src/Cordis.Composition/ProfileCandidate.cs": "96c8fa008f4e484fd515d34303598003d1b2626861e264d37bd15ea505af3d13",
+    "src/Cordis.Composition/ProfileComposition.cs": "ab4df097ea97ca516181446f1721069bf87a2eb6888926c073ce4c86dd9acda3",
+    "src/Cordis.Composition/ProfileMaintenance.Configuration.cs": "54e51c030c4e1ea10f0cf16b5a44ee6ed14fb119154999e8ca1a50bb01b1e1cd",
+    "src/Cordis.Composition/ProfileMaintenance.cs": "1d6865eb80f4a843fd1f26b8f73ef60a2efb9ee3bbf60a996c1fd20e1c2972fd",
+    "src/Cordis.Composition/Profiles.cs": "7b4862f82b2f0e53a0f2ceeaba5bfdeedc76f5580e3380d90842253313d033e2",
+    "src/Cordis.Composition/README.md": "70e1923af8fb5b08ddc5a1a5128e68b7a5e03b068c052a95e413795513c1802b",
+    "src/Cordis.Composition/RemoteEventAttribute.cs": "8040524097ee09783f118469c4d15496e1964fe34b833040178f7d3e1f8151cb",
+    "src/Cordis.Composition/RemoteEventResult.cs": "24ddb0d0bf2b2a6a17e758ef886640cba770d028b6b62f7b5e8284febb664086",
+    "src/Cordis.Composition/RemoteOptional.cs": "98998f165bdfaca8400098609149e1f061e597b5c16280c73aad500dfe9ac5ca",
+    "src/Cordis.Composition/RemoteResult.cs": "748813dbd047f56a490a0ed43d369bbfee0c3380d408b3c126a51a799010005c",
+    "src/Cordis.Composition/RemoteStreamHandle.cs": "24cfa6e3fcadfd44c254a6333e0104592967857c19b0975c8edf3139a7908dd9",
+    "src/Cordis.Composition/SettingsForms.cs": "db6d68a63c5b4adf89ea5fabe5dac9191be9c24b3af6de76d1164af953f5f716",
+    "src/Cordis.Composition/SettingsRemote.cs": "322b019c470a8a628acd04315a08fbd0f1539d3633d1797480143b13ee661437",
+    "src/Cordis.Composition/StandardRemoteEvents.cs": "090fc8d51611388ecad949e72423c3cef26d3110c7a244c9f92cc54f4d8c8074",
+    "src/Cordis.Composition/TypertArtifacts.Events.cs": "3500a2858d0003e666f9d552c898c7c1a76fb97bb60422edb76151cb255471d3",
+    "src/Cordis.Composition/TypertArtifacts.cs": "66c9f7f35cd1f66fbc58914461e62115bb729024ba455c821327598c2e61d9a7",
+    "src/Cordis.Composition/TypertBinaryResult.cs": "e2b205b5cd05e32f7538e94af15ec0948ecc2203f290f27b2147bc39dfddd13f",
+    "src/Cordis.Composition/TypertCallLifetime.cs": "cde81c99cc3c572cbe835ac9a23db850fa76b099b298706f8a75eabcf18c99d7",
+    "src/Cordis.Composition/TypertClient.cs": "aaa90b72824f7e4942336bf446369695f2c4579257fb17084b31aa4967e3801d",
+    "src/Cordis.Composition/TypertClientRuntime.cs": "ca1d5cf024b9eeb80d80e30f1812a2ca1419fa779139bf2c118f1aaa235b7df2",
+    "src/Cordis.Composition/TypertCodec.Nullability.cs": "7a99a7359404b6b4fb8eec1b986fe490710d1dd2b01e78c6c4c57154c5886672",
+    "src/Cordis.Composition/TypertCodec.StreamInputs.cs": "87eb5ec3300684970b1bd0f9033d083cac7de2fea53a4e915b8a1380e8e75688",
+    "src/Cordis.Composition/TypertConnection.Multipart.cs": "69352ed40ece95ff210e56533d764259efa9d491bd4da25c635c78c7c8fe39ba",
+    "src/Cordis.Composition/TypertConnection.Streams.cs": "2f1f9147bfe383eae7f9eef8eb50173e72fc1a6a7c10234a4f20ea02f56ba2dd",
+    "src/Cordis.Composition/TypertConnection.cs": "c4dd8c1f09c679a5f44b2c6b93176e70403a8d2c1e01c31094ea02b2e00a2bfa",
+    "src/Cordis.Composition/TypertEventProtocol.cs": "9b30c61961d516fa0003bdf623ca905d16700ac26eff0d744287c263e72f1e2a",
+    "src/Cordis.Composition/TypertGateway.Events.cs": "671441514fa408d67d4c1bb1d078789ad229b43cf35648f13a73395a2d7304bb",
+    "src/Cordis.Composition/TypertGateway.cs": "7093ed6d138df500cffd0cfc3b9ef62a028e564cc157c4b597bfff7d4c02729b",
+    "src/Cordis.Composition/TypertHostConnection.cs": "49c4b59daf768f75fbc6dbde90ae4568a71f9dc02025bf05f5b5259dc1e4ced4",
+    "src/Cordis.Composition/TypertJson.cs": "5e42dcaae1a4b28745387ec77e3ea44ba0ee32b7a753bdb04f3714a4fe030d61",
+    "src/Cordis.Composition/TypertLoader.cs": "f90d0dd99bdf3b17cd90ad411d8a6e2b386ec0b79bc18d143098e9e29335494c",
+    "src/Cordis.Composition/TypertProtocol.cs": "b4f5dc1ab81be67a9306ed81ffbd83cd6ce2f96035c99d5e8abb89a84d2e16b8",
+    "src/Cordis.Composition/TypertRegistry.cs": "92a9ca4a6bc33e34614763539425e0e5cb297d7cd4fffbfd3f18b6c0eb76906c",
+    "src/Cordis.Composition/TypertRemoteEventSource.cs": "fca61b643b06ea144b3bfea79f6846c0eccb8161bd009d185eae5cee3853f337",
+    "src/Cordis.Composition/TypertRemoteEvents.cs": "488b43a61fb411eef3befe5455b03957c50407b976eec39dd5448e3523d56a14",
+    "src/Cordis.Composition/TypertRemoteEventsClient.cs": "8fcefc9f9e5c7e447a0a51e774e95c4d37759aed6eb750685ff557d00443bc08",
+    "src/Cordis.Composition/TypertResolvedContext.cs": "69f60815a37f0995647a7e7316226c48cd8bcebccd0e023d3013f89960ef14e0",
+    "src/Cordis.Composition/TypertUplinkReader.cs": "63e402910a61cd0eb3edf941ffc820e00365b394a6f09b57349a13972300211d",
+    "src/Cordis.Composition/buildTransitive/Cordis.NET.Composition.targets": "3191ddcfbf685102c57ad15d27fd23920366694c17b403634665190b13ae9148",
+    "src/Cordis.Composition/packages.lock.json": "2c574712ccfa45b8540a0f6026b79e9c29779339bec51e7e0228774b2e5f6111",
+    "src/Cordis.Core/AssemblyInfo.cs": "bf56036eec0c3e3b7f6e64a36e0badcf44a492a3748e3b9fd853e03de54e7ce3",
+    "src/Cordis.Core/Configuration.Annotations.cs": "0e743d386d71811d1169b5270f5a2d28501e10e87165dd9bdf1247691e315598",
+    "src/Cordis.Core/Configuration.References.cs": "0a269aead9ca33d3e513e71d1c7ce1f46647664b5925081c1aba40004ebcfa2a",
+    "src/Cordis.Core/Configuration.Serialization.cs": "837029ca62bf0faa324290137b98cce28ef4705df8b6837a5d9bad1a5dac0d6d",
+    "src/Cordis.Core/Configuration.cs": "4a52062ebab9c4c8d05b7a4828bd75e1639683bf760f1964f9c44cd6a415cabc",
+    "src/Cordis.Core/Context.Services.cs": "b9729730e9018d49723817b2c23bd5f5816910b9910396dd20007c409fca5eb2",
+    "src/Cordis.Core/Context.cs": "1561d840e8a2b3b02d76c475bea8761eed4c73c648fb2bcdad4613bb5559b8b1",
+    "src/Cordis.Core/Cordis.Core.csproj": "a17d79cf65914f45988fa863a2aaf13e924e79750de4365e5c28087df68451ef",
+    "src/Cordis.Core/EffectHandle.cs": "0e8208f5b4dd7171c6ac52368b2f0b29fee5d6e1b97aff786cdf745cc28c6405",
+    "src/Cordis.Core/EventsService.cs": "0ea79f9cf634197c746c8849a719a1702425b5dd6cad7ea02e7090c8c0ce42bf",
+    "src/Cordis.Core/ExecutionContext.cs": "48b0ea2d6a08381ba996357b8ae8684fc4ac3e5c626259bbfb30b83af0f4f522",
+    "src/Cordis.Core/Fiber.cs": "8c3b2f2b9c3820bf17be057e56f640d3381be490e981ed6654d66f341ff6cad2",
+    "src/Cordis.Core/Logger.cs": "1a937979f26d72cb37796345bb2ac66b34800ec4b495d49eec4327bde4f5f852",
+    "src/Cordis.Core/Plugin.cs": "6835d9bc032fcf1198b00968286425e74dec0d8e5617950ace2302a498e6087f",
+    "src/Cordis.Core/README.md": "799c2d45b1a8edecdc87f3b94e308805ffe360d8055ef3f192bb18ddaf6ce456",
+    "src/Cordis.Core/ReflectService.cs": "be9c11b3ef6688cfbf25de706466949986018b3cc3e4014f4662cd24d25b2033",
+    "src/Cordis.Core/Runtime.cs": "0063aaf047aabcb7996e18048196bcb7890b4ef36a620e687c911c7fdd4236b5",
+    "src/Cordis.Core/TypedEvents.cs": "594b36a687cebbb24b3542c206888ec96ed5fb42b0f4bfe6895b11c4e37f4ef7",
+    "src/Cordis.Core/Utilities.cs": "9fd31f5118265ebb3b2f1a0452ab75f870167d8a10658ce7ddf121cd0ba7a6d3",
+    "src/Cordis.Core/packages.lock.json": "e93ba412087911c9cf3177540421d007ec0c2ec1da8a8ee00f744b79ab096b3d",
+    "src/Cordis.Extensions/ConsoleExporter.cs": "221868438b54b463bdd65523ae4223e8a83d2837676a922f1e0c5ed4f1a4325c",
+    "src/Cordis.Extensions/Cordis.Extensions.csproj": "26e06ca3661d265621550e17575870a42f0127b57291fa1af609f98fcb565586",
+    "src/Cordis.Extensions/ExternalCallbacks.cs": "474127a118e12172ff4c375d0e4eb5baf547967d23a327773c876fadecabc548",
+    "src/Cordis.Extensions/HmrCoordinator.cs": "52f5cfa5136857a12f8faeb9e36d829634cf930b3bb952676403c8213efbe7bf",
+    "src/Cordis.Extensions/HmrDiagnostics.cs": "9fbc9e01c250894f250be57992a358c5edc6fbb072ff9bcd61ca52ac879dfef7",
+    "src/Cordis.Extensions/ProfileSession.cs": "874f24cfd7327734b3f527545c7e979d061ad7943b009d5eb2626aa13e732cbe",
+    "src/Cordis.Extensions/README.md": "87b81f0141f2f1fd22a3540173ab7973e3f777095e3bd1a634b71014267e3526",
+    "src/Cordis.Extensions/TimerService.cs": "dd0f4365e7c019289c4d9a20582a6aef58a069a6ab4bbea741283ad2c79a070e",
+    "src/Cordis.Extensions/packages.lock.json": "e8f5fc330b2ea8111b247f8c34d7ee6f824209f1f4787e5eb634ae829c10be24",
+    "src/Cordis.Hosting/Cordis.Hosting.csproj": "15e5960e0b4ffad2e4cab64324661b4c9c43ab50e8774b40b4d68d47085397ab",
+    "src/Cordis.Hosting/CordisHostExtensions.cs": "0ed21a279e1c38c780a1270ad56998c3d3f37f90d714c0298475b2789cc64c44",
+    "src/Cordis.Hosting/README.md": "462563b9eaa226c9647aa1b1a8584169b19ebedc59ae1b94f820ffa4c024a0df",
+    "src/Cordis.Hosting/packages.lock.json": "c54b22a8dd0d5dcf6aa86ba65bd28fa2097e6033c73f9ec29addc03ea6512566",
+    "src/Cordis.JavaScript/Cordis.JavaScript.csproj": "92ca3e653992e161db4b2582d0f4d49c42b1a98f5b45b71d1a33badac375f190",
+    "src/Cordis.JavaScript/JavaScriptExpressionException.cs": "6eaf77a398f34da397c62083d745fb59937bf222fcdc5531781faf629c672f01",
+    "src/Cordis.JavaScript/JintExpressionEvaluator.cs": "abbef89bdde8976e188d9fd7420f4efd63e66d01bd89fa17600f2545d1a1a371",
+    "src/Cordis.JavaScript/README.md": "894c8e62360b0ec64f5150874ba24043bda142e99d9ed7902362d69fbcba163c",
+    "src/Cordis.JavaScript/packages.lock.json": "b42983e7d66a678072ad98fbc7c795d0b0b8fa6f0f11740ac92a25e46af608e1",
+    "tests/Cordis.Composition.Tests/AssertionClosureTests.cs": "1eab6a73c86401e5e5bff416bea0f040a8759c8f61d19feb282987ca9498ec36",
+    "tests/Cordis.Composition.Tests/AuthoringBootTests.cs": "6d65581b5fd899728cd8aa078d78937d8526591af336a6fc74de1153d51ea4d7",
+    "tests/Cordis.Composition.Tests/BootOriginalTests.cs": "4168700d06db82b247c1b6fec0d25b0032a9d1a08113bcfa2ba9d7d3e3e4def5",
+    "tests/Cordis.Composition.Tests/BootTests.cs": "3d911e7e0fd6c016df84cfb2da1aa746cc92da0c5c3c27cf39b4ab29367b963d",
+    "tests/Cordis.Composition.Tests/ClientArtifactTests.cs": "5664c7d10371284b799035cf0541789f45e1a9208394f3f0142f3ac89ddadc6f",
+    "tests/Cordis.Composition.Tests/ClientModuleCatalogTests.cs": "b96c9088dc08277c02f151611083caf695d34c3fcac2a644df874caa8290dbd5",
+    "tests/Cordis.Composition.Tests/CompositionTests.cs": "8352684c7959eb0294e6c9429ac2eaa5a642d85ec88339e6da35258afc9d0fb8",
+    "tests/Cordis.Composition.Tests/ConfigBindingTests.cs": "fb7a5c67cd5d14b882f4e4c21df3ab8ea342b6817af435f6c58abc821f7f4638",
+    "tests/Cordis.Composition.Tests/ConfigDumpOriginalTests.cs": "c1149e837f603c39311ea391e8ff9825b95e3149bb5853c6f32abbafa1b4fbba",
+    "tests/Cordis.Composition.Tests/ConfigurationDeclarationTests.cs": "097004f9cd33d73b022b2a9b176d12d0c4ab444167e8358f56ac5812bfeded14",
+    "tests/Cordis.Composition.Tests/ConfigurationEditTests.cs": "33051b91778114fadd23005e6fac950801b6118c450f4d0bf9e935de014ae76d",
+    "tests/Cordis.Composition.Tests/ConfigurationSchemaExportTests.cs": "f8f7d7b9ed87c3a5c2c80d938756fb0b7c092db51efe7a9e425322e5589cffea",
+    "tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj": "4a757489b9d73006a0249cf12d76450434f64968a8aedeba0e51adbfb5c2ba14",
+    "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs": "95543c542d37a08fc0ae70396474b614c298c397b495056624a6cd10f92377e7",
+    "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs": "939400a702f06c29d1e753b1785dce3aa04a6989c9e85732178752d1f61f9bb6",
+    "tests/Cordis.Composition.Tests/ExpressionMarkerRegression.cs": "2b10dbae5313c08bd6dd145480ce214427ae3f7014d07690e89e7879ac0ddccc",
+    "tests/Cordis.Composition.Tests/FinalClosureTests.cs": "71ce75ba20d45018f4c8e837adf860ab2aaaef4f655162a975ce3212f780a861",
+    "tests/Cordis.Composition.Tests/LaunchEnvironmentTests.cs": "615dade41734d832198aad49660d3269e524b231b24543fbc01f4c903d31125b",
+    "tests/Cordis.Composition.Tests/LaunchOriginalTests.cs": "71ee6f15f67a50e4f1a6f743a525b83defcfc2c2256366ab40638b224850f993",
+    "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs": "aa20438c7365f243f25a91d99a3b1cdf45fdb776eb32f1d5362a92bf9d9a6e75",
+    "tests/Cordis.Composition.Tests/MaintenanceTests.cs": "c72137e04f542e59fc023b1b0254ec525b8c2964fb9c86a2075dadaa66150ae8",
+    "tests/Cordis.Composition.Tests/PluginManagerOriginalTests.cs": "54c7933eeac335906dcb2a5d8eb5fd06367b2e11e67d74087eac34133f12a85c",
+    "tests/Cordis.Composition.Tests/PreviewTests.cs": "0b35828ab89b556cf4cc2129710acebe41406d86e69b887b8b319f0127cff59c",
+    "tests/Cordis.Composition.Tests/ProductBoundaryTests.cs": "12015425fde472c18ade9a4ff941872a0e26fbd3705406e4e360b971cd92f69b",
+    "tests/Cordis.Composition.Tests/ProfileOriginalTests.cs": "96adb3edfd4791694603b2af161e35fe8ab59a395de8387ec4fa6a3b52ca1528",
+    "tests/Cordis.Composition.Tests/ProfilePluginOriginalTests.cs": "d7430ca7c06c6800c6db031232222fb0965bda099e19263c4d79719f2084f3ff",
+    "tests/Cordis.Composition.Tests/ProfileUpgradeTests.cs": "6c6ead7fa6d98a4c12fd0f3646f2692dbeeaf509299c70ca2966b6c2777efae8",
+    "tests/Cordis.Composition.Tests/PublicConfigurationReviewTests.cs": "c27ac7a41f2415d2dd7469e0684c8d653541f8fd40c3b544d7fddb1897caf27f",
+    "tests/Cordis.Composition.Tests/ReconciliationOriginalTests.cs": "b60a8117c772a3eee959ce69799ed2c60594000e811445d84ea4a332cb6806ca",
+    "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs": "de3a2792c158bf1ebbc23277fee0668d7ad0723ff5c6673a38a0722cdb81751d",
+    "tests/Cordis.Composition.Tests/Resources/invalid.yml": "bb226c2939f279ee806413b3100214434106bc1d8c9b9086b5df25a5e0e8bf42",
+    "tests/Cordis.Composition.Tests/Resources/patch.json": "d86b1c79d1e55be50be0007d48b6083c85ec7f4ce0b3c153a7f0f77735e0e684",
+    "tests/Cordis.Composition.Tests/Resources/patch.yml": "83bf4606cd294f4b1d4f9d16856357def61c27621768a8e38ea174cd97d5bbf6",
+    "tests/Cordis.Composition.Tests/ServiceAuthoringTests.cs": "f67dbe31599ba4e137c13f2aadebc17ae8c23d4d72df694c92516177b8503ee5",
+    "tests/Cordis.Composition.Tests/SettingsControllerTests.cs": "f26a269233522080641bd5df4c147c9fe0418dd5cb7af0e7ed71b4d93171fe50",
+    "tests/Cordis.Composition.Tests/TypertBinaryTests.cs": "d240acff3ee64e826de2fb3b6f6b61ce67e6567870bb7d92df9d2b7c4223de5f",
+    "tests/Cordis.Composition.Tests/TypertGatewayPeerTests.cs": "a26b813146ee43ad5d3b6c93a0d3e870a0c0d155c11d02e928eb1b56e64c3edf",
+    "tests/Cordis.Composition.Tests/TypertGatewayPreparationTests.cs": "48960dcf0e531b52ff09750b34f9c27abda81370dcec5f76a09ace8a53b4ca29",
+    "tests/Cordis.Composition.Tests/TypertRegistryTests.cs": "bda30f763080feec375c4ef9f4bed057e27bdf5767422c6b75bc86df0dee14b2",
+    "tests/Cordis.Composition.Tests/UpstreamRegressions.cs": "636c22210cf3fbb3f19f1c822ebc9dac8765f21712ab1c0f554029aa15f31970",
+    "tests/Cordis.Composition.Tests/VolatileEntryTests.cs": "35d02bce8927281952c2b128de126c3a23d37e0de1cfd78e4f977181c1c9ca8d",
+    "tests/Cordis.Composition.Tests/deployment-upstream-map.json": "cef79e4831cfc23db58f169f7f1f55bd4fe085b72575e9561c537f0b3873571b",
+    "tests/Cordis.Composition.Tests/launch-upstream-map.json": "aedf43a3f39633235bdae4998773648d24607f2f7a3127c3474d8ee60ea2a8fa",
+    "tests/Cordis.Composition.Tests/packages.lock.json": "0c498929cb7669bdc40027c19e39c9ae8ba1bf0f383cfd56bd1bfc22bd7ebd68",
+    "tests/Cordis.Composition.Tests/plugin-manager-upstream-map.json": "7cb0f16b98e46dd8776969488b43705e3fb3e1770b464c97bb8f8ee8ca427884",
+    "tests/Cordis.Composition.Tests/product-boundary-map.json": "153105efdff0dce57f15effaadde340564a1e3bc2d44412b987cebeaa27538ac",
+    "tests/Cordis.Composition.Tests/profile-fallback-upstream-map.json": "557e254ad61f05ba4c7109907ef338ba15705987bc0a6ec4f03b40be8805d5de",
+    "tests/Cordis.Composition.Tests/upstream-map.json": "01dfe6385d6adc73c46f9474a05de6bd1fb00191b9ce22f46c1f87545bf7f56a",
+    "tests/Cordis.Conformance/ConfigurationScenarios.cs": "bf7b896bcb2a8a6626a6378c9f2e440b7eae91289d14767c9acca995eb01f366",
+    "tests/Cordis.Conformance/Cordis.Conformance.csproj": "fd3cea3d074c2b824f5dced3e14c86a5e7683e44868f1ecb12ef65cedec9ba29",
+    "tests/Cordis.Conformance/ExtendedScenarios.cs": "8c2719b94a642e8c54c5551b29c68db893678e1ace3adea294c6fcff3fc4d724",
+    "tests/Cordis.Conformance/PlatformScenarios.cs": "f6200324d5628ad30f9b29afab0507b89c7ebcb18588ead1b1f0142b68649e69",
+    "tests/Cordis.Conformance/ProfileUpgradeScenarios.cs": "f3ee1aaae82a54574b068da1532cd84019c51c5ba9813cc9b7281f9a18263c80",
+    "tests/Cordis.Conformance/Program.cs": "521af856586929c09850c2f40936ebc87d1d7a14b7ae3d92c2d250232d2db38e",
+    "tests/Cordis.Conformance/PublicReviewScenarios.cs": "ae15e28963770a44b58823da5a099b7f70fc049f4439e34bdce578d4432b927c",
+    "tests/Cordis.Conformance/Scenarios.cs": "add8a4dcad1821e48b8c2b8c00d4810885e92499f3e37c398de6c6fba22bdeae",
+    "tests/Cordis.Conformance/TimerScenarios.cs": "3b3c330d6667784314e8a8f77a23fadd572fc842286d22531741b2a61c2431f5",
+    "tests/Cordis.Conformance/UpgradeScenarios.cs": "48718724c411f4b1f8c01fe1e3cad4d4fc3f1a9c71a3c46f8aed390bd9ac94d9",
+    "tests/Cordis.Conformance/UpstreamEffects.cs": "da2fe4581b444bc96c45b6e27a2628fd79b8cf675731f1dca2249b1ac394b8bb",
+    "tests/Cordis.Conformance/packages.lock.json": "1e05898031ace79922bb47d6f481035a6d828efa35a1c5d423f02848972bd219",
+    "tests/Cordis.Core.Tests/AssociationTests.cs": "702928e26abafab4dfe44371e4f0ff705a1f4f3b6b1b7b87c129daab437b1945",
+    "tests/Cordis.Core.Tests/ConfigurationTests.cs": "df11923353bd54893bffade9830e16c9014e3cfa6e6934903d13516a36fb17e9",
+    "tests/Cordis.Core.Tests/Cordis.Core.Tests.csproj": "9c2590ffeb28816603cd271e97ac27bc11802215077cd3b5becf0a0df8802460",
+    "tests/Cordis.Core.Tests/CoreTests.cs": "4a21b5fc5c6891dab8f76170f352077820b3e2430df5c49b63f1dc21839de169",
+    "tests/Cordis.Core.Tests/OriginalEffectsTests.cs": "b2bf41743ead6bcb24cb944394e1eb39b994dca39a20fd0b751b632aec9b4778",
+    "tests/Cordis.Core.Tests/TypedEventTests.cs": "63d3285f4d9537ca381d26ab1aaa1e5f63e3762f8af750e070834e2aed96d1ef",
+    "tests/Cordis.Core.Tests/UpstreamTests.cs": "684efa80da9bee9cfe6ec1754442e20b74335d3014c9c9e2fddcccc883792ea4",
+    "tests/Cordis.Core.Tests/packages.lock.json": "78fd1cd426ce3a5751f9f227620af155897ee65d987ab611892d3b2c34de1243",
+    "tests/Cordis.Core.Tests/upstream-map.json": "daf2a704b797e8ccbe4877cc285bdee1519c5ff98a39fece700850dae3d3d1ea",
+    "tests/Cordis.Extensions.Tests/ConfigurationSessionTests.cs": "037794a4c2e1deaafea3dad7504cb572e3df4b1f5a6143bcb59a532f58727381",
+    "tests/Cordis.Extensions.Tests/ConsoleTests.cs": "0a022d5889e2e118e16cd3b8ff2c81e9ffd3ec8ab502076793ba327c676e114f",
+    "tests/Cordis.Extensions.Tests/Cordis.Extensions.Tests.csproj": "f6cf29d26b4a5d8d8f92263cf3c028a331c9092a8e1f60d04f8d747ee39f4b7f",
+    "tests/Cordis.Extensions.Tests/ExternalCallbackTests.cs": "0dddaf6409427e74fe0b6429585b4a4337b11a5003e9e68c2eee758c1d6829dd",
+    "tests/Cordis.Extensions.Tests/HmrDiagnosticTests.cs": "aa4db5bc1803594c1297172a366c82b8a2d9b38b85e83b040fb462f335affbf7",
+    "tests/Cordis.Extensions.Tests/HmrModuleTests.cs": "97a911c1cbbc8f39ac401db993fb6c0b6c2087c51af53170756dc848d0faf230",
+    "tests/Cordis.Extensions.Tests/HmrReconciliationTests.cs": "23cac2f20c8e18ff88b1054f0d9ec2b114ab6f521bbfd4c60b2c4a3f23ac9108",
+    "tests/Cordis.Extensions.Tests/HmrTests.cs": "5c9fed292c7dcf607e0a42625bd16595cd5a9c0f45c548fbe6057ecdc73ae44d",
+    "tests/Cordis.Extensions.Tests/HmrWatchTests.cs": "85816d8103c12527a524160914a054e6ac9a77c156bda26071b28125cf56ed8a",
+    "tests/Cordis.Extensions.Tests/ProfileSessionTests.cs": "77a2065085463d18ae3823ee6564b714af949e90c45ba27c016c2fb137db3017",
+    "tests/Cordis.Extensions.Tests/TimerTests.cs": "746f2f58ebaa9731b48128e57b221c969c3d5c574149554c4f4d7499120cd8ba",
+    "tests/Cordis.Extensions.Tests/packages.lock.json": "2d58ebdbf393ee55fc85459d643e98c6703796654e38243c10b56a24591f62be",
+    "tests/Cordis.Extensions.Tests/upstream-map.json": "3287f1be8b06d7f5051939698a59643cde019475702c1c845d0aeeed489ac034",
+    "tests/Cordis.JavaScript.AotProbe/Cordis.JavaScript.AotProbe.csproj": "2fd58d14528e280489301f509cca244b186bd45c30e26980c6e2baf025cc1b2c",
+    "tests/Cordis.JavaScript.AotProbe/Program.cs": "6551c16a90a252843693732299e69a40dd8d25e599b742b50abc8734f48ee0c4",
+    "tests/Cordis.JavaScript.AotProbe/README.md": "eaaacf4a25ee7f2a8d8b80a44918f9e83d8d51152d91c2591d31a65a6a0a1079",
+    "tests/Cordis.JavaScript.AotProbe/packages.lock.json": "9157a489c034c96e2cb9d7016a788778dce0cc7a3810553bf75fb735285f5f41",
+    "tests/Cordis.Platform.Tests/BootCollectionTests.cs": "a5c247256b9712c27e29859aaa383ff7925995574791021bccff1dc54d9808db",
+    "tests/Cordis.Platform.Tests/ClrTests.cs": "4e764e343c3bb86ca92516159f7bf7ef45ef54672864b496fcbb92712649c32c",
+    "tests/Cordis.Platform.Tests/Cordis.Platform.Tests.csproj": "0fc584585368bacd9b50992acc2973cf142f0270ece555b7d93508567e4b7d40",
+    "tests/Cordis.Platform.Tests/DevelopmentBuildProcessTests.cs": "aedc7535f30bc8f07e399b0e27c8b739c208dced8e59597ebbd62614ff39b2da",
+    "tests/Cordis.Platform.Tests/DshHomePathTests.cs": "0916fd50d0b6999379bedf5b1a47e49d06590fc55157164464797a63fdf66b94",
+    "tests/Cordis.Platform.Tests/EventDeclarationTests.cs": "62fd7dad9981c25e44103c5c4eac1723cd1b4acd2dc288ffbb8650ebcdd5f6e5",
+    "tests/Cordis.Platform.Tests/HostAndJavaScriptTests.cs": "75c5d092ab1fadc4485e7321c7958fcc821e7c5cd63df3486a6919456e45aa2a",
+    "tests/Cordis.Platform.Tests/ManagementTestHost.cs": "5ef9db54250eeaf9ae15ead6a3c4cb234d2d411a2936540de072bb1424c8936d",
+    "tests/Cordis.Platform.Tests/ManagementTransportTests.cs": "50c2e11659af59cdddb851a355e8352f23aeab36de269b41668174d036611115",
+    "tests/Cordis.Platform.Tests/OnlineReplacementProbeTests.cs": "002d881fa8624d20704b89bd2a86c704b9e413de36e2f34e5bea94c0b6fc5f31",
+    "tests/Cordis.Platform.Tests/PackageConcurrencyTests.cs": "e4b796bd7edc2d30cd4db2943975e61c6ff38f889d7a8116c665ca9b38bfb795",
+    "tests/Cordis.Platform.Tests/PackageManagementTests.cs": "0529ca104081854b8947623c9cae815d08722679dbe8fecaa1b0cd81bff7de5b",
+    "tests/Cordis.Platform.Tests/PackageProcessTests.cs": "8f5ef21e2c4fde4e547303b0c026890bf8e39f3a611c35f6f2b47f1f04313792",
+    "tests/Cordis.Platform.Tests/PackageUpdateTests.cs": "6fbaf67ca8a86ce8f431fef70270160c7dfd6d7264768abe39bb5d00fc53d4df",
+    "tests/Cordis.Platform.Tests/ProbeDeploymentTests.cs": "d51e11ea357eef6ec3ec80a1bdb68499a131c1b356f7e2387748324ea887f946",
+    "tests/Cordis.Platform.Tests/RemoteCarrierTests.cs": "abd513183f70b25d6c90a54a461fc33eebc095d3e1f0e2cc8d59f931f414a6da",
+    "tests/Cordis.Platform.Tests/RemoteEventsTests.cs": "e6c06048ff3d743f40b6b67c0c67e133ada0f106e615e5b0c27f070ef4934da7",
+    "tests/Cordis.Platform.Tests/ReplacementHostTests.cs": "d40889309aac4f1dc416fcf40f1662b0beb7ba4a4e8f983ae5abb8d3b78ebf1a",
+    "tests/Cordis.Platform.Tests/packages.lock.json": "6cfcba363322e8fef74762682411653261f9788d5e54345809e9ce32000145e9",
+    "tests/fixtures/ClientModuleBrowser/Host.cs": "89982bbd3b0f5af3e7a6c65ce691cd32fc91df7e3b79048f4dedfeb1a6fcb177",
+    "tests/fixtures/ClrDeployment/AspNetHost/AspNetHost.csproj": "c07e3d8b1de9a185f76fb95245dcaacb17877791a64ed4e863a675536ae36064",
+    "tests/fixtures/ClrDeployment/AspNetHost/packages.lock.json": "b2472106e88d3c67cdf25c32aac6ab14eb1da5237092022cbcc10888e5da9d79",
+    "tests/fixtures/ClrDeployment/AspNetPlugin/AspNetPlugin.csproj": "e1f7612c540e2af76b4a2c75bc58ad4477faa80abe8dc73cdce75acd1fcf4b62",
+    "tests/fixtures/ClrDeployment/AspNetPlugin/Entry.cs": "b2057abacbb3ef2a4c5603826c94cdd4ea16d3aa90b70aa028f0ceaf3f21411a",
+    "tests/fixtures/ClrDeployment/AspNetPlugin/packages.lock.json": "b2472106e88d3c67cdf25c32aac6ab14eb1da5237092022cbcc10888e5da9d79",
+    "tests/fixtures/ClrDeployment/Host/Host.csproj": "5aca5e85cfad26531a1734f824a69c8a052fbb45dd37e13c1acdd8e9fb4a8864",
+    "tests/fixtures/ClrDeployment/Host/packages.lock.json": "b2472106e88d3c67cdf25c32aac6ab14eb1da5237092022cbcc10888e5da9d79",
+    "tests/fixtures/ClrDeployment/HostProgram.cs": "36ee1bab403de17e790315d68e8e753362284ad4512d9cf7e4728fd22a8c89fd",
+    "tests/fixtures/ClrDeployment/Plugin/Entry.cs": "ebfe569ac3b8e0f954fbf3f713fb21bacc7c1c6f73eab2e6b0ea2f945a3d5d9a",
+    "tests/fixtures/ClrDeployment/Plugin/Plugin.csproj": "e03e8d4e29e2b6bc4247a551e6b4d223ae4be226db6543875ce3e2ea28f05e18",
+    "tests/fixtures/ClrDeployment/Plugin/packages.lock.json": "b2472106e88d3c67cdf25c32aac6ab14eb1da5237092022cbcc10888e5da9d79",
+    "tests/fixtures/ClrMultiAssembly/Bridge.cs": "cc2bc979936a4096e22c3fafcd5a1b2092dadff645e10243ed1bcb425edd4f2e",
+    "tests/fixtures/ClrMultiAssembly/Consumer.cs": "c6b84ac5e4468bb2862bf56a9347985fb3db57a614f68b6bf7979474121d2ba5",
+    "tests/fixtures/ClrMultiAssembly/ManagedEntry.cs": "47107a70131ddd14ba58954ae2e3f19b58d7e821b5d244169279e74c20d59119",
+    "tests/fixtures/ClrMultiAssembly/NativeEntry.cs": "4d821d2dfc3e7171ec0cf77d0d5d8a1c4277c86a3f0ce025f628a00d7efb3733",
+    "tests/fixtures/ClrMultiAssembly/Private.cs": "be1e77c41a72a167bb8eaaefc2e2fceb456979d49950a009f7ef318fbe214179",
+    "tests/fixtures/ClrMultiEntry/Consumer.cs": "6a6f5b90b4ebf20a96d99bdb57c142eb90d4fc74adf2130b4e46e05b95b207cb",
+    "tests/fixtures/ClrMultiEntry/Plugin.cs": "d7673d021f24ace4302dd987324d98a8af5d626021cb484dca4f49814590d7df",
+    "tests/fixtures/DeclarationModel/ArrayLabels.cs": "bb7392d6d7353cfbd04f85cad35008e1ccb861f0d365be92a9bb7be50132f823",
+    "tests/fixtures/DeclarationModel/Author.cs": "db644947558ec8e5ebf02afc74d6c98a66eacdb241bd2f1ab6bf994ebe70be3d",
+    "tests/fixtures/DeclarationModel/CatalogConsumer.cs": "e8ef1a69b44c078ae877644c8f3f604aea22bfe72f7687c944ce202ad5fa166c",
+    "tests/fixtures/DeclarationModel/DataAuthor.cs": "6a3d396e1de7dc449658f7c6af11291f75d6ddf7d7192b780eafc53549ff143c",
+    "tests/fixtures/DeclarationModel/DataConsumer.cs": "a20e0896ec8ba7d6b1449a81b10b32a98a0820fd8f08705f7671519010f26028",
+    "tests/fixtures/DeclarationModel/External.cs": "10253ec8270586491ee49cb0a2d390ab5a31099d0fee5504ca09f30194ebbf43",
+    "tests/fixtures/DeclarationModel/GeneratedNeighbor.cs": "1212711aca30afc14f9ecbbe72b48bd8fd5a01e7a27fe72a30f49f2cfd16694b",
+    "tests/fixtures/DeclarationModel/InvalidRoot.cs": "b593c453cd9a7a73feca24af83ce6d30d3c493b38f94f1fbe02d564947b7eada",
+    "tests/fixtures/DeclarationModel/ReadonlyHostConsumer.cs": "c0e2914a25d7c5dff42155a6ace22e11942c51abb99752415bb2f9722d0013ed",
+    "tests/fixtures/DeclarationModel/ReferencedConsumer.cs": "1eee3358b7f8f14f7ed55a566daedd66cb2246173428accc5461b58f5cdaddde",
+    "tests/fixtures/DeclarationModel/ReferencedRemote.cs": "6a0731914b32986a6f26ed1113a39a805d00cc89c37aef496517a873c3a25368",
+    "tests/fixtures/DeclarationModel/ReferencedRemoteConsumer.cs": "1d499756a40cecc18d50f6396b6b28cbf1586271216c3fbc823cdd42b22d48cd",
+    "tests/fixtures/DeclarationModel/ReferencedRemoteHost.cs": "b8e9d5ca79a02f29f8ca5ee91d5751c77496a1a80d21786f5d8a4640fda69486",
+    "tests/fixtures/DeclarationModel/SharedAuthor.cs": "e5bc4089e28edc313ab1bef4a56793c68990a871aec2dc64c55932cbd6d7ba44",
+    "tests/fixtures/DeclarationModel/SharedClient.ts": "5c0680879230711d80af57f355f45e707f8c41fac4c7780ea4da555177a812e6",
+    "tests/fixtures/DeclarationModel/SharedConsumer.cs": "51481dd3fe917e07880cc71960a84bb7215a0095064327bd0ff96ed56db78c03",
+    "tests/fixtures/DeclarationModel/SharedHost.cs": "28b94658fd375121b798b32c44141c9e926e9feef4a97b015905cb6223950bab",
+    "tests/fixtures/Dependency/Dependency.csproj": "c8f021236d1fd9ed3d59f4cdb690615650912eaa6eb5e0abe520b72c4c0d6fb5",
+    "tests/fixtures/Dependency/PrivateDependency.cs": "f524ecffd738324b23a0e066baa60b0f77265b397cbb983f3f884e3b2d8fe190",
+    "tests/fixtures/Dependency/packages.lock.json": "03eeadc5ef377c17f787ab65f41fb4c8a9c936bb7f7f4171111fdeec8a81cb46",
+    "tests/fixtures/EventDeclarations/Author.cs": "8430889459bd2dc835e9ee291e357308e748f14a8456266a1f0243d557146418",
+    "tests/fixtures/InvocationConsumer/Module.cs": "6b8d03ff9191be4e8e1875c1e5b3ca0a1d2210d1ac4dc5b323e80c73d7015fc2",
+    "tests/fixtures/ManagementDotnet/Client.cs": "4130221831f57b48cddf04215ca114f5fb9e6704415980b1c026185d026a8c98",
+    "tests/fixtures/ManagementDotnet/Client.ts": "5128795a906baaac75b25dcc7080b0c6d785aef8b27c977f1abdd4581a8e1536",
+    "tests/fixtures/ManagementDotnet/Host.cs": "7958ea4bb9ba641fd7ec04693ea4e370d4182f045a18787bac9ba22829deaeea",
+    "tests/fixtures/PluginBad/PluginBad.csproj": "69a3019d13b92388ae29e7f0b508cff44b3390a708ea8dad93b62335ac010ee4",
+    "tests/fixtures/PluginBad/packages.lock.json": "63e9e37833dd0df9907a7e29cfcf0d72f25f4e3dc3383a4d6057f9dee0c917f8",
+    "tests/fixtures/PluginEntry.cs": "bd0cbc89ad712e19a37e47c08ebcd8e3d33695d20ba5f2597410ac282deb54e5",
+    "tests/fixtures/PluginV1/PluginV1.csproj": "7ada870a53e94dcce881889ebdbe04390444e371551412605e19576d962842c0",
+    "tests/fixtures/PluginV1/packages.lock.json": "63e9e37833dd0df9907a7e29cfcf0d72f25f4e3dc3383a4d6057f9dee0c917f8",
+    "tests/fixtures/PluginV2/PluginV2.csproj": "d0c62f3a66423dd95d31c414e13f1745e169ba91daa67e267e8bcc56a2055875",
+    "tests/fixtures/PluginV2/packages.lock.json": "63e9e37833dd0df9907a7e29cfcf0d72f25f4e3dc3383a4d6057f9dee0c917f8",
+    "tests/fixtures/ProbeEntry.cs": "7266f55d2b2eb7506bb7d86c9ec44f082eb7de8e6bde00dd274c794c13eff8ca",
+    "tests/fixtures/ProbeV1/ProbeV1.csproj": "1db43f7848783878d05cec55fc177169be23ffdfce4aba44b1b0900218d9da67",
+    "tests/fixtures/ProbeV1/packages.lock.json": "b9fd6b20601fa3a9c8a309443e6a42dc2fb4de1622409db5b00f832722f96f4f",
+    "tests/fixtures/ProbeV2/ProbeV2.csproj": "86a42e9f9c208f78b409fb1edcecd051a6788c40bb2e057fa9865b8f659d7962",
+    "tests/fixtures/ProbeV2/packages.lock.json": "b9fd6b20601fa3a9c8a309443e6a42dc2fb4de1622409db5b00f832722f96f4f",
+    "tests/fixtures/SettingsDotnet/Author.cs": "5ed23437807395c72d459ea302fa4fe2acd45fab16c28d7d93ba264cbaec8322",
+    "tests/fixtures/SettingsDotnet/Client.cs": "cbf416686e4121913d880bbaf1a653d731d41dc4a6acb870aa6e34dbcaf3029b",
+    "tests/fixtures/SettingsDotnet/Host.cs": "330f34ec639e546e8780bd427763b8e7c49afb176f890855e77a9f43519bc371",
+    "tests/fixtures/SettingsDotnet/ProjectionAuthor.cs": "3a246019c6e43ab2d9e4c27420d8274288ddd56e6059e377b3b4e010ac6dc522",
+    "tests/fixtures/SettingsDotnet/ProjectionCaller.cs": "163cb806f022273aee830b68166513bdc10417b9a601defcb3cf8a2bb922671f",
+    "tests/fixtures/Shared/IVersionedService.cs": "1b145e0de89c736657d5ebca0df12488e31792205bd5f2d041880a8389d37390",
+    "tests/fixtures/Shared/RetirementProbe.cs": "370f2283cffc0c6887d7b9d5bee8439065b76a3ebf6ab463cd2b1eb64729419a",
+    "tests/fixtures/Shared/Shared.csproj": "c8f021236d1fd9ed3d59f4cdb690615650912eaa6eb5e0abe520b72c4c0d6fb5",
+    "tests/fixtures/Shared/packages.lock.json": "03eeadc5ef377c17f787ab65f41fb4c8a9c936bb7f7f4171111fdeec8a81cb46",
+    "tests/fixtures/TypertConsumer/Author.cs": "d5b1552c95e4e31f710388116f019bc9770bdfabd68682e8ecfac59475982334",
+    "tests/fixtures/TypertConsumer/Consumer.cs": "c14ae85f9e4e1c1f939751e172015c29d72cfed3ac7131a8e56b8ea8deb0578b",
+    "tests/fixtures/TypertConsumer/LifetimeCases.cs": "f2ffeabdca9508190818ce60cb64312b6ea3b679e05e6af5e5c6d781941f6a2b",
+    "tests/fixtures/TypertConsumer/TupleContract.cs": "b88110abb4e922aaec8494e252cc4ef839a58032b7e11c24d24a15cfba4d1627",
+    "tests/fixtures/TypertOptional/OptionalAuthor.cs": "17762358b6cbb1735ad089845aba1d5cb702931098b41fef644e206c0d30569c",
+    "tests/fixtures/TypertOptional/OptionalConsumer.cs": "9fac53f4775067792f9ce0b2821d9063b110c6cb61b67de05c1607574d809f0c",
+    "tests/fixtures/resource.txt": "f6aa91c7340315002b6bf57c3ab986124ebd4391ee1d380751d8a03644a1ef07",
+    "tools/Cordis.ApiCheck/Cordis.ApiCheck.csproj": "94152f0e043d09af3343d4cee9951e9a12cb8c1cb9a9e0056c3e078439e7b9e0",
+    "tools/Cordis.ApiCheck/Program.cs": "2706948dcca00f7f8a3120fa2be3401a90497497f6a9656b003b432eb430a526",
+    "tools/Cordis.ApiCheck/packages.lock.json": "2676d2567a66850da857a79a33a4a055bf2d80f5b9ec53c3e101b653f7c2a4eb",
+    "tools/Cordis.Cli/ApplicationCommands.cs": "a2fdfe2a69bd7013ca32e766627a6a3cde204bcff7187f69f724243c134dcd5c",
+    "tools/Cordis.Cli/ApplicationReadiness.cs": "f4413905995a77b779a040043c991a62c683809afac3c3627332bc719a8e1026",
+    "tools/Cordis.Cli/ApplicationShutdown.cs": "24c8d3ab952d8e8637d83d5263451d176867d5eff9ebfbc5bc103b76ed3507b5",
+    "tools/Cordis.Cli/Cordis.Cli.csproj": "16cb0fde8194abeef35fb8aa5f4b57fca16e619d890f30c01113b8ecc8b9a114",
+    "tools/Cordis.Cli/ManagementCommands.cs": "cb3004c0317f0b55281bd2efab6a65a773b1aad2579cb840d4517359b18c5308",
+    "tools/Cordis.Cli/Program.cs": "3d7c2a9aefd4b1a41cbcc1722dba6667895d4e3dd0d740b02c7fcd01f382aee1",
+    "tools/Cordis.Cli/README.md": "941da4af5830e512012f2c843a5161b1de43a56618af87a7c3de708158011833",
+    "tools/Cordis.Cli/packages.lock.json": "5a9b4d5820b1b718d672a353a98e64b27c96fb415145b273fd244d941b24409b",
+    "tools/Cordis.ClientAssets/Cordis.ClientAssets.csproj": "95f89eeed48a7514faa2ab38a0e5c1bf3e0c1cd250647d188620f8e1af6e0a94",
+    "tools/Cordis.ClientAssets/Program.cs": "2c7d5f16b7b89af76a283cbd409502faefa0f03fc64fa49588e25b4ddbcc181b",
+    "tools/Cordis.ClientAssets/packages.lock.json": "245c3292ece18178887b07b484588ea6bc7b25db22eb2b054d21dafe991a5048",
+    "tools/Cordis.Typert.Compiler/CompilerRunner.cs": "bf1894f6bfad6fc3c3614df92aa067d3dac077a750c0c49805380307e73220f8",
+    "tools/Cordis.Typert.Compiler/Cordis.Typert.Compiler.csproj": "e0dff60c59532261fdf28a5ac615c35c570c8d3689863ff01407ad63356f1850",
+    "tools/Cordis.Typert.Compiler/Program.cs": "23df5d7a517e503537366bf24898c83a5c9e32e8a1034e1213056f50614acc27",
+    "tools/Cordis.Typert.Compiler/packages.lock.json": "03eeadc5ef377c17f787ab65f41fb4c8a9c936bb7f7f4171111fdeec8a81cb46",
+    "tools/Cordis.Typert.Generator/Cordis.Typert.Generator.csproj": "384b349b690f08c7db372060887b37ecede6b99abb65ea76cf82c9560161a07c",
+    "tools/Cordis.Typert.Generator/EventGenerator.cs": "97c835f04f3adb5ebccacedc4bd11b29c7ea4c41e003a353069040d371b99aab",
+    "tools/Cordis.Typert.Generator/Model/DeclarationAttributeProjection.cs": "d3c0d989e2563c5b44649d12cb56c4f0ca83d64ff646b8d651a45aa8c5a9c0f4",
+    "tools/Cordis.Typert.Generator/Model/DeclarationConstantEmitter.cs": "39671f3990fb22b8ae3c01853cfe9726849a672d7a50d3a7cf3ed74e091c40b3",
+    "tools/Cordis.Typert.Generator/Model/DeclarationDataProjection.cs": "a8553a479412132d9751caeafe687efc9c395898f3e7858450305be09221fdf0",
+    "tools/Cordis.Typert.Generator/Model/DeclarationEventContract.cs": "3e20744e27fc3eafc86988e5f27b62fb4c273385863b521498613f7341955f10",
+    "tools/Cordis.Typert.Generator/Model/DeclarationModel.cs": "dff3724f2615f5b825bdfcaa235b9bca6c916e080f85ded5952c4d127daf4ed0",
+    "tools/Cordis.Typert.Generator/Model/DeclarationModelComposition.cs": "090966b0aede27a4372aff7b4ce490aebfb5f80672a5c40d868f548b286d76ef",
+    "tools/Cordis.Typert.Generator/Model/DeclarationModelConformance.cs": "e9e984cb4c48adbf7e2f7439010c485a90ff8aa22c4b0403210ac63e7be94dba",
+    "tools/Cordis.Typert.Generator/Model/DeclarationRemoteContract.cs": "b210d5bd056041d4fed980a4bd5721db3ae3f7f99a54fbf42998eda8e339b61e",
+    "tools/Cordis.Typert.Generator/Model/DeclarationRemoteProjection.cs": "a2ca9b65735469713551b58df18988ccd3d518cd07ef24d956ca37667fe23a44",
+    "tools/Cordis.Typert.Generator/Model/DeclarationWireProjection.cs": "a9f5f13487ba9032576341acb598aa288130395e9d074a51f8da993597cc0251",
+    "tools/Cordis.Typert.Generator/Model/DotnetProjectionEmitter.Events.cs": "536ffa24b2d753e5f1e19af94aa11cebce1b3a3be8392283ca5afa364dccc215",
+    "tools/Cordis.Typert.Generator/Model/DotnetProjectionEmitter.cs": "4e942d1d486abc0df8ef56e2dfdb29593c0234e355b5273f2dc4e7f71a1f8c7f",
+    "tools/Cordis.Typert.Generator/Model/NativeModel.cs": "89a67840a6558151b9554fed39c58970e9a25f2f8668906c107ff20b89a70a83",
+    "tools/Cordis.Typert.Generator/Model/NativeXmlDocumentation.cs": "6e22176979e453f7bf5036dc32566fc99d56c738c5722f8bd5f66b4b39fd98bc",
+    "tools/Cordis.Typert.Generator/Model/NullabilityProjection.cs": "ec9ca6c43708297b970a039d328c2bf3685e0ce75db80247d5f425710e0b97a9",
+    "tools/Cordis.Typert.Generator/Model/SourceContractReader.Declarations.cs": "0bbec7dbaf5045bb21d560c749140479fedee837b9c32912995d67eee32c55fa",
+    "tools/Cordis.Typert.Generator/Model/SourceContractReader.cs": "781d9353bbfcdedb3a42000a6dcbbfd35e77c0a7c0698d6883ef8358d265f79b",
+    "tools/Cordis.Typert.Generator/RemoteGenerator.cs": "8f25a7ae831e3bc3306b532a21c9e05b64d28fb48d2a6e02647df8799f896767",
+    "tools/Cordis.Typert.Generator/packages.lock.json": "03eeadc5ef377c17f787ab65f41fb4c8a9c936bb7f7f4171111fdeec8a81cb46",
+    "upstream.lock.json": "96eda8e1416daa87d7e9148385ed0a2525b3f7da7f4ebd91243c3c46dda231a7"
+  },
+  "generatedConsumers": {
+    "status": "requested-checks-passed",
+    "steps": [
+      {
+        "name": "declaration-external-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-author-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-author-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-author-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-author-cold-rebuild",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-artifact-only-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-selected-sdk",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-direct-baseline",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-return-annotation-source-drift",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-extension-receiver-source-drift",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-method-default-source-drift",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-null-array-source-drift",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-null-array-named-source-drift",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-duplicate-signature-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "declaration-malformed-declaration-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "declaration-first-invalid-root-build",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "declaration-first-invalid-root-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-generated-neighbor-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-catalog-cold-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-catalog-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-catalog-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-catalog-cold-rebuild",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-catalog-consumer",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "declaration-tampered-identity-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "declaration-unknown-root-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "declaration-nonpublic-root-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "declaration-nonpublic-container-root-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "declaration-remote-emission-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-author-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "ordinary-data-contracts-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "ordinary-data-contracts-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "ordinary-data-contracts-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "ordinary-data-contracts-cold-rebuild",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "ordinary-data-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "ordinary-data-caller",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "shared-declaration-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "shared-declaration-host-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "shared-declaration-caller",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-extract-context-declaration-missing",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-context-declaration-missing",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-context-lookup-type-mismatch",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-context-lookup-type-mismatch",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-context-wire-collision",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-context-wire-collision",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-private-marked-method",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-private-marked-method",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-abstract-marked-method",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-abstract-marked-method",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-extern-marked-method",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-extern-marked-method",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-bodyless-marked-method",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-bodyless-marked-method",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-empty-json-context",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-empty-json-context",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-authored-json-metadata",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-authored-json-metadata",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-metadata-context-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-extract-external-metadata-context",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-external-metadata-context",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-extract-internal-service",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "saved-remote-refuse-missing-implementation",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-refuse-unknown-property",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-first-refused-build",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "saved-remote-first-refused-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "ordinary-data-refuse-dataexpression-refusedjson",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-refuse-dataexternal-refusedjson",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-refuse-datareadonly-refusedjson",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-refuse-datawirecollision-refusedjson",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-refuse-dataoptions-dataoptions",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-refuse-datachild-refusedjson",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-refuse-catalogservice-refusedjson",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-msbuild-refusal",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "ordinary-data-failed-build-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-selected-sdk",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-author-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-contracts-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-contracts-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-caller",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-contracts-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-host-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-caller",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-source-change-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-changed-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-changed-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-changed-caller",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-missing-model",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-remote-failed-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-remote-cold-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-reference-change-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-changed-contracts-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-changed-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-changed-caller",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-refuse-missing",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-data-refuse-conflicting-source",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-data-refuse-reference-identity",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-data-refuse-reference-root",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-data-refuse-reference-generic",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-data-refuse-private-json-include",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-data-refuse-dictionary-key",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-data-msbuild-missing-model",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "referenced-data-failed-build-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "referenced-data-cold-rebuild",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "event-author-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "event-author-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-pluginManager-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-plugin-manager-changed-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-alpha-changed-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-alpha-nested-client-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-host-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "standard-management-jit",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "author-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "author-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "unrelated-declaration-change-accepted",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "valid-stale-model-method-name-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "valid-stale-model-service-type-name-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "model-only-contracts-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "contracts-incremental",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "contracts-clean",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "contracts-cold-rebuild",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "projection-author-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "selected-sdk",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "numeric-model-only-contracts-pack",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "primitives-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "primitives-model-project",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "nullable-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "nullable-model-project",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "readonly-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "readonly-model-project",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "collision-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "collision-model-project",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "recordStruct-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "recordStruct-model-project",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "optional-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "optional-model-project",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "readonly-host-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "readonly-host-caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "readonly-host-caller",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "helperCollision-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "helper-model-only-contracts-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "helper-JsonCollision-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "helper-CarrierCollision-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "helper-ClientCollision-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "helper-ArgsCollision-rejected",
+        "exitCode": 1,
+        "expectedFailure": true
+      },
+      {
+        "name": "optional-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "nullable-source-extract",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "projection-caller-jit",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "author-package-publish",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "host-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "caller-build",
+        "exitCode": 0,
+        "expectedFailure": false
+      },
+      {
+        "name": "typed-settings-jit",
+        "exitCode": 0,
+        "expectedFailure": false
+      }
+    ],
+    "nodeCommands": [],
+    "managementTypeScriptCommands": [
+      {
+        "name": "standard-management-typescript",
+        "exitCode": 0
+      }
+    ],
+    "packageReferencesOnly": true,
+    "providerImplementationReferencedByCaller": false,
+    "aotRequested": false
+  },
+  "generatedConsumersReportSha256": "cc58dbf16eafbc386cfda3d2c5117b4b81dc11180458d1c1693c1b35a6bcf02d"
+}

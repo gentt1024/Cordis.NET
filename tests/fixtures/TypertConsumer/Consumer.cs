@@ -84,6 +84,8 @@ catch (ArgumentException)
 
 Directory.CreateDirectory(args[0]);
 await File.WriteAllTextAsync(Path.Combine(args[0], "remote.mjs"), artifact.Module);
+await File.WriteAllTextAsync(Path.Combine(args[0], "cordis-remote.mjs"), TypertClientRuntime.Module);
+await File.WriteAllTextAsync(Path.Combine(args[0], "cordis-remote.d.mts"), TypertClientRuntime.Declaration);
 await File.WriteAllTextAsync(Path.Combine(args[0], "remote.d.mts"), artifact.Declaration);
 foreach (var (name, contract) in TupleContract.ClientContracts(contribution))
 {
@@ -121,10 +123,19 @@ if (args.Contains("--serve"))
     builder.Logging.ClearProviders();
     var app = builder.Build();
     app.Urls.Add("http://127.0.0.1:0");
+    TypertHostConnection remoteConnection = null!;
+    await root.RunAsync(owner =>
+    {
+        remoteConnection = new(owner, gateway);
+        owner.Provide("connection", remoteConnection);
+        return Task.CompletedTask;
+    });
+    app.UseWebSockets();
     app.MapCordisRemote(
         "/remote",
-        gateway,
-        (_, endpoint) => Task.FromResult(endpoint.StartsWith("sample/", StringComparison.Ordinal)));
+        remoteConnection,
+        (_, endpoint) =>
+            Task.FromResult(endpoint == "remote.mux" || endpoint.StartsWith("sample/", StringComparison.Ordinal)));
     await app.StartAsync();
     Console.WriteLine(app.Urls.Single());
     Console.Out.Flush();
@@ -253,7 +264,9 @@ using (var cancellation = new CancellationTokenSource())
 
 var binary = await gateway.InvokeAsync("sample/Binary", Json("{\"text\":\"bytes\"}"));
 Require(
-    binary.Ok && System.Text.Encoding.UTF8.GetString(binary.Value!.Value.GetBytesFromBase64()) == "bytes",
+    binary.Ok && binary.Value!.Value.ValueKind == JsonValueKind.Null && binary.Attachments.Count == 1 &&
+    binary.Attachments[0].Path.Count == 0 &&
+    System.Text.Encoding.UTF8.GetString(binary.Attachments[0].Bytes.Span) == "bytes",
     "Native binary projection failed.");
 using (var cancellation = new CancellationTokenSource())
 {

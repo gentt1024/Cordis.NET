@@ -1,11 +1,12 @@
 using System.Threading.Channels;
+using System.Diagnostics;
 using Cordis.Composition;
 using Cordis.JavaScript;
 using Xunit;
 
 namespace Cordis.Extensions.Tests;
 
-public sealed class HmrReconciliationTests
+public sealed class HmrReconciliationTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     [Theory]
     [InlineData("noop", false)]
@@ -13,6 +14,9 @@ public sealed class HmrReconciliationTests
     [InlineData("webserver", true)]
     public async Task Best_effort_reconciliation_retains_eager_options_and_recovers(string id, bool asynchronous)
     {
+        var clock = Stopwatch.StartNew();
+        Action<string> trace = stage => output.WriteLine($"HMR timing: {clock.Elapsed.TotalSeconds:F3}s {stage}");
+        trace("setup begin");
         var directory = Directory.CreateTempSubdirectory("cordis-hmr-reconcile-");
         try
         {
@@ -55,7 +59,7 @@ public sealed class HmrReconciliationTests
                 loader = new Loader(
                     ctx,
                     new StaticModuleResolver().Register("noop", plugin),
-                    expressionEvaluator: new JintExpressionEvaluator());
+                    expressionEvaluator: new TracedEvaluator(trace));
                 return Task.CompletedTask;
             });
             var include = await ApplicationBoot.MountAsync(loader!, config, basePatches);
@@ -69,6 +73,7 @@ public sealed class HmrReconciliationTests
             var outcomes = Channel.CreateUnbounded<Exception?>();
             hmr.Error += error =>
             {
+                trace("error published");
                 failures++;
                 outcomes.Writer.TryWrite(error);
             };
@@ -76,22 +81,28 @@ public sealed class HmrReconciliationTests
 
             async Task Refresh(bool defaultCompose)
             {
+                trace("refresh entry");
                 var patches = await Profiles.ReadPatchesAsync(user, true);
+                trace("patch read complete");
                 await ApplicationBoot.ReconcileAsync(
                     include,
                     defaultCompose ? patches : [.. basePatches, .. patches],
                     required);
                 outcomes.Writer.TryWrite(null);
+                trace("refresh complete");
             }
 
             var watch = hmr.WatchConfig(user, () => Refresh(false));
             native!.EnableRaisingEvents = false;
             Assert.Equal(1, watchers);
+            trace("watch ready");
 
             async Task<Exception?> Change(string text)
             {
+                trace("change: " + text.Replace('\n', ' '));
                 await File.WriteAllTextAsync(user, text);
                 native.Change("cordis.patch.yml");
+                trace("event signalled");
                 return await outcomes.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
             }
 
@@ -120,15 +131,39 @@ public sealed class HmrReconciliationTests
             Assert.Equal(2, watchers);
             Assert.Null(await Change($"- id: {id}\n  config:\n    value: identity\n"));
             Assert.Equal("identity", ((EntryOptions)Row().Options.Config!)["value"]);
+            trace("scenario complete; draining owners");
         }
         finally
         {
+            trace("owners drained; deleting temporary files");
             directory.Delete(true);
+            trace("cleanup complete");
         }
     }
 
     private sealed class ControlledWatcher(string directory) : FileSystemWatcher(directory)
     {
         public void Change(string name) => OnChanged(new(WatcherChangeTypes.Changed, Path, name));
+    }
+
+    private sealed class TracedEvaluator(Action<string> trace) : IExpressionEvaluator
+    {
+        private readonly JintExpressionEvaluator inner = new()
+        {
+            Configure = _ => trace("expression engine configured")
+        };
+
+        public object? Evaluate(string expression, Context context)
+        {
+            trace("expression entry");
+            try
+            {
+                return inner.Evaluate(expression, context);
+            }
+            finally
+            {
+                trace("expression exit");
+            }
+        }
     }
 }

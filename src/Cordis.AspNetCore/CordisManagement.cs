@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using System.Threading.Channels;
 using Cordis.Composition;
 using Cordis.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -15,31 +14,70 @@ namespace Cordis.AspNetCore;
 /// Unrelated body/query fields never select the resource. Build authorization is separate from installation authority.</remarks>
 public sealed record ManagementPermission(string Operation, string? Target = null, PackageInspection? Package = null);
 
-/// <summary>HTTP/SSE bindings over one running profile. No configuration or plugin lifecycle state is copied into the transport.</summary>
-/// <remarks>The host supplies authorization and settings visibility for every request. A lost installation response must
+/// <summary>Native host state, raw configuration and artifact bindings over one running profile.</summary>
+/// <remarks>The host supplies authorization for every request. A lost installation response must
 /// be resolved through wait/inventory; a null wait result is unknown, never permission to repeat the mutation.</remarks>
 public sealed class CordisManagement(
     ProfileSession session,
     Func<HttpContext, ManagementPermission, Task<bool>> authorize,
-    Func<string, SettingsPolicy> settingsPolicy,
     IProfilePackageToolchain? packages = null,
     Func<CancellationToken, Task<ClientModuleCatalog>>? clientModules = null)
 {
     private readonly string generation = Guid.NewGuid().ToString("N");
-    private event Action? ClientModulesChanged;
     private PluginConfigurationOperations Operations => session.ConfigurationOperations;
 
     /// <summary>Notify connected clients after the host has accepted a complete captured catalog.</summary>
     /// <remarks>The build/deployment owner must serialize capture and publication through its existing session queue.
     /// Failed builds keep the prior catalog and send no success notification.</remarks>
-    public void NotifyClientModulesChanged() => ClientModulesChanged?.Invoke();
+    public Task NotifyClientModulesChangedAsync() => session.Context.RunAsync(context =>
+    {
+        context.Emit("client-modules/changed");
+        return Task.CompletedTask;
+    });
 
-    /// <summary>Map the versioned management contract. Mutations require the generation returned by GET /state.</summary>
+    /// <summary>Mount the standard generated PluginManager with this transport's host policy and generation fence.</summary>
+    /// <remarks>The request accessor supplies identity only during the physical HTTP call. The manager still
+    /// authorizes the parsed operation target and inspected build separately, using the same operations and toolchain.</remarks>
+    public Task MountPluginManagerAsync(
+        Context owner,
+        TypertRegistry registry,
+        IHttpContextAccessor requests,
+        string package = "Cordis.NET.PluginManager")
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(requests);
+        if (!ReferenceEquals(owner.Root, session.Context.Root))
+            throw new ArgumentException("The manager must share the profile's Cordis root.", nameof(owner));
+        return owner.RunAsync(context =>
+        {
+            new PluginManager(
+                context,
+                Operations,
+                (_, permission) => AuthorizeRemoteAsync(requests.HttpContext, permission),
+                packages);
+            registry.Register(context, PluginManagerTypert.Contribution(package));
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task<bool> AuthorizeRemoteAsync(HttpContext? http, PluginManagementPermission permission)
+    {
+        if (http is null || !await authorize(http, new(permission.Operation, permission.Target, permission.Package)))
+            return false;
+        var expected = http.Request.Headers["If-Cordis-Generation"];
+        if ((permission.Mutation || expected.Count != 0) && expected != generation)
+            throw new RemoteError(
+                "plugin-manager/generation-changed",
+                "Read current host state before starting another management request.");
+        return true;
+    }
+
+    /// <summary>Map host state, raw configuration and client artifacts. Raw mutations require the generation returned by GET /state.</summary>
     /// <remarks>Reads may also supply If-Cordis-Generation to refuse results from a replacement host.</remarks>
     public void Map(IEndpointRouteBuilder endpoints, string prefix = "/cordis")
     {
         ArgumentNullException.ThrowIfNull(authorize);
-        ArgumentNullException.ThrowIfNull(settingsPolicy);
         Get(
             "/state",
             "read",
@@ -60,46 +98,6 @@ public sealed class CordisManagement(
                         })
                         .ToList(),
                 }));
-        Get(
-            "/plugins",
-            "read",
-            async http => await WriteAsync(
-                http,
-                (await Operations.ListPluginsAsync())
-                .Select(row => new EntryOptions
-                {
-                    ["entryId"] = row.EntryId,
-                    ["module"] = row.ModuleName,
-                    ["enabled"] = row.Enabled,
-                    ["readOnlyReason"] = row.ReadOnlyReason,
-                    ["state"] = row.State?.ToString(),
-                })
-                .ToList()));
-        Get(
-            "/bundles",
-            "read",
-            async http => await WriteAsync(
-                http,
-                (await Operations.ListBundlesAsync())
-                .Select(row => new EntryOptions
-                {
-                    ["name"] = row.Name,
-                    ["version"] = row.Version,
-                    ["enabled"] = row.Enabled,
-                    ["installed"] = row.Installed,
-                    ["removable"] = row.Removable,
-                    ["readOnlyReason"] = row.ReadOnlyReason,
-                    ["error"] = row.Error,
-                })
-                .ToList()));
-        Get("/sources", "read", http => WriteAsync(http, RequirePackages().Sources.ToArray()));
-        GetTarget(
-            "/versions",
-            "inspect",
-            http => Query(http, "name"),
-            async (http, target) => await WriteAsync(
-                http,
-                await RequirePackages().VersionsAsync(target, Query(http, "source"), http.RequestAborted)));
         GetTarget(
             "/configuration",
             "configuration-read",
@@ -135,186 +133,6 @@ public sealed class CordisManagement(
                         Edits(body),
                         Text(body, "revision"),
                         cancellationToken: http.RequestAborted))));
-        GetTarget(
-            "/settings",
-            "settings-read",
-            http => Query(http, "entryId"),
-            async (http, target) =>
-            {
-                var entryId = target;
-                var settings = await Operations.ReadSettingsAsync(
-                    entryId,
-                    settingsPolicy(entryId),
-                    http.RequestAborted);
-                await WriteAsync(
-                    http,
-                    new EntryOptions
-                    {
-                        ["entryId"] = entryId,
-                        ["revision"] = settings.Revision,
-                        ["diagnostics"] = settings.Diagnostics.ToArray(),
-                        ["secrets"] = settings
-                            .Secrets.Select(secret => new EntryOptions
-                            {
-                                ["path"] = secret.Path.ToArray(),
-                                ["set"] = secret.Set
-                            })
-                            .ToList(),
-                        ["fields"] = settings
-                            .Fields.Select(field => new EntryOptions
-                            {
-                                ["name"] = field.Name,
-                                ["kind"] = field.Kind,
-                                ["value"] = field.Value,
-                                ["overridden"] = field.Overridden
-                            })
-                            .ToList(),
-                    });
-            });
-        GetTarget(
-            "/settings/schema",
-            "settings-read",
-            http => Query(http, "entryId"),
-            async (http, target) =>
-            {
-                var entryId = target;
-                var schema = await Operations.ReadSettingsSchemasAsync(
-                    entryId,
-                    settingsPolicy(entryId),
-                    http.RequestAborted);
-                await WriteAsync(http, SchemaResult(schema));
-            });
-        PostTarget(
-            "/settings",
-            "settings-write",
-            "entryId",
-            async (http, body, target) =>
-            {
-                var entryId = target;
-                var result = await Operations.MutateSettingsAsync(
-                    entryId,
-                    Edits(body),
-                    Text(body, "revision"),
-                    settingsPolicy(entryId),
-                    http.RequestAborted);
-                await WriteAsync(http, EditResult(result));
-            });
-        PostTarget(
-            "/enable",
-            "manage",
-            "target",
-            async (http, body, target) =>
-            {
-                var enabled = Boolean(body, "enabled");
-                var result = Text(body, "kind") switch
-                {
-                    "plugin" => await Operations.SetPluginEnabledAsync(target, enabled, http.RequestAborted),
-                    "bundle" => await Operations.SetBundleEnabledAsync(target, enabled, http.RequestAborted),
-                    _ => throw new FormatException("kind must be plugin or bundle."),
-                };
-                await WriteAsync(http, Change(result));
-            });
-        PostTarget(
-            "/inspect",
-            "inspect",
-            "name",
-            async (http, body, target) =>
-            {
-                var inspection = await RequirePackages().InspectAsync(Request(body, target), http.RequestAborted);
-                await WriteAsync(
-                    http,
-                    new EntryOptions
-                    {
-                        ["hash"] = inspection.ContentHash,
-                        ["description"] = inspection.Description,
-                        ["requiresBuildApproval"] = inspection.RequiresBuildApproval
-                    });
-            });
-        PostTarget(
-            "/install",
-            "install",
-            "name",
-            async (http, body, target) =>
-            {
-                var request = Request(body, target);
-                var inspection = await RequirePackages().InspectAsync(request, http.RequestAborted);
-                if (inspection.ContentHash != Text(body, "inspectedHash"))
-                    throw new InvalidOperationException("The package changed after client inspection.");
-                if (!await authorize(http, new("build", request.Name, inspection)))
-                {
-                    http.Response.StatusCode = StatusCodes.Status403Forbidden;
-                    return;
-                }
-
-                // The connection owns neither the installation nor its cancellation. Explicit cancel and session shutdown do.
-                var result = await Operations.InstallPackageAsync(
-                    RequirePackages(),
-                    request with
-                    {
-                        ExpectedHash = inspection.ContentHash
-                    },
-                    Text(body, "requestId"),
-                    buildApproved: true,
-                    enabled: body.GetValueOrDefault("enabled") is not false);
-                await WriteAsync(http, PackageResult(result));
-            });
-        GetTarget(
-            "/install/wait",
-            "install",
-            http => Query(http, "requestId"),
-            async (http, target) =>
-            {
-                var result = await Operations.WaitForInstallAsync(target);
-                await WriteAsync(http, result is null ? null : PackageResult(result));
-            });
-        PostTarget(
-            "/install/cancel",
-            "install",
-            "requestId",
-            async (http, body, target) => await WriteAsync(
-                http,
-                new EntryOptions
-                {
-                    ["status"] = await Operations.CancelInstallAsync(target)
-                }));
-        PostTarget(
-            "/remove",
-            "manage",
-            "name",
-            async (http, body, target) => await WriteAsync(
-                http,
-                PackageResult(await Operations.RemovePackageAsync(RequirePackages(), target, http.RequestAborted))));
-        PostResolved(
-            "/compatibility",
-            "compatibility-grant",
-            body => Operations.ResolveVersionExemptionIdentity(Text(body, "packageVersion")),
-            async (http, body, target) => await WriteAsync(
-                http,
-                Change(
-                    await Operations.SetVersionExemptionAsync(
-                        target,
-                        Text(body, "runtimeVersion"),
-                        Boolean(body, "enabled"),
-                        Boolean(body, "acceptRisk"),
-                        http.RequestAborted))));
-        Get(
-            "/compatibility",
-            "compatibility-read",
-            async http =>
-            {
-                var grants = Operations.ReadVersionCompatibility();
-                await WriteAsync(
-                    http,
-                    new EntryOptions
-                    {
-                        ["rewritable"] = grants.Rewritable,
-                        ["warnings"] = grants.Warnings.ToArray(),
-                        ["exemptions"] = grants.Exemptions.ToDictionary(
-                            pair => pair.Key,
-                            pair => (object?)pair.Value.ToArray()),
-                    });
-            });
-        Get("/events", "read", EventsAsync);
         Get(
             "/client/graph",
             "client-read",
@@ -485,127 +303,14 @@ public sealed class CordisManagement(
         }
     }
 
-    private async Task EventsAsync(HttpContext http)
-    {
-        var messages = Channel.CreateBounded<EntryOptions>(
-            new BoundedChannelOptions(64)
-            {
-                FullMode = BoundedChannelFullMode.DropOldest
-            });
-        EffectHandle? ownership = null;
-        await session.Context.RunAsync(context =>
-        {
-            ownership = context.Effect(() => new EventStreamCleanup(messages.Writer), "management event connection");
-            return Task.CompletedTask;
-        });
-        var sequence = 0L;
-
-        void Send(string kind, object? value) =>
-            messages.Writer.TryWrite(
-                new EntryOptions
-                {
-                    ["generation"] = generation,
-                    ["sequence"] = Interlocked.Increment(ref sequence),
-                    ["kind"] = kind,
-                    ["value"] = value
-                });
-
-        void Changed(string reason) => Send("configuration", reason);
-        void Refreshed() => Send("refresh", null);
-        void ModulesChanged() => Send("client-modules", null);
-
-        void Progress(PackageProgress progress) =>
-            Send(
-                "package",
-                new EntryOptions
-                {
-                    ["requestId"] = progress.RequestId,
-                    ["phase"] = progress.Phase,
-                    ["output"] = progress.Output
-                });
-
-        Operations.Changed += Changed;
-        Operations.PackageProgressed += Progress;
-        session.Refreshed += Refreshed;
-        ClientModulesChanged += ModulesChanged;
-        try
-        {
-            http.Response.ContentType = "text/event-stream";
-            http.Response.Headers.CacheControl = "no-store";
-            Send("connected", null);
-            await foreach (var message in messages.Reader.ReadAllAsync(http.RequestAborted))
-            {
-                var json = ConfigurationFile
-                    .Write(message, true)
-                    .Replace("\r", "", StringComparison.Ordinal)
-                    .Replace("\n", "", StringComparison.Ordinal);
-                await http.Response.WriteAsync("data: " + json + "\n\n", http.RequestAborted);
-                await http.Response.Body.FlushAsync(http.RequestAborted);
-            }
-        }
-        finally
-        {
-            Operations.Changed -= Changed;
-            Operations.PackageProgressed -= Progress;
-            session.Refreshed -= Refreshed;
-            ClientModulesChanged -= ModulesChanged;
-            await ownership!.DisposeAsync();
-        }
-    }
-
-    // Root disposal closes the stream without waiting for the HTTP client to read.
-    // Request completion releases this same effect; no transport lifetime table is needed.
-    private sealed class EventStreamCleanup(ChannelWriter<EntryOptions> messages) : IAsyncDisposable
-    {
-        public ValueTask DisposeAsync()
-        {
-            messages.TryComplete();
-            return ValueTask.CompletedTask;
-        }
-    }
-
-    private IProfilePackageToolchain RequirePackages() =>
-        packages ?? throw new InvalidOperationException(
-            "This host has no dynamic package toolchain; static code changes require republishing.");
-
     private Func<CancellationToken, Task<ClientModuleCatalog>> RequireClientModules() =>
         clientModules ?? throw new InvalidOperationException("This host has no client module catalog.");
-
-    private static PackageRequest Request(EntryOptions body, string name) =>
-        new(name, Text(body, "version"), Text(body, "source"));
 
     private static string Query(HttpContext http, string key) =>
         http.Request.Query[key].FirstOrDefault() ?? throw new FormatException("Missing query: " + key);
 
     private static string Text(EntryOptions body, string key) =>
         body.GetValueOrDefault(key) as string ?? throw new FormatException("Missing string: " + key);
-
-    private static bool Boolean(EntryOptions body, string key) =>
-        body.GetValueOrDefault(key) is bool value ? value : throw new FormatException("Missing boolean: " + key);
-
-    private static EntryOptions Change(ConfigurationChange result) =>
-        new()
-        {
-            ["changed"] = result.Changed,
-            ["application"] = result.Application,
-            ["error"] = result.Error,
-            ["diagnostic"] = result.Diagnostic
-        };
-
-    private static EntryOptions PackageResult(PackageChange result) =>
-        new()
-        {
-            ["requestId"] = result.RequestId,
-            ["target"] = result.Target,
-            ["stage"] = result.Stage,
-            ["installed"] = result.Installed,
-            ["selected"] = result.Selected,
-            ["application"] = result.Application,
-            ["error"] = result.Error,
-            ["diagnostic"] = result.Diagnostic,
-            ["residuals"] = result.Residuals?.ToArray(),
-            ["toolExitCode"] = result.ToolExitCode,
-        };
 
     private static EntryOptions EditResult(ConfigurationEditResult result) =>
         new()

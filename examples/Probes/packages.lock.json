@@ -8,6 +8,12 @@
         "resolved": "10.0.11",
         "contentHash": "IBf7lbovvjGWVWXZX5cJ/cO0WXbId0Zq4BuSeT94mGZuOAP66oMeH9PTBZ9Jpp3Jb6jtK0qm/NyUbPRo1gC/wQ=="
       },
+      "Cordis.NET.AspNetCore": {
+        "type": "Project",
+        "dependencies": {
+          "Cordis.NET.Extensions": "[0.2.0-alpha.4, )"
+        }
+      },
       "Cordis.NET.Composition": {
         "type": "Project",
         "dependencies": {

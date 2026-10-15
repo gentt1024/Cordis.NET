@@ -6,10 +6,24 @@ import tempfile
 import unittest
 import zipfile
 
-from scripts.package_inspection import PACKAGE_LAYOUTS, PUBLISHABLE_PACKAGE_IDS, inspect_packages, inspect_symbols
+from scripts.package_inspection import PACKAGE_LAYOUTS, PUBLISHABLE_PACKAGE_IDS, inspect_packages, inspect_symbols, inspect_readme_links
 
 
 class PackageInspectionTests(unittest.TestCase):
+    def test_readme_links_resolve_from_packaged_location(self):
+        for target, message in [
+            ("../../docs/authoring.md", "escapes package root"),
+            ("docs/authoring.md", "target missing"),
+            ("/%2e%2e/docs/authoring.md", "escapes package root"),
+        ]:
+            with self.subTest(target=target), self.assertRaisesRegex(AssertionError, message):
+                inspect_readme_links(f"[Guide]({target})", {"README.md"})
+        inspect_readme_links(
+            "[Guide](https://github.com/gentt1024/Cordis.NET/blob/0123456789abcdef/docs/authoring.md)\n"
+            "[License](LICENSE)\n[Section](#install)\n[notice]: NOTICE.md\n",
+            {"README.md", "LICENSE", "NOTICE.md"},
+        )
+
     def test_wrapper_xml_does_not_count_as_api_documentation(self):
         artifact_root = Path(__file__).resolve().parents[2] / "artifacts"
         artifact_root.mkdir(exist_ok=True)

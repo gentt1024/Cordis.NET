@@ -28,5 +28,15 @@ a bounded client example, not a translation of the DSH frontend or its wire prot
 The reusable browser modules in `clients/modules/vendor/` retain DSH's module loader,
 contracts, snapshot stores and SlotCore at the same fixed revision. Their provenance
 manifest records source hashes; the original MIT licenses are retained in
-the corresponding `clients/modules/vendor/*/LICENSE` files. The .NET management transport is an explicit adapter,
-not a claim of DSH wire-protocol compatibility.
+the corresponding `clients/modules/vendor/*/LICENSE` files. The .NET integration keeps application event selection separate from fixed
+carrier behavior.
+
+The shared Remote client in `src/Cordis.Composition/Client/` adapts the fixed DSH
+Gateway client, mux and lossless-JSON input behavior. The .NET carrier and Gateway
+also implement the fixed unary envelope, mux frames and unary attachment workflow.
+The original MIT notices remain in `LICENSES/`. Bounded cross-end evidence is
+recorded in `docs/validation.md`; this is not a whole-product wire compatibility claim.
+
+`Cordis.Composition.Scope` and Peer registration routing adapt the fixed DSH
+`packages/core/scope` and `packages/client/connection/src/operator-peer.ts`.
+Their MIT notices remain in `LICENSES/deepseek-harness.LICENSE`.

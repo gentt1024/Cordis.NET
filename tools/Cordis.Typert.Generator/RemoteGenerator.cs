@@ -31,130 +31,216 @@ public sealed class RemoteGenerator : IIncrementalGenerator
         var services = context.SyntaxProvider.ForAttributeWithMetadataName(
             "Cordis.Composition.RemoteServiceAttribute",
             static (node, _) => node is ClassDeclarationSyntax,
-            static (syntax, _) => (Type: (INamedTypeSymbol)syntax.TargetSymbol, Attribute: syntax.Attributes[0]));
+            static (syntax, _) => (INamedTypeSymbol)syntax.TargetSymbol);
         var models = context
             .AdditionalTextsProvider
-            .Where(static file => file.Path.EndsWith(".cordis.typert.json", StringComparison.OrdinalIgnoreCase))
+            .Where(static file => file.Path.EndsWith(".cordis.model.json", StringComparison.OrdinalIgnoreCase))
             .Select(static (file, cancellation) => file.GetText(cancellation)?.ToString() ?? "")
             .Collect();
         var projectDirectory = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
             options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var directory)
                 ? directory
-                : "");
+                : Directory.GetCurrentDirectory());
+        var referenceDocumentation = context
+            .AdditionalTextsProvider
+            .Combine(context.AnalyzerConfigOptionsProvider)
+            .Select(static (input, cancellation) =>
+            {
+                var (file, options) = input;
+                return options
+                    .GetOptions(file)
+                    .TryGetValue("build_metadata.AdditionalFiles.CordisTypertAssemblyIdentity", out var identity)
+                    ? (Identity: identity, Text: file.GetText(cancellation)?.ToString() ?? "")
+                    : (Identity: "", Text: "");
+            })
+            .Where(static input => input.Identity.Length != 0)
+            .Collect();
         context.RegisterSourceOutput(
-            services.Combine(context.CompilationProvider).Combine(models).Combine(projectDirectory),
+            services
+                .Combine(context.CompilationProvider)
+                .Combine(models)
+                .Combine(projectDirectory)
+                .Combine(referenceDocumentation),
             static (output, input) =>
             {
-                var (((service, compilation), artifacts), directory) = input;
-                var key = service.Attribute.ConstructorArguments[0].Value as string;
-                foreach (var json in artifacts)
+                var ((((service, compilation), artifacts), directory), documentation) = input;
+                try
                 {
-                    try
+                    var selector = service.ToDisplayString();
+                    var docs = documentation
+                        .GroupBy(value => value.Identity, StringComparer.Ordinal)
+                        .ToDictionary(
+                            group => group.Key,
+                            group => NativeXmlDocumentation.FromText(
+                                group.Key,
+                                group.Select(value => value.Text).Distinct(StringComparer.Ordinal).Single()),
+                            StringComparer.Ordinal);
+                    var authored = SourceContractReader.ReadServices(
+                        (CSharpCompilation)compilation,
+                        directory,
+                        selector,
+                        docs);
+                    var contract = DeclarationRemoteContract.Read(authored, selector).Single();
+                    foreach (var json in artifacts)
                     {
-                        var artifact = NativeModelJson.Deserialize(json);
-                        if (!artifact.Services.Any(value => value.Key == key))
-                            continue;
-                        var authored = SourceContractReader.Read((CSharpCompilation)compilation, directory, key);
-                        var differences = NativeModelConformance.Compare(artifact, authored, key!);
-                        if (differences.Length == 0)
-                            continue;
-                        output.ReportDiagnostic(
-                            Diagnostic.Create(
-                                Drift,
-                                service.Type.Locations[0],
-                                "Published source model drift: " + string.Join("; ", differences)));
-                        return;
+                        try
+                        {
+                            var artifact = DeclarationModelJson.Deserialize(json);
+                            var roots = artifact
+                                .Roots.Select(id => artifact.Declarations.Single(value => value.Id == id))
+                                .Where(value => DeclarationAttributeProjection.Attribute(
+                                    value.Attributes,
+                                    "Cordis.Composition.RemoteServiceAttribute") is not null)
+                                .ToArray();
+                            var sameSource = roots.Any(value => value.Id == contract.Facts.Id);
+                            var sameKey = roots.Any(value => DeclarationAttributeProjection.String(
+                                    DeclarationAttributeProjection.Attribute(
+                                        value.Attributes,
+                                        "Cordis.Composition.RemoteServiceAttribute")!.Arguments.FirstOrDefault()) ==
+                                contract.Key);
+                            if (!sameSource && !sameKey)
+                                continue;
+                            var differences = DeclarationModelConformance.Compare(
+                                artifact,
+                                authored,
+                                sameSource ? selector : contract.Key);
+                            if (differences.Length == 0)
+                                continue;
+                            output.ReportDiagnostic(
+                                Diagnostic.Create(
+                                    Drift,
+                                    service.Locations[0],
+                                    "Published declaration model drift: " + string.Join("; ", differences)));
+                            return;
+                        }
+                        catch (Exception error)
+                        {
+                            output.ReportDiagnostic(
+                                Diagnostic.Create(
+                                    Drift,
+                                    service.Locations[0],
+                                    "Cannot verify declaration model: " + error.Message));
+                            return;
+                        }
                     }
-                    catch (Exception error)
-                    {
-                        output.ReportDiagnostic(
-                            Diagnostic.Create(
-                                Drift,
-                                service.Type.Locations[0],
-                                "Cannot verify source model: " + error.Message));
-                        return;
-                    }
-                }
 
-                Emit(output, service.Type, service.Attribute);
+                    Emit(output, service, compilation, authored, contract);
+                }
+                catch (Exception error)
+                {
+                    output.ReportDiagnostic(
+                        Diagnostic.Create(
+                            Unsupported,
+                            service.Locations[0],
+                            "Cannot bind Remote declaration facts: " + error.Message));
+                }
             });
     }
 
-    private static void Emit(SourceProductionContext output, INamedTypeSymbol type, AttributeData attribute)
+    private static void Emit(
+        SourceProductionContext output,
+        INamedTypeSymbol type,
+        Compilation compilation,
+        DeclarationModelDocument model,
+        RemoteServiceContract contract)
     {
         void Refuse(string message) =>
             output.ReportDiagnostic(Diagnostic.Create(Unsupported, type.Locations[0], message));
 
-        if (type.TypeParameters.Length != 0 || type.ContainingType is not null ||
-            type.DeclaredAccessibility != Accessibility.Public ||
-            !type.DeclaringSyntaxReferences.All(reference =>
-                reference.GetSyntax() is ClassDeclarationSyntax declaration &&
-                declaration.Modifiers.Any(SyntaxKind.PartialKeyword)))
+        var facts = contract.Facts;
+        if (facts.TypeParameters.Length != 0 || facts.ContainingType is not null ||
+            facts.Accessibility != "Public" || !facts.Modifiers.Contains("partial", StringComparer.Ordinal))
         {
-            Refuse("Remote services must be public, top-level, non-generic partial classes.");
+            Refuse("Remote Host bindings require public, top-level, non-generic partial classes.");
             return;
         }
 
-        if (attribute.ConstructorArguments.Length < 2 ||
-            attribute.ConstructorArguments[1].Value is not INamedTypeSymbol metadata)
-        {
-            Refuse("RemoteService requires an explicit source-generated JsonSerializerContext type.");
-            return;
-        }
-
-        var service = (string)attribute.ConstructorArguments[0].Value!;
-        var space = Named<string>(attribute, "Namespace") ?? service;
-        var methods = type
-            .GetMembers()
-            .OfType<IMethodSymbol>()
-            .Select(method => (Method: method, Marker: method
-                .GetAttributes()
-                .FirstOrDefault(value =>
-                    value.AttributeClass?.ToDisplayString() == "Cordis.Composition.RemoteMethodAttribute")))
-            .Where(value => value.Marker is not null)
+        var errors = contract
+            .Diagnostics.Concat(
+                DeclarationRemoteContract
+                    .SourceDiagnostics(model, contract)
+                    .Where(diagnostic => diagnostic.Category is "PreGeneratorDeclaration" or "AnalysisUnsupported"))
             .ToArray();
-        var names = new HashSet<string>(StringComparer.Ordinal);
+        if (errors.Length != 0)
+        {
+            Refuse(string.Join("; ", errors.Select(error => error.Code + ": " + error.Message)));
+            return;
+        }
+
+        if (contract.JsonContext is not { Kind: "named" } contextReference ||
+            Resolve(contextReference, compilation, model) is not INamedTypeSymbol metadata)
+        {
+            Refuse("RemoteService requires an explicit JsonSerializerContext type.");
+            return;
+        }
+
+        var service = contract.Key;
+        var space = contract.Namespace;
+        var symbols = type.GetMembers().OfType<IMethodSymbol>().ToDictionary(SymbolId, StringComparer.Ordinal);
         var definitions = new StringBuilder();
         var unary = new StringBuilder();
         var streams = new StringBuilder();
         var streamHelpers = new StringBuilder();
-        foreach (var (method, markerValue) in methods)
+        var nullabilityHelpers = new StringBuilder();
+        var nullabilityIndex = 0;
+        foreach (var invocation in contract.Methods)
         {
-            var marker = markerValue!;
-            var name = Named<string>(marker, "Name") ??
-                marker.ConstructorArguments.FirstOrDefault().Value as string ?? method.Name;
-            var stream = Named<bool>(marker, "Stream");
-            var receiver = Named<string>(marker, "Context");
-            var wire = Named<string>(marker, "Wire") ?? "contextId";
-            var cancellation = method.Parameters.LastOrDefault()?.Type.ToDisplayString() ==
-                "System.Threading.CancellationToken";
-            var parameters = cancellation
-                ? method.Parameters.Take(method.Parameters.Length - 1).ToArray()
-                : method.Parameters.ToArray();
-            if (!names.Add(name) || method.IsStatic || method.IsGenericMethod ||
-                method.DeclaredAccessibility != Accessibility.Public ||
-                method.Parameters.Any(parameter =>
-                    parameter.RefKind != RefKind.None || parameter.IsParams || parameter.HasExplicitDefaultValue) ||
-                method.ReturnType is not INamedTypeSymbol returnType || returnType.TypeArguments.Length != 1 ||
-                returnType.OriginalDefinition.ToDisplayString() != (stream
-                    ? "System.Collections.Generic.IAsyncEnumerable<T>"
-                    : "System.Threading.Tasks.Task<TResult>") ||
-                parameters.Any(parameter => parameter.Type.ToDisplayString() == "System.Threading.CancellationToken"))
+            if (!symbols.TryGetValue(invocation.Facts.Id, out var method))
+                throw new InvalidDataException("No implementation symbol matches declaration " + invocation.Facts.Id);
+            var name = invocation.Name;
+            var stream = invocation.Stream;
+            var receiver = invocation.Context;
+            var wire = invocation.ContextWire;
+            var cancellation = invocation.Cancellation;
+            var parameters = invocation.Parameters;
+
+            string Codec(DeclarationReference reference, bool disallowNull = false)
             {
-                Refuse(
-                    $"{method.Name}: Remote methods require unique export names, ordinary required parameters, and Task<T> or explicitly marked IAsyncEnumerable<T>. CancellationToken may only be the final parameter.");
-                return;
+                if (reference.Kind == "primitive" && reference.Name == "System_Void")
+                    return "global::Cordis.Composition.TypertCodec.Void";
+                var symbol = Resolve(reference, compilation, model);
+                if (disallowNull)
+                    symbol = symbol is INamedTypeSymbol named &&
+                        named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T
+                            ? named.TypeArguments[0]
+                            : symbol.WithNullableAnnotation(NullableAnnotation.NotAnnotated);
+                var query = "__CordisNullability" + nullabilityIndex++;
+                var declared = disallowNull
+                    ? reference with
+                    {
+                        Nullability = "NotAnnotated"
+                    }
+                    : reference;
+                if (disallowNull && reference.Kind == "named" && model.Declarations.Any(value =>
+                        value.Id == reference.Name && value.MetadataName == "System.Nullable`1"))
+                    declared = reference.Arguments[0];
+                nullabilityHelpers.Append(NullabilityProjection.Declaration(declared, model, contextReference, query));
+                return "global::Cordis.Composition.TypertCodec.CreateDeclared" +
+                    "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" + TypeName(symbol) + ">)" +
+                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " + query + ", " +
+                    Literal(symbol.ToDisplayString()) + ")";
             }
 
-            string Codec(ITypeSymbol symbol) =>
-                "global::Cordis.Composition.TypertCodec." +
-                (symbol.IsReferenceType && symbol.NullableAnnotation == NullableAnnotation.Annotated
-                    ? "CreateNullable"
-                    : "Create") +
-                "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" +
-                TypeName(symbol) + ">)" +
-                TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
-                Literal(symbol.ToDisplayString()) + ")";
+            string UplinkCodec(DeclarationReference reference)
+            {
+                var symbol = Resolve(reference, compilation, model);
+                var collection = reference.Kind == "array" || symbol is INamedTypeSymbol named &&
+                    named.ContainingNamespace.ToDisplayString() == "System.Collections.Generic" &&
+                    named.Name is "List" or "IReadOnlyList" or "IList" or "IEnumerable" or "ICollection"
+                        or "IReadOnlyCollection" or
+                        "Dictionary" or "IReadOnlyDictionary" or "IDictionary";
+                if (!collection || symbol is IArrayTypeSymbol { ElementType.SpecialType: SpecialType.System_Byte })
+                    return Codec(reference);
+                var dictionary = reference.Arguments.Length == 2;
+                if (dictionary && reference.Arguments[0].Name != "System_String")
+                    throw new InvalidDataException("Remote uplink dictionaries require string keys.");
+                return "global::Cordis.Composition.TypertCodec." +
+                    (dictionary ? "CreateDictionary" : "CreateSequence") +
+                    "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" + TypeName(symbol) + ">)" +
+                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
+                    UplinkCodec(reference.Arguments[dictionary ? 1 : 0]) + ", nullable: " +
+                    (reference.Nullability == "Annotated" ? "true" : "false") + ")";
+            }
 
             definitions
                 .Append("new global::Cordis.Composition.TypertInvocationDescriptor(package + ")
@@ -168,37 +254,56 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                 .Append(", [");
             foreach (var parameter in parameters)
             {
-                var lookup = parameter
-                    .GetAttributes()
-                    .FirstOrDefault(value =>
-                        value.AttributeClass?.ToDisplayString() == "Cordis.Composition.RemoteLookupAttribute");
-                var parameterWire = lookup?.ConstructorArguments[1].Value as string ?? parameter.Name;
-                var wireType = lookup?.ConstructorArguments[2].Value as ITypeSymbol ?? parameter.Type;
+                var lookup = parameter.Lookup;
+                var parameterWire = parameter.Wire;
+                var wireType = parameter.LookupWireType ?? parameter.Facts.Type;
                 definitions
                     .Append("new global::Cordis.Composition.TypertInvocationParameter(")
-                    .Append(Literal(parameter.Name))
+                    .Append(Literal(parameter.Facts.Name))
                     .Append(", ")
                     .Append(Literal(parameterWire))
                     .Append(", ")
-                    .Append(Codec(wireType))
+                    .Append(Codec(wireType, parameter.DisallowNull))
                     .Append(")");
-                if (lookup is not null)
+                if (lookup is not null || parameter.Facts.Default is not null)
+                {
                     definitions
-                        .Append(" { Lookup = ")
-                        .Append(Literal((string)lookup.ConstructorArguments[0].Value!))
-                        .Append(" }");
+                        .Append(" { ");
+                    if (lookup is not null)
+                        definitions.Append("Lookup = ").Append(Literal(lookup));
+                    else
+                        definitions.Append("AcceptsUndefined = true");
+                    definitions.Append(" }");
+                }
+
                 definitions.Append(',');
             }
 
             definitions
                 .Append("], ")
-                .Append(Codec(returnType.TypeArguments[0]))
+                .Append(Codec(invocation.Result))
                 .Append(") { Cancellation = ")
                 .Append(cancellation ? "true" : "false")
                 .Append(", IsStream = ")
                 .Append(stream ? "true" : "false");
+            if (invocation.Uplink is { } uplink)
+            {
+                var codec = UplinkCodec(uplink.Type);
+                if (uplink.Optional)
+                    codec = "global::Cordis.Composition.TypertCodec.CreateOptional<" +
+                        TypeName(Resolve(uplink.Type, compilation, model)) + ">(" + codec + ")";
+                definitions.Append(", Uplink = ").Append(codec);
+            }
+
             if (name != method.Name)
                 definitions.Append(", Implementation = ").Append(Literal(method.Name));
+            if (invocation.Scope is { } scope)
+                definitions
+                    .Append(", Scope = new global::Cordis.Composition.TypertScopeProjection(")
+                    .Append(Literal(scope.Context))
+                    .Append(", ")
+                    .Append(Literal(scope.Wire))
+                    .Append(")");
             if (receiver is not null)
                 definitions
                     .Append(", Invocation = new global::Cordis.Composition.TypertContextInvocation(")
@@ -207,16 +312,37 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                     .Append(Literal(wire))
                     .Append(", ")
                     .Append(
-                        "global::Cordis.Composition.TypertCodec.Create((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>)")
-                    .Append(TypeName(metadata))
-                    .Append(".Default.GetTypeInfo(typeof(string))!, \"string\")")
+                        Codec(
+                            invocation.ContextWireType ?? throw new InvalidDataException("Missing Context wire type.")))
                     .Append(")");
             definitions.Append(" },");
-            var call = "((" + TypeName(type) + ")service).@" + method.Name + "(" +
-                string.Join(
-                    ", ",
-                    parameters.Select((parameter, index) => "(" + TypeName(parameter.Type) + ")args[" + index + "]!")) +
-                (cancellation ? (parameters.Length == 0 ? "" : ", ") + "token" : "") + ")";
+            var callArguments = parameters
+                .Select((parameter, index) => parameter.Facts.Default is not null
+                    ? "(global::System.Object.ReferenceEquals(args[" + index +
+                    "], global::Cordis.Undefined.Value) ? " + DefaultValue(
+                        parameter.Facts,
+                        Resolve(parameter.Facts.Type, compilation, model)) + "! : (" +
+                    TypeName(Resolve(parameter.Facts.Type, compilation, model)) + ")args[" + index + "]!)"
+                    : "(" + TypeName(Resolve(parameter.Facts.Type, compilation, model)) + ")args[" + index +
+                    "]!")
+                .ToList();
+            if (invocation.Uplink is { } input)
+            {
+                var parameter = method.Parameters.Single(value => value.Name == input.Parameter);
+                var inputType = ((INamedTypeSymbol)parameter.Type).TypeArguments[0];
+                callArguments.Insert(
+                    parameter.Ordinal,
+                    "global::Cordis.Composition.TypertInvocation.Current!.ReadUplink<" +
+                    inputType.ToDisplayString(
+                        SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                            SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions |
+                            SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier)) + ">()");
+            }
+
+            if (cancellation)
+                callArguments.Add("token");
+            var call = "((" + TypeName(type) + ")service).@" + method.Name + "(" + string.Join(", ", callArguments) +
+                ")";
             if (stream)
             {
                 var helper = "Stream" + streams.Length;
@@ -229,6 +355,13 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                     .Append(call)
                     .Append(".WithCancellation(token)) yield return item; }");
             }
+            else if (invocation.ReturnWrapper == "System.Threading.Tasks.Task")
+                unary
+                    .Append("[")
+                    .Append(Literal(name))
+                    .Append("] = async (service, args, token) => { await ")
+                    .Append(call)
+                    .Append("; return global::Cordis.Undefined.Value; },");
             else
                 unary
                     .Append("[")
@@ -259,17 +392,65 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                                new global::System.Collections.Generic.Dictionary<string, global::Cordis.Composition.TypertUnaryInvoker> { {{unary}} },
                                new global::System.Collections.Generic.Dictionary<string, global::Cordis.Composition.TypertStreamInvoker> { {{streams}} });
                            {{streamHelpers}}
+                           {{nullabilityHelpers}}
                        }
                        """;
         output.AddSource(type.ToDisplayString().Replace('.', '_') + ".Remote.g.cs", source);
     }
 
-    private static T? Named<T>(AttributeData attribute, string name) => attribute
-        .NamedArguments
-        .Where(value => value.Key == name)
-        .Select(value => (T?)value.Value.Value)
-        .FirstOrDefault();
+    private static string SymbolId(ISymbol symbol) => symbol.ContainingAssembly.Identity + ":" +
+        (symbol.GetDocumentationCommentId() ?? symbol.ToDisplayString());
+
+    internal static ITypeSymbol Resolve(
+        DeclarationReference reference,
+        Compilation compilation,
+        DeclarationModelDocument model)
+    {
+        ITypeSymbol symbol;
+        if (reference.Kind == "primitive" && Enum.TryParse<SpecialType>(reference.Name, out var special))
+            symbol = compilation.GetSpecialType(special);
+        else if (reference.Kind == "dynamic")
+            symbol = compilation.DynamicType;
+        else if (reference.Kind == "array")
+            symbol = compilation.CreateArrayTypeSymbol(
+                Resolve(reference.Arguments[0], compilation, model),
+                reference.Rank);
+        else if (reference.Kind is "named" or "tuple")
+        {
+            var facts = model.Declarations.Single(value => value.Id == reference.Name);
+            var assembly = compilation
+                    .SourceModule.ReferencedAssemblySymbols.Prepend(compilation.Assembly)
+                    .SingleOrDefault(value => value.Identity.ToString() == facts.Assembly) ??
+                throw new InvalidDataException("No referenced assembly matches declaration " + facts.Id);
+            INamedTypeSymbol? named;
+            if (reference.ContainingType is { } containing)
+            {
+                var parent = (INamedTypeSymbol)Resolve(containing, compilation, model);
+                named = parent.GetTypeMembers(facts.Name, reference.Arguments.Length).SingleOrDefault();
+            }
+            else
+                named = assembly.GetTypeByMetadataName(facts.MetadataName);
+
+            if (named is null)
+                throw new InvalidDataException("No compiled type matches declaration " + facts.Id);
+            symbol = reference.Arguments.Length == 0
+                ? named
+                : named.Construct(reference.Arguments.Select(value => Resolve(value, compilation, model)).ToArray());
+        }
+        else
+            throw new InvalidDataException(
+                "No compilable Host type for declaration reference " + reference.Kind + ":" + reference.Name);
+
+        return symbol.WithNullableAnnotation(
+            reference.Nullability == "Annotated" ? NullableAnnotation.Annotated :
+            reference.Nullability == "NotAnnotated" ? NullableAnnotation.NotAnnotated : NullableAnnotation.None);
+    }
 
     private static string Literal(string value) => SymbolDisplay.FormatLiteral(value, true);
     private static string TypeName(ITypeSymbol type) => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+    private static string DefaultValue(DeclarationParameter parameter, ITypeSymbol type) =>
+        parameter.Default is { } value
+            ? value.Json == "null" ? "default(" + TypeName(type) + ")" : DeclarationConstantEmitter.Emit(value)
+            : throw new InvalidDataException("Missing explicit Remote parameter constant " + parameter.Name);
 }

@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-14",
+  "branch": "codex/alpha5-settings",
+  "branchCommit": "a66b7845760670545e0d7a056185f67be561af3a",
+  "baseCommit": "3342a967f4e57206bec272684a40a437fc051b77",
+  "checkoutCommit": "7893ed59fde70aa413f913526af8df14fb5b39e3",
+  "checkoutKind": "pull-request merge",
+  "checkoutEvidence": "Both runtime job checkout logs record this commit and the merge of the branch into the base.",
+  "pullRequest": "https://github.com/gentt1024/Cordis.NET/pull/16",
+  "run": "https://github.com/gentt1024/Cordis.NET/actions/runs/38497878162",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 115637705352,
+      "name": "runtime (ubuntu-24.04)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705511,
+      "name": "upstream (windows-latest, shard 2)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705565,
+      "name": "upstream (ubuntu-24.04, shard 4)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705634,
+      "name": "upstream (ubuntu-24.04, shard 3)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705649,
+      "name": "runtime (windows-latest)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705651,
+      "name": "upstream (windows-latest, shard 3)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705666,
+      "name": "upstream (windows-latest, shard 1)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705672,
+      "name": "upstream (windows-latest, shard 4)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705689,
+      "name": "upstream (ubuntu-24.04, shard 1)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115637705696,
+      "name": "upstream (ubuntu-24.04, shard 2)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115645717892,
+      "name": "verify (ubuntu-24.04)",
+      "conclusion": "success"
+    },
+    {
+      "id": 115645717893,
+      "name": "verify (windows-latest)",
+      "conclusion": "success"
+    }
+  ],
+  "artifactDigestSource": "GitHub archive metadata; archives were not independently downloaded and rehashed for this receipt.",
+  "artifacts": [
+    {
+      "id": 11865925415,
+      "name": "evidence-windows-latest",
+      "sha256": "a7315fa7706835535d943184ed34704784592919747eb3faebbe7ed81fd82d14",
+      "expiresAt": "2026-10-28T02:18:48Z"
+    },
+    {
+      "id": 11865830716,
+      "name": "upstream-summary-windows-latest",
+      "sha256": "8597c7fb9af50b1973aebbf6d09b9f03652ebc506688f7dac34fc3e5b821ad42",
+      "expiresAt": "2026-10-28T02:19:18Z"
+    },
+    {
+      "id": 11865715728,
+      "name": "validated-packages-windows-latest",
+      "sha256": "5da242c85380e8d06c61b73dfc19afe4208b8d14e38982495dda7ee66509411b",
+      "expiresAt": "2026-10-28T02:18:47Z"
+    },
+    {
+      "id": 11865338081,
+      "name": "evidence-ubuntu-24.04",
+      "sha256": "54f8de631bcf57debc1359d3cc2be0388f45e01b153e7129b31d5b4f65d84980",
+      "expiresAt": "2026-10-28T02:17:26Z"
+    },
+    {
+      "id": 11865073870,
+      "name": "upstream-summary-ubuntu-24.04",
+      "sha256": "50f3261346b745f53195af5a2a3720a88a8c585eb45a553aee209366897fa4e8",
+      "expiresAt": "2026-10-28T02:19:13Z"
+    },
+    {
+      "id": 11864835778,
+      "name": "upstream-ubuntu-24.04-2",
+      "sha256": "554baad646b0f5267b6f23de16c0e4f324a0db12e1e5287627554ff03b85f270",
+      "expiresAt": "2026-10-28T01:51:32Z"
+    },
+    {
+      "id": 11864819998,
+      "name": "validated-packages-ubuntu-24.04",
+      "sha256": "f228fd20eb810bfa7069acfeb9007a4cd815ba3239200bd09624593475122a1a",
+      "expiresAt": "2026-10-28T02:17:24Z"
+    },
+    {
+      "id": 11864672855,
+      "name": "upstream-windows-latest-1",
+      "sha256": "0286bbb49d3b11794d771de0dba3e77c3a82fb67b2645a823195e587875b9a27",
+      "expiresAt": "2026-10-28T01:56:39Z"
+    },
+    {
+      "id": 11864632166,
+      "name": "upstream-ubuntu-24.04-3",
+      "sha256": "1f0800b461a665a8b84f3e3e76a76d3c206ad8abd5af5ebc24b97b3ed5ffa119",
+      "expiresAt": "2026-10-28T01:51:27Z"
+    },
+    {
+      "id": 11864342615,
+      "name": "upstream-ubuntu-24.04-1",
+      "sha256": "310adb3a7a8019f5e0e5dfef12ce8d0b2b17f9871b13b144b847e52d0df68cab",
+      "expiresAt": "2026-10-28T01:52:08Z"
+    },
+    {
+      "id": 11864307780,
+      "name": "upstream-windows-latest-3",
+      "sha256": "3d73c68dd3bb387529e266153537ebe3ddf8d64b3d0db372201cb56d969b8197",
+      "expiresAt": "2026-10-28T01:54:03Z"
+    },
+    {
+      "id": 11864167595,
+      "name": "upstream-ubuntu-24.04-4",
+      "sha256": "2bd232fb144b6f36ccb58a4794ecda84cdbd35b09d1524b171c3f5ff7d1302e1",
+      "expiresAt": "2026-10-28T01:51:35Z"
+    },
+    {
+      "id": 11863954662,
+      "name": "upstream-windows-latest-2",
+      "sha256": "bff92b6f039c452565b586224f3c27217aabd59ec694d370c4d015c1c7714579",
+      "expiresAt": "2026-10-28T01:55:28Z"
+    },
+    {
+      "id": 11863839675,
+      "name": "upstream-windows-latest-4",
+      "sha256": "d03d43f39a308d6760197ee5804475bcf68572834dce6d6f151017d49922ee10",
+      "expiresAt": "2026-10-28T01:54:09Z"
+    }
+  ],
+  "boundaries": [
+    "Windows and Ubuntu completed verify.py --aot --package and verify-authoring.py --aot with SDK 10.0.111; eight fixed-upstream shards and both union aggregators passed.",
+    "Saved-model Web event generation and its independent package consumers are included in this candidate's gate.",
+    "Earlier real Chromium evidence uses development packages and is not reassigned to these CI archives.",
+    "The historical HMR timeout did not fail this run; its cause and residual-risk disposition remain unresolved.",
+    "Live IDE/debugging, actual default desktop handoff and complete application shutdown/restart remain separate evidence.",
+    "CI packages are not a new alpha5 release identity. No merge, version change, tag, publication or deployment is recorded."
+  ]
+}

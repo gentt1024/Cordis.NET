@@ -8,6 +8,8 @@ import json
 import re
 import subprocess
 import tempfile
+import posixpath
+from urllib.parse import unquote, urlsplit
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -25,6 +27,24 @@ PACKAGE_LAYOUTS = {
 }
 
 PUBLISHABLE_PACKAGE_IDS = tuple(identity for identity in PACKAGE_LAYOUTS if identity.startswith("Cordis.NET."))
+
+
+def inspect_readme_links(readme: str, entries: set[str]) -> None:
+    """Resolve packaged README links from the package root, not the source project."""
+    text = re.sub(r"^```[^\n]*\n.*?^```\s*$", "", readme, flags=re.MULTILINE | re.DOTALL)
+    targets = re.findall(r"\[[^\]]*\]\(([^)]+)\)", text)
+    targets += re.findall(r"^\s*\[[^\]]+\]:\s*(\S+)", text, flags=re.MULTILINE)
+    for raw in targets:
+        target = raw.strip().split(maxsplit=1)[0].strip("<>")
+        url = urlsplit(target)
+        if url.scheme:
+            assert url.scheme == "https" and url.netloc, ("package README needs an HTTPS document URL", target)
+            continue
+        path = posixpath.normpath(unquote(url.path))
+        if not url.path:
+            continue
+        assert not url.netloc and not path.startswith(("/", "../")) and path != "..", ("package README link escapes package root", target)
+        assert path in entries, ("package README link target missing", target)
 
 
 def inspect_packages(directory: Path, version: str) -> list[str]:
@@ -56,6 +76,7 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
             assert re.fullmatch(r"[0-9a-f]{40}", repository.attrib.get("commit", "")), (identity, repository.attrib)
             readme = archive.read("README.md").decode("utf-8-sig")
             assert readme.startswith(f"# {identity}\n"), (identity, readme.splitlines()[:1])
+            inspect_readme_links(readme, entries)
 
             folder, assembly, representative_member, expected_dependencies = PACKAGE_LAYOUTS[identity]
             dll_path = f"{folder}/{assembly}.dll"
@@ -81,7 +102,21 @@ def inspect_packages(directory: Path, version: str) -> list[str]:
                 assert "buildTransitive/Cordis.NET.Composition.targets" in entries, identity
                 for asset in ("Cordis.Typert.Compiler.dll", "Cordis.Typert.Compiler.deps.json", "Cordis.Typert.Compiler.runtimeconfig.json"):
                     assert "tools/net10.0/typert/" + asset in entries, (identity, asset)
-                assert "cordis/typert/settingsController.cordis.typert.json" in entries, identity
+                model_path = "cordis/typert/Cordis.Composition.cordis.model.json"
+                model_entries = [name for name in archive.namelist()
+                                 if name.startswith("cordis/typert/") and not name.endswith("/")]
+                assert model_entries == [model_path], (identity, model_entries)
+                model = json.loads(archive.read(model_path))
+                declarations = {declaration["id"]: declaration for declaration in model["declarations"]}
+                service_keys = [json.loads(attribute["arguments"][0]["json"])
+                                for root_id in model["roots"]
+                                for declaration in [declarations[root_id]]
+                                if declaration["accessibility"] == "Public"
+                                for attribute in declaration["attributes"]
+                                if attribute["name"] == "Cordis.Composition.RemoteServiceAttribute"]
+                assert len(service_keys) == 2 and set(service_keys) == {
+                    "settingsController", "pluginManager"
+                }, (identity, service_keys)
                 assert not any(PurePosixPath(name).name.startswith("Microsoft.CodeAnalysis") for name in entries), identity
 
             assert any(name.startswith("LICENSES/") for name in entries), package

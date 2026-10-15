@@ -13,6 +13,18 @@
     "./slots": {
       "types": "./lib/types/vendor/slots/index.d.ts",
       "default": "./lib/client.mjs"
+    },
+    "./management": {
+      "types": "./lib/types/standard/management.d.ts",
+      "default": "./lib/management.mjs"
+    },
+    "./events": {
+      "types": "./lib/types/standard/events.d.ts",
+      "default": "./lib/events.mjs"
+    },
+    "./settings": {
+      "types": "./lib/types/standard/settings.d.ts",
+      "default": "./lib/settings.mjs"
     }
   },
   "files": [
@@ -22,7 +34,7 @@
   ],
   "scripts": {
     "build": "node ../../scripts/build-client-modules.mjs",
-    "typecheck": "tsc -p tsconfig.vendor.json && tsc -p tsconfig.json --noEmit"
+    "typecheck": "node ../../scripts/build-client-modules.mjs --types-only"
   },
   "devDependencies": {
     "@standard-schema/spec": "1.0.0",

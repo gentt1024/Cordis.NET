@@ -3,6 +3,17 @@ using Cordis.Composition;
 using Cordis.Example.Probes;
 using Cordis.Extensions;
 
+if (args is ["--settings-client", var outputDirectory])
+{
+    Directory.CreateDirectory(outputDirectory);
+    var artifact = TypertArtifacts.GenerateClient(SettingsControllerTypert.Contribution("Cordis.Probes.Settings"));
+    await File.WriteAllTextAsync(Path.Combine(outputDirectory, "settings.generated.mjs"), artifact.Module);
+    await File.WriteAllTextAsync(Path.Combine(outputDirectory, "settings.generated.d.mts"), artifact.Declaration);
+    await File.WriteAllTextAsync(Path.Combine(outputDirectory, "cordis-remote.mjs"), TypertClientRuntime.Module);
+    await File.WriteAllTextAsync(Path.Combine(outputDirectory, "cordis-remote.d.mts"), TypertClientRuntime.Declaration);
+    return;
+}
+
 if (args is ["--application-host", var prefix, var clientDirectory])
 {
     await ApplicationHost.RunAsync(prefix, clientDirectory);

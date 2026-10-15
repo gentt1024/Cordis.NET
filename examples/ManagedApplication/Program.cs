@@ -65,6 +65,7 @@ var builder = WebApplication.CreateSlimBuilder(
         ContentRootPath = AppContext.BaseDirectory
     });
 builder.WebHost.UseUrls("http://127.0.0.1:5187");
+builder.Services.AddHttpContextAccessor();
 await using var app = builder.Build();
 var clientArtifacts = new Dictionary<string, string>(clientPackages, StringComparer.Ordinal);
 
@@ -106,10 +107,56 @@ bool Authorized(HttpContext http) =>
 var management = new CordisManagement(
     session,
     (http, _) => Task.FromResult(Authorized(http)),
-    _ => new SettingsPolicy(["limit", "label", "credential"]),
     packages,
     _ => Task.FromResult(catalog!));
 management.Map(app);
+var settingsContracts = SettingsControllerTypert.Contribution("Cordis.ManagedApplication.Settings");
+var managerContracts = PluginManagerTypert.Contribution("Cordis.ManagedApplication.Management");
+var registry = new TypertRegistry(session.Context);
+var gateway = new TypertGateway(session.Context, registry);
+await session.Context.RunAsync(context =>
+{
+    new SettingsForms(
+        context,
+        session.ConfigurationOperations,
+        _ => new SettingsPolicy(["limit", "label", "credential"]));
+    new SettingsController(context);
+    registry.Register(context, settingsContracts);
+    gateway.RegisterRemoteEvents(
+        context,
+        TypertRemoteEvents.FromCordis(context, StandardRemoteEvents.Definitions),
+        new TypertRemoteEventHost(launch.Home));
+    return Task.CompletedTask;
+});
+await management.MountPluginManagerAsync(
+    session.Context,
+    registry,
+    app.Services.GetRequiredService<IHttpContextAccessor>(),
+    managerContracts.Package);
+TypertHostConnection remoteConnection = null!;
+await session.Context.RunAsync(owner =>
+{
+    remoteConnection = new(owner, gateway);
+    owner.Provide("connection", remoteConnection);
+    return Task.CompletedTask;
+});
+app.UseWebSockets();
+app.MapCordisRemote(
+    "/remote",
+    remoteConnection,
+    (http, _) => Task.FromResult(Authorized(http)));
+app.MapGet("/client-runtime/cordis-remote.mjs", () => Results.Text(TypertClientRuntime.Module, "text/javascript"));
+app.MapGet("/client-runtime/cordis-remote.d.mts", () => Results.Text(TypertClientRuntime.Declaration, "text/plain"));
+var eventArtifact = TypertArtifacts.GenerateEvents(StandardRemoteEvents.Definitions);
+app.MapGet("/client-runtime/events.mjs", () => Results.Text(eventArtifact.Module, "text/javascript"));
+app.MapGet("/client-runtime/events.d.ts", () => Results.Text(eventArtifact.Declaration, "text/plain"));
+foreach (var (name, contracts) in new[] { ("settings", settingsContracts), ("management", managerContracts) })
+{
+    var client = TypertArtifacts.GenerateClient(contracts);
+    app.MapGet("/client-runtime/" + name + ".mjs", () => Results.Text(client.Module, "text/javascript"));
+    app.MapGet("/client-runtime/" + name + ".d.ts", () => Results.Text(client.Declaration, "text/plain"));
+}
+
 app.MapGet("/", () => Results.File(Path.Combine(app.Environment.ContentRootPath, "index.html"), "text/html"));
 app.MapGet("/client-runtime/client.mjs", () => Results.File(Path.Combine(runtime, "client.mjs"), "text/javascript"));
 app.MapGet("/client-runtime/LICENSES.txt", () => Results.File(Path.Combine(runtime, "LICENSES.txt"), "text/plain"));
@@ -157,7 +204,7 @@ void QueueCapture()
         try
         {
             await CaptureAsync();
-            management.NotifyClientModulesChanged();
+            await management.NotifyClientModulesChangedAsync();
         }
         catch (Exception error)
         {
@@ -167,7 +214,7 @@ void QueueCapture()
                 [],
                 new Uri(configuration),
                 "/cordis/client/artifacts");
-            management.NotifyClientModulesChanged();
+            await management.NotifyClientModulesChangedAsync();
             Console.Error.WriteLine("Client catalog withdrawn: " + error.Message);
         }
     }));
@@ -273,7 +320,7 @@ foreach (var author in watchSources)
                             }
 
                             builds[name] = new(name, "running", revision, null);
-                            management.NotifyClientModulesChanged();
+                            await management.NotifyClientModulesChangedAsync();
                         });
                         // Stop escapes a queued publication while root disposal owns that queue.
                         // Its tracked settlement rejects publication when cancellation reaches the queue.

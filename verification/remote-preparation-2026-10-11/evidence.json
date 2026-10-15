@@ -1510,7 +1510,7 @@
     "Local Windows and WSL2 Ubuntu gates; no new hosted CI, remote push, PR, merge, release or publication.",
     "Original composition reference gate selects existing profile/user-patches coverage, not Gateway original specs.",
     "Initial fixture type-symbol mistake, invalid upstream-test selection, launcher failure and interrupted runs are retained privately and excluded from acceptance.",
-    "No complete Typert, rich protocol, numeric Settings migration, PluginManager migration, new model scope, named UI host or Maker execution is accepted.",
+    "No complete Typert, rich protocol, numeric Settings migration, PluginManager migration, new model scope, named UI host or external applications execution is accepted.",
     "Dynamic CLR remains JIT-only; static Native AOT applies only to supported consumers.",
     "Source archive is retained; no new no-Git archive build or remote SourceLink retrieval was performed.",
     "Independent review and main integration remain pending."

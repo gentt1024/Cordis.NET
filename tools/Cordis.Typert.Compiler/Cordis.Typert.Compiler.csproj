@@ -7,5 +7,7 @@
     <Reference Include="Microsoft.CodeAnalysis" HintPath="$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.dll" Private="false" />
     <Reference Include="Microsoft.CodeAnalysis.CSharp" HintPath="$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll" Private="false" />
     <Compile Include="../Cordis.Typert.Generator/Model/**/*.cs" Link="Model/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../src/Cordis.Composition/Generation/*.cs" Link="Generation/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../src/Cordis.Composition/Client/cordis-remote.mjs;../../src/Cordis.Composition/Client/cordis-remote.d.mts" LogicalName="Cordis.Typert.Compiler.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

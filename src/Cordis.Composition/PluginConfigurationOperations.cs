@@ -57,7 +57,7 @@ public sealed record BundleConfigurationInfo(
 /// <summary>
 /// The persistence and application outcomes of one management operation.
 /// </summary>
-/// <param name="Changed">Whether profile manifest or patch bytes changed; this is separate from runtime application.</param>
+/// <param name="Changed">Whether profile manifest, patch or compatibility bytes changed; this is separate from runtime application.</param>
 /// <param name="Application">Application outcome: applied, restart-required, overridden or failed.</param>
 /// <param name="Target">The affected entry, bundle or exact compatibility package/version identity.</param>
 /// <param name="Enabled">The requested enablement state.</param>
@@ -86,7 +86,7 @@ public sealed partial class PluginConfigurationOperations(
         new(StringComparer.Ordinal);
 
     private string ManifestPath => Path.Combine(launch.Profile.Directory, "package.json");
-    private string PatchPath => launch.Profile.UserLayer.Source;
+    internal string PatchPath => launch.Profile.UserLayer.Source;
 
     /// <summary>Host lifecycle queue for mutations. ProfileSession supplies its queue even without automatic watching; null means startup-only configuration.</summary>
     public Func<Func<Task>, Task>? RunExclusiveAsync
@@ -516,7 +516,7 @@ public sealed partial class PluginConfigurationOperations(
         }
     }
 
-    private async Task<string> DiskStateAsync()
+    private async Task<(string Manifest, string Patch, string? Compatibility)> DiskStateAsync()
     {
         async Task<string> Read(string file)
         {
@@ -530,7 +530,18 @@ public sealed partial class PluginConfigurationOperations(
             }
         }
 
-        return await Read(ManifestPath) + "\0" + await Read(PatchPath);
+        string? compatibility;
+        try
+        {
+            compatibility = await Read(Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // Unknown bytes are distinct from absence. The compatibility authority still refuses unsafe rewrites.
+            compatibility = null;
+        }
+
+        return (await Read(ManifestPath), await Read(PatchPath), compatibility);
     }
 
     private async Task<ProfileCandidate> WriteManifestAsync(
@@ -581,7 +592,7 @@ public sealed partial class PluginConfigurationOperations(
         }
     }
 
-    private sealed class Refusal(string code) : Exception(code)
+    private sealed class Refusal(string code, string? message = null) : Exception(message ?? code)
     {
         public string Code
         {

@@ -1,0 +1,423 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-14",
+  "sourceCheckpoint": "ec45dd727fb2eb7be5e31c336c1a6de5cc1f0963",
+  "packageRun": "38509755930",
+  "packageCheckout": "5ab3ec2bf67f3409c62f5e8ecb399378ccafcb81",
+  "packageVersion": "0.2.0-alpha.4",
+  "boundary": "Original CI packages, unchanged example C#/HTML source, isolated PackageReferences instead of ProjectReferences. Browser runtime rebuilt with the unchanged module builder and the ClientAssets producer referencing the original CI Composition package. No platform package rebuilt.",
+  "application": {
+    "source": "examples/ManagedApplication",
+    "plugin": "examples/ManagedPlugin",
+    "hostPackageMatches": {
+      "Cordis.AspNetCore.dll": {
+        "sha256": "5f10b09f8a6ee73cc892191b8b0978a2edf6dfd9f32f22e8c0311128d527c566",
+        "packages": [
+          "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      },
+      "Cordis.Clr.dll": {
+        "sha256": "2af431d9f74e32f9dd9576d158351cd0a50832cffb2c86edd65759804962b8cb",
+        "packages": [
+          "Cordis.NET.Clr.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      },
+      "Cordis.Composition.dll": {
+        "sha256": "7fff8bcbf3c8a93a31cac3d24284809c163c94081ace13c57c66582cb18cb837",
+        "packages": [
+          "Cordis.NET.Composition.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      },
+      "Cordis.Core.dll": {
+        "sha256": "29edb8955c56b661834186dc69f1da96a609fd8a17d5976815bf9b47eb3999c3",
+        "packages": [
+          "Cordis.NET.Core.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      },
+      "Cordis.Extensions.dll": {
+        "sha256": "4800b3ca0235f8db7e2bf19b49ebcbb7d472c2f5987d0c17f24c18bceecfa20b",
+        "packages": [
+          "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg",
+          "Cordis.NET.Tool.0.2.0-alpha.4.nupkg"
+        ]
+      }
+    },
+    "sourceHashes": {
+      "examples/ManagedApplication/Program.cs": "92494792f31f62e6966fa7ac8044ee3d1efc393e01d0260321d9e9a95d364ba5",
+      "examples/ManagedApplication/index.html": "0b7cfc4196cdfc1005f6895592f0991344b6dc210cfa91ceb85f6b1d341a476a",
+      "examples/ManagedPlugin/Module.cs": "d6a1ad66550948f298eff43af514c3b2733f1fb6f63fa7c0daeb00708ad27f69",
+      "tools/Cordis.ClientAssets/Program.cs": "2c7d5f16b7b89af76a283cbd409502faefa0f03fc64fa49588e25b4ddbcc181b",
+      "scripts/build-client-modules.mjs": "d0640a3aefa7aec81c68a8f4ecf333d102fb13e34fa27f9a1c4a5f744ab77844"
+    },
+    "runtimeAssets": {
+      "client.mjs": "19bf77da1cc6ce64ebb275c3c371af24c18fddd67d3054205dd83714678b1d1e",
+      "cordis-remote.d.mts": "189a6622e3b556dbd69a733407f0ef70de2feb1203c74a3a104ba3c1f96ed9dc",
+      "cordis-remote.mjs": "7e72b561d045eafd8b3447205bbf3db0f432331b853f44f6fb5d58cd5373be18",
+      "events.d.ts": "92401af271f0505482c1e5b93f5b5dd75b39f278a02ffefc3a704582f14400f4",
+      "events.mjs": "8dae0e76feef32072f77037c05741cbfd70ba91b2bd129ff178db0a261972e6b",
+      "LICENSES.txt": "d839a006c92fa155fce7b474f981fb66f3378cbbe3360a728cdc7354a381a2b9",
+      "management.d.ts": "a58ea379cb9e6839a07ee3ef9cee42a4af538efd350509e93a704e450dd173cd",
+      "management.mjs": "de6f956e2fe4b0da60f67a8cda69f890b5404519ebc381b2e907f52da1d460ba",
+      "package.json": "3f46e2770fb3759a0424c71351298753f8e0649ae7425384459dbfa3cc1aefc7",
+      "settings.d.ts": "dd9947d64e7d0d406ef8b53fdd3c64b9569f931f190c73b07ad2d1c9cf1c366d",
+      "settings.mjs": "ba5e463b3a1aa74d664ba69e016772f2289bd03d1c95e403170c589b23963b3a"
+    },
+    "observations": [
+      "Actual browser inspect/install succeeded using DotnetPluginToolchain, not an injected installation fixture.",
+      "Settings edit persisted limit 7 and advanced the live form revision from 0 to 1.",
+      "Disabling the provider removed panel contributions; enabling restored one contribution.",
+      "After client disposal and Host shutdown, a new process reacquired the profile and restored the active CLR plugin, limit 7 and one panel contribution. The new Settings owner reported revision 0.",
+      "Standard remove withdrew the plugin and retained deployment files. A second process restart did not reactivate it.",
+      "All temporary application Hosts were stopped with the normal Ctrl+C shutdown signal. The PowerShell PTY wrapper reported exit 1 from interruption; this is not a claim of a captured zero process exit code."
+    ],
+    "restart": {
+      "settings": {
+        "ns": "example.managedplugin",
+        "autoGenerate": true,
+        "schema": {
+          "uid": 0,
+          "refs": {
+            "0": {
+              "type": "object",
+              "meta": {
+                "required": false,
+                "default": {}
+              },
+              "dict": {
+                "limit": 1,
+                "credential": 2
+              }
+            },
+            "1": {
+              "type": "number",
+              "meta": {
+                "required": false,
+                "description": "Maximum concurrent work items.",
+                "min": 1,
+                "max": 100,
+                "step": 1,
+                "default": 1
+              }
+            },
+            "2": {
+              "type": "string",
+              "meta": {
+                "role": "secret"
+              }
+            }
+          }
+        },
+        "value": {
+          "limit": 7
+        },
+        "revision": 0,
+        "base": {
+          "limit": 1
+        },
+        "user": {
+          "limit": 7
+        },
+        "applies": "live",
+        "secrets": [
+          {
+            "path": [
+              "credential"
+            ],
+            "set": true
+          }
+        ]
+      },
+      "plugins": [
+        {
+          "entryId": "root",
+          "moduleName": "cordis:include",
+          "enabled": true,
+          "patchId": null,
+          "readOnlyReason": "management-required",
+          "state": "active"
+        },
+        {
+          "entryId": "root:example.managedplugin",
+          "moduleName": "nuget:example.managedplugin",
+          "enabled": true,
+          "patchId": "example.managedplugin",
+          "readOnlyReason": null,
+          "state": "active"
+        }
+      ],
+      "slots": {
+        "panelContributions": 1
+      }
+    },
+    "afterRemoveRestart": {
+      "plugins": [
+        {
+          "entryId": "root",
+          "moduleName": "cordis:include",
+          "enabled": true,
+          "patchId": null,
+          "readOnlyReason": "management-required",
+          "state": "active"
+        }
+      ],
+      "slots": {
+        "panelContributions": 1
+      }
+    },
+    "deploymentFilesRetained": true,
+    "screenshotSha256": "73b22a040f817449dcc3cb9528f4f1661f02f54ddd03557b823bff37f6270d81"
+  },
+  "defaultDesktopOpening": {
+    "injected": false,
+    "observed": "The real Settings action started Windows Explorer/OpenWith. The human confirmed a window appeared and closed it without choosing an editor.",
+    "preparedDocument": "profile/cordis.patch.yml",
+    "editorContentsVerified": false
+  },
+  "ide": {
+    "coldProjectPrepared": true,
+    "coldProjectInitiallyHasGeneratedOutputs": false,
+    "separateCommandLineSanity": "Example.Author and Guid.Empty printed successfully.",
+    "liveIdeVerified": true,
+    "ideVersion": "Rider 2026.2",
+    "initialHumanObservation": "EchoServiceTypert, RemoteService and RemoteMethod were unresolved on first opening.",
+    "initialRestorePackageCommit": "ecfc5ee8559e05fb913fd45ae2dd447ddef2c2ff",
+    "expectedRestorePackageCommit": "5ab3ec2bf67f3409c62f5e8ecb399378ccafcb81",
+    "cause": "The IDE inherited NUGET_PACKAGES and reused the published alpha.4 cache, overriding fixture NuGet.Config globalPackagesFolder. That package lacks the current Remote attributes, analyzer and build targets.",
+    "fixtureCorrection": "Set RestorePackagesPath in the isolated Directory.Build.props and preparation script; preserve the failed assets and global cache. No platform or published-package changes.",
+    "correctedRestore": "Rider automatically restored the original CI package hash and completed design-time build. A separate restore probe retained the conflicting environment and also selected the isolated cache.",
+    "correctedCompositionSha512": "DQ7pVmbEGqAi8isz7p+C4pb6NgdYPqryGOeEjznI561h0fS7dOI4SV2H78U/Eq51rwYyBPvBkY2oYgK5Ri68Qg==",
+    "correctedEditorObservation": "Human confirmed all three symbols resolved without manual build after correcting cache isolation.",
+    "debugObservation": "Human confirmed the breakpoint at Console.WriteLine(contribution.Package) was hit, then Example.Author and 00000000-0000-0000-0000-000000000000 were printed."
+  },
+  "hmr": {
+    "packageBacked": true,
+    "diagnosticTool": "dotnet-trace 10.0.750501, isolated diagnostic tool only",
+    "sample": "One cold process running the unchanged packaged JintExpressionEvaluator through Context.RunAsync, followed by two warm evaluations and recovery.",
+    "firstEntryMilliseconds": 73.125,
+    "firstConfigureMilliseconds": 1272.129,
+    "firstExitMilliseconds": 1463.203,
+    "recoveryResult": 3,
+    "stacks": {
+      "sampledEvaluatorMilliseconds": {
+        "within evaluator": 1372.3649136526108,
+        "Jint.Engine..ctor": 1159.6348177185057,
+        "Jint.Engine.SetValue": 17.589782350158885,
+        "Jint.Engine.Execute": 195.1393519689559,
+        "Jint.Engine.Evaluate": 51.86684910182953
+      },
+      "leafMilliseconds": [
+        [
+          "UNMANAGED_CODE_TIME",
+          1190.315275019454
+        ],
+        [
+          "CPU_TIME",
+          182.04711544284882
+        ],
+        [
+          "Cordis.JavaScript!Cordis.JavaScript.JintExpressionEvaluator.Evaluate(class System.String,class Cordis.Context)",
+          0.000961614990274029
+        ],
+        [
+          "Jint!Jint.Native.Temporal.DefaultTimeZoneProvider..cctor()",
+          0.00038670616140734637
+        ],
+        [
+          "Jint!Jint.Options..ctor()",
+          0.0003517862319881715
+        ],
+        [
+          "Jint!Jint.Engine..ctor(class Jint.Options,class System.Action`2<class Jint.Engine,class Jint.Options>)",
+          0.0003176723480464716
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.TryGetTimeZone(class System.String,bool,class System.TimeZoneInfo&,class System.Exception&,class CachedData,bool)",
+          0.0003111206056019
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.TryGetTimeZoneFromLocalMachine(class System.String,class System.TimeZoneInfo&,class System.Exception&)",
+          9.931850451039281e-05
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetSystemTimeZones(bool)",
+          4.472656246434781e-05
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetLocalizedNameByMuiNativeResource(class System.String)",
+          2.6468849853245047e-05
+        ],
+        [
+          "Acornima!Acornima.Parser.ParseMaybeBinary(value class DestructuringErrors&,value class ExpressionContext)",
+          5.616378984996118e-06
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetLocalizedNameByNativeResource(class System.String,int32)",
+          2.0586015807566582e-06
+        ],
+        [
+          "Jint!Jint.Engine.ScriptEvaluation(class Jint.Runtime.ScriptRecord,class Acornima.ParserOptions)",
+          2.012443474086467e-06
+        ],
+        [
+          "Acornima!Acornima.Parser.ParseVar(value class Acornima.Ast.VariableDeclarationKind,bool)",
+          1.7032623418344883e-06
+        ],
+        [
+          "System.Private.CoreLib.il!Interop+Kernel32.LoadLibraryEx(class System.String,int,int32)",
+          1.6639709201626829e-06
+        ]
+      ],
+      "timezoneAndJitSampledMilliseconds": [
+        [
+          "Jint!Jint.Options+TemporalOptions..ctor()",
+          1097.4838866149903
+        ],
+        [
+          "Jint!Jint.Native.Temporal.DefaultTimeZoneProvider.get_Instance()",
+          1097.4838866149903
+        ],
+        [
+          "Jint!Jint.Native.Temporal.DefaultTimeZoneProvider..cctor()",
+          1097.4838866149903
+        ],
+        [
+          "Jint!Jint.Native.Temporal.DefaultTimeZoneProvider.BuildCanonicalCasingDict()",
+          1092.8559569202423
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetSystemTimeZones(bool)",
+          1092.8559569202423
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.TryGetTimeZone(class System.String,bool,class System.TimeZoneInfo&,class System.Exception&,class CachedData,bool)",
+          1082.455712034607
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.PopulateAllSystemTimeZones(class CachedData)",
+          1080.427612020874
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.TryGetTimeZoneFromLocalMachine(class System.String,class System.TimeZoneInfo&,class System.Exception&)",
+          1080.4273009002684
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetLocalizedNameByMuiNativeResource(class System.String)",
+          1067.1264188789364
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetLocalizedNameByNativeResource(class System.String,int32)",
+          731.9681055147169
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.TryGetTimeZoneUsingId(class System.String,bool,class System.TimeZoneInfo&,class System.Exception&,class CachedData,bool)",
+          706.2958981536865
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.TryGetTimeZoneFromLocalMachine(class System.String,bool,class System.TimeZoneInfo&,class System.Exception&,class CachedData)",
+          706.2958981536865
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetLocalizedNamesByRegistryKey(class Internal.Win32.RegistryKey,class System.String&,class System.String&,class System.String&)",
+          692.5156161226272
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo..cctor()",
+          12.428300172805791
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.CreateUtcTimeZone()",
+          8.368400065231299
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetUtcStandardDisplayName()",
+          8.368400065231299
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.TryCreateAdjustmentRules(class System.String,value class REG_TZI_FORMAT&,class AdjustmentRule[]&,class System.Exception&,int32)",
+          5.037790582466073
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.CreateCustomTimeZone(class System.String,value class System.TimeSpan,class System.String,class System.String)",
+          4.059900107574492
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.TryConvertIanaIdToWindowsId(class System.String,bool,class System.String&)",
+          4.059900107574492
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo+CachedData.CreateLocal()",
+          3.9938132949828287
+        ],
+        [
+          "System.Private.CoreLib.il!System.TimeZoneInfo.GetLocalTimeZone(class CachedData)",
+          3.9938132949828287
+        ],
+        [
+          "System.Private.CoreLib.il!Interop+Kernel32.GetDynamicTimeZoneInformation(value class TIME_DYNAMIC_ZONE_INFORMATION&)",
+          1.9657132587433352
+        ]
+      ]
+    },
+    "traceSha256": "63d0063b1d676b0d1e8643e4f5c97cda0107939b4e1b8f7f0f3583fda0819887",
+    "boundary": "Sampled stack durations overlap and must not be added. This probe did not reproduce the historical ten-second timeout or prove the cause of its whole twelve-second delay. Engine construction/Temporal timezone discovery is established for this sample, not inferred from a later green test. No production code, assertion, timeout, concurrency or retry changed.",
+    "dispositionRecommendation": {
+      "status": "Pending maintainer acceptance of a residual latency risk; not a proven environment failure or closed historical timeout.",
+      "recommendation": "Retain current implementation, ten-second regression wait and failure evidence. Accept optional trusted-expression cold-preparation latency as a bounded release scope risk if the maintainer agrees; do not claim a measured upper latency bound.",
+      "observableImpact": "Synchronous cold evaluator preparation delays the current serialized configuration refresh, subsequent coordinator work and disposal that drains that refresh. No new data-loss, missing-error or non-draining-owner defect was established.",
+      "limits": "The Jint execution constraint is not an end-to-end deadline covering engine construction and native initialization. The new sample identifies one initialization path, not the complete historical delay.",
+      "reopenWhen": [
+        "Queue progress, error publication or cleanup fails after evaluator completion.",
+        "A repeatable production scenario demonstrates unacceptable cold-preparation latency requiring a platform correction.",
+        "A hard total evaluation deadline becomes an approved product requirement."
+      ],
+      "notSelected": [
+        "Increase timeout or weaken assertions to get green results.",
+        "Mandatory warmup that moves latency without bounding it.",
+        "Engine replacement or off-domain background evaluation without a proven behavioral need."
+      ]
+    }
+  },
+  "retainedPreparationFailures": [
+    "Initial isolated Host added reflection-disabled serialization, unlike the source example; real installation refused after preparation. The override was removed and that profile/residual deployment preserved.",
+    "Retry into the preserved failed profile correctly refused an existing deployment directory; acceptance used a separately named profile.",
+    "A rebuild attempted before Host shutdown completed failed on a locked application output; the next build waited for shutdown and passed.",
+    "Diagnostic source initially used a nonexistent exception property; the corrected diagnostic uses the exception type. These are diagnostic/setup failures, not additional product regressions."
+  ],
+  "validationBoundary": "No new Windows/Linux, upstream shard or AOT full gate. Original CI remains the production-source baseline. Rider 2026.2 symbol visibility and debugging passed with human observation after correcting the proven fixture package-cache mismatch. No Visual Studio or other IDE acceptance is claimed. Desktop editor content remains unverified; HMR historical-risk disposition remains open. A separate original-package compilation independently confirmed CS0122 for external ResultSchema access; this is a consumer boundary finding, not a failed full CI or a completed API correction.",
+  "consumerBoundaryReview": {
+    "runtimeExport": {
+      "entry": "TypertArtifacts.GenerateClient(TypertContribution)",
+      "status": "Existing public descriptor/STJ-based export through shared emitter and Connection; independent saved-model restrictions are not global Host restrictions.",
+      "evidence": "Repository ManagedApplication original-package consumption. Additional private-application success is an external thread report, not independently rerun here."
+    },
+    "failureProjection": {
+      "status": "Fixed DSH and .NET both preserve explicit RemoteError fields and the message of ordinary exceptions under gateway/internal. No general safe-error policy or host-wide exception projection callback is established.",
+      "recommendation": "Keep fixed behavior unless a host-wide policy is explicitly approved. Existing business boundaries can emit public-safe RemoteError values. A uniform policy request remains a release-scope decision, not a secretly implemented adaptation."
+    },
+    "outputSchema": {
+      "status": "Concrete public export gap for consumers requiring the exact output-direction schema. Schema is public input projection; ResultSchema is internal. Generated Web type declarations do not provide complete runtime DTO validation.",
+      "packageCheckout": "5ab3ec2bf67f3409c62f5e8ecb399378ccafcb81",
+      "probe": "using Cordis.Composition; Console.WriteLine(TypertCodec.Void.ResultSchema);",
+      "compilerDiagnostic": "CS0122",
+      "buildExitCode": 1,
+      "logSha256": "532a04dc03f5ac8629aa734cd60ffbdbb53dd5a8b29ebc221e46874397fe20bf",
+      "recommendation": "If required for alpha5 consumption, expose the existing read-only output-direction projection with its current lazy validation semantics. Do not use input Schema as output, reflection, copied DTO schemas or a new validator/model. API scope decision precedes implementation.",
+      "notEstablished": "No result-schema API was added and no client validation behavior was changed.",
+      "probeWrapperNote": "The initial wrapper expected CS1061; the compiler actually returned the more precise CS0122 protection-level diagnostic. The retained compiler log was checked directly without rerunning compilation."
+    },
+    "reviewedSourceSha256": {
+      "src/Cordis.JavaScript/JintExpressionEvaluator.cs": "abbef89bdde8976e188d9fd7420f4efd63e66d01bd89fa17600f2545d1a1a371",
+      "src/Cordis.Extensions/HmrCoordinator.cs": "52f5cfa5136857a12f8faeb9e36d829634cf930b3bb952676403c8213efbe7bf",
+      "src/Cordis.Composition/TypertGateway.cs": "7093ed6d138df500cffd0cfc3b9ef62a028e564cc157c4b597bfff7d4c02729b",
+      "src/Cordis.Composition/TypertProtocol.cs": "bcc5be523c73c5c3fc4136f74870f15370ffeb410b68aa19b7a779ebf51be959",
+      "src/Cordis.Composition/TypertArtifacts.cs": "fef79c2718856558b9631023135570c49762710ce4cd2bf85c3d11be864272ff",
+      "src/Cordis.Composition/Generation/ClientEmitter.cs": "fffac9253a93c0eb28db2726286f333a56af38eed5ffb1c428c51cf82addbc64",
+      "src/Cordis.Composition/Client/cordis-remote.mjs": "7e72b561d045eafd8b3447205bbf3db0f432331b853f44f6fb5d58cd5373be18"
+    },
+    "validation": "Paired documentation check passed: 15 pairs, 9 package readmes. No production, API snapshot, dependency or version change; no repeated full gate."
+  }
+}

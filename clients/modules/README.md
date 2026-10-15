@@ -45,20 +45,28 @@ For a Host mapped at `/cordis`, a browser entry can use:
 
 ```js
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
+import { createEvents } from '/client-runtime/events.mjs'
+import { TypertConnection } from '/client-runtime/cordis-remote.mjs'
 
 const modules = await bootClientModules({ graph: { rev: 'initial', entries: [], batches: [] } })
-const management = createManagementClient({ baseUrl: '/cordis', modules })
+const connection = new TypertConnection(location.origin + '/remote')
+const events = createEvents(modules.context, connection)
+const management = createManagementClient({ baseUrl: '/cordis', modules, events })
 management.connection.subscribe(() => renderConnection(management.connection.getSnapshot()))
 management.subscribe(event => renderProgress(event))
 ```
 
-The management client reads full state and graph on connection and reconnection. SSE configuration, refresh and client-modules events invalidate those reads, and sequence gaps cause another full read. Transient connection loss preserves page plugins and drafts. Identical artifacts retain their instances across Host reconnection; actual roster withdrawal, explicit disconnect and page close release effects. Mutations require a connected Host generation and are never automatically replayed. Installation uses the inspection's `hash` as `inspectedHash` plus a caller-owned `requestId`; after a lost response the client queries the same generation's active wait operation. A null result remains unknown. `ManagementHttpError` represents a known refusal, while `ManagementOutcomeUnknown` means the caller cannot infer whether a mutation happened. Settings responses expose secret availability as `{path,set}` sidecars without a secret value. Authentication and approval policy belong to the native Host.
+The management client waits for the generated notification stream's readiness, then reads full state and graph on connection and reconnection. Selected configuration and client-module notifications invalidate those reads; installation state and log notifications reach subscribers with their original arguments. Notifications have no replay or sequence-gap protocol. Transient connection loss preserves page plugins and drafts. Identical artifacts retain their instances across Host reconnection; actual roster withdrawal, explicit disconnect and page close release effects. Raw configuration mutations require a connected Host generation and are never automatically replayed. `ManagementHttpError` represents a known HTTP refusal, while `ManagementOutcomeUnknown` means the caller cannot infer whether a raw configuration mutation happened.
+
+Plugin and package operations use the actual generated `/management` module. Installation submits the inspection's `contentHash` as `inspectedHash` plus a caller-owned `requestId`; after a lost response the caller queries the same generation's active `waitForInstall`. A null result remains unknown. The shell's fetch carrier supplies authentication and `If-Cordis-Generation`; approval policy belongs to the native Host. See the [standard management migration guide](../../docs/management-remote-migration.md) for public calls and removed handwritten routes and methods.
+
+Settings is consumed through the generated standard Remote module, not handwritten management methods. It uses numeric form revisions and optional expected revisions and exposes secret availability as `{path,set}` sidecars. Full-configuration management methods retain their independent hash fence. Regenerate consumers using the [Settings migration guide](../../docs/settings-contract-migration.md).
 
 `SlotCore` is the fixed generic contribution registry, exported beside the module client. It does not bring a React runtime into the bundle. Its type declarations retain the upstream renderer contracts and ship their licensed React/CSS type dependencies. Import types and augment `SlotMap` through the public `@cordis-net/client-modules/slots` subpath. A host can declare root and child seats; a plugin registers a component and owns the returned disposer with `ctx.effect`. The examples demonstrate a provider declaring a list seat and a separate panel registering into it. Replacement clears the previous registry's entries, and withdrawal removes the panel's contribution. Application-specific renderer and session binding remain outside this package.
 
-`createManagementClient` accepts optional `transport.fetch`, `transport.openEvents` and `recovery`. The default is same-origin HTTP/SSE. The fixed upstream controller owns handshake deadlines, continuous backoff, browser offline suspension and manual `management.reconnect()`. Failed handshakes close their carrier attempt and retry even when the stream remained open. Injected carriers honor read cancellation and release event resources through their returned disposer. Late callbacks cannot publish readiness. Recovery never replays writes.
+`createManagementClient` requires the generated notification client in `events` and accepts optional `transport.fetch` and `recovery`. The carrier is native HTTP envelopes and WebSocket mux. The fixed upstream controller owns handshake deadlines, continuous backoff, browser offline suspension and manual `management.reconnect()`. Failed handshakes close their subscription attempt and retry even when the stream remained open. Injected fetch carriers honor read cancellation; the generated notification client releases its observer when that attempt is aborted. Late callbacks cannot publish readiness. Recovery never replays writes.
 
-`management.close()` closes recovery and withdraws modules; the page still owns `modules.dispose()`. Invoke both when disposing the page. The isolated `client-modules-browser-host.mjs` carrier exercises factory scripts in a browser, but does not prove native management, configuration or Host composition.
+`management.close()` closes recovery and withdraws modules; the page still owns `modules.dispose()` and `events.dispose()`. Release all three when disposing the page. The isolated `client-modules-browser-host.mjs` carrier exercises factory scripts in a browser, but does not prove native management, configuration or Host composition.
 
 Run `node scripts/verify-client-shared-modules.mjs` for an independent built-plugin check of the public bootstrap with an injected Node transport.
 For real browser transport checks, start `node scripts/client-modules-browser-host.mjs` and open its printed origin at `/shared`.

@@ -1,0 +1,357 @@
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+
+namespace Cordis.Typert;
+
+internal sealed record ClientArtifact(string Module, string Declaration);
+
+internal sealed record ClientCodec(
+    JsonElement Schema,
+    bool IsVoid = false,
+    bool AcceptsUndefined = false,
+    JsonTypeInfo? ResultMetadata = null);
+
+internal sealed record ClientParameter(string Wire, ClientCodec Codec, bool AcceptsUndefined, string? Lookup);
+
+internal sealed record ClientScope(string Context, string Wire);
+
+internal sealed record ClientInvocation(string Context, string Wire, ClientCodec Codec);
+
+internal sealed record ClientMethod(
+    string Endpoint,
+    string Namespace,
+    string Method,
+    ClientParameter[] Parameters,
+    ClientCodec Result,
+    bool IsStream,
+    ClientInvocation? Invocation,
+    ClientScope? Scope,
+    ClientCodec? Uplink);
+
+[JsonSerializable(typeof(string))]
+internal partial class ClientEmitterJson : JsonSerializerContext;
+
+internal static class ClientEmitter
+{
+    /// <summary>Emit typed Client methods borrowing the shared Connection runtime. Unsupported schema constructs fail generation.</summary>
+    internal static ClientArtifact Generate(IReadOnlyList<ClientMethod> methodsInput)
+    {
+        ArgumentNullException.ThrowIfNull(methodsInput);
+        if (methodsInput
+            .GroupBy(descriptor => descriptor.Endpoint, StringComparer.Ordinal)
+            .Any(group => group.Skip(1).Any()))
+            throw new ArgumentException(
+                "A Client contribution cannot contain duplicate Remote endpoints.",
+                nameof(methodsInput));
+        var definitions = new StringBuilder(
+            "import type { TypertConnection, RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters } from './cordis-remote.mjs';\n" +
+            "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
+            "export type { RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters } from './cordis-remote.mjs';\n");
+        var methods = new StringBuilder("export interface RemoteClient {\n  dispose(): Promise<void>;\n");
+        var services = new Dictionary<string, StringBuilder>(StringComparer.Ordinal);
+        var runtime = new StringBuilder(
+            "import { createClient, mountClient } from './cordis-remote.mjs';\n" +
+            "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
+            "export function createRemote(connection) { return createClient(connection, [\n");
+        var index = 0;
+        foreach (var descriptor in methodsInput)
+        {
+            if (descriptor.Method == "ctx")
+                throw new ArgumentException(
+                    "A Remote method cannot replace its namespace's calling Context.",
+                    nameof(methodsInput));
+            var fields = new List<string>();
+            var scopedFields = new List<string>();
+            var scopeKey = descriptor.Invocation?.Context ?? descriptor.Scope?.Context;
+            var scopeWire = descriptor.Invocation?.Wire ?? descriptor.Scope?.Wire;
+            foreach (var parameter in descriptor.Parameters)
+            {
+                var type = "Boundary" + index++;
+                AppendType(definitions, type, parameter.Codec.Schema);
+                var field = Quote(parameter.Wire) + (parameter.AcceptsUndefined ? "?" : "") + ": " + type;
+                fields.Add(field);
+                if (parameter.Wire != scopeWire)
+                    scopedFields.Add(field);
+            }
+
+            if (descriptor.Invocation is { } receiver)
+            {
+                var type = "Boundary" + index++;
+                AppendType(definitions, type, receiver.Codec.Schema);
+                fields.Add(Quote(receiver.Wire) + ": " + type);
+            }
+
+            var result = "Boundary" + index++;
+            if (descriptor.Result.IsVoid)
+                definitions.Append("export type ").Append(result).Append(" = undefined;\n");
+            else
+                AppendType(
+                    definitions,
+                    result,
+                    descriptor.Result.Schema,
+                    descriptor.IsStream ? null : descriptor.Result.ResultMetadata);
+            string? input = null;
+            if (descriptor.Uplink is { } uplink)
+            {
+                input = "Boundary" + index++;
+                AppendType(definitions, input, uplink.Schema);
+                if (uplink.AcceptsUndefined)
+                    input += " | undefined";
+            }
+
+            var returnType = (descriptor.IsStream
+                    ? input is null ? "RemoteStreamHandle<" : "RemoteDuplexHandle<"
+                    : "Promise<RemoteResult<") + result + (input is null ? "" : ", " + input) +
+                (descriptor.IsStream ? ">" : ">>");
+            methods
+                .Append("  ")
+                .Append(Quote(descriptor.Endpoint))
+                .Append("(args: ")
+                .Append(Arguments(fields))
+                .Append(", signal?: AbortSignal): ")
+                .Append(returnType)
+                .Append(";\n");
+            if (!services.TryGetValue(descriptor.Namespace, out var service))
+                services.Add(descriptor.Namespace, service = new());
+            service
+                .Append("    ")
+                .Append(Quote(descriptor.Method))
+                .Append("(args: ")
+                .Append(Arguments(scopedFields))
+                .Append(", signal?: AbortSignal): ")
+                .Append(returnType)
+                .Append(";\n");
+            if (descriptor.Scope is not null && descriptor.Invocation is null)
+                service
+                    .Append("    ")
+                    .Append(Quote(descriptor.Method))
+                    .Append("(args: ")
+                    .Append(Arguments(fields))
+                    .Append(", signal?: AbortSignal): ")
+                    .Append(returnType)
+                    .Append(";\n");
+            runtime
+                .Append("  [")
+                .Append(Quote(descriptor.Endpoint))
+                .Append(", ")
+                .Append(descriptor.IsStream ? "true" : "false")
+                .Append(", ")
+                .Append(input is null ? "false" : "true")
+                .Append(", [")
+                .Append(
+                    string.Join(
+                        ", ",
+                        descriptor
+                            .Parameters
+                            .Where(parameter => !parameter.AcceptsUndefined || parameter.Lookup is not null)
+                            .Select(parameter => Quote(parameter.Wire))
+                            .Concat(descriptor.Invocation is { } invocation ? [Quote(invocation.Wire)] : [])))
+                .Append(']')
+                .Append(
+                    scopeKey is null
+                        ? ""
+                        : ", [" + Quote(scopeKey) + ", " + Quote(scopeWire!) + ", " +
+                        (descriptor.Invocation is null ? "true" : "false") + "]")
+                .Append("],\n");
+        }
+
+        methods.Append("}\nexport declare function createRemote(connection: TypertConnection): RemoteClient;\n");
+        methods.Append("export interface RemoteServices {\n");
+        foreach (var (name, service) in services)
+            methods.Append("  ").Append(Quote(name)).Append(": {\n").Append(service).Append("  };\n");
+        methods.Append(
+            "}\nexport declare function getRemote<K extends keyof RemoteServices>(ctx: RemoteCaller, namespace: K): RemoteServices[K];\n");
+        runtime.Append("]); }\n");
+        runtime.Append("const namespaceSpecs = [\n");
+        foreach (var group in methodsInput.GroupBy(descriptor => descriptor.Namespace))
+            runtime
+                .Append("  [")
+                .Append(Quote("remote." + group.Key))
+                .Append(", [")
+                .Append(
+                    string.Join(
+                        ", ",
+                        group.Select(descriptor =>
+                            "[" + Quote(descriptor.Method) + ", " + Quote(descriptor.Endpoint) + "]")))
+                .Append("]],\n");
+        runtime.Append(
+            "];\nexport function mountRemote(ctx, connection, adapters) { return mountClient(ctx, createRemote(connection), namespaceSpecs, adapters); }\n" +
+            "export function getRemote(ctx, namespace) { const service = ctx.get('remote.' + namespace); if (!service) throw new Error('Remote namespace is not mounted: ' + namespace); return service; }\n");
+        methods.Append(
+            "export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection, adapters?: RemoteContextAdapters): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
+        return new(runtime.ToString(), definitions.Append(methods).ToString());
+    }
+
+    private static string Arguments(List<string> fields) =>
+        fields.Count == 0 ? "Record<string, never>" : "{ " + string.Join("; ", fields) + " }";
+
+    private static string Quote(string value) => JsonSerializer.Serialize(value, ClientEmitterJson.Default.String);
+
+    internal static void AppendType(
+        StringBuilder output,
+        string name,
+        JsonElement schema,
+        JsonTypeInfo? metadata = null)
+    {
+        var refs = new Dictionary<(string, JsonTypeInfo?), string>()
+        {
+            [("#", metadata)] = name
+        };
+        var pending = new Queue<(string Name, JsonElement Schema, JsonTypeInfo? Metadata)>();
+        pending.Enqueue((name, schema, metadata));
+        while (pending.TryDequeue(out var type))
+            output
+                .Append("export type ")
+                .Append(type.Name)
+                .Append(" = ")
+                .Append(Render(type.Schema, type.Metadata))
+                .Append(";\n");
+
+        string Render(JsonElement node, JsonTypeInfo? native)
+        {
+            if (node.ValueKind == JsonValueKind.True)
+                return "unknown";
+            if (node.ValueKind == JsonValueKind.False)
+                return "never";
+            if (node.ValueKind != JsonValueKind.Object)
+                throw new NotSupportedException("Invalid JSON Schema type model.");
+            if (node.TryGetProperty("$ref", out var reference))
+            {
+                var path = reference.GetString()!;
+                if (refs.TryGetValue((path, native), out var known))
+                    return known;
+                if (!path.StartsWith("#/", StringComparison.Ordinal))
+                    throw new NotSupportedException("Only local schema references are supported.");
+                var target = schema;
+                foreach (var segment in path[2..].Split('/'))
+                {
+                    var key = segment
+                        .Replace("~1", "/", StringComparison.Ordinal)
+                        .Replace("~0", "~", StringComparison.Ordinal);
+                    target = target.ValueKind == JsonValueKind.Array
+                        ? target[int.Parse(key, System.Globalization.CultureInfo.InvariantCulture)]
+                        : target.GetProperty(key);
+                }
+
+                var alias = name + "Ref" + refs.Count;
+                refs.Add((path, native), alias);
+                pending.Enqueue((alias, target, native));
+                return alias;
+            }
+
+            if (node.TryGetProperty("enum", out var values))
+                return string.Join(
+                    " | ",
+                    values
+                        .EnumerateArray()
+                        .Select(value => LiteralType(value, native))
+                        .Distinct(StringComparer.Ordinal));
+            if (node.TryGetProperty("const", out var constant))
+                return LiteralType(constant, native);
+            foreach (var union in new[] { "anyOf", "oneOf" })
+                if (node.TryGetProperty(union, out var choices))
+                    return string.Join(" | ", choices.EnumerateArray().Select(child => Render(child, native)));
+            if (node.TryGetProperty("allOf", out var requirements))
+                return string.Join(
+                    " & ",
+                    requirements.EnumerateArray().Select(child => "(" + Render(child, native) + ")"));
+            if (node.EnumerateObject().Count() == 1 && node.TryGetProperty("not", out var excluded) &&
+                excluded.ValueKind == JsonValueKind.Object && excluded.EnumerateObject().Count() == 1 &&
+                excluded.TryGetProperty("type", out var excludedType) &&
+                excludedType.ValueKind == JsonValueKind.String &&
+                excludedType.GetString() == "null")
+                return "{}";
+            if (ClientMetadata.IsBinary(native) &&
+                !(node.TryGetProperty("type", out var nullKind) && nullKind.ValueKind == JsonValueKind.String &&
+                    nullKind.GetString() == "null"))
+                return node.TryGetProperty("type", out var binaryKind) && binaryKind.ValueKind == JsonValueKind.Array &&
+                    binaryKind.EnumerateArray().Any(value => value.GetString() == "null")
+                        ? "Uint8Array | null"
+                        : "Uint8Array";
+            if (!node.TryGetProperty("type", out var kind))
+            {
+                if (node.TryGetProperty("properties", out _))
+                    return ObjectType(node, native);
+                if (node
+                    .EnumerateObject()
+                    .All(property => property.Name is "description" or "title" or "$schema" or "$id"))
+                    return "unknown";
+                throw new NotSupportedException("The generated schema has no supported type projection.");
+            }
+
+            var types = kind.ValueKind == JsonValueKind.Array
+                ? kind.EnumerateArray().Select(value => value.GetString()!)
+                : [kind.GetString()!];
+            return string.Join(
+                " | ",
+                types.Select(value => value switch
+                {
+                    "string" => "string",
+                    "integer" or "number" => "number",
+                    "boolean" => "boolean",
+                    "null" => "null",
+                    "array" => ArrayType(node, native),
+                    "object" => ObjectType(node, native),
+                    _ => throw new NotSupportedException("Unsupported schema type " + value),
+                }));
+        }
+
+        static string LiteralType(JsonElement value, JsonTypeInfo? native) =>
+            ClientMetadata.IsBinary(native) && value.ValueKind != JsonValueKind.Null
+                ? "Uint8Array"
+                : value.GetRawText();
+
+        string ArrayType(JsonElement node, JsonTypeInfo? native)
+        {
+            var element = native?.Kind == JsonTypeInfoKind.Enumerable && native.ElementType is { } elementType
+                ? native.Options.GetTypeInfo(elementType)
+                : null;
+            var hasItems = node.TryGetProperty("items", out var items);
+            if (!node.TryGetProperty("prefixItems", out var prefix))
+                return "ReadonlyArray<" + (hasItems ? Render(items, element) : "unknown") + ">";
+            var count = prefix.GetArrayLength();
+            var minimum = node.TryGetProperty("minItems", out var minItems) ? minItems.GetInt32() : 0;
+            int? maximum = node.TryGetProperty("maxItems", out var maxItems) ? maxItems.GetInt32() : null;
+            if (hasItems && items.ValueKind == JsonValueKind.False)
+                maximum = Math.Min(maximum ?? count, count);
+            if (minimum < 0 || minimum > count || maximum is < 0 || maximum < minimum || maximum > count)
+                throw new NotSupportedException(
+                    "Tuple projection requires a minimum within its prefix and no finite tail length limit.");
+            var length = maximum ?? count;
+            var elements = Enumerable
+                .Range(0, length)
+                .Select(index =>
+                    index < minimum ? Render(prefix[index], element) : "(" + Render(prefix[index], element) + ")?")
+                .ToList();
+            if (maximum is null)
+                elements.Add("...Array<" + (hasItems ? Render(items, element) : "unknown") + ">");
+            return "readonly [" + string.Join(", ", elements) + "]";
+        }
+
+        string ObjectType(JsonElement node, JsonTypeInfo? native)
+        {
+            var required = node.TryGetProperty("required", out var requiredFields)
+                ? requiredFields.EnumerateArray().Select(field => field.GetString()!).ToHashSet(StringComparer.Ordinal)
+                : [];
+            var fields = node.TryGetProperty("properties", out var properties)
+                ? properties
+                    .EnumerateObject()
+                    .Select(field =>
+                        "readonly " + Quote(field.Name) + (required.Contains(field.Name) ? "" : "?") + ": " +
+                        Render(field.Value, ClientMetadata.Property(native, field.Name)))
+                    .ToList()
+                : [];
+            if (node.TryGetProperty("additionalProperties", out var additional) &&
+                additional.ValueKind != JsonValueKind.False)
+                fields.Add(
+                    "readonly [key: string]: " + Render(
+                        additional,
+                        native?.Kind == JsonTypeInfoKind.Dictionary && native.ElementType is { } elementType
+                            ? native.Options.GetTypeInfo(elementType)
+                            : null));
+            return "{ " + string.Join("; ", fields) + " }";
+        }
+    }
+}

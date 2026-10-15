@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http.Json;
 using System.Security;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,7 @@ using Cordis.Composition;
 using Cordis.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Cordis.Platform.Tests;
@@ -18,6 +20,17 @@ namespace Cordis.Platform.Tests;
 [Collection("Collectible CLR")]
 public sealed partial class PackageManagementTests : IAsyncLifetime
 {
+    private static Task<HttpResponseMessage> PostRemoteAsync(HttpClient client, string path, object payload) =>
+        client.PostAsJsonAsync(
+            path,
+            new
+            {
+                type = "client-request",
+                rpcId = Guid.NewGuid().ToString(),
+                method = path["/remote/".Length..],
+                payload
+            });
+
     private readonly string directory = Directory.CreateTempSubdirectory("cordis-package-consumer-").FullName;
     private string Feed => Path.Combine(directory, "feed");
 
@@ -135,17 +148,18 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             Assert.False(File.Exists(marker));
             var builder = WebApplication.CreateSlimBuilder();
             builder.WebHost.UseUrls("http://127.0.0.1:0");
+            builder.Services.AddHttpContextAccessor();
             await using var server = builder.Build();
             var permissions = new List<ManagementPermission>();
-            new CordisManagement(
+            var management = new CordisManagement(
                 host.Session,
                 (_, permission) =>
                 {
                     permissions.Add(permission);
                     return Task.FromResult(true);
                 },
-                _ => new SettingsPolicy([]),
-                host.Toolchain).Map(server);
+                host.Toolchain);
+            await ManagementTestHost.MountAsync(server, host.Session, management);
             await server.StartAsync();
             using var client = new HttpClient
             {
@@ -155,28 +169,41 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             client.DefaultRequestHeaders.Add(
                 "If-Cordis-Generation",
                 state.RootElement.GetProperty("generation").GetString());
-            using var grant = await client.PostAsync(
-                "/cordis/compatibility",
-                new StringContent(
-                    JsonSerializer.Serialize(
-                        new
-                        {
-                            packageVersion = spelling + "@5.0.0",
-                            runtimeVersion = runtime.Version,
-                            enabled = true,
-                            acceptRisk = true,
-                        }),
-                    Encoding.UTF8,
-                    "application/json"));
+            using var grant = await PostRemoteAsync(
+                client,
+                "/remote/pluginManager/setVersionExemption",
+                new
+                {
+                    args = new
+                    {
+                        packageVersion = spelling + "@5.0.0",
+                        runtimeVersion = runtime.Version,
+                        enabled = true,
+                        acceptRisk = true,
+                    }
+                });
             Assert.Equal(HttpStatusCode.OK, grant.StatusCode);
             using var saved = JsonDocument.Parse(await grant.Content.ReadAsStringAsync());
             Assert.True(
-                saved.RootElement.GetProperty("error").ValueKind == JsonValueKind.Null,
+                saved.RootElement.GetProperty("result").GetProperty("ok").GetBoolean(),
                 saved.RootElement.ToString());
+            var grantResult = saved.RootElement.GetProperty("result").GetProperty("value");
+            Assert.True(grantResult.GetProperty("changed").GetBoolean(), grantResult.ToString());
+            Assert.Equal("applied", grantResult.GetProperty("application").GetString());
+            Assert.False(
+                grantResult.TryGetProperty("error", out var grantError) && grantError.ValueKind != JsonValueKind.Null,
+                grantResult.ToString());
             Assert.Equal("independentplugin@5.0.0", permissions.Last().Target);
             Assert.Contains(
                 "independentplugin@5.0.0",
                 await File.ReadAllTextAsync(Path.Combine(profile, DshProfilePolicy.CompatibilityFilename)));
+            var repeatedGrant = await operations.SetVersionExemptionAsync(
+                "independentplugin@5.0.0",
+                runtime.Version,
+                true,
+                true);
+            Assert.False(repeatedGrant.Changed);
+            Assert.Null(repeatedGrant.Error);
             var otherVersion = await operations.InstallPackageAsync(
                 host.Toolchain,
                 request with
@@ -275,12 +302,13 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         {
             var builder = WebApplication.CreateSlimBuilder();
             builder.WebHost.UseUrls("http://127.0.0.1:0");
+            builder.Services.AddHttpContextAccessor();
             await using var server = builder.Build();
-            new CordisManagement(
+            var management = new CordisManagement(
                 restarted.Session,
                 (_, _) => Task.FromResult(true),
-                _ => new SettingsPolicy([]),
-                restarted.Toolchain).Map(server);
+                restarted.Toolchain);
+            await ManagementTestHost.MountAsync(server, restarted.Session, management);
             await server.StartAsync();
             await RunAsync(
                 directory,
@@ -566,16 +594,17 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         operations.PackageProgressed += progress.Add;
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services.AddHttpContextAccessor();
         await using var server = builder.Build();
-        new CordisManagement(
+        var management = new CordisManagement(
             host.Session,
             (_, permission) =>
             {
                 permissions.Add(permission);
                 return Task.FromResult(permission.Operation != "build");
             },
-            _ => new SettingsPolicy([]),
-            host.Toolchain).Map(server);
+            host.Toolchain);
+        await ManagementTestHost.MountAsync(server, host.Session, management);
         await server.StartAsync();
         using var client = new HttpClient
         {
@@ -585,34 +614,55 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         client.DefaultRequestHeaders.Add(
             "If-Cordis-Generation",
             state.RootElement.GetProperty("generation").GetString());
-        var request = new EntryOptions
-        {
-            ["name"] = "IndependentPlugin",
-            ["version"] = "1.0.0",
-            ["source"] = Feed
-        };
-        using var inspectResponse = await client.PostAsync("/cordis/inspect", JsonContent(request));
+        var request = new PackageRequest("IndependentPlugin", "1.0.0", Feed);
+        using var inspectResponse = await PostRemoteAsync(
+            client,
+            "/remote/pluginManager/inspect",
+            new
+            {
+                args = new
+                {
+                    request
+                }
+            });
         inspectResponse.EnsureSuccessStatusCode();
         using var inspection = JsonDocument.Parse(await inspectResponse.Content.ReadAsStringAsync());
-        var hash = inspection.RootElement.GetProperty("hash").GetString();
-        request["inspectedHash"] = hash;
-        request["requestId"] = "denied-by-host";
+        Assert.True(inspection.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+        var hash = inspection
+            .RootElement.GetProperty("result")
+            .GetProperty("value")
+            .GetProperty("contentHash")
+            .GetString()!;
 
-        using var response = await client.PostAsync("/cordis/install", JsonContent(request));
+        using var response = await PostRemoteAsync(
+            client,
+            "/remote/pluginManager/installBundle",
+            new
+            {
+                args = new
+                {
+                    request,
+                    options = new PluginInstallOptions("denied-by-host", hash)
+                }
+            });
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.EnsureSuccessStatusCode();
+        using var denied = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(denied.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+        var result = denied.RootElement.GetProperty("result").GetProperty("value");
+        Assert.Equal("build-not-approved", result.GetProperty("error").GetString());
+        Assert.Equal("inspect", result.GetProperty("stage").GetString());
+        Assert.False(result.GetProperty("installed").GetBoolean());
+        Assert.False(result.GetProperty("selected").GetBoolean());
         Assert.Contains(permissions, permission => permission.Operation == "install");
         var build = Assert.Single(permissions, permission => permission.Operation == "build");
         Assert.Equal("IndependentPlugin", build.Target);
         Assert.Equal(hash, build.Package!.ContentHash);
         Assert.True(build.Package.RequiresBuildApproval);
-        Assert.Empty(progress);
+        Assert.Equal(["inspect"], progress.Select(row => row.Phase));
         Assert.Null(await operations.WaitForInstallAsync("denied-by-host"));
         await AssertUnpreparedAsync(host, manifest);
     }
-
-    private static StringContent JsonContent(EntryOptions value) =>
-        new(ConfigurationFile.Write(value, true), Encoding.UTF8, "application/json");
 
     private static async Task AssertUnpreparedAsync(Host host, byte[] originalManifest)
     {
@@ -849,7 +899,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             "--allow-build",
             "IndependentPlugin@1.0.0",
             "--settings",
-            "root:independentplugin=limit");
+            "independentplugin=limit");
         var stderr = host.StandardError.ReadToEndAsync();
         try
         {
@@ -889,7 +939,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             var settings = await Command(
                 "settings",
                 endpoint,
-                "root:independentplugin",
+                "independentplugin",
                 "--authorization-env",
                 "CORDIS_TEST_AUTHORIZATION");
             Assert.True(settings.ExitCode == 0, settings.Output);

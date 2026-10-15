@@ -1,0 +1,237 @@
+{
+  "sourceCommit": "8da4cb4f671ef9a654042a16f313275b40b7fe22",
+  "upstream": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "status": "passed",
+  "scope": "Fixed DSH unary/multipart and mux clients under Node against the managed ASP.NET Host; generated strict TypeScript, managed .NET and Windows x64 Native AOT callers from isolated local packages. Both Host/caller projects disable reflection serialization. No native Host, Linux, SDK stdio, full event or owned-value claim.",
+  "steps": [
+    {
+      "name": "host-build",
+      "exitCode": 0
+    },
+    {
+      "name": "caller-build",
+      "exitCode": 0
+    },
+    {
+      "name": "caller-publish-aot",
+      "exitCode": 0
+    },
+    {
+      "name": "fixed-client",
+      "exitCode": 0
+    },
+    {
+      "name": "typescript-uplink",
+      "exitCode": 0
+    },
+    {
+      "name": "caller-run",
+      "exitCode": 0
+    },
+    {
+      "name": "native-caller-run",
+      "exitCode": 0
+    },
+    {
+      "name": "fixed-mux",
+      "exitCode": 0
+    }
+  ],
+  "packages": {
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": "057d819e94f4619f78f1038aec4aa8aec9bc26dabc95e40097cdc46826713281",
+    "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": "2ca67c7ebfb026741c823b183f3b44e53b36d2ccea991fa11f8a7c8fe4ab7a23",
+    "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": "e6fd399f6928e8ce6d1af841416dfd214c9b1f3b1237a3b3d39055a5adb53e14",
+    "Cordis.NET.Core.0.2.0-alpha.4.nupkg": "143377fbd0bf47ad1001b1e73640c54d17bdc772df7c149ef1e7861f13f88a57",
+    "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": "c141acb61faf2d276e04d2564fab9af310194255cb970bec0b6045c7b51e737d"
+  },
+  "nativeCallerSha256": "822676edcd774e585f050c669d6bf57f19f32c23138a6da9ca5ba3cf2156e725",
+  "hostAssembliesSha256": {
+    "Host.dll": "74bea8043b5dab69c7fe1c0b90aeca67472cbdf4644ff2b3611301c1d3c766cd",
+    "Cordis.Core.dll": "1322aa42e6fd5e91140efb1e91e8a614d27e9b545e8680034104877c62ecaaf6",
+    "Cordis.Composition.dll": "bac778b033ce11ba64c9841346f8cad59154b9936d3e63e3f7a2a311f5739c26",
+    "Cordis.AspNetCore.dll": "736d71ab7544a00b8647af960a5ae05ecdbe67f5c76254b15396353885a25333"
+  },
+  "consumerInputsSha256": {
+    "Host/Host.csproj": "5dbdba694da147920d941ecdae822698b1c49a8e5ff6bdc8c934e66e090d32ee",
+    "Caller/Caller.csproj": "5d47395de3cf03d016ffc3ad101e3ec6ae9d47dafbe58b8c0ff9f50bbabcc910",
+    "Caller/Program.cs": "51481dd3fe917e07880cc71960a84bb7215a0095064327bd0ff96ed56db78c03",
+    "Caller/Host.cordis.model.json": "9801b9603fa31ac60e237f984c099ec212a3c13f4d91b3e3db8518294b76b8d3"
+  },
+  "logSha256": {
+    "binary-literal-package.log": "c7ff6e5c57380e7c699b2476a758547cae2a4136575eda44e52005e7a065cd63",
+    "caller-build.log": "c0501c074a83aba838609e749599c42e5b0f53b870c10c91068cc1b78f02a077",
+    "caller-publish-aot.log": "f63566fb141f2e5a12ebeadd3e457c0a587f6a618c2796e36996a827ca210488",
+    "caller-run.log": "68cfb8f4bd677c016740173334f39830d13d87b5042d4e44ffe7e4552c4c26c4",
+    "fixed-client.log": "6f136ca09f488fd5e63cee99301573f3a54716e26007b246a7574b14fbb6b969",
+    "fixed-mux.log": "13fa79b7dcb334b41496449e9245d09aacd8ec0e14025e05785e326377634845",
+    "host-build.log": "26d218ea62b4c232a6870101a79f183502e9887505191db631e970b0c49bc447",
+    "host.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "native-caller-run.log": "68cfb8f4bd677c016740173334f39830d13d87b5042d4e44ffe7e4552c4c26c4",
+    "native-host.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "typescript-uplink.log": "ace9816625eef512626c854d6c24e06ad4ce1a0bc559dd12e4e4c714f1146f4c"
+  },
+  "fixedUnary": {
+    "inputHashes": {
+      "artifacts/remote-transport-review/packages/client/connection/src/client/random-uuid.ts": "c037b0e0224ca27a70682fd86d06e3527e6f45acf467b0b70a56e1d8c3000f7c",
+      "artifacts/remote-transport-review/packages/client/connection/src/client/rpc.ts": "8a55426351dfc3b4150b6fdd60daf20735824cbb90b4b806321ec442c639e460"
+    },
+    "checks": [
+      "correlation",
+      "no-value/null",
+      "root/nested/empty multipart",
+      "lookup refusal",
+      "strict nested payload",
+      "old envelope refusal"
+    ]
+  },
+  "fixedMux": {
+    "fixedCommit": "639ed015397290b3745d163aafe02ffee4aa3f84",
+    "status": "passed",
+    "checks": [
+      "fixed mux downlink values and end",
+      "fixed mux Remote error",
+      "nested payload rejects extra fields through fixed mux",
+      "logical cancellation leaves sibling and carrier alive",
+      "reconnect invalidates old handle without destroying Host operator Peer",
+      "fixed mux uplink absent/null and half-close",
+      "fixed mux receives Host uplink codec error"
+    ],
+    "execution": "Node with built-in WebSocket; fixed mux client and parser bundled from pinned sources. Proxy changes only route and authorization headers; it forwards frame bytes unchanged.",
+    "hostDllSha256": "74bea8043b5dab69c7fe1c0b90aeca67472cbdf4644ff2b3611301c1d3c766cd",
+    "inputHashes": {
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/utils.ts": "8fe273424583d21267ef13f248840e97454d09d836a0ac08323a9482c2069263",
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/events.ts": "9aff93dcfcad98aebb692c19c36d3bf034a96f9085bc66900a997cda3f79e6fe",
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/logger.ts": "05cb6be3e4cf8d078185b5d10c87e536c7d2b2b3ad43c270a0dbafaa28f41fef",
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/fiber.ts": "b7661d6c19be76cef6b97d88719a8112c0f8b5abe65bd9e7d5947773fd4b96d4",
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/reflect.ts": "6847b9781044023d65aebb5896a873b9f0a3d777eaf7fa0dd2a7a408eb6b74a6",
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/registry.ts": "34bbd60ae502b4f85201c204afb52a9acabde6878d9278493478c1b2183debd3",
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/context.ts": "96b388162d6013c1898de61e35f28917abb93809de24174980f2a1a348d0b115",
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/service.ts": "614205c6ce7cf1a057b8b352e96aa4fcd734c967a3d2283a126c9c61f268e3be",
+      "artifacts/remote-fixed-mux-probe/pinned/vendor/cordis/src/index.ts": "071fb226e9a21556625e4391b28e6641b9b34b1cd402155246e0437993d8b740",
+      "artifacts/remote-fixed-mux-probe/pinned/packages/typert/protocol/src/remote-error.ts": "bb902ec537e1dfbc74885e77a01192e6532b50a959a5bc4cc55c1fbf52e0a368",
+      "artifacts/remote-fixed-mux-probe/pinned/packages/typert/protocol/src/owned-value.ts": "096c583e2093cd814d0cef5bc3f8161f6aabfe8cfe97eff78c3a340c0c95a44d",
+      "artifacts/remote-fixed-mux-probe/pinned/packages/typert/protocol/src/json-value.ts": "c5d58b60b7e085004041326055737f7e718e719f5df7b7df5b09d2fb147e57c0",
+      "artifacts/remote-fixed-mux-probe/pinned/packages/typert/protocol/src/index.ts": "d44d7bd7811f975dd7937e818f43360a6d683e465e688002dfc0aa25c3f65a33",
+      "artifacts/remote-fixed-mux-probe/pinned/packages/api/gateway/src/stream-protocol.ts": "c0d26dd8d3be737cbb9ae8ecf4e7084d1fb31b37693e94d7e79263c4aa8ce040",
+      "artifacts/remote-fixed-mux-probe/pinned/packages/util/deque/src/index.ts": "6dd9b24cc99aeeffb1e70c880306d76ced4a3b769dbd2131d7f129fa8a6649e7",
+      "artifacts/remote-fixed-mux-probe/pinned/packages/util/crypto/src/index.ts": "6d314b677a163808a732c53fc509eebea1f8b8cc34b67031644dcfa4a97e28f0",
+      "artifacts/remote-fixed-mux-probe/pinned/packages/api/gateway/src/client/stream-client.ts": "18b8004e7d0c03f8ac1429f7f5868c9e49666c895d00959dab74be511b25a5a7"
+    }
+  },
+  "fixedMuxBundleSha256": "1ab3ecfd5f36bc25bed246075c27ff19c836468a4afec870964c911531780229",
+  "generatedRuntimeSha256": "d6fcbd2ca2f0605c90d4cf0a1549d48647f0985cb372c392774fb8730ef10942",
+  "binaryLiteralPackageProbe": {
+    "sourceCommit": "8da4cb4f671ef9a654042a16f313275b40b7fe22",
+    "exitCode": 0,
+    "expectedType": "Uint8Array",
+    "actualAttachments": 1,
+    "logSha256": "c7ff6e5c57380e7c699b2476a758547cae2a4136575eda44e52005e7a065cd63",
+    "inputSha256": "1d670e72444f3dcf4834099c31185696d8638b2da2be0fa5f243b1d6d58fc260"
+  },
+  "fullGatePackageComparison": {
+    "Cordis.NET.AspNetCore.0.2.0-alpha.4.nupkg": {
+      "independentArchiveSha256": "057d819e94f4619f78f1038aec4aa8aec9bc26dabc95e40097cdc46826713281",
+      "fullGateArchiveSha256": "c16764082aa0f69c462fc7d433b2f178324102f686a443484f8db582f12c702f",
+      "archiveBytesEqual": false,
+      "payloadEntriesSha256": {
+        "Cordis.NET.AspNetCore.nuspec": "88f664c1f6149b25784a9a43402f10a18e031d3a4b4c11999a5a683ce7cceeb2",
+        "LICENSE": "86125a8ab7d416a2db0fa04f53e6dbecab12e65e059f3bc62462af19fb665f5e",
+        "LICENSES/cordis.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "LICENSES/deepseek-harness.LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "LICENSES/include.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "NOTICE.md": "e7a05b60db376891393156701e0718f8ce3119d543a042577035712b2e5b3a17",
+        "README.md": "1976be83fcd2dfba83268193364843b887efa5d496c4dc2e5305bfbdbd371ec1",
+        "[Content_Types].xml": "6860f0f2cde3959cea97226215633f1fed9b63c25a5558e9945c718abaab143e",
+        "lib/net10.0/Cordis.AspNetCore.dll": "736d71ab7544a00b8647af960a5ae05ecdbe67f5c76254b15396353885a25333",
+        "lib/net10.0/Cordis.AspNetCore.xml": "4508d0bd8d1f65f70cbd93a33192cb1186f4abf68af2568a8950612dbb0836f5"
+      },
+      "corePropertiesBytesEqual": true,
+      "relationshipsEqualExceptGeneratedCorePropertiesTargetAndId": true
+    },
+    "Cordis.NET.Clr.0.2.0-alpha.4.nupkg": {
+      "independentArchiveSha256": "2ca67c7ebfb026741c823b183f3b44e53b36d2ccea991fa11f8a7c8fe4ab7a23",
+      "fullGateArchiveSha256": "f69a5839d155bedeb8231e111307a8f4289762b476559ce463e689ae42efa9c6",
+      "archiveBytesEqual": false,
+      "payloadEntriesSha256": {
+        "Cordis.NET.Clr.nuspec": "7c85bd36316185c6774579d6f7af899bca8a9edb8d727db63f28c28be112c5d0",
+        "LICENSE": "86125a8ab7d416a2db0fa04f53e6dbecab12e65e059f3bc62462af19fb665f5e",
+        "LICENSES/cordis.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "LICENSES/deepseek-harness.LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "LICENSES/include.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "NOTICE.md": "e7a05b60db376891393156701e0718f8ce3119d543a042577035712b2e5b3a17",
+        "README.md": "651ba8512a249353d663f6987cb5b928e885ee92df9b8ad581a5b6fd5c98d3ff",
+        "[Content_Types].xml": "13bef77de16b1157521d981d9846b167a6092a7091fa1e54340dc22e7696d348",
+        "buildTransitive/Cordis.NET.Clr.targets": "21624e5f5279a26794ed908d99ab67cdce72651e5014a796524409ffa5239699",
+        "lib/net10.0/Cordis.Clr.dll": "6dd8159a98515549c58c213e851671484b004f84348b2e4700d0da419e8cf8e3",
+        "lib/net10.0/Cordis.Clr.xml": "d9e157f8bd2f024603c66f26c935fdf7ad8921b598fab2a1831f8455e2a1384b"
+      },
+      "corePropertiesBytesEqual": true,
+      "relationshipsEqualExceptGeneratedCorePropertiesTargetAndId": true
+    },
+    "Cordis.NET.Composition.0.2.0-alpha.4.nupkg": {
+      "independentArchiveSha256": "e6fd399f6928e8ce6d1af841416dfd214c9b1f3b1237a3b3d39055a5adb53e14",
+      "fullGateArchiveSha256": "7c49b570d8df126074f9c876ff923c4bcf2c8f69b93d31b61e3b37f85a9b9fc2",
+      "archiveBytesEqual": false,
+      "payloadEntriesSha256": {
+        "Cordis.NET.Composition.nuspec": "09258844b6788943d4521dac091c6ce2e4751d618848f9c941b75ae5526db02a",
+        "LICENSE": "86125a8ab7d416a2db0fa04f53e6dbecab12e65e059f3bc62462af19fb665f5e",
+        "LICENSES/cordis.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "LICENSES/deepseek-harness.LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "LICENSES/include.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "NOTICE.md": "e7a05b60db376891393156701e0718f8ce3119d543a042577035712b2e5b3a17",
+        "README.md": "70e1923af8fb5b08ddc5a1a5128e68b7a5e03b068c052a95e413795513c1802b",
+        "[Content_Types].xml": "1ca121ce1a53e74a581c3adeb276932e4da2ba4e5e34ea1e9a3d8512790721a6",
+        "analyzers/dotnet/cs/Cordis.Typert.Generator.dll": "4e9ab9e36dc3f8c626c78b5a0273ae2fd376f97c9b74a54330b5bc9a84c3f73e",
+        "analyzers/dotnet/cs/Cordis.Typert.Generator.pdb": "1c2fee1c2961cb6ffbe621f54b5119191854d564dafa3af5337eb77381b655bf",
+        "buildTransitive/Cordis.NET.Composition.targets": "adea4714834e12ad2ab091f099db5a670c0118e603f09732cdf8b08612d0bdae",
+        "cordis/typert/Cordis.Composition.cordis.model.json": "e19005b3d216ffc71aee6f9ce773e823c4d9294e8f5790583214181b78062219",
+        "lib/net10.0/Cordis.Composition.dll": "bac778b033ce11ba64c9841346f8cad59154b9936d3e63e3f7a2a311f5739c26",
+        "lib/net10.0/Cordis.Composition.xml": "aac6d0928c631d359439ff4278f2dc942b785f5bb759551250fd7249fe71d08d",
+        "tools/net10.0/typert/Cordis.Typert.Compiler.deps.json": "0a8349ca8c6d8de3af703fec8c35f647b7c154ecff372e5df670ced8930a21ea",
+        "tools/net10.0/typert/Cordis.Typert.Compiler.dll": "db54b01661d97a50321f57f6c7c02b102b877ceed43b4015ec5b83d5912a9c36",
+        "tools/net10.0/typert/Cordis.Typert.Compiler.pdb": "7e461228bc9b6e5f0e84df992aaf2a1d595eaa41cdbb1b480d46f26d4f68f23e",
+        "tools/net10.0/typert/Cordis.Typert.Compiler.runtimeconfig.json": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+      },
+      "corePropertiesBytesEqual": true,
+      "relationshipsEqualExceptGeneratedCorePropertiesTargetAndId": true
+    },
+    "Cordis.NET.Core.0.2.0-alpha.4.nupkg": {
+      "independentArchiveSha256": "143377fbd0bf47ad1001b1e73640c54d17bdc772df7c149ef1e7861f13f88a57",
+      "fullGateArchiveSha256": "523db0ca35bfb47bb5d61956c9bf60ab38a134ac6e09be4d2580d5f3a8f08fcd",
+      "archiveBytesEqual": false,
+      "payloadEntriesSha256": {
+        "Cordis.NET.Core.nuspec": "ad2c570fa70e17964aa5cf6ecd4b8853158bf8db94a3e35bf90685f8da01b535",
+        "LICENSE": "86125a8ab7d416a2db0fa04f53e6dbecab12e65e059f3bc62462af19fb665f5e",
+        "LICENSES/cordis.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "LICENSES/deepseek-harness.LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "LICENSES/include.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "NOTICE.md": "e7a05b60db376891393156701e0718f8ce3119d543a042577035712b2e5b3a17",
+        "README.md": "799c2d45b1a8edecdc87f3b94e308805ffe360d8055ef3f192bb18ddaf6ce456",
+        "[Content_Types].xml": "6860f0f2cde3959cea97226215633f1fed9b63c25a5558e9945c718abaab143e",
+        "lib/net10.0/Cordis.Core.dll": "1322aa42e6fd5e91140efb1e91e8a614d27e9b545e8680034104877c62ecaaf6",
+        "lib/net10.0/Cordis.Core.xml": "d6ac3d41d0949e1c91efbb4dc8f5a53be3a7bf4894b11db6c8da678d907e9efc"
+      },
+      "corePropertiesBytesEqual": true,
+      "relationshipsEqualExceptGeneratedCorePropertiesTargetAndId": true
+    },
+    "Cordis.NET.Extensions.0.2.0-alpha.4.nupkg": {
+      "independentArchiveSha256": "c141acb61faf2d276e04d2564fab9af310194255cb970bec0b6045c7b51e737d",
+      "fullGateArchiveSha256": "5bb9904f4b8dfe167d9c5ad081e89c841e0826b95f94212e68b53ffe04b153fd",
+      "archiveBytesEqual": false,
+      "payloadEntriesSha256": {
+        "Cordis.NET.Extensions.nuspec": "8b7b9172d540a26227aacb4ae11dfd953c55290189453a7a873f9a0eb5b6b3ed",
+        "LICENSE": "86125a8ab7d416a2db0fa04f53e6dbecab12e65e059f3bc62462af19fb665f5e",
+        "LICENSES/cordis.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "LICENSES/deepseek-harness.LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "LICENSES/include.MIT.txt": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7",
+        "NOTICE.md": "e7a05b60db376891393156701e0718f8ce3119d543a042577035712b2e5b3a17",
+        "README.md": "87b81f0141f2f1fd22a3540173ab7973e3f777095e3bd1a634b71014267e3526",
+        "[Content_Types].xml": "6860f0f2cde3959cea97226215633f1fed9b63c25a5558e9945c718abaab143e",
+        "lib/net10.0/Cordis.Extensions.dll": "019b68e8bc3f8d0153328798b01df2b4b8c2b4500b070b2dc961b6a745b1a5f9",
+        "lib/net10.0/Cordis.Extensions.xml": "6f3bf188b57525f200d44451a5da55a82989d6fe3d8909aa4ee79b661a10aacf"
+      },
+      "corePropertiesBytesEqual": true,
+      "relationshipsEqualExceptGeneratedCorePropertiesTargetAndId": true
+    }
+  }
+}

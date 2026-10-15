@@ -1,7 +1,7 @@
 # Implementation status
 
-Cordis.NET `0.1.0-alpha.2` implements the pinned runtime and composition scope as an early preview. The public status is maintained in [compatibility](docs/compatibility.md), [validation](docs/validation.md), and the machine-readable maps under `docs/`.
+Use [current support and release status](docs/development.md#current-support-and-release-status) for the supported workflows and their limits, [validation](docs/validation.md#current-candidate-index) for exact source/package evidence, and [publication readiness](docs/publication-readiness.md) for release gates.
 
-The current publication candidate passes the complete Windows gate with 456 tests, the pinned source suites, JIT/AOT differential checks, and isolated package consumers. Package XML documentation, Source Link metadata, symbol packages, and release artifact hashing are enabled. Hosted Windows/Linux validation is the next public gate; this publication work does not expand the runtime compatibility claim.
+Start using the library through [getting started](docs/getting-started.md) and [authoring](docs/authoring.md). The [upstream lock](upstream.lock.json) defines the behavior baseline; a historical test count or checkpoint does not define current support.
 
-The remaining external steps are tracked in [publication readiness](docs/publication-readiness.md).
+[中文入口](docs/development.zh.md#当前支持与发行状态) · [中文入门](docs/getting-started.zh.md)

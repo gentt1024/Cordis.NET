@@ -166,18 +166,19 @@ Core carries these as `ConfigDescriptor.Annotations`, an immutable acyclic plain
 
 Use the session's existing `PluginConfigurationOperations`. `MutateConfigurationAsync` takes ordered `ConfigurationSet`/`ConfigurationUnset` operations and a fresh revision. It builds one complete candidate, validates that final candidate and writes/reconciles one source update. Intermediate candidates may be invalid. Object unset restores source inheritance; array unset removes the addressed element, and a terminal set at the current length appends. Array indexes must be canonical non-negative decimal strings. Root configuration edits are available through the full authorized configuration endpoint. `Saved`, `Applied` and recovery failures remain separate results.
 
-Settings add a mandatory host `SettingsPolicy`, selecting top-level form sections while recursively keeping only declared live boundaries. Nested fixed live fields need the same explicit `WithVolatile(path, projection)` bindings as runtime updates. Ordinary siblings are omitted. Under a live object, array or dictionary boundary, selected data stays editable through concrete paths. Every operation checks its ancestors and target: hidden paths, ordinary paths and root bypasses are refused. A write-only secret leaf can be set or reset; replacing an ancestor containing secret or hidden descendants is refused because that would implicitly erase unreadable values.
+Mount `SettingsForms` over those same operations. It derives supported live fields from the declaration; an optional host `SettingsPolicy` restricts visibility. Nested fixed live fields use the same explicit `WithVolatile(path, projection)` bindings as runtime updates. Ordinary siblings are omitted. Submitted fields and paths must lie in the offered live form; host-hidden paths cannot be bypassed through an ancestor. Secrets are write-only values, so replacing a secret's ancestor can reset an omitted secret, as in the pinned source. Use path mutations when editing an incomplete redacted view.
 
 ```csharp
-var policy = new SettingsPolicy(["network"]);
-var view = await operations.ReadSettingsAsync("root:worker", policy);
-var result = await operations.MutateSettingsAsync("root:worker",
-    [new ConfigurationSet(["network", "timeout"], 30),
-     new ConfigurationUnset(["network", "password"])], view.Revision, policy);
-var form = await operations.ReadSettingsSchemasAsync("root:worker", policy);
+var forms = new SettingsForms(ctx, operations, _ => new SettingsPolicy(["network"]));
+var view = (await forms.DescribeAsync()).Value.Namespaces.Single(row => row.Ns == "worker");
+using var timeout = JsonDocument.Parse("30");
+await forms.MutateAsync("worker",
+    [new SettingsPathOp("set", ["network", "timeout"]) { Value = timeout.RootElement },
+     new SettingsPathOp("unset", ["network", "password"])], view.Revision);
+var formSchema = (await forms.DescribeAsync()).Value.Namespaces.Single(row => row.Ns == "worker").Schema;
 ```
 
-`ReadSettingsAsync` returns detached selected values and `SettingsView.Secrets`, whose concrete paths and `Set` flags reveal presence only. Secret values are removed from objects and dictionaries; array positions remain as null placeholders. Secret slots are gathered conservatively across all union/intersection branches. Hidden values are removed and unknown object members are not exposed through the selected object form. The settings schema exports remove all defaults, omit hidden properties, remove secret required flags and retain write-only roles. Full `ReadConfigurationSchemasAsync` can include defaults and requires separate host authorization. Both active-entry reads synchronize through the normal lifecycle before projection; synchronization can execute plugin code.
+`DescribeAsync` returns one coherent snapshot of detached selected values, base/user layers, numeric observation revisions and `SettingsNamespaceView.Secrets`. Concrete paths and `Set` flags reveal presence only. Secret values are removed from objects and dictionaries; array positions remain as null placeholders. Secret slots are gathered conservatively across all union/intersection branches. Hidden values are removed and unknown object members are not exposed through the selected object form. The native settings schema projection preserves redacted public defaults, omits hidden properties, removes secret defaults and required flags, and retains write-only roles. Non-live object paths are fresh wrappers with an empty-object default; metadata is preserved once the path reaches a live boundary. Full `ReadConfigurationSchemasAsync` can include defaults and requires separate host authorization. Reads synchronize through the normal lifecycle before projection; synchronization can execute plugin code. The [Settings migration guide](settings-contract-migration.md) defines write and omission/null semantics.
 
 Resolved recursive descriptions follow only present value descendants; missing and null containers terminate traversal. A lazy/union cycle that makes no progress omits the affected value and records a redaction diagnostic, so an unresolved walk cannot return unredacted data.
 

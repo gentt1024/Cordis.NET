@@ -3,5 +3,6 @@
   <ItemGroup>
     <ProjectReference Include="../Probes.Plugin/Probes.Plugin.csproj" />
     <ProjectReference Include="../../src/Cordis.Extensions/Cordis.Extensions.csproj" />
+    <ProjectReference Include="../../src/Cordis.AspNetCore/Cordis.AspNetCore.csproj" />
   </ItemGroup>
 </Project>

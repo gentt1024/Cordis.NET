@@ -1,7 +1,9 @@
 # Cordis.NET.Extensions
 
+Choose the exact version and feed for this package batch; see [getting started](../../docs/getting-started.md) for package-only use and ownership. Published packages and unreleased candidate feeds are distinct.
+
 ```console
-dotnet add package Cordis.NET.Extensions --prerelease
+dotnet add package Cordis.NET.Extensions --version <selected-version>
 ```
 
 Timer, console export, profile session, and HMR services for Cordis.NET. The package builds on `Cordis.NET.Core` and `Cordis.NET.Composition` and supports their static Native AOT deployment path.

@@ -4,6 +4,7 @@ using Cordis.Composition;
 using Cordis.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -60,7 +61,7 @@ internal static class ApplicationCommands
                     case "--settings":
                         var selection = arguments[index].Split('=', 2);
                         if (selection.Length != 2)
-                            throw new ArgumentException("--settings expects entryId=field,field.");
+                            throw new ArgumentException("--settings expects namespace=field,field.");
                         settings[selection[0]] =
                             selection[1].Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
                         break;
@@ -118,15 +119,58 @@ internal static class ApplicationCommands
             try
             {
                 if (address is not null)
-                    new CordisManagement(
+                {
+                    var registry = new TypertRegistry(session.Context);
+                    var gateway = new TypertGateway(session.Context, registry);
+                    await session.Context.RunAsync(context =>
+                    {
+                        new SettingsForms(
+                            context,
+                            session.ConfigurationOperations,
+                            ns => new SettingsPolicy(settings.GetValueOrDefault(ns) ?? []));
+                        new SettingsController(context);
+                        registry.Register(context, SettingsControllerTypert.Contribution("Cordis.Cli.Settings"));
+                        gateway.RegisterRemoteEvents(
+                            context,
+                            TypertRemoteEvents.FromCordis(
+                                context,
+                                [
+                                    PluginManagerChangedEventTypert.Definition,
+                                    PluginInstallStateEventTypert.Definition,
+                                    PluginInstallLogEventTypert.Definition,
+                                    SettingsDocumentUpdatedEventTypert.Definition,
+                                    ConfigurationReloadEventTypert.Definition,
+                                ]),
+                            new TypertRemoteEventHost(launch.Home));
+                        return Task.CompletedTask;
+                    });
+                    TypertHostConnection remoteConnection = null!;
+                    await session.Context.RunAsync(owner =>
+                    {
+                        remoteConnection = new(owner, gateway);
+                        return Task.CompletedTask;
+                    });
+                    ((WebApplication)host).UseWebSockets();
+                    ((WebApplication)host).MapCordisRemote(
+                        "/remote",
+                        remoteConnection,
+                        (http, _) => Task.FromResult(http.Request.Headers.Authorization == authorization));
+                    var management = new CordisManagement(
                         session,
                         (http, permission) =>
                             Task.FromResult(
                                 http.Request.Headers.Authorization == authorization &&
                                 (permission.Operation != "build" || permission.Package is { } package &&
                                     builds.Contains(package.Request.Name + "@" + package.Request.Version))),
-                        entryId => new SettingsPolicy(settings.GetValueOrDefault(entryId) ?? []),
-                        toolchain).Map((WebApplication)host);
+                        toolchain);
+                    management.Map((WebApplication)host);
+                    await management.MountPluginManagerAsync(
+                        session.Context,
+                        registry,
+                        host.Services.GetRequiredService<IHttpContextAccessor>(),
+                        "Cordis.Cli.Management");
+                }
+
                 // Help and one-shot commands may request exit during activation. Still await
                 // startup above so a real boot failure wins, then dispose the tree normally.
                 if (exit.IsCompleted)
@@ -172,6 +216,7 @@ internal static class ApplicationCommands
         if (address is null)
             return Host.CreateApplicationBuilder().Build();
         var builder = WebApplication.CreateSlimBuilder();
+        builder.Services.AddHttpContextAccessor();
         builder.WebHost.UseUrls(address);
         return builder.Build();
     }

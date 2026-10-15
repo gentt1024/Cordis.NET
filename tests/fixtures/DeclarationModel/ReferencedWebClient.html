@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Referenced model package consumer</title>
+<h1>Referenced model package consumer</h1>
+<p>Generated package assets call an actual .NET Host through the standard Connection.</p>
+<button id="run">Run package calls</button>
+<pre id="status">Ready</pre>
+<script type="module">
+  import { run } from './ReferencedWebClient.js'
+  const status = document.querySelector('#status')
+  document.querySelector('#run').onclick = async () => {
+    status.textContent = 'Running'
+    try {
+      const modes = [
+        ['default', undefined],
+        ['raw native fetch', globalThis.fetch],
+        ['bound fetch', globalThis.fetch.bind(globalThis)],
+        ['arrow fetch', (input, init) => globalThis.fetch(input, init)],
+      ]
+      status.textContent = ''
+      for (const [name, fetcher] of modes) {
+        await run(location.origin, 11, fetcher)
+        status.textContent += 'PASS ' + name + ': actual HTTP, invalid input rejection, cancellation reason\n'
+      }
+      status.textContent += 'PASS referenced model package browser caller\nWire names, required/null boundaries, recursive references, collections, dictionaries and Host defaults.'
+    } catch (error) {
+      status.textContent = 'FAIL ' + error.stack
+    }
+  }
+</script>

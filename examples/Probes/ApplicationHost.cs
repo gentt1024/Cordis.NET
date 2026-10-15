@@ -1,5 +1,9 @@
 using System.Net;
-using System.Text;
+using Cordis.AspNetCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Cordis.Composition;
 using Cordis.Extensions;
 
@@ -54,6 +58,17 @@ internal static class ApplicationHost
                 launch,
                 new StaticModuleResolver().Register("worker", plugin));
             var policy = new SettingsPolicy(["limit", "label", "token"], ["token"]);
+            var registry = new TypertRegistry(session.Context);
+            var contribution = SettingsControllerTypert.Contribution("Cordis.Probes.Settings");
+            await session.Context.RunAsync(context =>
+            {
+                new SettingsForms(context, session.ConfigurationOperations, _ => policy);
+                new SettingsController(context);
+                registry.Register(context, contribution);
+                return Task.CompletedTask;
+            });
+            var gateway = new TypertGateway(session.Context, registry);
+
             var generation = new DeploymentGeneration(
                 Path.Combine(home, "profiles"),
                 profile,
@@ -68,121 +83,85 @@ internal static class ApplicationHost
             var packages = new DeploymentPackageResolver(generation, native: (_, _) => clientDirectory);
             var parent = new Uri(config);
             var artifact = await ClientArtifact.CaptureAsync(packages, "demo-client", parent);
-            using var listener = new HttpListener();
-            listener.Prefixes.Add(prefix);
-            listener.Start();
-            Console.WriteLine("application host ready " + prefix);
-            Console.Out.Flush();
-            var stopped = false;
-            while (!stopped)
+            TypertHostConnection connection = null!;
+            await session.Context.RunAsync(owner =>
             {
-                var request = await listener.GetContextAsync();
-                try
+                connection = new(owner, gateway);
+                owner.Provide("connection", connection);
+                return Task.CompletedTask;
+            });
+            await using var connectionOwner = connection;
+            var builder = WebApplication.CreateSlimBuilder();
+            builder.WebHost.UseUrls(prefix.TrimEnd('/'));
+            await using var app = builder.Build();
+            app.UseWebSockets();
+            app.MapCordisRemote(
+                "/remote",
+                connection,
+                (http, _) =>
+                    Task.FromResult(http.Connection.RemoteIpAddress is { } remote && IPAddress.IsLoopback(remote)));
+            app.MapGet(
+                "/status",
+                (HttpContext http) => JsonAsync(
+                    http,
+                    new()
+                    {
+                        ["activations"] = activations
+                    }));
+            app.MapGet(
+                "/client",
+                async (HttpContext http) =>
                 {
-                    var route = request.Request.Url!.AbsolutePath;
-                    if (route == "/settings" && request.Request.HttpMethod == "GET")
-                    {
-                        var view = await session.ConfigurationOperations.ReadSettingsAsync("root:worker", policy);
-                        await JsonAsync(
-                            request,
-                            new()
-                            {
-                                ["version"] = 1,
-                                ["mode"] = "primitive-live-set",
-                                ["revision"] = view.Revision,
-                                ["fields"] = view
-                                    .Fields.Select(field => new EntryOptions
-                                    {
-                                        ["name"] = field.Name,
-                                        ["kind"] = field.Kind,
-                                        ["value"] = field.Value,
-                                        ["overridden"] = field.Overridden
-                                    })
-                                    .ToList(),
-                                ["diagnostics"] = view.Diagnostics.ToList(),
-                                ["activations"] = activations
-                            });
-                    }
-                    else if (route == "/settings" && request.Request.HttpMethod == "POST")
-                    {
-                        using var reader = new StreamReader(request.Request.InputStream, Encoding.UTF8);
-                        var body = (EntryOptions)ConfigurationFile.Parse(await reader.ReadToEndAsync(), true)!;
-                        var result = await session.ConfigurationOperations.EditSettingsFieldAsync(
-                            "root:worker",
-                            (string)body["field"]!,
-                            body["value"],
-                            (string)body["revision"]!,
-                            policy);
-                        await JsonAsync(
-                            request,
-                            new()
-                            {
-                                ["saved"] = result.Saved,
-                                ["applied"] = result.Applied,
-                                ["revision"] = result.Revision,
-                                ["error"] = result.Error
-                            });
-                    }
-                    else if (route == "/client" && request.Request.HttpMethod == "GET")
-                    {
-                        // Polling a content identity is the example's generation notification adaptation.
-                        // Replacing this one captured object never changes what an old version URL serves.
-                        artifact = await ClientArtifact.CaptureAsync(packages, "demo-client", parent);
-                        await JsonAsync(
-                            request,
-                            new()
-                            {
-                                ["revision"] = artifact.Revision,
-                                ["entry"] = "/client/" + artifact.Revision + ".mjs"
-                            });
-                    }
-                    else if (route == "/client/" + artifact.Revision + ".mjs" &&
-                             request.Request.HttpMethod is "GET" or "HEAD")
-                    {
-                        request.Response.Headers["ETag"] = artifact.ETag;
-                        request.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
-                        if (request.Request.Headers["If-None-Match"] == artifact.ETag)
-                            request.Response.StatusCode = 304;
-                        else
-                        {
-                            request.Response.ContentType = "text/javascript; charset=utf-8";
-                            request.Response.ContentLength64 = artifact.Length;
-                            if (request.Request.HttpMethod != "HEAD")
-                            {
-                                await using var content = artifact.OpenRead();
-                                await content.CopyToAsync(request.Response.OutputStream);
-                            }
-                        }
-
-                        request.Response.Close();
-                    }
-                    else if (route == "/stop" && request.Request.HttpMethod == "POST")
-                    {
-                        stopped = true;
-                        await JsonAsync(
-                            request,
-                            new()
-                            {
-                                ["stopped"] = true
-                            });
-                    }
-                    else
-                    {
-                        request.Response.StatusCode = 404;
-                        request.Response.Close();
-                    }
-                }
-                catch (Exception error)
-                {
-                    request.Response.StatusCode = 400;
+                    // Polling a content identity is the example's generation notification adaptation.
+                    artifact = await ClientArtifact.CaptureAsync(packages, "demo-client", parent);
                     await JsonAsync(
-                        request,
+                        http,
                         new()
                         {
-                            ["error"] = error.Message
+                            ["revision"] = artifact.Revision,
+                            ["entry"] = "/client/" + artifact.Revision + ".mjs"
                         });
-                }
-            }
+                });
+            app.MapMethods(
+                "/client/{revision}.mjs",
+                ["GET", "HEAD"],
+                async (HttpContext http) =>
+                {
+                    var captured = artifact;
+                    if (http.Request.RouteValues["revision"]?.ToString() != captured.Revision)
+                    {
+                        http.Response.StatusCode = StatusCodes.Status404NotFound;
+                        return;
+                    }
+
+                    http.Response.Headers.ETag = captured.ETag;
+                    http.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+                    if (http.Request.Headers.IfNoneMatch == captured.ETag)
+                        http.Response.StatusCode = StatusCodes.Status304NotModified;
+                    else
+                    {
+                        http.Response.ContentType = "text/javascript; charset=utf-8";
+                        http.Response.ContentLength = captured.Length;
+                        if (http.Request.Method != "HEAD")
+                        {
+                            await using var content = captured.OpenRead();
+                            await content.CopyToAsync(http.Response.Body, http.RequestAborted);
+                        }
+                    }
+                });
+            app.MapPost(
+                "/stop",
+                async (HttpContext http) =>
+                {
+                    await JsonAsync(
+                        http,
+                        new()
+                        {
+                            ["stopped"] = true
+                        });
+                    app.Lifetime.StopApplication();
+                });
+            await app.RunAsync();
         }
         finally
         {
@@ -190,12 +169,9 @@ internal static class ApplicationHost
         }
     }
 
-    private static async Task JsonAsync(HttpListenerContext request, EntryOptions body)
+    private static Task JsonAsync(HttpContext request, EntryOptions body)
     {
-        var content = Encoding.UTF8.GetBytes(ConfigurationFile.Write(body, true));
         request.Response.ContentType = "application/json; charset=utf-8";
-        request.Response.ContentLength64 = content.Length;
-        await request.Response.OutputStream.WriteAsync(content);
-        request.Response.Close();
+        return request.Response.WriteAsync(ConfigurationFile.Write(body, true));
     }
 }

@@ -1,0 +1,39 @@
+{
+  "sourceCommit": "8da4cb4f671ef9a654042a16f313275b40b7fe22",
+  "status": "observed-pass",
+  "browser": "Codex in-app Chromium browser",
+  "observedText": "PASS real scripts + generated notifications: disconnect retains instance/draft; failed query recovers; actual withdrawal disposes",
+  "carrier": "Generated notification client and shared runtime through production ASP.NET text mux; fixture forwards WebSocket bytes without translating frames.",
+  "boundary": "Browser module lifecycle and selected notification recovery only; no full scoped, reverse Context, owned-value or complete event claim.",
+  "sourceSha256": {
+    "scripts/client-modules-browser-host.mjs": "8ceebf1b014ed9e5067f14e07a932a90b102586439f21975ca30903a751f54c4",
+    "tests/fixtures/ClientModuleBrowser/Host.cs": "b11eaace162dcff55230ddf115a19916e422574ad505e6ee97834fa85baffb8a",
+    "clients/modules/examples/recovery.html": "4e8f07ba349b94dd9750792a1f7b11731f3070f2aad829435d29735f95b5d064",
+    "clients/modules/src/management.ts": "eaca5b2fb95c31f8902a36a8cbdf7f5c9bc4d2b52016f1152fc7979bfb0f42a1",
+    "src/Cordis.Composition/Client/cordis-remote.mjs": "d6fcbd2ca2f0605c90d4cf0a1549d48647f0985cb372c392774fb8730ef10942",
+    "src/Cordis.AspNetCore/CordisRemoteMux.cs": "c1cd9dfb61e8ad6c7154489885f3d2c062de68ed8d97125f4ff447809fa49b96"
+  },
+  "runtimeSha256": {
+    "runtime/client.mjs": "eb2b3770a0da53faa11626e110df0f3842bb1563147d1f58b51cced018f18f6f",
+    "runtime/cordis-remote.d.mts": "9f9b45a1042a0f76698832d88810850f6ef38179f3b8b19f0dffacd40a5a8974",
+    "runtime/cordis-remote.mjs": "d6fcbd2ca2f0605c90d4cf0a1549d48647f0985cb372c392774fb8730ef10942",
+    "runtime/LICENSES.txt": "d839a006c92fa155fce7b474f981fb66f3378cbbe3360a728cdc7354a381a2b9",
+    "runtime/management.d.ts": "574ee5a5911ab87b2d8a8185a4a142cb3d61b62b70a3d51f744608ee17f5c65e",
+    "runtime/management.mjs": "d7e4dc4ed9d62e093683351674d7094e5ee300090600194e30e9206975a69a42",
+    "runtime/notifications.d.ts": "5d255248aec22b7f964b5862f3231a57da8e29f01a960209c79bed200fe32b3c",
+    "runtime/notifications.mjs": "ae7aa44384fe16e65d6b8d45751a4e7f8a0cb65a932a5806bc991925575cc6d5",
+    "runtime/package.json": "0c311f8d4945434979866fc4c21a45c4cbe6d27951d1a906bb77c4e6f4778c97",
+    "runtime/settings.d.ts": "46951a454c146d1b5fd9bcd423cb3e447a9777a889f3413bbc6aff97e48f5cfe",
+    "runtime/settings.mjs": "d94b125e0c21398ea9d3c27c12889fb2d979ea23c6aa532a179dfa470432b8de"
+  },
+  "hostAssembliesSha256": {
+    "BrowserHost.dll": "ab06fb25ab14398812fd9ac68a3113119e733083f03382b0f3bffe41732eac2a",
+    "Cordis.AspNetCore.dll": "736d71ab7544a00b8647af960a5ae05ecdbe67f5c76254b15396353885a25333",
+    "Cordis.Composition.dll": "bac778b033ce11ba64c9841346f8cad59154b9936d3e63e3f7a2a311f5739c26",
+    "Cordis.Core.dll": "1322aa42e6fd5e91140efb1e91e8a614d27e9b545e8680034104877c62ecaaf6",
+    "Cordis.Extensions.dll": "019b68e8bc3f8d0153328798b01df2b4b8c2b4500b070b2dc961b6a745b1a5f9",
+    "YamlDotNet.dll": "86f873f682c619a0c24e263dcdd15fe027104666641c92f503516671d61edda6"
+  },
+  "hostBuildLogSha256": "ec82a32602d3dbb406e78a8720bc9c2b943e4e2e0cae619b8cec690ad8f943c0",
+  "screenshotSha256": "276f6434c7c5a47d960467a21b2b1595a8b34dbdff54feccb27fc75b29c407ff"
+}

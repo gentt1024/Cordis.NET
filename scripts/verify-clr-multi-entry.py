@@ -3,6 +3,7 @@ import argparse
 import json
 import glob
 import os
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -110,17 +111,24 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default="dotnet")
     parser.add_argument("--packages", required=True, type=Path)
+    parser.add_argument("--package-version", help="Use the isolated candidate package version.")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--node", default="node")
     parser.add_argument("--tsc", type=Path, help="Path to the existing TypeScript compiler CLI.")
     parser.add_argument("--multi-assembly-only", action="store_true",
                         help="Run only the nested CLR assembly/dependency package consumer.")
+    parser.add_argument("--stable-publication-only", action="store_true",
+                        help="Prepare and publish one real author package, then verify repeated loading and retained worker/native/resource lifetimes.")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     tsc = options.tsc or root / "clients/modules/node_modules/typescript/bin/tsc"
-    if not options.multi_assembly_only and not tsc.is_file():
+    if options.multi_assembly_only and options.stable_publication_only:
+        parser.error("Choose only one focused consumer.")
+    if not (options.multi_assembly_only or options.stable_publication_only) and not tsc.is_file():
         parser.error("TypeScript compiler not found; install the client module dependencies or provide --tsc.")
-    version = ET.parse(root / "Directory.Build.props").findtext(".//Version")
+    if options.output.exists() and any(options.output.iterdir()):
+        parser.error("Output must be empty. Preserve the previous evidence and select a new --output directory.")
+    version = options.package_version or ET.parse(root / "Directory.Build.props").findtext(".//Version")
     directory = Path(tempfile.mkdtemp(prefix="cordis-multi-entry-consumer-"))
     author_packages = directory / "author-packages"
     author_packages.mkdir()
@@ -156,17 +164,29 @@ def main():
         return path
 
     try:
-        verify_multi_assembly(options, root, directory, version, project, run)
+        if not options.stable_publication_only:
+            verify_multi_assembly(options, root, directory, version, project, run)
         if options.multi_assembly_only:
             return 0
         author = directory / "Author"
         author_project = project(author,
-            '<AssemblyName>IndependentMultiEntry</AssemblyName><PackageId>IndependentMultiEntry</PackageId><Version>1.0.0-alpha</Version>',
+            '<AssemblyName>IndependentMultiEntry</AssemblyName><PackageId>IndependentMultiEntry</PackageId><Version>1.0.0-alpha</Version>' +
+            ('<DefineConstants>WINDOWS</DefineConstants>' if os.name == 'nt' else ''),
             f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>')
         shutil.copyfile(root / "tests/fixtures/ClrMultiEntry/Plugin.cs", author / "Plugin.cs")
+        shutil.copyfile(root / "tests/fixtures/ClrMultiAssembly/NativeEntry.cs", author / "NativeEntry.cs")
+        architecture = {'amd64': 'x64', 'x86_64': 'x64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine().lower()]
+        if os.name == 'nt':
+            rid, native_name = 'win-' + architecture, 'CordisBundleNative.dll'
+            native_source = Path(os.environ['SystemRoot']) / 'System32/version.dll'
+        else:
+            rid, native_name = 'linux-' + architecture, 'libCordisBundleNative.so'
+            native_source = Path(sorted(glob.glob('/lib/*/libm.so.6') + glob.glob('/usr/lib/*/libm.so.6'))[0])
+        shutil.copyfile(native_source, author / native_name)
+        (author / 'retained-data.txt').write_text('published resource retained for worker\n', encoding='utf8')
         metadata = {
             "assembly": "IndependentMultiEntry.dll", "entryType": "IndependentMultiEntry.First",
-            "exports": {"./second": "IndependentMultiEntry.Second"},
+            "exports": {"./second": "IndependentMultiEntry.Second", "./native": "IndependentBundle.NativeEntry"},
             "patches": [{"insert": [
                 {"id": "one", "name": "nuget:independentmultientry", "config": 7},
                 {"id": "two", "name": "nuget:independentmultientry/second", "config": 11}]}],
@@ -174,12 +194,17 @@ def main():
         (author / "cordis.plugin.json").write_text(json.dumps(metadata), encoding="utf-8")
         tree = ET.parse(author_project)
         ET.SubElement(tree.getroot().find("ItemGroup"), "None", Include="cordis.plugin.json", Pack="true", PackagePath="/")
+        ET.SubElement(tree.getroot().find("ItemGroup"), "None", Include=native_name, Pack="true", PackagePath=f"runtimes/{rid}/native/")
+        ET.SubElement(tree.getroot().find("ItemGroup"), "None", Include="retained-data.txt", Pack="true",
+            PackagePath="contentFiles/any/any/", PackageCopyToOutput="true")
         tree.write(author_project, encoding="utf-8")
         bundles = []
-        for major in (1, 2, 3):
+        for major in ((1,) if options.stable_publication_only else (1, 2, 3)):
             package_version = f"{major}.0.0-alpha"
             run(f"author-{major}-pack", [options.dotnet, "pack", author_project, "-c", "Release", "-o", author_packages,
                 "-p:Version=" + package_version])
+            if options.stable_publication_only:
+                continue
             deployment = directory / f"Deployment{major}"
             deployment_project = project(deployment, '<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>',
                 f'<PackageReference Include="IndependentMultiEntry" Version="{package_version}"/>')
@@ -187,18 +212,26 @@ def main():
                 "--configfile", directory / "NuGet.Config"])
             bundle = directory / f"bundle{major}"
             run(f"author-{major}-package-publish", [options.dotnet, "publish", deployment_project, "--no-restore", "-c", "Release", "-o", bundle])
+            shutil.copyfile(bundle / f"Deployment{major}.deps.json", bundle / "IndependentMultiEntry.deps.json")
             (bundle / "package.json").write_text('{"name":"multi-entry","version":"' + package_version + '"}\n', encoding="utf-8")
             bundles.append(bundle)
-        consumer = directory / "Consumer"
-        consumer_project = project(consumer, '<OutputType>Exe</OutputType>',
-            f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>' +
-            f'<PackageReference Include="Cordis.NET.Extensions" Version="{version}"/>' +
-            f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>' +
-            '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
-        shutil.copyfile(root / "tests/fixtures/ClrMultiEntry/Consumer.cs", consumer / "Program.cs")
-        run("consumer-run", [options.dotnet, "run", "--project", consumer_project, "-c", "Release", "--", *bundles,
-            author_packages, options.packages.resolve(), options.dotnet, options.node,
-            root / "scripts/multi-entry-client-consumer.mjs", tsc.resolve()])
+        if not options.stable_publication_only:
+            consumer = directory / "Consumer"
+            consumer_project = project(consumer, '<OutputType>Exe</OutputType>',
+                f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>' +
+                f'<PackageReference Include="Cordis.NET.Extensions" Version="{version}"/>' +
+                f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>' +
+                '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
+            shutil.copyfile(root / "tests/fixtures/ClrMultiEntry/Consumer.cs", consumer / "Program.cs")
+            run("consumer-run", [options.dotnet, "run", "--project", consumer_project, "-c", "Release", "--", *bundles,
+                author_packages, options.packages.resolve(), options.dotnet, options.node,
+                root / "scripts/multi-entry-client-consumer.mjs", tsc.resolve()])
+        stable = directory / "StableConsumer"
+        stable_project = project(stable, '<OutputType>Exe</OutputType>',
+            f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>')
+        shutil.copyfile(root / "tests/fixtures/ClrMultiEntry/StableConsumer.cs", stable / "Program.cs")
+        run("stable-publication-worker", [options.dotnet, "run", "--project", stable_project, "-c", "Release", "--",
+            author_packages, options.packages.resolve(), options.dotnet])
     finally:
         (options.output / "results.json").write_text(json.dumps(outcomes, indent=2) + "\n", encoding="utf-8")
     return 0

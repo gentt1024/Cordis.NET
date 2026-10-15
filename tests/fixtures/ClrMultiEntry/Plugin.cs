@@ -25,6 +25,20 @@ public sealed class Second : IClrPluginModule, IClrTypertModule
     public TypertContribution CreateTypertContribution() => SecondRemoteTypert.Contribution("multi-entry.second");
 }
 
+public sealed class IncompatibleFirst : IClrPluginModule, IClrTypertModule
+{
+    public IPlugin CreatePlugin() => Entries.Create("first");
+    public TypertContribution CreateTypertContribution() => IncompatibleRemoteTypert.Contribution("multi-entry.first");
+}
+
+[RemoteService("first.remote", typeof(BundleJson), Namespace = "first")]
+public partial class IncompatibleRemote
+{
+    [RemoteMethod]
+    public Task<string> Echo(EchoRequest request) =>
+        Task.FromResult(request.Delta.ToString(System.Globalization.CultureInfo.InvariantCulture));
+}
+
 public sealed record EchoRequest(int Delta);
 
 [RemoteService("first.remote", typeof(BundleJson), Namespace = "first")]
@@ -60,6 +74,7 @@ public sealed partial class SecondRemote(int value)
 }
 
 [JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(EchoRequest))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 public partial class BundleJson : JsonSerializerContext;

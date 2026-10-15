@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cordis;
 using Cordis.Clr;
@@ -19,10 +21,35 @@ public sealed class Second : IClrPluginModule
 }
 
 [RemoteService("settingsController", typeof(AuthorSettingsJson), Namespace = "settings")]
-public sealed partial class SettingsRemote(Context context) : SettingsController(context)
+public sealed partial class SettingsRemote(Context context) : SettingsController(
+    context,
+    context.Get<Func<string, CancellationToken, Task>>("fixture.openDocument")!)
 {
+    [RemoteMethod("openSettingsDocument")]
+    public new Task<SettingsDocumentOpenValue> OpenSettingsDocumentAsync(
+        CancellationToken cancellationToken = default) =>
+        base.OpenSettingsDocumentAsync(cancellationToken);
+
     [RemoteMethod("describe")]
     public new Task<SettingsDescribeValue> DescribeAsync() => base.DescribeAsync();
+
+    [RemoteMethod("update")]
+    public new Task<SettingsNamespaceView> UpdateAsync(
+        string ns,
+        JsonElement patch,
+        [DisallowNull] double? expectedRevision = null!) => base.UpdateAsync(ns, patch, expectedRevision!);
+
+    [RemoteMethod("replace")]
+    public new Task<SettingsNamespaceView> ReplaceAsync(
+        string ns,
+        JsonElement section,
+        [DisallowNull] double? expectedRevision = null!) => base.ReplaceAsync(ns, section, expectedRevision!);
+
+    [RemoteMethod("mutate")]
+    public new Task<SettingsNamespaceView> MutateAsync(
+        string ns,
+        IReadOnlyList<SettingsPathOp> ops,
+        [DisallowNull] double? expectedRevision = null!) => base.MutateAsync(ns, ops, expectedRevision!);
 }
 
 public sealed record NestedOptions(string Visible = "nested-visible", string Secret = "nested-default-secret");
@@ -41,6 +68,12 @@ public sealed record EntryConfig(
     RespectNullableAnnotations = true,
     RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(SettingsDescribeValue))]
+[JsonSerializable(typeof(SettingsDocumentOpenValue))]
+[JsonSerializable(typeof(SettingsNamespaceView))]
+[JsonSerializable(typeof(IReadOnlyList<SettingsPathOp>))]
+[JsonSerializable(typeof(JsonElement))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(double))]
 [JsonSerializable(typeof(EntryConfig))]
 public partial class AuthorSettingsJson : JsonSerializerContext;
 

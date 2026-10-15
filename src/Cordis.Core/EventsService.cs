@@ -155,6 +155,7 @@ public sealed class EventsService(Context context)
                 {
                     Context ctx => ctx.Filter?.Invoke(hook.Owner) ?? true,
                     Service service => service.Filter(hook.Owner),
+                    IEventFilter filter => filter.Filter(hook.Owner),
                     _ => true
                 };
             })

@@ -1,15 +1,18 @@
+using System.Net.WebSockets;
 using System.Net;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Cordis.AspNetCore;
 using Cordis.Composition;
 using Cordis.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Cordis.Platform.Tests;
@@ -17,7 +20,8 @@ namespace Cordis.Platform.Tests;
 public sealed class ManagementTransportTests
 {
     [Fact]
-    public async Task Real_http_settings_enforce_authorization_generation_and_revision_without_restarting_live_plugin()
+    public async Task
+        Real_remote_settings_enforce_authorization_and_revision_while_configuration_retains_generation_fencing()
     {
         var root = Directory.CreateTempSubdirectory("cordis-http-").FullName;
         try
@@ -57,87 +61,128 @@ public sealed class ManagementTransportTests
                 [],
                 new Dictionary<string, string>());
             await using var session = await ProfileSession.StartAsync(config, launch, resolver);
-            var permissions = new List<ManagementPermission>();
             await using var server = CreateServer();
-            new CordisManagement(
+            var management = new CordisManagement(
                 session,
-                (http, permission) =>
+                (http, _) => Task.FromResult(http.Request.Headers.Authorization == "test-host-policy"));
+            var registry = new TypertRegistry(session.Context);
+            await session.Context.RunAsync(context =>
+            {
+                new SettingsForms(context, session.ConfigurationOperations, _ => new SettingsPolicy(["limit"]));
+                new SettingsController(context);
+                registry.Register(context, SettingsControllerTypert.Contribution("Cordis.Tests.Settings"));
+                return Task.CompletedTask;
+            });
+            var permissions = new List<string>();
+            var notifications = await ManagementTestHost.MountAsync(
+                server,
+                session,
+                management,
+                registry,
+                (http, endpoint) =>
                 {
-                    permissions.Add(permission);
+                    permissions.Add(endpoint);
                     return Task.FromResult(
-                        http.Request.Headers.Authorization == "test-host-policy" &&
-                        (permission.Operation != "settings-write" || permission.Target == "root:worker") ||
-                        http.Request.Headers.Authorization == "settings-only" &&
-                        permission.Operation == "settings-read");
-                },
-                _ => new SettingsPolicy(["limit"])).Map(server);
+                        http.Request.Headers.Authorization == "test-host-policy" ||
+                        http.Request.Headers.Authorization == "settings-only" && endpoint == "settings/describe");
+                });
             await server.StartAsync();
             using var client = new HttpClient
             {
                 BaseAddress = new Uri(server.Urls.Single())
             };
             Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/cordis/state")).StatusCode);
+            Assert.Equal(
+                HttpStatusCode.Forbidden,
+                (await PostRemoteAsync(
+                    client,
+                    "/remote/settings/describe",
+                    new
+                    {
+                        args = new
+                        {
+                        }
+                    })).StatusCode);
             client.DefaultRequestHeaders.Authorization = new("test-host-policy");
             using var state = JsonDocument.Parse(await client.GetStringAsync("/cordis/state"));
             var generation = state.RootElement.GetProperty("generation").GetString();
             var view = await ReadSettingsAsync(client);
+            Assert.Equal(0, view.Revision);
             var patch = Path.Combine(profile, "cordis.patch.yml");
             var original = await File.ReadAllTextAsync(patch);
-            var body = new
-            {
-                entryId = "root:worker",
-                revision = view.Revision,
-                operations = new[]
-                {
+            Assert.Equal(
+                HttpStatusCode.Conflict,
+                (await client.PostAsJsonAsync(
+                    "/cordis/configuration",
                     new
                     {
-                        op = "set",
-                        path = new[] { "limit" },
-                        value = 2
-                    }
-                }
-            };
-            Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/cordis/settings", body)).StatusCode);
+                        entryId = "root:worker"
+                    })).StatusCode);
             Assert.Equal(original, await File.ReadAllTextAsync(patch));
             client.DefaultRequestHeaders.Add("If-Cordis-Generation", generation);
             Assert.Equal(
                 HttpStatusCode.BadRequest,
-                (await client.PostAsync("/cordis/settings", new StringContent("[", Encoding.UTF8, "application/json")))
-                .StatusCode);
+                (await client.PostAsync(
+                    "/remote/settings/mutate",
+                    new StringContent("[", Encoding.UTF8, "application/json"))).StatusCode);
+            var body = new
+            {
+                args = new
+                {
+                    ns = "worker",
+                    expectedRevision = view.Revision,
+                    ops = new[]
+                    {
+                        new
+                        {
+                            op = "set",
+                            path = new[] { "limit" },
+                            value = 2
+                        }
+                    }
+                }
+            };
             using var saved = JsonDocument.Parse(
-                await (await client.PostAsJsonAsync("/cordis/settings", body)).Content.ReadAsStringAsync());
-            Assert.True(saved.RootElement.GetProperty("applied").GetBoolean());
+                await (await PostRemoteAsync(client, "/remote/settings/mutate", body)).Content.ReadAsStringAsync());
+            Assert.True(saved.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
             Assert.Equal(2, (await ReadSettingsAsync(client)).Value);
             Assert.Equal(1, activations);
             using var stale = JsonDocument.Parse(
-                await (await client.PostAsJsonAsync("/cordis/settings", body)).Content.ReadAsStringAsync());
-            Assert.Equal("conflict", stale.RootElement.GetProperty("error").GetString());
+                await (await PostRemoteAsync(client, "/remote/settings/mutate", body)).Content.ReadAsStringAsync());
+            Assert.Equal(
+                "settings/conflict",
+                stale.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
             view = await ReadSettingsAsync(client);
             using var reset = JsonDocument.Parse(
-                await (await client.PostAsJsonAsync(
-                    "/cordis/settings",
+                await (await PostRemoteAsync(
+                    client,
+                    "/remote/settings/mutate",
                     new
                     {
-                        entryId = "root:worker",
-                        revision = view.Revision,
-                        operations = new[]
+                        args = new
                         {
-                            new
+                            ns = "worker",
+                            expectedRevision = view.Revision,
+                            ops = new[]
                             {
-                                op = "unset",
-                                path = new[] { "limit" }
+                                new
+                                {
+                                    op = "unset",
+                                    path = new[] { "limit" }
+                                }
                             }
-                        },
+                        }
                     })).Content.ReadAsStringAsync());
-            Assert.True(reset.RootElement.GetProperty("applied").GetBoolean());
+            Assert.True(reset.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
             Assert.Equal(1, (await ReadSettingsAsync(client)).Value);
-            Assert.Contains(
-                permissions,
-                permission => permission.Operation == "settings-write" && permission.Target == "root:worker");
+            Assert.Contains("settings/mutate", permissions);
             // The CLI edits through the same owner. Ordinary changes are available only
             // through full configuration authority, while Settings remains live-only.
             client.DefaultRequestHeaders.Authorization = new("settings-only");
-            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/cordis/settings?entryId=root:worker")).StatusCode);
+            Assert.Equal(1, (await ReadSettingsAsync(client)).Value);
+            Assert.Equal(
+                HttpStatusCode.Forbidden,
+                (await PostRemoteAsync(client, "/remote/settings/mutate", body)).StatusCode);
             Assert.Equal(
                 HttpStatusCode.Forbidden,
                 (await client.GetAsync("/cordis/configuration?entryId=root:worker")).StatusCode);
@@ -150,6 +195,40 @@ public sealed class ManagementTransportTests
             try
             {
                 var endpoint = server.Urls.Single() + "/cordis";
+                Environment.SetEnvironmentVariable(authVariable, "settings-only");
+                var settingsRead = await RunCliAsync(
+                    "settings",
+                    endpoint,
+                    "worker",
+                    "--authorization-env",
+                    authVariable);
+                Assert.Equal(0, settingsRead.ExitCode);
+                using var settingsView = JsonDocument.Parse(settingsRead.Output);
+                Assert.Equal(JsonValueKind.Number, settingsView.RootElement.GetProperty("revision").ValueKind);
+                Environment.SetEnvironmentVariable(authVariable, "test-host-policy");
+                var settingsOps = Path.Combine(root, "settings-operations.json");
+                await File.WriteAllTextAsync(settingsOps, """[{"op":"set","path":["limit"],"value":1}]""");
+                var withoutRevision = await RunCliAsync(
+                    "edit",
+                    endpoint,
+                    "settings",
+                    "worker",
+                    "-",
+                    settingsOps,
+                    "--authorization-env",
+                    authVariable);
+                Assert.Equal(0, withoutRevision.ExitCode);
+                var nullRevision = await RunCliAsync(
+                    "edit",
+                    endpoint,
+                    "settings",
+                    "worker",
+                    "null",
+                    settingsOps,
+                    "--authorization-env",
+                    authVariable);
+                Assert.Equal(1, nullRevision.ExitCode);
+
                 var read = await RunCliAsync(
                     "configuration",
                     endpoint,
@@ -226,18 +305,48 @@ public sealed class ManagementTransportTests
 
             client.DefaultRequestHeaders.Remove("If-Cordis-Generation");
             client.DefaultRequestHeaders.Add("If-Cordis-Generation", "retired-host");
+            using var retired = await PostRemoteAsync(
+                client,
+                "/remote/pluginManager/waitForInstall",
+                new
+                {
+                    args = new
+                    {
+                        requestId = "reused"
+                    }
+                });
+            retired.EnsureSuccessStatusCode();
+            using var refused = JsonDocument.Parse(await retired.Content.ReadAsStringAsync());
+            Assert.False(refused.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
             Assert.Equal(
-                HttpStatusCode.Conflict,
-                (await client.GetAsync("/cordis/install/wait?requestId=reused")).StatusCode);
+                "plugin-manager/generation-changed",
+                refused.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
             client.DefaultRequestHeaders.Remove("If-Cordis-Generation");
-            using var events = await client.GetAsync("/cordis/events", HttpCompletionOption.ResponseHeadersRead);
-            Assert.Equal(HttpStatusCode.OK, events.StatusCode);
-            using var stream = new StreamReader(await events.Content.ReadAsStreamAsync());
-            Assert.StartsWith("data: ", await stream.ReadLineAsync());
-            Assert.Equal("", await stream.ReadLineAsync());
+            using var socket = new ClientWebSocket();
+            socket.Options.SetRequestHeader("Authorization", client.DefaultRequestHeaders.Authorization!.ToString());
+            var streamUri = new UriBuilder(new Uri(client.BaseAddress!, "/remote/remote.mux"))
+            {
+                Scheme = "ws"
+            }.Uri;
+            await socket.ConnectAsync(streamUri, CancellationToken.None);
+            await socket.SendAsync(
+                Encoding
+                    .UTF8.GetBytes(
+                        """{"type":"open","streamId":"notifications","endpoint":"$events","payload":{"args":{}}}""")
+                    .AsMemory(),
+                WebSocketMessageType.Text,
+                true,
+                CancellationToken.None);
+            using var ready = await ReadFrameAsync(socket);
+            Assert.Equal("item", ready.RootElement.GetProperty("type").GetString());
+            Assert.Equal("ready", ready.RootElement.GetProperty("value").GetProperty("type").GetString());
+            await notifications.DisposeAsync();
+            using var withdrawn = await ReadFrameAsync(socket);
+            Assert.Equal("end", withdrawn.RootElement.GetProperty("type").GetString());
+            Assert.Equal("notifications", withdrawn.RootElement.GetProperty("streamId").GetString());
+            await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "consumer done", CancellationToken.None);
             await session.Context.DisposeAsync();
             Assert.Equal(HttpStatusCode.Gone, (await client.GetAsync("/cordis/state")).StatusCode);
-            Assert.Null(await stream.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3)));
         }
         finally
         {
@@ -246,19 +355,19 @@ public sealed class ManagementTransportTests
     }
 
     [Theory]
-    [InlineData("enable", "target", "root:blocked", false)]
-    [InlineData("remove", "name", "blocked", false)]
-    [InlineData("compatibility", "packageVersion", "blocked@1.0.0", false)]
-    [InlineData("install/cancel", "requestId", "blocked-task", false)]
-    [InlineData("install/wait", "requestId", "blocked-task", true)]
-    [InlineData("versions", "name", "blocked", true)]
-    [InlineData("inspect", "name", "blocked", false)]
-    [InlineData("install", "name", "blocked", false)]
+    [InlineData("setPluginEnabled", "id", "root:blocked")]
+    [InlineData("setBundleEnabled", "name", "blocked")]
+    [InlineData("removeBundle", "name", "blocked")]
+    [InlineData("setVersionExemption", "packageVersion", "blocked@1.0.0")]
+    [InlineData("cancelInstall", "requestId", "blocked-task")]
+    [InlineData("waitForInstall", "requestId", "blocked-task")]
+    [InlineData("versions", "name", "blocked")]
+    [InlineData("inspect", "request", "blocked")]
+    [InlineData("installBundle", "request", "blocked")]
     public async Task Authorization_uses_the_executed_resource_despite_unrelated_fields(
         string endpoint,
         string identityField,
-        string blocked,
-        bool read)
+        string blocked)
     {
         var root = Directory.CreateTempSubdirectory("cordis-http-resource-").FullName;
         try
@@ -291,19 +400,19 @@ public sealed class ManagementTransportTests
             Assert.All(plugins, plugin => Assert.Null(plugin.ReadOnlyReason));
             var allowed = plugins.Single(plugin => plugin.EntryId.EndsWith(":allowed", StringComparison.Ordinal))
                 .EntryId;
-            if (endpoint == "enable")
+            if (endpoint == "setPluginEnabled")
                 blocked = plugins.Single(plugin => plugin.EntryId.EndsWith(":blocked", StringComparison.Ordinal))
                     .EntryId;
             await using var server = CreateServer();
             var permissions = new List<ManagementPermission>();
-            new CordisManagement(
+            var management = new CordisManagement(
                 session,
                 (_, permission) =>
                 {
                     permissions.Add(permission);
                     return Task.FromResult(permission.Operation == "read" || permission.Target == allowed);
-                },
-                _ => new SettingsPolicy([])).Map(server);
+                });
+            await ManagementTestHost.MountAsync(server, session, management);
             await server.StartAsync();
             using var client = new HttpClient
             {
@@ -314,21 +423,32 @@ public sealed class ManagementTransportTests
                 "If-Cordis-Generation",
                 state.RootElement.GetProperty("generation").GetString());
             var before = Directory.GetFiles(profile).ToDictionary(path => Path.GetFileName(path), File.ReadAllText);
-            var body = new Dictionary<string, object?>
+            var arguments = new Dictionary<string, object?>
             {
-                ["entryId"] = allowed,
-                [identityField] = blocked,
-                ["kind"] = "plugin",
-                ["enabled"] = false,
-                ["runtimeVersion"] = "0.2.0-rc.2",
-                ["acceptRisk"] = true,
+                [identityField] = identityField == "request"
+                    ? new PackageRequest(blocked, "1.0.0", "selected-source")
+                    : blocked,
             };
-            using var response = read
-                ? await client.GetAsync(
-                    $"/cordis/{endpoint}?entryId={Uri.EscapeDataString(allowed)}&{identityField}={Uri.EscapeDataString(blocked)}")
-                : await client.PostAsJsonAsync(
-                    "/cordis/" + endpoint + "?entryId=" + Uri.EscapeDataString(allowed),
-                    body);
+            if (endpoint is "setPluginEnabled" or "setBundleEnabled" or "setVersionExemption")
+                arguments["enabled"] = false;
+            if (endpoint == "setVersionExemption")
+            {
+                arguments["runtimeVersion"] = "0.2.0-rc.2";
+                arguments["acceptRisk"] = true;
+            }
+
+            if (endpoint == "versions")
+                arguments["source"] = "selected-source";
+            if (endpoint == "installBundle")
+                arguments["options"] = new PluginInstallOptions("unrelated-task", "inspected-hash");
+            using var response = await PostRemoteAsync(
+                client,
+                "/remote/pluginManager/" + endpoint + "?entryId=" + Uri.EscapeDataString(allowed) +
+                "&name=" + Uri.EscapeDataString(allowed) + "&target=" + Uri.EscapeDataString(allowed),
+                new
+                {
+                    args = arguments
+                });
             // Check state as well as HTTP refusal: a successful enable request used
             // to authorize allowed while actually disabling blocked.
             Assert.All(await session.ConfigurationOperations.ListPluginsAsync(), plugin => Assert.True(plugin.Enabled));
@@ -338,16 +458,28 @@ public sealed class ManagementTransportTests
                     .GetFiles(profile)
                     .ToDictionary(path => Path.GetFileName(path), File.ReadAllText)
                     .OrderBy(pair => pair.Key));
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            response.EnsureSuccessStatusCode();
+            using var refused = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            Assert.False(refused.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+            Assert.Equal(
+                "plugin-manager/forbidden",
+                refused.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
             Assert.Equal(blocked, permissions.Last().Target);
-            if (endpoint == "enable")
+            if (endpoint == "setPluginEnabled")
             {
-                body["target"] = allowed;
-                body["entryId"] = blocked;
-                using var accepted = await client.PostAsJsonAsync(
-                    "/cordis/enable?name=" + Uri.EscapeDataString(blocked),
-                    body);
+                arguments["id"] = allowed;
+                using var accepted = await PostRemoteAsync(
+                    client,
+                    "/remote/pluginManager/setPluginEnabled?entryId=" + Uri.EscapeDataString(blocked),
+                    new
+                    {
+                        args = arguments
+                    });
                 Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+                using var changed = JsonDocument.Parse(await accepted.Content.ReadAsStringAsync());
+                Assert.True(changed.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+                Assert.True(
+                    changed.RootElement.GetProperty("result").GetProperty("value").GetProperty("changed").GetBoolean());
                 var after = await session.ConfigurationOperations.ListPluginsAsync();
                 Assert.False(after.Single(plugin => plugin.EntryId == allowed).Enabled);
                 Assert.True(after.Single(plugin => plugin.EntryId == blocked).Enabled);
@@ -369,16 +501,22 @@ public sealed class ManagementTransportTests
         await using var server = CreateServer();
         var waits = 0;
         server.MapGet("/cordis/state", () => Results.Text("{\"generation\":\"original\"}", "application/json"));
-        server.MapPost("/cordis/inspect", () => Results.Text("{\"hash\":\"inspected\"}", "application/json"));
-        server.MapPost("/cordis/install", () => Results.StatusCode(status));
-        server.MapGet(
-            "/cordis/install/wait",
-            () =>
+        server.MapPost(
+            "/remote/pluginManager/inspect",
+            (HttpContext http) => RemoteValue(
+                http,
+                new PackageInspection(new("new-package", "1.0.0", "explicit-feed"), "inspected", "test package", true),
+                PluginManagerJson.Default.PackageInspection));
+        server.MapPost("/remote/pluginManager/installBundle", () => Results.StatusCode(status));
+        server.MapPost(
+            "/remote/pluginManager/waitForInstall",
+            (HttpContext http) =>
             {
                 Interlocked.Increment(ref waits);
-                return Results.Text(
-                    "{\"requestId\":\"reused\",\"application\":\"applied\",\"target\":\"previous-package\"}",
-                    "application/json");
+                return RemoteValue(
+                    http,
+                    new PackageChange("reused", "previous-package", "complete", true, true, "applied"),
+                    PluginManagerJson.Default.PackageChange);
             });
         await server.StartAsync();
         var result = await RunCliAsync(
@@ -392,7 +530,7 @@ public sealed class ManagementTransportTests
             "reused",
             "--approve-build");
         Assert.Equal(1, result.ExitCode);
-        Assert.Contains("Management returned " + status, result.Error);
+        Assert.Contains("HTTP " + status, result.Error);
         Assert.Equal(0, waits);
         Assert.DoesNotContain("previous-package", result.Output);
     }
@@ -405,25 +543,35 @@ public sealed class ManagementTransportTests
         await using var server = CreateServer();
         var generation = "original";
         var waits = 0;
+        var installs = 0;
         server.MapGet(
             "/cordis/state",
             () => Results.Text("{\"generation\":\"" + generation + "\"}", "application/json"));
-        server.MapPost("/cordis/inspect", () => Results.Text("{\"hash\":\"inspected\"}", "application/json"));
         server.MapPost(
-            "/cordis/install",
+            "/remote/pluginManager/inspect",
+            (HttpContext http) => RemoteValue(
+                http,
+                new PackageInspection(new("package", "1.0.0", "explicit-feed"), "inspected", "test package", true),
+                PluginManagerJson.Default.PackageInspection));
+        server.MapPost(
+            "/remote/pluginManager/installBundle",
             (HttpContext http) =>
             {
+                Interlocked.Increment(ref installs);
                 if (replaceHost)
                     generation = "replacement";
                 http.Abort();
                 return Task.CompletedTask;
             });
-        server.MapGet(
-            "/cordis/install/wait",
-            () =>
+        server.MapPost(
+            "/remote/pluginManager/waitForInstall",
+            (HttpContext http) =>
             {
                 Interlocked.Increment(ref waits);
-                return Results.Text("{\"requestId\":\"reused\",\"application\":\"applied\"}", "application/json");
+                return RemoteValue(
+                    http,
+                    new PackageChange("reused", "package", "complete", true, true, "applied"),
+                    PluginManagerJson.Default.PackageChange);
             });
         await server.StartAsync();
         var result = await RunCliAsync(
@@ -438,7 +586,26 @@ public sealed class ManagementTransportTests
             "--approve-build");
         Assert.Equal(replaceHost ? 1 : 0, result.ExitCode);
         Assert.Equal(replaceHost ? 0 : 1, waits);
+        Assert.Equal(1, installs);
         Assert.Contains(replaceHost ? "unknown-result" : "applied", result.Output);
+    }
+
+    private static async Task RemoteValue<T>(HttpContext http, T value, JsonTypeInfo<T> metadata)
+    {
+        using var request = await JsonDocument.ParseAsync(http.Request.Body);
+        Assert.Equal("client-request", request.RootElement.GetProperty("type").GetString());
+        Assert.Equal(
+            http.Request.Path.Value!["/remote/".Length..],
+            request.RootElement.GetProperty("method").GetString());
+        var result = JsonSerializer.Serialize(
+            new TypertRemoteResult(true, JsonSerializer.SerializeToElement(value, metadata), null),
+            TypertJson.Default.TypertRemoteResult);
+        await Results
+            .Text(
+                "{\"type\":\"server-response\",\"rpcId\":" +
+                request.RootElement.GetProperty("rpcId").GetRawText() + ",\"result\":" + result + "}",
+                "application/json")
+            .ExecuteAsync(http);
     }
 
     private static async Task<(int ExitCode, string Output, string Error)> RunCliAsync(params string[] arguments)
@@ -521,18 +688,57 @@ public sealed class ManagementTransportTests
         Assert.Equal(HttpStatusCode.Gone, (await client.PostAsJsonAsync("/echo", new EchoRequest("value"))).StatusCode);
     }
 
+    private static Task<HttpResponseMessage> PostRemoteAsync(HttpClient client, string path, object payload) =>
+        client.PostAsJsonAsync(
+            path,
+            new
+            {
+                type = "client-request",
+                rpcId = Guid.NewGuid().ToString(),
+                method = path.Split('?')[0]["/remote/".Length..],
+                payload
+            });
+
+    private static async Task<JsonDocument> ReadFrameAsync(ClientWebSocket socket)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        using var content = new MemoryStream();
+        var buffer = new byte[4096];
+        ValueWebSocketReceiveResult frame;
+        do
+        {
+            frame = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token);
+            Assert.Equal(WebSocketMessageType.Text, frame.MessageType);
+            content.Write(buffer, 0, frame.Count);
+        } while (!frame.EndOfMessage);
+
+        return JsonDocument.Parse(content.ToArray());
+    }
+
     private static WebApplication CreateServer()
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services.AddHttpContextAccessor();
         return builder.Build();
     }
 
-    private static async Task<(string Revision, int Value)> ReadSettingsAsync(HttpClient client)
+    private static async Task<(double Revision, int Value)> ReadSettingsAsync(HttpClient client)
     {
-        using var view = JsonDocument.Parse(await client.GetStringAsync("/cordis/settings?entryId=root:worker"));
-        return (view.RootElement.GetProperty("revision").GetString()!,
-            view.RootElement.GetProperty("fields")[0].GetProperty("value").GetInt32());
+        using var response = await PostRemoteAsync(
+            client,
+            "/remote/settings/describe",
+            new
+            {
+                args = new
+                {
+                }
+            });
+        response.EnsureSuccessStatusCode();
+        using var view = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(view.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+        var row = view.RootElement.GetProperty("result").GetProperty("value").GetProperty("namespaces")[0];
+        return (row.GetProperty("revision").GetDouble(), row.GetProperty("value").GetProperty("limit").GetInt32());
     }
 
     private sealed record EchoService(string Prefix);

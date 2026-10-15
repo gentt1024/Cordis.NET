@@ -1,7 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><OutputType>Exe</OutputType><IsPackable>true</IsPackable><PackAsTool>true</PackAsTool><ToolCommandName>cordis</ToolCommandName><PackageId>Cordis.NET.Tool</PackageId><Description>Validate configuration, run modular CLR applications, and manage plugins through Cordis.NET hosts.</Description></PropertyGroup>
+  <PropertyGroup>
+    <CordisTypertService>settingsController</CordisTypertService>
+    <CordisTypertClientModel>$(MSBuildProjectDirectory)/../../src/Cordis.Composition/obj/$(Configuration)/net10.0/cordis-typert/Cordis.Composition.cordis.model.json</CordisTypertClientModel>
+    <CordisTypertCompiler>$(MSBuildProjectDirectory)/../Cordis.Typert.Compiler/bin/$(Configuration)/net10.0/Cordis.Typert.Compiler.dll</CordisTypertCompiler>
+    <CordisTypertClientNamespace>Cordis.Cli.Settings</CordisTypertClientNamespace>
+    <CordisTypertClientName>SettingsClient</CordisTypertClientName>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Cordis.AspNetCore/Cordis.AspNetCore.csproj"/>
     <ProjectReference Include="../../src/Cordis.Clr/Cordis.Clr.csproj"/>
   </ItemGroup>
+  <Import Project="../../src/Cordis.Composition/buildTransitive/Cordis.NET.Composition.targets" />
+  <Target Name="GeneratePluginManagerClient" BeforeTargets="CoreCompile" DependsOnTargets="CordisTypertEmitDotnetClient"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --namespace Cordis.Cli.Management --service pluginManager --client PluginManagerClient --output &quot;$(CordisTypertOutputDirectory)PluginManagerClient.Generated.g.cs&quot;" />
+    <ItemGroup>
+      <Compile Remove="$(CordisTypertOutputDirectory)PluginManagerClient.Generated.g.cs" />
+      <Compile Include="$(CordisTypertOutputDirectory)PluginManagerClient.Generated.g.cs" />
+      <FileWrites Include="$(CordisTypertOutputDirectory)PluginManagerClient.Generated.g.cs" />
+    </ItemGroup>
+  </Target>
 </Project>

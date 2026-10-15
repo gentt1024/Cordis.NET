@@ -12,21 +12,74 @@ Composition owns the native Typert declaration model, explicit JSON codecs, Fibe
 Loader artifact discovery and carrier-independent Remote dispatcher. A Roslyn generator shipped
 in the Composition package adapts source analysis to the pinned .NET SDK. It emits typed delegates
 and metadata factories without loading plugin assemblies or scanning their methods at runtime.
-System.Text.Json source metadata supplies schemas and serialization; the same descriptors emit
-TypeScript clients. ASP.NET Core supplies the authorized HTTP/NDJSON carrier above this layer.
+System.Text.Json source metadata supplies Host schemas and serialization. Saved declaration
+facts supply independent .NET and Web artifacts within their documented backend support.
+Both routes reuse the client emitters. ASP.NET Core hosts the authorized HTTP unary route and
+the WebSocket mux Connection for streams, selected events and binary attachments.
 Actual visible services determine routing; a descriptor alone cannot invoke a provider.
 
 The native implementation preserves atomic registration, identity conflicts, exact-owner
 withdrawal, descriptor history and stale-call fences for the implemented subset. Invocation
 Context uses explicit providers and an asynchronous ambient call instead of JavaScript's rebound
-`this.ctx`. Collectible typed metadata belongs to its bundle generation: replacing that generation
-requires retiring and rebuilding its TypertLoader owner, or using host-shared DTO contracts.
-Neither path supplies product admission, draining or business recovery policy.
+`this.ctx`. Collectible typed metadata belongs to its bundle generation. Bundle replacement keeps
+the TypertLoader owner and suspends only the affected exact Loader requests before switching
+provider Fibers. Resume those requests after commit, or after confirmed successful recovery;
+unrelated contributions retain their identity. The [authoring workflow](authoring.md#register-call-and-withdraw-contracts)
+defines the ordering and failure boundary. This supplies no product admission, draining or
+business recovery policy.
 
-This is an incremental implementation of the original application infrastructure scope. The
-native carrier is not the complete fixed Typert wire protocol. The [scope reconciliation](development.md#application-infrastructure-scope-reconciliation-2026-10-09)
-and [compatibility record](compatibility.md) distinguish verified paths from remaining type-graph,
-transport and production-consumer work; earlier HTTP management acceptance remains historical.
+The [current support and maintenance navigation](development.md#current-support-and-release-status)
+and [compatibility record](compatibility.md) distinguish implemented workflows from remaining
+backend and consumer evidence. Fixed-end interoperability claims name the tested client and
+carrier; they do not imply compatibility with every DSH product or SDK transport.
+
+## Current workflow decisions
+
+The fixed DSH source remains the behavioral authority. Its existing comparison with the
+native implementation is applied incrementally, rather than repeated as a new inventory.
+The [current support and maintenance navigation](development.md#current-support-and-release-status)
+records current support; historical scope decisions retain their original checkpoints. Application consumption supplies evidence; it does not define platform scope.
+
+| Workflow | Fixed DSH responsibility | Native expression and owner | Observable boundary |
+|---|---|---|---|
+| Ordinary author and caller | Plugin provision, Fiber-owned effects, dependency activation and caller Context | Existing `Plugin`, `Provide`, `Reflect.Read<T>` and explicit `Service<TState>.CreateView` | Analysis selection does not introduce Remote registration or replace Cordis with container scopes. |
+| Model and build | Authored declaration graph precedes codec, catalog and client projections | SDK Roslyn extracts ordinary roots and selected services into one declaration artifact; Composition's MSBuild target publishes it before `CoreCompile` | Definitions, constructed references and type-parameter ownership remain distinct. A backend's refusal does not remove analysis facts. |
+| Settings view and write | Active live Entry forms, layers, redaction, optional view revision and ConfigEditor commit | Existing profile/configuration owner supplies layers and performs one complete candidate commit; a service-owned revision projection observes the form | Client view revision and file hash protect different conflicts. Replace resets live fields while retaining ordinary fields. Neither adds a whole-runtime transaction. |
+| Management | Accepted install work belongs to PluginManager, not the waiting connection | Generated `PluginManager` calls the existing operations/session/toolchain and active request table | Inspection, hash checks, build approval and preparation share one admitted task. Disconnecting a waiter does not cancel installation. Explicit cancel joins work; updating installed code requires restart. |
+| Remote and carrier | Context/reference ownership, invocation, streams, events and attachments | Registry/Gateway own admission and dispatch; the shared Connection owns HTTP unary and WebSocket mux exchange | Reverse Context, owned-value settlement, Peer/scope routing, selected events, uplink/downlink and binary attachments use these owners. Explicit forwarding selects exposed events; a connection does not own installation tasks. NDJSON and base64 are not the standard stream/attachment route. |
+| Artifact update | Installed selection and current activation have separate lifetimes | Stable deployment directories, shared bundle/ALC and existing restart policy | Saving V2 does not change V1's running descriptors/codecs. Unload request, collection and deletion remain separate. |
+
+Ordinary roots and selected Remote services share one declaration artifact,
+`cordis/typert/$(AssemblyName).cordis.model.json`, produced by `extract-model`. Source and saved
+inputs use the same member, reference, default, attribute and provenance facts. The internal
+`DeclarationRemoteContract` interprets invocation semantics from those facts; it is recomputable,
+not a second persisted authored model. Host binding uses the author's actual implementation and
+explicit STJ metadata. Independent caller projection builds its own supported DTOs and metadata,
+and refuses behavior it cannot reproduce. That refusal does not automatically disable Host
+binding or remove analysis facts. Ordinary roots require no Remote registration.
+
+Saved declarations feed the catalog, ordinary DTO/STJ and supported Remote caller projections.
+The same authored DTO can be an ordinary root and a Remote argument/result. Explicit
+`CordisTypertDataReferenceModel` inputs already support bounded ordinary DTO/STJ composition:
+definitions must match complete assembly-qualified identities, each model's identity is checked,
+and references do not enlarge the primary model's roots. Missing, conflicting or unsupported
+definitions are refused. External signatures retain their metadata provenance; opaque references
+cannot supply missing source facts, and no provider DLL is loaded to fill them. The same explicit
+reference composition now feeds supported Remote, Schema and Web projections. It does not
+establish correspondence to an arbitrary implementation DLL or enable generic DTO emission
+and other refused shapes.
+
+The [pipeline contract](development.md#model-pipeline-contract) identifies stage owners and the
+retired extraction, wire-artifact and conformance-bridge paths. An incomplete port cannot define
+the next architecture or justify a second public protocol. Maintained consumers are re-extracted
+and rebuilt without hypothetical compatibility obligations to experimental artifacts. These
+current contract decisions do not establish completed reconstruction validation; historical
+results remain bound to the source and package batches in [validation](validation.md).
+
+Roslyn, STJ, MSBuild/NuGet and the existing transport mechanics remain the selected tools.
+This continuation introduces no new RPC, schema or DI dependency. Remaining backend shapes
+and candidate-specific consumer acceptance are recorded separately from implemented runtime
+mechanisms; see the support boundaries in [authoring](authoring.md).
 
 ## ADR 001: one explicit execution domain
 
@@ -66,7 +119,9 @@ at runtime. StaticModuleResolver is explicit; packages ship normal assemblies an
 
 Core/Composition/Extensions are the static path. CLR, JavaScript and Hosting are separate
 optional dependencies. CLR bundles use a collectible AssemblyLoadContext with explicit
-shared-contract identity and complete shadow directories. Stop, replacement, unload request,
+shared-contract identity. Normal deployment loads verified stable artifact directories in place;
+`ShadowCopy` is an explicit development option. The [CLR artifact workflow](clr-artifacts.md)
+defines those modes and their ownership. Stop, replacement, unload request,
 collection and file deletion are separate observations. Tests force collection only to
 observe leaks; production does not make forced GC a lifecycle success condition.
 

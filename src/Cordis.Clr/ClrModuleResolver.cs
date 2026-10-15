@@ -293,19 +293,24 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
             var lease = GetLease(specifier);
             var definition = definitions[specifier];
             var key = DefinitionExport(definition);
-            if (lease.Bundle.Artifacts.TryGetValue(key, out var artifact))
-                return artifact;
-            artifact = lease.Bundle.Modules[key] is IClrTypertModule module
-                ? module.CreateTypertContribution() ??
-                throw new InvalidOperationException("The CLR Typert module returned no contribution.")
-                : null;
-            lease.Bundle.Artifacts.Add(key, artifact);
-            return artifact;
+            return GetArtifact(lease.Bundle, key);
         }
         finally
         {
             gate.Release();
         }
+    }
+
+    private static TypertContribution? GetArtifact(Bundle bundle, (string Assembly, string Entry) key)
+    {
+        if (bundle.Artifacts.TryGetValue(key, out var artifact))
+            return artifact;
+        artifact = bundle.Modules[key] is IClrTypertModule module
+            ? module.CreateTypertContribution() ??
+            throw new InvalidOperationException("The CLR Typert module returned no contribution.")
+            : null;
+        bundle.Artifacts.Add(key, artifact);
+        return artifact;
     }
 
     private Lease GetLease(string specifier)
@@ -331,6 +336,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         string specifier,
         ClrModuleDefinition definition,
         Func<IPlugin, IPlugin, ValueTask> switchFibers,
+        Func<ClrReplacementCandidate, ValueTask>? admitCandidate = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(switchFibers);
@@ -357,6 +363,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         return await ReplaceAsync(
                 replacements,
                 pairs => switchFibers(pairs.First().Key, pairs.First().Value),
+                admitCandidate,
                 cancellationToken)
             .ConfigureAwait(false);
     }
@@ -364,10 +371,13 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
     /// <summary>Prepare and switch every registered export of one CLR bundle in a shared candidate load context.</summary>
     /// <remarks>All registered specifiers for the current bundle must be supplied, including unloaded exports.
     /// The callback owns Fiber switching and recovery; only route publication is atomic. Candidate side effects
-    /// and product-wide rollback are not a transaction. Registering another alias during the callback is refused.</remarks>
+    /// and product-wide rollback are not a transaction. Registering another alias during the callback is refused.
+    /// Admission runs before switchFibers, while old mappings and contracts remain available. Throwing rejects
+    /// the candidate. Suspend Typert imports only inside switchFibers, after admission has succeeded.</remarks>
     public async ValueTask<ClrUnloadObservation> ReplaceAsync(
         IReadOnlyDictionary<string, ClrModuleDefinition> replacements,
         Func<IReadOnlyDictionary<IPlugin, IPlugin>, ValueTask> switchFibers,
+        Func<ClrReplacementCandidate, ValueTask>? admitCandidate = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(replacements);
@@ -444,6 +454,22 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
             {
                 try
                 {
+                    if (admitCandidate is not null)
+                    {
+                        var view = new ClrReplacementCandidate(
+                            candidates.Keys,
+                            name => GetArtifact(candidates[name].Bundle, DefinitionExport(replacements[name])));
+                        try
+                        {
+                            await admitCandidate(view).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            view.Close();
+                        }
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
                     await switchFibers(new System.Collections.ObjectModel.ReadOnlyDictionary<IPlugin, IPlugin>(pairs))
                         .ConfigureAwait(false);
                 }

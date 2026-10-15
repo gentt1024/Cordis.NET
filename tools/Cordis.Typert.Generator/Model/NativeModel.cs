@@ -85,6 +85,8 @@ internal sealed record NativeParameter(
     NativeAttribute[] Attributes,
     string Documentation);
 
+internal sealed record NativeUplink(NativeTypeReference Type, bool Optional);
+
 internal sealed record NativeMethod(
     string Name,
     string Implementation,
@@ -94,9 +96,18 @@ internal sealed record NativeMethod(
     bool Cancellation,
     string? Context,
     string ContextWire,
+    NativeTypeReference? ContextWireType,
+    RemoteScopeContract? Scope,
     NativeParameter[] Parameters,
     string Documentation,
-    NativeLocation? Location);
+    NativeLocation? Location)
+{
+    internal NativeUplink? Uplink
+    {
+        get;
+        init;
+    }
+}
 
 internal sealed record NativeSerializerContext(
     string Id,
@@ -113,8 +124,7 @@ internal sealed record NativeService(
     string Documentation,
     NativeLocation? Location);
 
-internal sealed record NativeModelDocument(
-    int FormatVersion,
+internal sealed record RemoteProjection(
     string ContractIdentity,
     NativeCompilation Compilation,
     NativeService[] Services,

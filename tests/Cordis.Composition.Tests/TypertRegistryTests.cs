@@ -171,6 +171,46 @@ public sealed class TypertRegistryTests
             await registry.GetLookup("@scope/document")!.Resolve("one")));
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void Output_reader_preserves_native_readonly_values_and_enforces_output_presence(
+        bool constructorBound,
+        bool respectRequiredConstructorParameters)
+    {
+        var context = new ReadonlyCodecJson(
+            new JsonSerializerOptions
+            {
+                RespectNullableAnnotations = true,
+                RespectRequiredConstructorParameters = respectRequiredConstructorParameters
+            });
+        if (constructorBound)
+            Check(context.ImmutableCodecValue, "saved", value => value.Applies);
+        else
+            Check(context.ComputedCodecValue, "live", value => value.Applies);
+
+        static void Check<T>(
+            System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> metadata,
+            string expected,
+            Func<T, string> read)
+        {
+            using var document = JsonDocument.Parse($"{{\"applies\":\"{expected}\"}}");
+            var codec = TypertCodec.Create(metadata);
+            Assert.Equal(expected, read(JsonSerializer.Deserialize(document.RootElement, metadata)!));
+            Assert.Equal(expected, read(Assert.IsType<T>(codec.Decode(document.RootElement))));
+            Assert.Equal(expected, read(Assert.IsType<T>(codec.DecodeOutput(document.RootElement))));
+            Assert.Contains(
+                codec.ResultSchema.GetProperty("required").EnumerateArray(),
+                item => item.GetString() == "applies");
+            using var missing = JsonDocument.Parse("{}");
+            using var nullValue = JsonDocument.Parse("{\"applies\":null}");
+            Assert.Throws<JsonException>(() => codec.DecodeOutput(missing.RootElement));
+            Assert.Throws<JsonException>(() => codec.DecodeOutput(nullValue.RootElement));
+        }
+    }
+
     [Fact]
     public void Strict_codecs_follow_local_references_and_refuse_unknown_schema_keywords()
     {
@@ -670,3 +710,24 @@ internal sealed record TypertPayload([property: JsonPropertyName("value")] int V
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(TypertEnvelope))]
 internal partial class TypertRegistryJson : JsonSerializerContext;
+
+internal sealed class ComputedCodecValue
+{
+    [JsonPropertyName("applies")] public string Applies => "live";
+}
+
+internal sealed class ImmutableCodecValue
+{
+    [JsonConstructor]
+    public ImmutableCodecValue(string applies) => Applies = applies;
+
+    [JsonPropertyName("applies")]
+    public string Applies
+    {
+        get;
+    }
+}
+
+[JsonSerializable(typeof(ComputedCodecValue))]
+[JsonSerializable(typeof(ImmutableCodecValue))]
+internal partial class ReadonlyCodecJson : JsonSerializerContext;
