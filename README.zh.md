@@ -20,7 +20,7 @@ Cordis.NET 独立维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方�
 
 ## 选择包批次
 
-当前分支正在准备 alpha5，尚未发布。请从发行或验证回执选择精确版本及匹配的 feed，不要假设已发布 alpha.4 含有本分支能力。正式发行获批前源码版本保持不变。[当前支持与发行状态](docs/development.zh.md#当前支持与发行状态)区分已实现能力、已知限制和待决事项；[验证索引](docs/validation.zh.md#当前候选索引)标明实际验过的包。
+当前源码选择 `0.2.0-alpha.5` 进行发行验证，尚未公开发布到 NuGet。取得对应验收批次后，从匹配的 feed 消费这一精确版本。已发布 alpha.4 不包含这些修改。[当前支持与发行状态](docs/development.zh.md#当前支持与发行状态)区分已实现能力、已知限制和待决事项；[验证索引](docs/validation.zh.md#当前候选索引)标明实际验过的包。
 
 按[入门指南](docs/getting-started.zh.md)安装选定批次，无需 clone 即可运行。若要从源码探索相同的组合流程，使用 global.json 指定 SDK：
 
