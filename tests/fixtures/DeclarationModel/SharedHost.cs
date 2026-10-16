@@ -104,7 +104,7 @@ var clientArtifact = TypertArtifacts.GenerateClient(
                 "result",
                 "optional",
                 [],
-            TypertCodec.CreateOptional<string?>(TypertCodec.CreateNullable(ResultJson.Default.String))),
+                TypertCodec.CreateOptional<string?>(TypertCodec.CreateNullable(ResultJson.Default.String))),
             new(
                 "result#encodedText",
                 "result",
