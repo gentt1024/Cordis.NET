@@ -557,6 +557,19 @@ public Task<Item> EchoAsync(Item value) => Task.FromResult(value);
 
 `Guid?`、数组、支持的列表及 string-key 字典值沿同一映射组合。省略可选 `Guid value = default` 使用 Guid.Empty；显式 null 需要可空声明。TypeScript 的 string 类型不证明 UUID 合法，实际值由 Host 既有 STJ codec 接纳或拒绝。自定义 converter 会改变合同，保存模型投影继续拒绝此类情况。本项不包含 Guid 键和应用 ID wrapper。
 
+### 保存模型客户端中的数值枚举
+
+Remote 和普通数据声明可以继续使用数值 C# 枚举，在作者的 JsonSerializerContext 中注册 DTO，并沿用现有 build/pack 与引用模型输入。独立 .NET 合同生成自己的枚举声明，保留底层整数类型、具名常量、别名、Flags 和常量默认值。Web 消费者使用 number：没有具名成员的 `(MotionStatus)37` 仍表示为 `37`。可空与数组用法沿用相同声明引用，独立消费者无需提供者 DLL。静态投影支持具有显式源事实的顶层公开枚举，拒绝字符串枚举策略、自定义枚举 converter 和嵌套声明。Host 实际元数据仍保留自身支持的 converter 行为。上游区别与数值精度边界见[兼容说明](compatibility.zh.md#数值枚举投影2026-10-16)。
+
+```csharp
+public enum MotionStatus { Unavailable = -1, Succeeded = 4 }
+public sealed class MotionResult
+{
+    public MotionStatus Status { get; set; } = MotionStatus.Unavailable;
+    public MotionStatus? Previous { get; set; }
+}
+```
+
 ### 有方向的数据 Web 合同
 
 可省略参数与可空值是独立事实。`[DisallowNull] double? expectedRevision = null!` 接受省略或数值，但拒绝显式 JSON null。生成的 TypeScript 参数为 `expectedRevision?: number`。

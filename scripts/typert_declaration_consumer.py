@@ -295,7 +295,7 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
 def pack_external_data(fixtures, feed, dotnet, composition, run, project):
     roots = ''.join('<CordisTypertModelRoot Include="IndependentDeclarations.External.' + name + '"/>'
         for name in ("ImportedData", "GuidItem", "UnrelatedData", "ImportedHiddenData", "Envelope`1",
-            "RequiredConstructor", "OptionalConstructor", "SelectedConstructor", "DirectionalData"))
+            "RequiredConstructor", "OptionalConstructor", "SelectedConstructor", "DirectionalData", "EnumData"))
     external, external_project = project("DeclarationExternal",
         '<AssemblyName>IndependentDeclarations.External</AssemblyName>'
         '<PackageId>IndependentDeclarations.External</PackageId><Version>1.0.0-alpha</Version>', composition,
@@ -628,27 +628,29 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     assert generated.read_bytes() == changed_projection, "Cold rebuild changed a reference-composed carrier"
     shutil.copyfile(primary_input, output / "referenced-data-main-model.json")
     shutil.copyfile(reference_input, output / "referenced-data-library-model.json")
-    # A framework scalar does not authorize replaying a member's executable converter.
-    run("referenced-guid-converter-build", [dotnet, "build", external_project, "-c", "Release",
-        "-p:DefineConstants=GUID_CUSTOM_CONVERTER"])
-    converter_references = remote / "converter-references.rsp"
-    converter_references.write_text(str(external_model) + "\n", encoding="utf-8")
-    for backend, arguments, owned_output in (
-        ("dotnet", ["--namespace", "IndependentDeclarations.Refused", "--client", "RefusedClient"],
-            remote / "RefusedClient.g.cs"),
-        ("web", [], remote / "refused-web"),
-    ):
-        if backend == "web":
-            owned_output.mkdir()
-            (owned_output / "remote.schema.json").write_text("stale schema", encoding="utf-8")
-        else:
-            owned_output.write_text("stale source", encoding="utf-8")
-        rejected = run("referenced-guid-converter-" + backend, [dotnet, compiler, "--roslyn-directory", roslyn,
-            "emit-" + backend, "--model", model, "--reference-models", converter_references,
-            "--service", "referencedData", *arguments, "--output", owned_output], True)
-        assert b"TYPM110" in rejected, rejected
-        assert not (owned_output / "remote.schema.json").exists() if backend == "web" else not owned_output.exists()
-        refusals.append({"case": "guid-member-converter-" + backend, "staleOutputRemoved": True})
+    # Static scalar support does not authorize replaying executable converters.
+    for label, constant, diagnostic in (("guid", "GUID_CUSTOM_CONVERTER", b"TYPM110"),
+            ("enum", "ENUM_CUSTOM_CONVERTER", b"TYPM109")):
+        run("referenced-" + label + "-converter-build", [dotnet, "build", external_project, "-c", "Release",
+            "-p:DefineConstants=" + constant])
+        converter_references = remote / "converter-references.rsp"
+        converter_references.write_text(str(external_model) + "\n", encoding="utf-8")
+        for backend, arguments, owned_output in (
+            ("dotnet", ["--namespace", "IndependentDeclarations.Refused", "--client", "RefusedClient"],
+                remote / "RefusedClient.g.cs"),
+            ("web", [], remote / "refused-web"),
+        ):
+            if backend == "web":
+                owned_output.mkdir(exist_ok=True)
+                (owned_output / "remote.schema.json").write_text("stale schema", encoding="utf-8")
+            else:
+                owned_output.write_text("stale source", encoding="utf-8")
+            rejected = run("referenced-" + label + "-converter-" + backend, [dotnet, compiler, "--roslyn-directory", roslyn,
+                "emit-" + backend, "--model", model, "--reference-models", converter_references,
+                "--service", "referencedData", *arguments, "--output", owned_output], True)
+            assert diagnostic in rejected, rejected
+            assert not (owned_output / "remote.schema.json").exists() if backend == "web" else not owned_output.exists()
+            refusals.append({"case": label + "-member-converter-" + backend, "staleOutputRemoved": True})
     (output / "referenced-data-evidence.json").write_text(json.dumps({
         "consumer": "reference-composed-data-and-remote", "mainContractIdentity": main_identity,
         "referenceContractIdentity": reference_identity, "changedReferenceContractIdentity": changed_identity,

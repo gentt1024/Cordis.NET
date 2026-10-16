@@ -89,6 +89,12 @@ internal sealed class DeclarationRemoteProjection
                     "TYPM102",
                     "Context converter policies cannot be copied into a standalone caller.",
                     context.Id);
+            if (Named(options, "UseStringEnumConverter")?.Json == "true")
+                Diagnose(
+                    "ProjectionUnsupported",
+                    "TYPM118",
+                    "String enum context policies require an explicitly supported standalone projection.",
+                    context.Id);
             var authored = DeclarationRemoteContract.HasAuthoredMetadata(context);
             if (authored)
                 Diagnose(
@@ -249,6 +255,12 @@ internal sealed class DeclarationRemoteProjection
 
     private void Declaration(DeclarationType type, int depth)
     {
+        if (type.Kind == "enum")
+        {
+            types[type.Id] = DeclarationEnumProjection.Project(type);
+            return;
+        }
+
         if (type.Kind is not ("class" or "record") || type.Modifiers.Contains("refLike", StringComparer.Ordinal) ||
             type.TypeParameters.Length > 0)
             Diagnose(

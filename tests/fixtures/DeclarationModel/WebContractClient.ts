@@ -48,8 +48,18 @@ export async function run(origin: string) {
     checkOutput(await client['webContract/direction'](valid))
     const explicitNull = await client['webContract/direction']({ value: { ...valid.value, OptionalJson: null } })
     if (!explicitNull.ok || explicitNull.value.Count !== 1) throw new Error('Explicit JSON null was collapsed into omission')
+    const enums = await client['webContract/enums']({ value: { Status: 37, Optional: null, History: [4, -7], Flags: 3, Always: 0 } })
+    if (!enums.ok || enums.value.Status !== 37 || enums.value.Optional !== -1 ||
+        enums.value.History?.[0] !== 4 || enums.value.History?.[1] !== -7 || enums.value.Flags !== 3 || enums.value.Always !== 0)
+      throw new Error('Numeric enum values, aliases, flags or optional default changed')
+    const always: number = enums.value.Always
+    void always
     const before = await client['webContract/calls']({})
     for (const [endpoint, input] of [
+      ['webContract/enums', { value: { Status: null } }],
+      ['webContract/enums', { value: { Status: 'Succeeded' } }],
+      ['webContract/enums', { value: { Status: 1.5 } }],
+      ['webContract/enums', { value: { Flags: 256 } }],
       ['webContract/revision', { expectedRevision: null }],
       ['webContract/required', { value: {} }],
       ['webContract/selected', { value: {} }],

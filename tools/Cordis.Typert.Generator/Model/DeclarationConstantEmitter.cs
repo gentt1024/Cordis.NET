@@ -8,7 +8,7 @@ internal static class DeclarationConstantEmitter
     {
         "carrierDefault" => "default",
         "emptyCollection" => "[]",
-        "enum" => "(global::" + value.Type + ")" + value.Json,
+        "enum" => "(global::" + value.Type + ")(" + value.Json + ")",
         "type" => "typeof(" + JsonSerializer.Deserialize<string>(value.Json) + ")",
         "value" when value.Json == "null" && value.Type == "System.Guid" => "default(global::System.Guid)",
         "value" when value.Json == "null" => "null",

@@ -2,6 +2,12 @@
 
 [English](compatibility.md)
 
+## 数值枚举投影，2026-10-16
+
+固定 DSH 的 analyzer 保留枚举声明，但其 [Zod emitter](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts)明确拒绝枚举投影。因此数值 CLR 枚举支持属于 .NET 平台适配，不能称为上游已有的 Schema 保证。现有共同模型已经保存底层类型及成员常量；独立 Remote、事件和普通数据投影复用这些事实，不加载提供者程序集，也不新增保存格式。
+
+默认 [.NET 10 STJ 枚举转换器](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Converters/Value/EnumConverter.cs)读写底层整数，包括未命名值，并导出 integer Schema。保存模型 Web 输出通过共享客户端 emitter 使用同样的 Schema，不添加成员白名单。生成的 .NET 声明保留名称、常量、底层宽度及 Flags；原生反序列化检查范围。可空枚举保留 null 分支，枚举默认值引用生成后的类型。字符串枚举策略及作者枚举 converter 仍由静态投影明确拒绝。JavaScript number 的既有精度限制不变，本次不引入无损 64 位传输。
+
 ## Group 撤回的持久化修正，2026-10-15
 
 固定 DSH Loader 同样存在 group 撤回缺陷：空 base 加两个 bundle 补丁，撤下 group 并保留另一 bundle 的条目，会将有效条目写入 base。在 `639ed015397290b3745d163aafe02ffee4aa3f84` 上的定向执行也复现了 base 自有 host group 布局，重开后出现重复 retained 条目。这是共享缺陷，不能说成上游已经保证源文件不变。.NET 修正在将拥有的子插件清理判为自停前，检查条目及祖先已有的撤回意图。不重排 Fiber 清理，不抑制显式 Include 写入，不清空写队列，也不改变真正自停的持久化。标准 bundle 撤回持久化 Profile 选择，不将组合树复制到基础源文件。

@@ -70,7 +70,18 @@ internal sealed record NativeTypeDeclaration(
     NativeConstructor[] Constructors,
     NativeAttribute[] Attributes,
     string Documentation,
-    NativeLocation? Location);
+    NativeLocation? Location)
+{
+    internal NativeEnum? Enumeration
+    {
+        get;
+        init;
+    }
+}
+
+internal sealed record NativeEnum(NativeTypeReference UnderlyingType, NativeEnumMember[] Members);
+
+internal sealed record NativeEnumMember(string Name, string Value, string Documentation);
 
 internal sealed record NativeParameter(
     string Name,

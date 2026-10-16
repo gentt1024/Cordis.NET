@@ -115,6 +115,12 @@ internal sealed class DeclarationDataProjection
 
     private void Project(DeclarationType type, int depth)
     {
+        if (type.Kind == "enum")
+        {
+            projected.Add(type.Id, DeclarationEnumProjection.Project(type));
+            return;
+        }
+
         if (type.Provenance != "source" || type.Kind != "class" || type.Accessibility != "Public" ||
             type.ContainingType is not null || type.TypeParameters.Length != 0 || type.Interfaces.Length != 0 ||
             type.Modifiers.Any(value => value is not ("sealed" or "partial")) ||
@@ -140,11 +146,12 @@ internal sealed class DeclarationDataProjection
                 throw Refuse(member.Id, "Accessor-targeted attributes require a separately supported data projection.");
             var attributes = DeclarationAttributeProjection.Native(member.Attributes);
             ValidateAttributes(attributes, false, member.Id);
-            if (member.Initializer is { Kind: not "value" })
+            if (member.Initializer is { Kind: not ("value" or "enum") })
                 throw Refuse(
                     member.Id,
                     "Only constant data initializers are supported; source expressions are not executed or copied.");
-            if (member.Initializer is { Json: not "null" } initializer && !ConstantType(initializer.Type))
+            if (member.Initializer is { Kind: "value", Json: not "null" } initializer &&
+                !ConstantType(initializer.Type))
                 throw Refuse(member.Id, "Unsupported data initializer type " + initializer.Type + ".");
             members.Add(
                 DeclarationWireProjection.Member(

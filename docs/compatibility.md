@@ -2,6 +2,12 @@
 
 [中文](compatibility.zh.md)
 
+## Numeric enum projection, 2026-10-16
+
+The fixed DSH analyzer retains enum declarations, while its [Zod emitter](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts) explicitly refuses enum projection. Numeric CLR enum support is a .NET platform adaptation, not an upstream schema guarantee. The existing common model already records underlying types and member constants. Independent Remote, event and ordinary data projections reuse those facts without loading provider assemblies or introducing another saved format.
+
+The default [.NET 10 STJ enum converter](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Converters/Value/EnumConverter.cs) reads and writes underlying integers, including unnamed values, and exports an integer schema. Saved-model Web output uses that same schema through the shared client emitter without a member whitelist. Generated .NET declarations retain names, constants, underlying widths and Flags; native deserialization checks range. Nullable enums retain their null alternative, and enum defaults refer to the generated type. String enum policies and authored enum converters remain explicit static projection refusals. JavaScript number precision has its existing limits; this does not introduce lossless 64-bit transport.
+
 ## Group withdrawal persistence correction, 2026-10-15
 
 The fixed DSH Loader also reproduces a group withdrawal defect: with an empty base and two bundle patches, removing the group while retaining another bundle's entry writes that effective entry into the base. A focused execution at `639ed015397290b3745d163aafe02ffee4aa3f84` observed the same result with a base-owned host group; reopening then produced duplicate retained rows. This is a shared defect, not an upstream guarantee of source preservation. The .NET correction checks the entry's existing ancestor removal intent before treating owned child cleanup as self-disposal. It does not reorder Fiber cleanup, suppress explicit Include writes, clear queued writes or change genuine self-disposal persistence. Standard bundle withdrawal persists profile selection without copying the composed tree into its base source.

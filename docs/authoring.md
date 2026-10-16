@@ -557,6 +557,19 @@ Normal extract/build/pack preserves the Guid declaration identity. Independent C
 
 `Guid?`, arrays, supported lists and string-key dictionary values compose with the same mapping. An omitted optional `Guid value = default` uses Guid.Empty; explicit null requires a nullable declaration. TypeScript string typing does not establish UUID validity: the Host's existing STJ codec admits or rejects actual values. A custom converter changes the contract and remains unsupported by the saved-model projection. Guid keys and application ID wrappers are not included.
 
+### Numeric enums in saved-model clients
+
+Keep numeric C# enums in Remote and ordinary data declarations and register the DTO in the author's JsonSerializerContext. Use the existing build/pack and referenced-model inputs. Independent .NET contracts generate their own enum declarations with the original underlying integer type, named constants, aliases, Flags and constant defaults. Web consumers use numbers: an unnamed `(MotionStatus)37` remains `37`. Nullable and array uses follow the same references. No provider DLL is needed by the independent consumer. Static projection supports public top-level enums with explicit source facts; it refuses string enum policies, custom enum converters and nested declarations. Actual Host metadata retains its own supported converter behavior. See [compatibility](compatibility.md#numeric-enum-projection-2026-10-16) for the upstream distinction and numeric precision boundary.
+
+```csharp
+public enum MotionStatus { Unavailable = -1, Succeeded = 4 }
+public sealed class MotionResult
+{
+    public MotionStatus Status { get; set; } = MotionStatus.Unavailable;
+    public MotionStatus? Previous { get; set; }
+}
+```
+
 ### Directional Web data contracts
 
 Optional parameters and nullable values are independent. `[DisallowNull] double? expectedRevision = null!` accepts omission or a number, but rejects explicit JSON null. The generated TypeScript parameter is `expectedRevision?: number`.

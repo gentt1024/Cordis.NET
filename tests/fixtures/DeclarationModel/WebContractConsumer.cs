@@ -37,4 +37,18 @@ if (!withNull.Ok)
     throw withNull.Error;
 if (withNull.Value.Count != 1)
     throw new Exception("Explicit JSON null was collapsed into field omission.");
+var enums = await client.EnumsAsync(
+    new EnumData
+    {
+        Status = (NumericStatus)37,
+        History = [NumericStatus.Alias, (NumericStatus)(-7)],
+        Flags = NumericFlags.Read | NumericFlags.Write
+    });
+if (!enums.Ok || enums.Value.Status != (NumericStatus)37 || enums.Value.Optional != NumericStatus.Unavailable ||
+    enums.Value.History[0] != NumericStatus.Succeeded || enums.Value.History[1] != (NumericStatus)(-7) ||
+    enums.Value.Flags != (NumericFlags)3 || enums.Value.Always != 0 ||
+    new EnumData().Status != NumericStatus.Unavailable ||
+    Enum.GetUnderlyingType(typeof(NumericFlags)) != typeof(byte) ||
+    !typeof(NumericFlags).IsDefined(typeof(FlagsAttribute), false))
+    throw new Exception("Generated enum declarations or numeric wire values changed.");
 Console.WriteLine("PASS directional .NET package caller");
