@@ -2,6 +2,8 @@
 
 This optional TypeScript package reuses the fixed DSH browser module registry, entry reconciliation, Cordis and Loader. It does not require Node in a deployed Host or in ordinary C# plugin development. The copied source and licenses are under `vendor`; `vendor/provenance.json` records the fixed upstream commit and source hashes.
 
+The local `ClientEntries` correction keeps installed code identity separate from activation success. After a failed replacement, explicitly syncing an earlier graph loads that target; retry uses the current target. Download failure before withdrawal leaves the existing Fiber available. This is a bounded correction to a defect also present in the fixed source, not automatic rollback of application state. Provenance retains the original hash and records the local hash and reason separately; the normal build checks both unchanged and adapted file identities.
+
 Build the runtime and its self-contained declarations:
 
 ```sh

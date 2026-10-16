@@ -71,6 +71,8 @@ Cordis.NET 是固定 DSH 基线及仓库已确认通用应用基础设施的忠�
 
 浏览器启动复用固定 web 激活审计；后续 sync 保留诊断/重试语义。生成通知恢复复用固定连接控制器，以数值时序适配替代 Schemastery 运行时。暂时断线保留插件，显式 close 撤销插件。CLI 参数、就绪和有界退出复用 Composition、ProfileSession 与 Generic Host。这些修正恢复上游装配职责，不改变 Core Pending 语义。
 
+浏览器 `ClientEntries` 对固定 DSH 的 `packages/client/modules/src/client/entries.ts` 作了有限的本地修正。固定源码在新代码启动成功后才记录替换 revision；新代码失败时仍保留旧 revision，调用者显式请求旧 graph 却可能重试新代码。修正后的记录随模块缓存失效，预取成功之前旧 Fiber 仍可用；新 Fiber 建立后、等待激活之前，仅为当前 generation 记录实际代码。显式 sync 和同目标 retry 因而选择对应代码，继续复用既有 generation、队列、依赖重挂与释放机制。不新增自动回滚、历史存储或业务副作用恢复。浏览器 provenance 分别记录原上游身份和本地文件摘要，正常构建检查这些身份；未修改文件继续保留固定摘要。
+
 | 路径 | 支持的行为 | 边界 |
 |---|---|---|
 | 静态 Core 与 Composition | JIT 与 Native AOT；静态模块注册、生命周期、配置、profile 与部分扩展 | 新插件代码需要重新发布应用 |

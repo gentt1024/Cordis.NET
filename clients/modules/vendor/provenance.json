@@ -133,7 +133,9 @@
     {
       "upstreamPath": "packages/client/modules/src/client/entries.ts",
       "sha256": "52b438c9541a470b63e41b8880fd608909117168bfcd76cbe65be6dbff651edc",
-      "file": "modules/entries.ts"
+      "file": "modules/entries.ts",
+      "localSha256": "69fbd1944e1344df56fc5eeeeeed090749c7a0d45542dc39a38eaaef27a7e2ad",
+      "adaptation": "Invalidate installed-code identity with the module cache; record the current replacement Fiber before startup settlement so explicit target sync cannot retry failed newer code. No automatic rollback."
     },
     {
       "upstreamPath": "packages/client/modules/src/client/entry-lifecycle.ts",

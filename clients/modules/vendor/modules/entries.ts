@@ -176,6 +176,8 @@ export class ClientEntries {
 
   private async replace(entry: Entry, id: string, rev: string, generation: number): Promise<void> {
     this.index.invalidateForReplacement(id, rev)
+    // The retained Fiber may still run, but its revision no longer identifies the module cache.
+    this.revisions.delete(id)
     await this.modules.prefetch(id)
     if (!this.current(generation)) return
     await tearDownEntryFiber(entry)
@@ -184,9 +186,10 @@ export class ClientEntries {
     await this.modules.import(id, '', {})
     if (!this.current(generation)) return
     await entry.refresh()
-    await entry.fiber?.await()
     if (entry.fiber === undefined) throw new Error(`client-modules: ${id} import failed (see console)`)
-    this.revisions.set(id, rev)
+    // Installed code and successful activation are separate facts, including failed startup.
+    if (this.current(generation)) this.revisions.set(id, rev)
+    await entry.fiber.await()
   }
 
   private async reconcile(generation: number): Promise<void> {
