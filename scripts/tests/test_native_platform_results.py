@@ -29,7 +29,8 @@ def row(name, outcome="Passed", *, class_name=None, assembly="Cordis.Platform.Te
 
 
 def windows_rows(outcome="NotExecuted"):
-    return [row(CLASS + "." + method, outcome, reason=REASON if outcome == "NotExecuted" else None) for method in METHODS]
+    return [row(CLASS + "." + method, "Passed" if method == METHODS[1] else outcome,
+                reason=REASON if outcome == "NotExecuted" and method != METHODS[1] else None) for method in METHODS]
 
 
 def write_trx(directory, rows, name="platform.trx"):
@@ -47,7 +48,7 @@ def write_trx(directory, rows, name="platform.trx"):
         definition = ET.SubElement(definitions, tag("UnitTest"), {"id": identity, "name": item["name"]})
         ET.SubElement(definition, tag("TestMethod"), {"className": item["class"],
             "name": item["name"].rsplit(".", 1)[-1], "codeBase": "/build/" + item["assembly"]})
-    # The actual xUnit TRX reports zero here even when three Results are NotExecuted.
+    # The actual xUnit TRX reports zero here even when two Results are NotExecuted.
     summary = ET.SubElement(run, tag("ResultSummary"))
     ET.SubElement(summary, tag("Counters"), {"notExecuted": "0"})
     ET.ElementTree(run).write(directory / name, encoding="utf-8", xml_declaration=True)
@@ -63,12 +64,12 @@ class NativePlatformResultsTests(unittest.TestCase):
             with patch.object(sys, "platform", platform):
                 return test_map.verify_results(mapping, directory)
 
-    def test_linux_accepts_only_three_owned_windows_cases_and_counts_actual_results(self):
+    def test_linux_accepts_only_two_owned_windows_cases_and_counts_actual_results(self):
         result = self.verify([row(MAPPED), *windows_rows()])
         self.assertEqual(result["testCount"], 4)
-        self.assertEqual(result["passedCount"], 1)
-        self.assertEqual(result["skippedCount"], 3)
-        self.assertEqual({case["name"] for case in result["platformExceptions"]}, {CLASS + "." + method for method in METHODS})
+        self.assertEqual(result["passedCount"], 2)
+        self.assertEqual(result["skippedCount"], 2)
+        self.assertEqual({case["name"] for case in result["platformExceptions"]}, {CLASS + "." + method for method in METHODS if method != METHODS[1]})
         self.assertEqual(result["tests"][0]["results"][0]["outcome"], "Passed")
 
     def test_windows_requires_three_actual_passes(self):
@@ -79,6 +80,10 @@ class NativePlatformResultsTests(unittest.TestCase):
     def test_an_extra_skip_is_rejected(self):
         with self.assertRaises(AssertionError):
             self.verify([row(MAPPED), *windows_rows(), row("Cordis.Platform.Tests.OtherTests.Some_case", "NotExecuted", reason=REASON)])
+        cases = windows_rows()
+        cases[1] = row(CLASS + "." + METHODS[1], "NotExecuted", reason=REASON)
+        with self.assertRaises(AssertionError):
+            self.verify([row(MAPPED), *cases])
 
     def test_any_failed_result_is_rejected(self):
         with self.assertRaises(AssertionError):
@@ -160,7 +165,7 @@ class AuthoringPlatformResultsTests(unittest.TestCase):
     def test_authoring_reuses_the_full_audit_and_preserves_required_suites(self):
         steps = self.verify()
         audit = next(step for step in steps if step["name"] == "native-platform-results")
-        self.assertEqual(audit["skippedCount"], 3)
+        self.assertEqual(audit["skippedCount"], 2)
         required = next(step for step in steps if step["name"] == "required-authoring-suites")
         self.assertEqual(set(required["suites"]), set(self.authoring.REQUIRED_SUITES))
         self.assertTrue(all(cases and all(case["outcome"] == "Passed" for case in cases) for cases in required["suites"].values()))

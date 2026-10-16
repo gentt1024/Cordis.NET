@@ -17,7 +17,7 @@ public sealed class PackageProcessTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        if (!OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())
             return;
         var helper = Directory.CreateDirectory(Path.Combine(directory, "helper")).FullName;
 
@@ -38,6 +38,50 @@ public sealed class PackageProcessTests : IAsyncLifetime
             using System.Text;
             using Cordis.Clr;
             using Cordis.Composition;
+            if (args[0] == "linux-owner")
+            {
+                if (Native.Prctl(36, 1, 0, 0, 0) != 0) throw new Exception("Subreaper setup failed.");
+                var record = Path.Combine(args[1], "process.json");
+                foreach (var cancel in new[] { true, false })
+                {
+                    using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                    try
+                    {
+                        var command = cancel
+                            ? "sleep 1000 & printf 'ready\\n'; wait"
+                            : "sleep 1000 >/dev/null 2>&1 & printf 'ready\\n'";
+                        try
+                        {
+                            await DevelopmentBuildProcess.RunAsync("/bin/sh", ["-c", command], args[1], record,
+                                _ => { if (cancel) stop.Cancel(); return Task.CompletedTask; }, stop.Token);
+                            throw new Exception("An interrupted tool completed successfully.");
+                        }
+                        catch (PackageToolException error)
+                        {
+                            if (error.Cancelled != cancel) throw new Exception("Wrong cancellation classification: " + error);
+                            if (!cancel && !error.Message.Contains("not fully drained")) throw;
+                        }
+                        if (File.Exists(record)) throw new Exception("Terminated children retained the run reservation.");
+                        var children = Native.Children();
+                        if (children.Length == 0) throw new Exception("The fixture did not retain unreaped descendants.");
+                        foreach (var child in children)
+                        {
+                            var stat = File.ReadAllText($"/proc/{child}/stat");
+                            if (stat[(stat.LastIndexOf(')') + 2)..].Split(' ')[0] != "Z")
+                                throw new Exception("A child is still able to execute.");
+                        }
+                    }
+                    finally
+                    {
+                        foreach (var child in Native.Children())
+                        {
+                            Native.Kill(child, 9);
+                            Native.WaitPid(child, out _, 0);
+                        }
+                    }
+                }
+                return;
+            }
             if (args[0] == "writer")
             {
                 File.WriteAllText(Path.Combine(args[1], "writer-pulse.txt"), ".");
@@ -76,6 +120,14 @@ public sealed class PackageProcessTests : IAsyncLifetime
             await toolchain.PrepareAsync(inspection, true, _ => { });
             static class Native
             {
+                public static int[] Children() => File.ReadAllText($"/proc/self/task/{Environment.ProcessId}/children")
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
+                [DllImport("libc", EntryPoint = "prctl")]
+                public static extern int Prctl(int option, nuint value, nuint arg3, nuint arg4, nuint arg5);
+                [DllImport("libc", EntryPoint = "waitpid")]
+                public static extern int WaitPid(int pid, out int status, int options);
+                [DllImport("libc", EntryPoint = "kill")]
+                public static extern int Kill(int pid, int signal);
                 [StructLayout(LayoutKind.Sequential)]
                 public struct StartupInfo
                 {
@@ -96,6 +148,8 @@ public sealed class PackageProcessTests : IAsyncLifetime
             }
             """);
         await RunAsync(helper, "build", "-c", "Release");
+        if (OperatingSystem.IsLinux())
+            return;
         var author = Directory.CreateDirectory(Path.Combine(directory, "author")).FullName;
         Directory.CreateDirectory(Feed);
         var tools = SecurityElement.Escape(Path.GetDirectoryName(Helper)!);
@@ -154,9 +208,15 @@ public sealed class PackageProcessTests : IAsyncLifetime
         }
     }
 
-    [WindowsFact]
+    [Fact]
     public async Task Cancelled_preparation_stops_child_with_independent_output_pipes_before_returning()
     {
+        if (OperatingSystem.IsLinux())
+        {
+            await RunAsync(directory, Helper, "linux-owner", directory);
+            return;
+        }
+
         var profile = NewProfile();
         await using var resolver = new ClrModuleResolver(Path.Combine(profile, "shadow"));
         using var toolchain = new DotnetPluginToolchain(profile, resolver, [Feed]);

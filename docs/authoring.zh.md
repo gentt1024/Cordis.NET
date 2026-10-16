@@ -253,6 +253,22 @@ File.WriteAllText("echo-result.schema.json", resultCodec.ResultSchema.GetRawText
 
 应用决定何时校验以及失败后如何处理，包括先记录业务接受事实、再校验结果。为此读取或导出同一输出合同，不以输入 Schema、DTO 反射或手写规则代替。读取属性不新增 Gateway 结果校验，也不改变接受、取消、回复或清理顺序。
 
+对于 TypeScript Connection 已还原的值，从生成模块导入可执行的输出合同：
+
+```typescript
+import { resultCodecs } from "./remote.mjs";
+
+const output = resultCodecs["sample/Echo"].parse(decodedValue);
+```
+
+使用实际声明的 endpoint，并传入应用取得的 `unknown` 值。`parse` 返回同一个值及生成的输出类型，不匹配时抛出 `TypeError`。它不发送请求、不复制对象或字节视图，也不拥有资源。map 和 codec 对象均被冻结。生成、部署模块时，应使用与其配套的 `cordis-remote.mjs` 运行时。
+
+受支持的 Schema 组合约束作用于同一个解码值。例如，默认字节 metadata 配合 `allOf: [{ type: "string" }, { not: { type: "null" } }]`，与单独 `type: "string"` 接受相同的非 null `Uint8Array`。嵌套字节位置保留其 metadata，额外的 JSON-only 值仍不能包含 typed array。
+
+codec 保留输出字段、必填性、省略、null、可选顶层 `undefined`、数组、string-key 字典和本地递归引用。可选字段可以不存在，显式 `undefined` 不等于 JSON null 或省略字段。默认二进制 metadata 接受包括空字节在内的 `Uint8Array`，而非序列化字符串；普通字符串和自定义 converter 输出保留其 JSON 表示。受支持的常量、联合、数值和集合约束由 emitter 使用的同一有界 Schema 编译。不支持的关键字或 pattern 在生成时拒绝。format 注解沿用既有 Schema 政策，不变成通用格式校验；递归判定限制为 256 层。保存模型的 binary metadata 仍明确拒绝，支持面不扩大。
+
+生成式 unary 调用只对二进制结果自动执行该 codec，顺序在附件还原和既有取消／撤销检查之后。无效值转为 `RemoteResult` 失败，code 为 `gateway/internal`，保留原本地 `TypeError` cause。普通 JSON 结果和流条目不增加自动业务校验。应用可在自行选择的校验边界独立使用导出 codec。这不提供 multipart 还原前的接受观察入口；若还原或 strict 二进制解码失败，应由应用通过请求身份和回执恢复消解未知结果。
+
 ```typescript
 import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";
 
@@ -556,6 +572,19 @@ public Task<Item> EchoAsync(Item value) => Task.FromResult(value);
 正常 extract/build/pack 保留 Guid 声明身份。独立 C# 数据／caller 使用 `global::System.Guid`；Web caller 接受和返回字符串，Schema 为 string/uuid。独立生成不需要框架源模型、映射注解或 Provider 程序集；来自另一模型的作者 DTO 仍需显式引用。
 
 `Guid?`、数组、支持的列表及 string-key 字典值沿同一映射组合。省略可选 `Guid value = default` 使用 Guid.Empty；显式 null 需要可空声明。TypeScript 的 string 类型不证明 UUID 合法，实际值由 Host 既有 STJ codec 接纳或拒绝。自定义 converter 会改变合同，保存模型投影继续拒绝此类情况。本项不包含 Guid 键和应用 ID wrapper。
+
+### 保存模型客户端中的数值枚举
+
+Remote 和普通数据声明可以继续使用数值 C# 枚举，在作者的 JsonSerializerContext 中注册 DTO，并沿用现有 build/pack 与引用模型输入。独立 .NET 合同生成自己的枚举声明，保留底层整数类型、具名常量、别名、Flags 和常量默认值。Web 消费者使用 number：没有具名成员的 `(MotionStatus)37` 仍表示为 `37`。可空与数组用法沿用相同声明引用，独立消费者无需提供者 DLL。静态投影支持具有显式源事实的顶层公开枚举，拒绝字符串枚举策略、自定义枚举 converter 和嵌套声明。Host 实际元数据仍保留自身支持的 converter 行为。上游区别与数值精度边界见[兼容说明](compatibility.zh.md#数值枚举投影2026-10-16)。
+
+```csharp
+public enum MotionStatus { Unavailable = -1, Succeeded = 4 }
+public sealed class MotionResult
+{
+    public MotionStatus Status { get; set; } = MotionStatus.Unavailable;
+    public MotionStatus? Previous { get; set; }
+}
+```
 
 ### 有方向的数据 Web 合同
 

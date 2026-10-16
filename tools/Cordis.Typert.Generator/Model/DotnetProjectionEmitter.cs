@@ -233,7 +233,7 @@ internal sealed partial class DotnetProjectionEmitter
         if (type.Kind is "unsupported" or "object" || type.Rank > 1)
             throw new InvalidDataException(
                 "Caller projection cannot represent type " + type.Name + " (" + type.Kind + ").");
-        if (type.Nullability == "None" &&
+        if (type.Nullability == "None" && !IsEnum(type) &&
             (type.Kind is "named" or "array" or "collection" || type.Name == "System_String"))
             throw new InvalidDataException(
                 "Oblivious reference annotations are retained in the model but require an explicit nullable caller projection: " +
@@ -244,6 +244,8 @@ internal sealed partial class DotnetProjectionEmitter
             return;
         if (!declarations.TryGetValue(type.Name, out var declaration))
             throw new InvalidDataException("Native model omits reachable declaration " + type.Name);
+        if (declaration.Enumeration is not null)
+            return;
         if (declaration.Kind is not ("record" or "class") || declaration.BaseType is not null ||
             declaration.TypeArguments.Length != 0)
             throw new InvalidDataException(
@@ -269,6 +271,19 @@ internal sealed partial class DotnetProjectionEmitter
         Docs(type.Documentation, filter: "type");
         foreach (var attribute in type.Attributes)
             EmitAttribute(attribute);
+        if (type.Enumeration is { } enumeration)
+        {
+            output.AppendLine("public enum " + name + " : " + TypeName(enumeration.UnderlyingType)).AppendLine("{");
+            foreach (var member in enumeration.Members)
+            {
+                Docs(member.Documentation, "    ");
+                output.AppendLine("    " + Identifier(member.Name) + " = " + member.Value + ",");
+            }
+
+            output.AppendLine("}");
+            return;
+        }
+
         output.AppendLine("public sealed " + type.Kind + " " + name).AppendLine("{");
         var constructor = dataCarrier ? DataConstructor(type) : Constructor(type);
         if (constructor is not null)
@@ -710,17 +725,32 @@ internal sealed partial class DotnetProjectionEmitter
     private static string Literal(string value) =>
         Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(value, true);
 
-    private static string Constant(NativeConstant value) => DeclarationConstantEmitter.Emit(value);
+    private bool IsEnum(NativeTypeReference type) => type.Kind == "named" &&
+        declarations.TryGetValue(type.Name, out var declaration) && declaration.Enumeration is not null;
+
+    private string Constant(NativeConstant value)
+    {
+        if (value.Kind == "enum")
+        {
+            var declaration = declarations.Values.SingleOrDefault(type => type.Enumeration is not null &&
+                (string.IsNullOrEmpty(type.Namespace) ? type.Name : type.Namespace + "." + type.Name) == value.Type);
+            if (declaration is not null)
+                return "(" + Identifier(declaration.Name) + ")(" + value.Json + ")";
+        }
+
+        return DeclarationConstantEmitter.Emit(value);
+    }
 
     private void EmitAttribute(NativeAttribute attribute, string indent = "")
         => output.AppendLine(indent + AttributeText(attribute));
 
-    private static string ParameterAttributes(NativeAttribute[] attributes) =>
+    private string ParameterAttributes(NativeAttribute[] attributes) =>
         string.Concat(attributes.Select(attribute => AttributeText(attribute) + " "));
 
-    private static string AttributeText(NativeAttribute attribute)
+    private string AttributeText(NativeAttribute attribute)
     {
-        var supported = attribute.Name is "System.Text.Json.Serialization.JsonPropertyNameAttribute" or
+        var supported = attribute.Name is "System.FlagsAttribute"
+            or "System.Text.Json.Serialization.JsonPropertyNameAttribute" or
             "System.Text.Json.Serialization.JsonIgnoreAttribute"
             or "System.Text.Json.Serialization.JsonRequiredAttribute" or
             "System.Text.Json.Serialization.JsonPropertyOrderAttribute"

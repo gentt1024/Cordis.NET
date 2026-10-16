@@ -1,4 +1,4 @@
-import { createRemote, TypertConnection, type RemoteClient } from './remote.mjs'
+import { createRemote, resultCodecs, TypertConnection, type RemoteClient } from './remote.mjs'
 
 type Revision = Parameters<RemoteClient['webContract/revision']>[0]
 const omitted: Revision = {}
@@ -17,6 +17,12 @@ const valid: Direction = { value: { Count: 1, GlobalCount: 1, Value: 'input', Ou
 const invalidInput: Direction = { value: { Count: 1, GlobalCount: 1, Value: null, OutputNullable: 'input' } }
 function checkOutput(result: Awaited<ReturnType<RemoteClient['webContract/direction']>>) {
   if (!result.ok) throw result.error
+  if (resultCodecs['webContract/direction'].parse(result.value) !== result.value)
+    throw new Error('Saved-model codec changed the directional output')
+  let rejected = false
+  try { resultCodecs['webContract/direction'].parse({ ...result.value, Always: undefined }) }
+  catch (error) { rejected = error instanceof TypeError }
+  if (!rejected) throw new Error('Saved-model codec lost required output presence')
   // @ts-expect-error A conditional write can omit Count.
   const requiredCount: number = result.value.Count
   // @ts-expect-error The global write condition can omit GlobalCount.
@@ -48,8 +54,27 @@ export async function run(origin: string) {
     checkOutput(await client['webContract/direction'](valid))
     const explicitNull = await client['webContract/direction']({ value: { ...valid.value, OptionalJson: null } })
     if (!explicitNull.ok || explicitNull.value.Count !== 1) throw new Error('Explicit JSON null was collapsed into omission')
+    const enums = await client['webContract/enums']({ value: { Status: 37, Optional: null, History: [4, -7], Flags: 3, Always: 0 } })
+    if (!enums.ok || enums.value.Status !== 37 || enums.value.Optional !== -1 ||
+        enums.value.History?.[0] !== 4 || enums.value.History?.[1] !== -7 || enums.value.Flags !== 3 || enums.value.Always !== 0)
+      throw new Error('Numeric enum values, aliases, flags or optional default changed')
+    const always: number = enums.value.Always
+    void always
+    for (const [input, expected] of [
+      [{}, [-1, 4, null, null]],
+      [{ negative: null, positive: null }, [null, null, null, null]],
+      [{ negative: -7, positive: 37 }, [-7, 37, null, null]],
+    ] as const) {
+      const result = await client['webContract/nullableEnums'](input)
+      if (!result.ok || JSON.stringify(result.value) !== JSON.stringify(expected))
+        throw new Error('Nullable enum default, omission or explicit null changed')
+    }
     const before = await client['webContract/calls']({})
     for (const [endpoint, input] of [
+      ['webContract/enums', { value: { Status: null } }],
+      ['webContract/enums', { value: { Status: 'Succeeded' } }],
+      ['webContract/enums', { value: { Status: 1.5 } }],
+      ['webContract/enums', { value: { Flags: 256 } }],
       ['webContract/revision', { expectedRevision: null }],
       ['webContract/required', { value: {} }],
       ['webContract/selected', { value: {} }],

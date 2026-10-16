@@ -130,6 +130,18 @@ public sealed class Envelope<T>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class ImportedData
 {
+    public NumericStatus? Previous
+    {
+        get;
+        set;
+    } = NumericStatus.Succeeded;
+
+    public NumericStatus Status
+    {
+        get;
+        set;
+    } = NumericStatus.Unavailable;
+
     [JsonPropertyName("external_name")]
     public required string Name
     {
@@ -193,4 +205,80 @@ public sealed partial class ImportedHiddenData
 
     [JsonSerializable(typeof(ImportedHiddenData))]
     internal partial class HiddenJson : JsonSerializerContext;
+}
+
+#if ENUM_CUSTOM_CONVERTER
+[JsonConverter(typeof(JsonStringEnumConverter<NumericStatus>))]
+#endif
+public enum NumericStatus
+{
+    Unavailable = -1,
+    Succeeded = 4,
+    Alias = Succeeded
+}
+
+[Flags]
+public enum NumericFlags : byte
+{
+    None = 0,
+    Read = 1,
+    Write = 2
+}
+
+public sealed class EnumData
+{
+    public NumericStatus? Previous
+    {
+        get;
+        set;
+    } = NumericStatus.Succeeded;
+
+    public NumericStatus? Missing
+    {
+        get;
+        set;
+    } = NumericStatus.Unavailable;
+
+    public NumericStatus? Absent
+    {
+        get;
+        set;
+    } = null;
+
+    public NumericStatus? Empty
+    {
+        get;
+        set;
+    } = default;
+
+    public NumericStatus Status
+    {
+        get;
+        set;
+    } = NumericStatus.Unavailable;
+
+    public NumericStatus? Optional
+    {
+        get;
+        set;
+    }
+
+    public NumericStatus[] History
+    {
+        get;
+        set;
+    } = [];
+
+    public NumericFlags Flags
+    {
+        get;
+        set;
+    }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public NumericStatus Always
+    {
+        get;
+        set;
+    }
 }

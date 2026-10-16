@@ -7,6 +7,14 @@ import { createHash, randomUUID } from 'node:crypto'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const source = resolve(root, 'clients/modules')
+const provenance = JSON.parse(await readFile(resolve(source, 'vendor/provenance.json'), 'utf8'))
+const lock = JSON.parse(await readFile(resolve(root, 'upstream.lock.json'), 'utf8'))
+if (provenance.commit !== lock.harness.commit) throw new Error('Browser source baseline differs from upstream.lock.json')
+for (const file of provenance.files) {
+  const digest = createHash('sha256').update(await readFile(resolve(source, 'vendor', file.file))).digest('hex')
+  if (file.localSha256 !== undefined && !file.adaptation) throw new Error('Missing source adaptation: ' + file.file)
+  if (digest !== (file.localSha256 ?? file.sha256)) throw new Error('Browser source identity mismatch: ' + file.file)
+}
 const declarationsOnly = process.argv[2] === '--types-only'
 const output = resolve(declarationsOnly ? resolve(source, 'lib') : process.argv[2] ?? resolve(source, 'lib'))
 const standard = resolve(source, '.types/standard')
@@ -39,6 +47,7 @@ for (const config of ['tsconfig.vendor.json', 'tsconfig.json']) {
 }
 if (declarationsOnly) process.exit(0)
 await mkdir(output, { recursive: true })
+await cp(resolve(source, 'vendor/provenance.json'), resolve(output, 'provenance.json'))
 await build({ entryPoints: [resolve(source, 'src/index.ts')], bundle: true, format: 'esm', platform: 'browser',
   outfile: resolve(output, 'client.mjs'), alias, define, legalComments: 'eof' })
 // A normal deployment can copy this directory; it does not require the author sources or Node.

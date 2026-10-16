@@ -93,7 +93,8 @@ public sealed partial class PluginConfigurationOperations
     private async Task<ProfileCandidate> CreateCandidateAsync(
         ProfileInputs inputs,
         PackageManifest manifest,
-        PreparedPackage? prepared = null)
+        PreparedPackage? prepared = null,
+        string? userPatch = null)
     {
         var proposal = inputs.Launch;
         if (prepared is not null)
@@ -110,7 +111,13 @@ public sealed partial class PluginConfigurationOperations
             };
         }
 
-        var refresh = await ProfileComposition.RefreshAsync(proposal, manifest, inputs.ReadCandidateAsync);
+        var refresh = await ProfileComposition.RefreshAsync(
+            proposal,
+            manifest,
+            path =>
+                userPatch is not null && ProfileInputs.SamePath(path, PatchPath)
+                    ? Task.FromResult(userPatch)
+                    : inputs.ReadCandidateAsync(path));
         var candidate = new ProfileCandidate(
             inputs.Revision,
             ConfigurationFile.Write(manifest.Raw, true),
@@ -162,11 +169,32 @@ public sealed partial class PluginConfigurationOperations
         return await ApplicationBoot.ReconcileAsync(include, candidate, required);
     }
 
+    private async Task SaveUserPatchAsync(ProfileInputs inputs, string text)
+    {
+        var temporary = PatchPath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            await File.WriteAllTextAsync(temporary, text);
+            if (!OperatingSystem.IsWindows())
+                File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            await inputs.VerifyAsync();
+            File.Move(temporary, PatchPath, true);
+        }
+        finally
+        {
+            if (File.Exists(temporary))
+                File.Delete(temporary);
+        }
+    }
+
     private sealed class ProfileInputs(ProfileLaunch source)
     {
         private static StringComparer PathComparer => OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal;
+
+        public static bool SamePath(string left, string right) =>
+            PathComparer.Equals(Path.GetFullPath(left), Path.GetFullPath(right));
 
         private readonly Dictionary<string, byte[]?> files = new(PathComparer);
         private PreparedPackage? publication;
@@ -266,7 +294,7 @@ public sealed partial class PluginConfigurationOperations
 
         public void PlanRemoval(string name) => removal = name;
 
-        public async Task VerifyAsync(bool published = false, string? savedManifest = null)
+        public async Task VerifyAsync(bool published = false, string? savedManifest = null, string? savedPatch = null)
         {
             var expectedLocal = new Dictionary<string, string>(Launch.LocalBundles!, StringComparer.Ordinal);
             if (removal is { } removed && source.LocalBundles?.ContainsKey(removed) != true)
@@ -292,11 +320,13 @@ public sealed partial class PluginConfigurationOperations
                 }
 
                 var actual = await ReadBytesAsync(actualPath);
-                var expectedBytes = savedManifest is not null && PathComparer.Equals(
+                var expectedBytes = savedManifest is not null && SamePath(
                     path,
-                    Path.GetFullPath(Path.Combine(source.Profile.Directory, "package.json")))
+                    Path.Combine(source.Profile.Directory, "package.json"))
                     ? Encoding.UTF8.GetBytes(savedManifest)
-                    : expected;
+                    : savedPatch is not null && SamePath(path, source.Profile.UserLayer.Source)
+                        ? Encoding.UTF8.GetBytes(savedPatch)
+                        : expected;
                 if (expectedBytes is null
                         ? actual is not null
                         : actual is null || !expectedBytes.AsSpan().SequenceEqual(actual))

@@ -173,8 +173,16 @@ internal sealed partial class SourceContractReader
             ConstantJson(value.Value));
     }
 
-    private static NativeConstant Constant(ITypeSymbol type, object? value) =>
-        new(type.TypeKind == TypeKind.Enum ? "enum" : "value", type.ToDisplayString(), ConstantJson(value));
+    private static NativeConstant Constant(ITypeSymbol type, object? value)
+    {
+        if (value is not null && type is INamedTypeSymbol
+            {
+                OriginalDefinition.SpecialType: SpecialType.System_Nullable_T,
+                TypeArguments: [{ TypeKind: TypeKind.Enum } enumeration]
+            })
+            type = enumeration;
+        return new(type.TypeKind == TypeKind.Enum ? "enum" : "value", type.ToDisplayString(), ConstantJson(value));
+    }
 
     private static string ConstantJson(object? value) => value switch
     {

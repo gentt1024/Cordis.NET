@@ -297,7 +297,12 @@ public sealed partial class PluginConfigurationOperations
                 ReportPackageProgress(requestId, stage);
                 if (enabled)
                 {
-                    var required = Flatten(Profiles.Compose(bundle.PatchLayers))
+                    var sources = bundle
+                        .PatchPaths.Select(path => Path.Combine(
+                            prepared.PublicationDirectory ?? prepared.Directory,
+                            Path.GetRelativePath(prepared.Directory, path)))
+                        .ToArray();
+                    var required = ComposedBundleRows(candidate, sources)
                         .Select(row => row.Id)
                         .ToHashSet(StringComparer.Ordinal);
                     await ApplyCandidateAsync(candidate, required);

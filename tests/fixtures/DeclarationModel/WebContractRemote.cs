@@ -10,6 +10,25 @@ public partial class WebContractRemote
 {
     private int calls;
 
+    [RemoteMethod("nullableEnums")]
+    public Task<NumericStatus?[]> NullableEnumsAsync(
+        NumericStatus? negative = NumericStatus.Unavailable,
+        NumericStatus? positive = NumericStatus.Succeeded,
+        NumericStatus? absent = null,
+        NumericStatus? empty = default)
+    {
+        calls++;
+        return Task.FromResult<NumericStatus?[]>([negative, positive, absent, empty]);
+    }
+
+    [RemoteMethod("enums")]
+    public Task<EnumData> EnumsAsync(EnumData value, NumericStatus fallback = NumericStatus.Unavailable)
+    {
+        calls++;
+        value.Optional ??= fallback;
+        return Task.FromResult(value);
+    }
+
     [RemoteMethod("calls")]
     public Task<int> CallsAsync() => Task.FromResult(calls);
 
@@ -63,6 +82,9 @@ public partial class WebContractRemote
     , RespectRequiredConstructorParameters = false
 #endif
 )]
+[JsonSerializable(typeof(EnumData))]
+[JsonSerializable(typeof(NumericStatus))]
+[JsonSerializable(typeof(NumericStatus?[]))]
 [JsonSerializable(typeof(double))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(int))]

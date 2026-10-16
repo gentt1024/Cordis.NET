@@ -31,6 +31,13 @@ manifest records source hashes; the original MIT licenses are retained in
 the corresponding `clients/modules/vendor/*/LICENSE` files. The .NET integration keeps application event selection separate from fixed
 carrier behavior.
 
+`clients/modules/vendor/modules/entries.ts` contains a local correction to the fixed
+source: replacement records identify installed code independently of successful
+activation, so an explicit sync back to an earlier target cannot retry failed newer
+code. The provenance manifest preserves the upstream path and hash and records
+the adapted file hash separately. This correction is not present in the fixed DSH
+source and does not add automatic rollback.
+
 The shared Remote client in `src/Cordis.Composition/Client/` adapts the fixed DSH
 Gateway client, mux and lossless-JSON input behavior. The .NET carrier and Gateway
 also implement the fixed unary envelope, mux frames and unary attachment workflow.

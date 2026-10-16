@@ -45,6 +45,35 @@ function uplinkValue(value, ancestors = new Set()) {
   } finally { ancestors.delete(value); }
 }
 
+// Internal support for predicates compiled from the author's bounded output projection.
+export function resultObject(value) {
+  return record(value) && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
+}
+export function resultJson(value, depth = 0) {
+  if (depth > 256) return false;
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++)
+      if (!Object.hasOwn(value, i) || !resultJson(value[i], depth + 1)) return false;
+    return true;
+  }
+  return resultObject(value) && Object.keys(value).every(key => resultJson(value[key], depth + 1));
+}
+export function resultEqual(value, expected) {
+  if (value === expected) return true;
+  if (Array.isArray(expected)) return Array.isArray(value) && value.length === expected.length &&
+    expected.every((item, index) => Object.hasOwn(value, index) && resultEqual(value[index], item));
+  return resultObject(expected) && resultObject(value) && Object.keys(value).length === Object.keys(expected).length &&
+    Object.keys(expected).every(key => Object.hasOwn(value, key) && resultEqual(value[key], expected[key]));
+}
+export function createResultCodec(accepts, name) {
+  return Object.freeze({parse(value) {
+    if (!accepts(value)) throw new TypeError('Invalid decoded Remote result: ' + name);
+    return value;
+  }});
+}
+
 class Lifetime {
   active = true;
   abort = new AbortController();
@@ -359,7 +388,7 @@ class StreamHandle {
 export function createClient(connection, methods) {
   const state = new Lifetime();
   const client = {dispose:() => state.dispose()};
-  for (const [endpoint, stream, uplink, required, projection] of methods) {
+  for (const [endpoint, stream, uplink, required, projection, decode] of methods) {
     client[endpoint] = (args, signal, binding) => {
       if (!state.active) {
         if (stream) throw new Error('The Remote contribution was withdrawn.');
@@ -398,7 +427,7 @@ export function createClient(connection, methods) {
           const result = await connection.call(endpoint, args, combined);
           if (!state.active) return withdrawn();
           combined.throwIfAborted();
-          return result;
+          return result.ok && decode ? {ok:true, value:decode(result.value)} : result;
         } catch (error) {
           return failure(combined.aborted ? 'gateway/cancelled' : 'gateway/internal', carrierMessage(error), {}, {cause:error});
         }

@@ -334,6 +334,11 @@ internal sealed partial class SourceContractReader
         var semantic = compilation.GetSemanticModel(expression.SyntaxTree);
         var constant = semantic.GetConstantValue(expression);
         var type = semantic.GetTypeInfo(expression).ConvertedType ?? semantic.GetTypeInfo(expression).Type;
+        if (semantic.GetOperation(expression) is Microsoft.CodeAnalysis.Operations.IDefaultValueOperation
+            {
+                Type: INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable
+            })
+            return Constant(nullable, null);
         return constant.HasValue && type is not null
             ? Constant(type, constant.Value)
             : new(

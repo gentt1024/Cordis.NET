@@ -2,11 +2,35 @@
 
 [English](compatibility.md)
 
+## 数值枚举投影，2026-10-16
+
+赋给可空枚举的非 null 常量保留底层枚举身份，null 与可空 `default` 仍为 null。这适用于作者绑定、参数默认值和普通／引用数据初始化器。独立发射器使用生成后的枚举类型，不携带作者程序集依赖。
+
+固定 DSH 的 analyzer 保留枚举声明，但其 [Zod emitter](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts)明确拒绝枚举投影。因此数值 CLR 枚举支持属于 .NET 平台适配，不能称为上游已有的 Schema 保证。现有共同模型已经保存底层类型及成员常量；独立 Remote、事件和普通数据投影复用这些事实，不加载提供者程序集，也不新增保存格式。
+
+默认 [.NET 10 STJ 枚举转换器](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Converters/Value/EnumConverter.cs)读写底层整数，包括未命名值，并导出 integer Schema。保存模型 Web 输出通过共享客户端 emitter 使用同样的 Schema，不添加成员白名单。生成的 .NET 声明保留名称、常量、底层宽度及 Flags；原生反序列化检查范围。可空枚举保留 null 分支，枚举默认值引用生成后的类型。字符串枚举策略及作者枚举 converter 仍由静态投影明确拒绝。JavaScript number 的既有精度限制不变，本次不引入无损 64 位传输。
+
+## Linux 包进程完成边界，2026-10-16
+
+固定 DSH 管理器等待被中断的工具退出后才报告取消。既有 .NET SDK 进程所有者还要求终止与管道排空。在 Linux 上，已终止的后代等待其他父进程回收时，进程组仍可能存在。所有者现在先核对 `/proc` 中的组状态，再判断这种存在是否代表执行尚未结束。仅排除已观测到、没有剩余线程的死亡成员；活进程、无法读取的状态及未确认的管道排空仍阻止成功。同一检查保护运行保留记录的接管。它不回收其他所有者的子进程，不把清理失败改成取消成功，也不新增进程监督器。参见 [Linux 进程状态](https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html)与 [wait 语义](https://man7.org/linux/man-pages/man2/waitpid.2.html)。
+
+## Group 撤回的持久化修正，2026-10-15
+
+固定 DSH Loader 同样存在 group 撤回缺陷：空 base 加两个 bundle 补丁，撤下 group 并保留另一 bundle 的条目，会将有效条目写入 base。在 `639ed015397290b3745d163aafe02ffee4aa3f84` 上的定向执行也复现了 base 自有 host group 布局，重开后出现重复 retained 条目。这是共享缺陷，不能说成上游已经保证源文件不变。.NET 修正在将拥有的子插件清理判为自停前，检查条目及祖先已有的撤回意图。不重排 Fiber 清理，不抑制显式 Include 写入，不清空写队列，也不改变真正自停的持久化。标准 bundle 撤回持久化 Profile 选择，不将组合树复制到基础源文件。
+
+Bundle 保护和激活要求对捕获的 base 与有序候选层调用现有补丁组合器，再选取来自该 bundle 补丁源的可达条目对象。外部容器保留原位置及后续 config 整体替换语义。这是对现有配置事实的脱离运行树审计，不新增来源注册表或第二套补丁算法。声明行仍是独立的目录视图。
+
 ## 输出合同复用，2026-10-14
 
 固定 DSH 的公开 `InvocationDescriptor` 提供结果 codec，其 strict `create()` 提供可执行 parse 的 Schema（[protocol types](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/protocol/src/types.ts)）。这支持结果合同的组合复用，不直接规定 .NET 的 JSON Schema 属性。本库的平台适配以非 virtual 的 `TypertCodec.ResultSchema` 公开现有输出投影，内部方向分派仍为内部实现。STJ 的输入／输出差异要求它与 `Schema` 区分。消费者复用输出解码及客户端生成的同一投影，自行决定校验时机。不新增外部 override 扩展、Schema 服务、HTTP 端点或 Gateway 校验政策。投影限制见[作者指南](authoring.zh.md)。
 
 输出 JSON 的字段存在性在原生读取之前由 ResultSchema 校验。输出 metadata modifier 只为存在 setter 的成员保留必填写入，只有 getter 的值遵循作者的原生 STJ 构造方式。构造参数的必填性仍由输出投影决定，条件省略的输出不会重新获得输入侧的必填要求。原生输入 metadata 和输出 Schema 生成不变。这是纠正此前 adapter 建立的 required 但不可反序列化 metadata，不是绕过 STJ 对只读 DTO 的固有限制。
+
+生成的 TypeScript 模块公开只读 `resultCodecs[endpoint].parse(value)`，校验解码后的输出值。共享 emitter 将现有输出投影与实际序列化 metadata 编译成判定函数；运行时 descriptor 导出和受支持的保存模型投影使用同一个 emitter。只有实际的默认 `byte[]` metadata 映射为 `Uint8Array`，base64 注解或自定义 converter 不构成附件身份。`ResultSchema` 继续描述附件提取前的 JSON，与解码后的可执行合同各有明确表示。
+
+解码值的表示检查与 Schema 布尔约束分别执行。固定 DSH 的[生成器](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts) 用 `z.intersection` 组合类型合同，用 `z.instanceof(Uint8Array)` 表达字节；.NET emitter 在 metadata 适配后的值上表达既有 JSON Schema 约束。`allOf` 中冗余的 `not: { type: "null" }` 不得对 metadata 已确定的字节重新施加纯 JSON 限制，嵌套字节同样如此。JSON-only 位置仍拒绝 typed array，组合约束不扩大其表示范围。这修正了结果 emitter 的判定组合，不改变固定 DSH 的 strict decoder 政策或公开 codec 合同。
+
+固定 DSH 的[客户端调用](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts) 在 Connection 还原和取消检查后，执行已提供的 strict 结果 decoder。本 .NET port 的生成式 TypeScript unary 调用同样只对带二进制 metadata 的结果自动执行解码值 codec。不匹配转为 `gateway/internal`，保留本地 `TypeError` cause。Remote 错误、取消与撤销维持既有顺序及结果。普通 JSON 结果保留既有自动校验政策，应用可显式调用导出的 codec；流条目政策不变。不新增附件还原前的分阶段接受 API，固定 DSH 也先等待 Connection 还原。接受、未知结果与回执恢复仍由应用负责。支持的投影和独立用法见[作者指南](authoring.zh.md)。
 
 ## scoped .NET caller 适配，2026-10-11
 
@@ -48,6 +72,8 @@ Cordis.NET 是固定 DSH 基线及仓库已确认通用应用基础设施的忠�
 可选浏览器模块 bootstrap 将外壳持有的 `staticModules` 和可选 `loadBundle` 传给固定 DSH 模块系统。原生目录捕获接受相同的额外精确请求名，SDK 默认模块继续可用。包根不会自动供应任意子路径。外壳持有对象与类型，Cordis 持有插件副作用；默认与自定义 transport 都保留既有同源 revision 边界。这是恢复上游 bootstrap 接线，不新增模块注册机制或 npm 解析器，见[开发说明](development.zh.md#外壳持有的客户端模块)。
 
 浏览器启动复用固定 web 激活审计；后续 sync 保留诊断/重试语义。生成通知恢复复用固定连接控制器，以数值时序适配替代 Schemastery 运行时。暂时断线保留插件，显式 close 撤销插件。CLI 参数、就绪和有界退出复用 Composition、ProfileSession 与 Generic Host。这些修正恢复上游装配职责，不改变 Core Pending 语义。
+
+浏览器 `ClientEntries` 对固定 DSH 的 `packages/client/modules/src/client/entries.ts` 作了有限的本地修正。固定源码在新代码启动成功后才记录替换 revision；新代码失败时仍保留旧 revision，调用者显式请求旧 graph 却可能重试新代码。修正后的记录随模块缓存失效，预取成功之前旧 Fiber 仍可用；新 Fiber 建立后、等待激活之前，仅为当前 generation 记录实际代码。显式 sync 和同目标 retry 因而选择对应代码，继续复用既有 generation、队列、依赖重挂与释放机制。不新增自动回滚、历史存储或业务副作用恢复。浏览器 provenance 分别记录原上游身份和本地文件摘要，正常构建检查这些身份；未修改文件继续保留固定摘要。
 
 | 路径 | 支持的行为 | 边界 |
 |---|---|---|
@@ -94,6 +120,10 @@ DSH-enabled NuGet 宿主应显式将 `ProfileLaunch.CompatibilityPackageName` �
 
 原生管理 `Changed` 事件逐个隔离同步观察者异常，记录日志，既不替换已完成操作的结果，也不阻止后续观察者。它不改变 Core 事件语义。启停与 bundle 选择先持久化、再协调；应用失败仍可能保留已保存文件。字段编辑恢复继续遵循其独立合同。
 
+原生管理寻址先纳入绑定 Include 的基础文件声明，再应用 bundle 和 Profile 用户补丁。因此，基础文件定义的组可以接收 bundle 插入的子项，并以其现有 patch ID 执行启停。这是通用 .NET 宿主适配，不能宣称固定 DSH PluginManager 已有相同行为：其 `listPlugins()` 使用 `composeEntries([readProfilePatches(...)])` 从空根组合。固定上游 Include 本身会对解析后的基础数据应用补丁；.NET 管理沿用该补丁算法和实际基础源，不刷新运行时或求值表达式，也不对已经组合的运行树重复应用补丁。基础文件缺失或格式错误会使读取失败。既有树所有者、唯一 ID、模块名及管理保护检查继续保留，修改队列、持久化和协调流程不变。Home／启动 overlays 仍保持后置优先级，可能覆盖已保存的启停值，但不据此建立 Profile 管理地址。
+
+管理读取复用捕获的 Profile 输入，并检查这些源未发生变化。Preview 将原始基础数据与全部有序层组合，包括 Home 和启动 overlays。Bundle 条目目录描述该 bundle 的插入声明，包括以基础文件中的组为目标的 insert。保护与必需条目审计则通过 `EntryPatches.Apply` 组合原始基础数据和全部有序候选层，再按该 bundle 补丁源的对象身份筛选最终可达条目。外部容器保留原位置及后续 config 整体替换语义；不会通过与初始声明取并集保留已移除子项，也不会把宿主声明归给 bundle。启用与新安装审计共用这一内部选择，详见顶部的 [group 撤回修正](#group-撤回的持久化修正2026-10-15)。这些视图保留仅组合补丁的 `Profiles.Compose`，不新增公共地址 API。
+
 ## 证据
 
 保存模型的 DTO 和 client 生成也在 MSBuild 设计时构建的 `CoreCompile` 前执行，使用相同共同模型后端和显式引用模型，通过独立输出目录避免语言服务生成写入普通 build/pack 产物。这是 .NET 编译输入适配：STJ 必须在输入 compilation 中看到生成声明；不增加第二套模型权威或回退解析器。打包所需的源码模型提取仍属于普通构建，source generator 继续分析实时作者 compilation。MSBuild 语言服务输入检查与实际 IDE、UI 平台验收分别记录。
@@ -105,6 +135,8 @@ DSH-enabled NuGet 宿主应显式将 `ProfileLaunch.CompatibilityPackageName` �
 Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 Prepare 前读取的 manifest 覆盖后续编辑。这是原生适配：固定 DSH 成功路径在 `selectBundle` 重读，但没有提供完整产品候选批准合同。两者都不保证能对忽略协作锁的任意编辑器执行条件替换。
 
 `PluginConfigurationOperations.AdmitProfileAsync` 接收库持有的不可变 manifest 文本和原始根配置候选，组合仍使用现有 Profile/Include 逻辑。修改分离的 composition 视图不会改变保存候选。安装与 bundle 选择在发布/持久化前准入，并通过 `ProfileSession` 应用该候选；移除分别准入其持久步骤，其中删除依赖候选在工具解除运行时映射前准入。CLR 制品保留并单独报告，直至显式离线删除。拒绝第二步时，包保持已安装、已取消选择。重复选择仍在重新应用前准入。普通消费可以省略准入。仅使用旧 `ReconcileAsync` 的宿主在未启用产品准入时保留原回调；启用产品准入时必须支持候选 reconciliation，不能静默退回重新读盘组合。
+
+单条启停将拟写入的 user patch 纳入完整候选，使用同一准入边界。拒绝时不保存补丁、不执行 reconciliation；批准后先核对捕获输入，再保存并应用该候选。既有补丁编辑器保留注释和表达式语法，manifest 与 base 不变。这是对既有 .NET 产品准入适配的覆盖补齐：固定 DSH 的 `PluginManager.setPluginEnabled` 先写入再 reload，并明确在激活失败后保留已保存修改。准入拒绝与后续激活失败分别处理；保存后的激活失败仍保留请求补丁。不提供批量启停或自动回滚合同。
 
 即使 owner 配置比较相等，捕获的基础数据变化也会进入既有 Include 更新；未变化条目保留原 fiber。候选回调与赋值时的旧回调关联。宿主随后只替换 `ReconcileAsync` 时，未启用准入的操作仍执行该定制；启用准入则拒绝，直到宿主明确为此接线设置候选应用回调。
 

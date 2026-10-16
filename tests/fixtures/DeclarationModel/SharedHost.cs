@@ -90,7 +90,67 @@ await context.RunAsync(owner =>
 });
 server.UseWebSockets();
 #if !CORDIS_READONLY_HOST
-var clientArtifact = TypertArtifacts.GenerateClient(SharedRemoteTypert.Contribution("IndependentData.Provider"));
+var shared = SharedRemoteTypert.Contribution("IndependentData.Provider");
+using var encodedString = System.Text.Json.JsonDocument.Parse("""{"type":"string","contentEncoding":"base64"}""");
+using var binaryLiteral = System.Text.Json.JsonDocument.Parse("""{"enum":["AQID",null]}""");
+using var composedBytes = System.Text.Json.JsonDocument.Parse(
+    """
+    {"allOf":[{"type":"string"},{"not":{"type":"null"}}]}
+    """);
+using var composedObject = System.Text.Json.JsonDocument.Parse(
+    """
+    {"allOf":[{"type":"object","properties":{"Payload":{"type":"string"}},"required":["Payload"]},{"not":{"type":"null"}},{"type":"object"}]}
+    """);
+var bytesResult = TypertCodec.Create(ResultJson.Default.ByteArray, schema: composedBytes.RootElement);
+var objectResult = TypertCodec.Create(ResultJson.Default.ResultBytes, schema: composedObject.RootElement);
+foreach (var bytes in new byte[][] { [1, 2, 3], [] })
+{
+    if (!((byte[])bytesResult.DecodeOutput(bytesResult.Encode(bytes))!).SequenceEqual(bytes) ||
+        !((ResultBytes)objectResult.DecodeOutput(objectResult.Encode(new ResultBytes(bytes)))!).Payload.SequenceEqual(
+            bytes))
+        throw new Exception("Composed native output contract rejected valid bytes.");
+}
+
+var clientArtifact = TypertArtifacts.GenerateClient(
+    new(
+        "IndependentData.Provider",
+        [
+            .. shared.Invocations.Select(method => method.Endpoint == "sharedData/bytes"
+                ? method with
+                {
+                    Result = bytesResult
+                }
+                : method),
+            new(
+                "result#plainBytes",
+                "result",
+                "result",
+                "plainBytes",
+                [],
+                TypertCodec.Create(ResultJson.Default.ByteArray)),
+            new("result#composedObject", "result", "result", "composedObject", [], objectResult),
+            new(
+                "result#optional",
+                "result",
+                "result",
+                "optional",
+                [],
+                TypertCodec.CreateOptional<string?>(TypertCodec.CreateNullable(ResultJson.Default.String))),
+            new(
+                "result#encodedText",
+                "result",
+                "result",
+                "encodedText",
+                [],
+                TypertCodec.Create(ResultJson.Default.String, schema: encodedString.RootElement)),
+            new(
+                "result#literal",
+                "result",
+                "result",
+                "literal",
+                [],
+                TypertCodec.Create(ResultJson.Default.ByteArray, schema: binaryLiteral.RootElement))
+        ]));
 server.MapGet("/client-runtime/shared.mjs", () => Results.Text(clientArtifact.Module, "text/javascript"));
 server.MapGet("/client-runtime/shared.d.mts", () => Results.Text(clientArtifact.Declaration, "text/plain"));
 server.MapGet("/client-runtime/cordis-remote.mjs", () => Results.Text(TypertClientRuntime.Module, "text/javascript"));
@@ -115,4 +175,11 @@ await server.WaitForShutdownAsync();
 #if CORDIS_READONLY_HOST
 [System.Text.Json.Serialization.JsonSerializable(typeof(System.Text.Json.JsonElement))]
 internal partial class ExportedSchemaJson : System.Text.Json.Serialization.JsonSerializerContext;
+#else
+[System.Text.Json.Serialization.JsonSerializable(typeof(byte[]))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(string))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(ResultBytes))]
+internal partial class ResultJson : System.Text.Json.Serialization.JsonSerializerContext;
+
+internal sealed record ResultBytes(byte[] Payload);
 #endif

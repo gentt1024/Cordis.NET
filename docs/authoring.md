@@ -253,6 +253,22 @@ Access preserves lazy projection and precise `NotSupportedException` diagnostics
 
 Applications choose when to validate and how to handle failure, including recording business acceptance before validation. Read or export this schema for that purpose; do not substitute input Schema, reflect DTOs or duplicate the output rules. Reading the property adds no Gateway result validation and changes no acceptance, cancellation, reply or cleanup ordering.
 
+For values already reconstructed by the TypeScript Connection, import the executable output contract from the generated module:
+
+```typescript
+import { resultCodecs } from "./remote.mjs";
+
+const output = resultCodecs["sample/Echo"].parse(decodedValue);
+```
+
+Use your declared endpoint and an `unknown` value obtained by your application. `parse` returns the same value with the generated output type, or throws `TypeError`. It sends no request, clones no objects or byte views, and owns no resources. The map and its codec objects are frozen. Generate and deploy the module with its matching `cordis-remote.mjs` runtime.
+
+Supported Schema combinations apply to that same decoded value. For example, default byte metadata with `allOf: [{ type: "string" }, { not: { type: "null" } }]` accepts the same non-null `Uint8Array` values as `type: "string"` alone. Nested byte positions retain their metadata, while additional JSON-only values cannot contain typed arrays.
+
+The codec preserves output properties, requiredness, omission, null, optional top-level `undefined`, arrays, string-key dictionaries and local recursive references. An optional property may be absent; explicit `undefined` is not JSON null or an omitted field. Default binary metadata admits `Uint8Array`, including empty bytes, instead of its serialized string. Ordinary strings and custom-converter outputs retain their JSON representation. Supported literal, union, numeric and collection constraints are compiled from the same bounded schema used by the emitter. Unsupported keywords or patterns refuse generation. Format annotations retain the existing schema policy, rather than acquiring general format validation; recursive predicate evaluation is bounded to 256 levels. Saved-model binary metadata remains unsupported and explicitly refused.
+
+Generated unary callers automatically use this codec for binary results, after attachment recovery and the existing cancellation/withdrawal checks. Invalid values become `RemoteResult` failures with code `gateway/internal` and the original local `TypeError` cause. Ordinary JSON results and stream items acquire no automatic business validation. Applications can use the exported codec independently at their chosen validation boundary. This does not expose acceptance before multipart reconstruction: if reconstruction or strict binary decoding fails, use the application's request identity and receipt recovery to resolve the unknown outcome.
+
 ```typescript
 import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";
 
@@ -556,6 +572,19 @@ public Task<Item> EchoAsync(Item value) => Task.FromResult(value);
 Normal extract/build/pack preserves the Guid declaration identity. Independent C# data/callers use `global::System.Guid`; Web callers accept and return strings with string/uuid Schema. No framework source model, mapping annotation or Provider assembly is needed by the independent generator. Explicit references remain required for authored DTOs from another model.
 
 `Guid?`, arrays, supported lists and string-key dictionary values compose with the same mapping. An omitted optional `Guid value = default` uses Guid.Empty; explicit null requires a nullable declaration. TypeScript string typing does not establish UUID validity: the Host's existing STJ codec admits or rejects actual values. A custom converter changes the contract and remains unsupported by the saved-model projection. Guid keys and application ID wrappers are not included.
+
+### Numeric enums in saved-model clients
+
+Keep numeric C# enums in Remote and ordinary data declarations and register the DTO in the author's JsonSerializerContext. Use the existing build/pack and referenced-model inputs. Independent .NET contracts generate their own enum declarations with the original underlying integer type, named constants, aliases, Flags and constant defaults. Web consumers use numbers: an unnamed `(MotionStatus)37` remains `37`. Nullable and array uses follow the same references. No provider DLL is needed by the independent consumer. Static projection supports public top-level enums with explicit source facts; it refuses string enum policies, custom enum converters and nested declarations. Actual Host metadata retains its own supported converter behavior. See [compatibility](compatibility.md#numeric-enum-projection-2026-10-16) for the upstream distinction and numeric precision boundary.
+
+```csharp
+public enum MotionStatus { Unavailable = -1, Succeeded = 4 }
+public sealed class MotionResult
+{
+    public MotionStatus Status { get; set; } = MotionStatus.Unavailable;
+    public MotionStatus? Previous { get; set; }
+}
+```
 
 ### Directional Web data contracts
 

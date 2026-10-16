@@ -219,18 +219,28 @@ public sealed partial class PluginConfigurationOperations(
     /// List mounted entries with their current state and profile management addresses.
     /// </summary>
     /// <remarks>Reads current profile sources without refreshing the runtime or evaluating configuration expressions.
-    /// Protected or ambiguous entries remain listed with a read-only reason. Profile manifest and user patch read or parse failures propagate.</remarks>
-    public async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync()
+    /// Protected or ambiguous entries remain listed with a read-only reason. Base configuration, profile manifest and user patch read or parse failures propagate.</remarks>
+    public async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync() =>
+        await ListPluginsAsync(await CaptureProfileAsync());
+
+    private async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync(ProfileInputs inputs)
     {
         var profile = await Profiles.LoadAsync(
-            launch.Profile.Directory,
-            launch.InstallationBundles,
-            launch.LocalBundles,
-            userLayer: false);
+            inputs.Launch.Profile.Directory,
+            inputs.Launch.InstallationBundles,
+            inputs.Launch.LocalBundles,
+            false,
+            null,
+            ParseManifest(await inputs.ReadAsync(ManifestPath)),
+            inputs.ReadAsync);
         var profileLayers = profile
             .Bundles.SelectMany(bundle => bundle.PatchLayers)
-            .Append(new ConfigurationLayer(PatchPath, await Profiles.ReadPatchesAsync(PatchPath, true)));
-        var rows = Flatten(Profiles.Compose(profileLayers)).ToArray();
+            .Append(
+                new ConfigurationLayer(PatchPath, await Profiles.ReadPatchesAsync(PatchPath, true, inputs.ReadAsync)));
+        var baseRows = ConfigurationFile.ParseEntries(
+            await inputs.ReadAsync(include.Filename),
+            Path.GetExtension(include.Filename) == ".json");
+        var rows = Flatten(EntryPatches.Apply(baseRows, ProfileComposition.Flatten(profileLayers))).ToArray();
         var result = new List<PluginConfigurationInfo>();
         await include.Context.RunAsync(_ =>
         {
@@ -254,6 +264,7 @@ public sealed partial class PluginConfigurationOperations(
 
             return Task.CompletedTask;
         });
+        await inputs.VerifyAsync();
         return result;
     }
 
@@ -264,7 +275,8 @@ public sealed partial class PluginConfigurationOperations(
     /// failures reading the profile manifest or obtaining runtime mappings propagate.</remarks>
     public async Task<IReadOnlyList<BundleConfigurationInfo>> ListBundlesAsync()
     {
-        var manifest = PackageManifest.Read(ManifestPath);
+        var inputs = await CaptureProfileAsync();
+        var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
         var dependencies = manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?> ??
             new EntryOptions();
         var names = manifest
@@ -286,7 +298,7 @@ public sealed partial class PluginConfigurationOperations(
             var removable = installed && !launch.InstallationBundles.ContainsKey(name);
             try
             {
-                var info = await ReadBundleAsync(name);
+                var info = await ReadBundleAsync(name, inputs);
                 if (info is null)
                 {
                     if (enabled)
@@ -306,14 +318,19 @@ public sealed partial class PluginConfigurationOperations(
                     continue;
                 }
 
-                var (metadata, patches) = info.Value;
-                var declared =
-                    Flatten(Profiles.Compose([new("bundle", patches.Where(p => p.ContainsKey("insert")).ToList())]))
-                        .Where(p => p.Id.Length > 0 && p.Name.Length > 0)
-                        .ToArray();
+                var (metadata, bundle) = info.Value;
+                var patches = bundle.Patches;
+                var declared = InsertedRows(patches)
+                    .Where(p => p.Id.Length > 0 && p.Name.Length > 0)
+                    .ToArray();
                 var ids = declared.Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-                if (ProtectsManager(patches))
+                var candidate = await CreateCandidateAsync(
+                    inputs,
+                    WithBundles(manifest, enabled ? manifest.Bundles : manifest.Bundles.Append(name).ToArray()));
+                if (ProtectsManager(ComposedBundleRows(candidate, bundle.PatchPaths)))
                     managementBundles.TryAdd(name, 0);
+                else
+                    managementBundles.TryRemove(name, out _);
                 var reason = managementBundles.ContainsKey(name) ? "management-required" : null;
                 result.Add(
                     new(
@@ -354,14 +371,16 @@ public sealed partial class PluginConfigurationOperations(
             }
         }
 
+        await inputs.VerifyAsync();
         return result;
     }
 
     /// <summary>
     /// Persist enablement for an addressable profile entry and reconcile through the host lifecycle queue.
     /// </summary>
-    /// <remarks>Protected or unaddressable entries are refused. Persistence precedes reconciliation; a failed result may
-    /// leave the requested patch saved. With no lifecycle queue, the change requires restart. Later overlays may override it.</remarks>
+    /// <remarks>Protected or unaddressable entries are refused. Product admission checks the complete candidate before
+    /// saving the user patch. Persistence precedes reconciliation; an activation failure may leave the patch saved.
+    /// With no lifecycle queue, the change requires restart. Later overlays may override it.</remarks>
     public Task<ConfigurationChange> SetPluginEnabledAsync(
         string entryId,
         bool enabled,
@@ -372,12 +391,35 @@ public sealed partial class PluginConfigurationOperations(
             "plugin",
             async () =>
             {
-                var row = (await ListPluginsAsync()).FirstOrDefault(row => row.EntryId == entryId) ??
+                var inputs = await CaptureProfileAsync();
+                var row = (await ListPluginsAsync(inputs)).FirstOrDefault(row => row.EntryId == entryId) ??
                     throw new Refusal("unknown-plugin");
                 if (row.ReadOnlyReason is not null)
                     throw new Refusal(row.ReadOnlyReason);
-                await ProfileMaintenance.WriteEnabledAsync(PatchPath, row.PatchId!, row.ModuleName, enabled);
-                var warnings = await ReloadAsync(
+                string previous;
+                try
+                {
+                    previous = await inputs.ReadAsync(PatchPath);
+                }
+                catch (FileNotFoundException)
+                {
+                    previous = "[]\n";
+                }
+
+                var patch = ProfileMaintenance.WithEnabled(previous, row.PatchId!, row.ModuleName, enabled);
+                var candidate = await CreateCandidateAsync(
+                    inputs,
+                    ParseManifest(await inputs.ReadAsync(ManifestPath)),
+                    userPatch: patch);
+                await AdmitCandidateAsync(inputs, candidate);
+                if (patch != previous)
+                {
+                    await SaveUserPatchAsync(inputs, patch);
+                    await inputs.VerifyAsync(savedPatch: patch);
+                }
+
+                var warnings = await ApplyCandidateAsync(
+                    candidate,
                     enabled ? new HashSet<string>([row.PatchId!], StringComparer.Ordinal) : null);
                 var current = (await ListPluginsAsync()).FirstOrDefault(item => item.EntryId == entryId);
                 return (RunExclusiveAsync is not null && current?.Enabled != enabled ? "overridden" : null, warnings);
@@ -405,12 +447,14 @@ public sealed partial class PluginConfigurationOperations(
                         string.Equals(removed.Key, removed.Value(name), StringComparison.Ordinal))))
                     throw new Refusal("removed-package");
                 var inputs = await CaptureProfileAsync();
-                var manifest = PackageManifest.Read(ManifestPath);
+                var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
                 var previous = manifest.Bundles;
-                var info = await ReadBundleAsync(name);
+                var info = await ReadBundleAsync(name, inputs);
                 if ((enabled || !previous.Contains(name)) && info is null)
                     throw new Refusal("not-bundle");
-                if (!enabled && previous.Contains(name) && info is not null && ProtectsManager(info.Value.Patches))
+                if (!enabled && previous.Contains(name) && info is not null &&
+                    ProtectsManager(
+                        ComposedBundleRows(await CreateCandidateAsync(inputs, manifest), info.Value.Bundle.PatchPaths)))
                     throw new Refusal("management-required");
                 var next = enabled
                     ? previous.Concat(previous.Contains(name) ? [] : new[] { name }).ToArray()
@@ -424,7 +468,7 @@ public sealed partial class PluginConfigurationOperations(
                 }
 
                 var required = enabled && info is not null
-                    ? Flatten(Profiles.Compose([new("bundle", info.Value.Patches)]))
+                    ? ComposedBundleRows(candidate, info.Value.Bundle.PatchPaths)
                         .Select(row => row.Id)
                         .ToHashSet(StringComparer.Ordinal)
                     : null;
@@ -433,8 +477,20 @@ public sealed partial class PluginConfigurationOperations(
             cancellationToken);
 
     /// <summary>Read the effective raw configuration without modifying files or evaluating expressions.</summary>
-    public async Task<string> PreviewAsync(bool json = false) =>
-        Profiles.Preview((await ProfileComposition.RefreshAsync(launch)).Layers, json);
+    public async Task<string> PreviewAsync(bool json = false)
+    {
+        var inputs = await CaptureProfileAsync();
+        var refresh = await ProfileComposition.RefreshAsync(
+            inputs.Launch,
+            ParseManifest(await inputs.ReadAsync(ManifestPath)),
+            inputs.ReadAsync);
+        var baseRows = ConfigurationFile.ParseEntries(
+            await inputs.ReadAsync(include.Filename),
+            Path.GetExtension(include.Filename) == ".json");
+        var rows = EntryPatches.Apply(baseRows, ProfileComposition.Flatten(refresh.Layers));
+        await inputs.VerifyAsync();
+        return ConfigurationFile.Write(rows, json);
+    }
 
     private async Task<IReadOnlyList<EntryDiagnostic>> ReloadAsync(IReadOnlySet<string>? required)
     {
@@ -566,20 +622,55 @@ public sealed partial class PluginConfigurationOperations(
         return new(raw);
     }
 
-    private async Task<(PackageManifest Manifest, List<EntryOptions> Patches)?> ReadBundleAsync(string name)
+    private async Task<(PackageManifest Manifest, Bundle Bundle)?> ReadBundleAsync(string name, ProfileInputs inputs)
     {
         if (!launch.InstallationBundles.TryGetValue(name, out var directory) &&
             !(launch.LocalBundles?.TryGetValue(name, out directory) ?? false))
             throw new FileNotFoundException($"Cannot resolve bundle '{name}'.");
-        var manifest = PackageManifest.Read(Path.Combine(directory!, "package.json"));
+        var manifest = ParseManifest(await inputs.ReadAsync(Path.Combine(directory!, "package.json")));
         return manifest.HasBundleDeclaration
-            ? (manifest, (await Profiles.ReadBundleAsync(name, directory!, manifest)).Patches)
+            ? (manifest, await Profiles.ReadBundleAsync(name, directory!, manifest, inputs.ReadAsync))
             : null;
     }
 
-    private bool ProtectsManager(List<EntryOptions> patches) =>
-        Flatten(Profiles.Compose([new("bundle", patches)]))
+    private bool ProtectsManager(IEnumerable<EntryOptions> rows) =>
+        rows
             .Any(row => ProtectedModules.Contains(row.Name) || include.Owner?.Id + ":" + row.Id == ownerEntryId);
+
+    private static IEnumerable<EntryOptions> ComposedBundleRows(
+        ProfileCandidate candidate,
+        IReadOnlyList<string> sources)
+    {
+        var layers = candidate.Composition.Layers;
+        var owned = layers
+            .Where(layer => sources.Contains(layer.Source))
+            .SelectMany(layer => PatchObjects(layer.Patches))
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        var basis = ConfigurationFile.ParseEntries(
+            candidate.BaseText,
+            Path.GetExtension(candidate.BaseSource) == ".json");
+        var composed = EntryPatches.Apply(basis, layers.SelectMany(layer => layer.Patches).ToList());
+        return Flatten(composed).Where(owned.Contains);
+    }
+
+    private static IEnumerable<EntryOptions> PatchObjects(object? value)
+    {
+        if (value is EntryOptions row)
+        {
+            yield return row;
+            foreach (var child in row.Values.SelectMany(PatchObjects))
+                yield return child;
+        }
+        else if (value is IEnumerable<object?> values)
+            foreach (var child in values.SelectMany(PatchObjects))
+                yield return child;
+    }
+
+    private static IEnumerable<EntryOptions> InsertedRows(IEnumerable<EntryOptions> patches) =>
+        Flatten(
+            patches
+                .Where(patch => Data.Truthy(patch.GetValueOrDefault("insert")))
+                .SelectMany(patch => Data.Entries(patch["insert"])));
 
     private static IEnumerable<EntryOptions> Flatten(IEnumerable<EntryOptions> rows)
     {

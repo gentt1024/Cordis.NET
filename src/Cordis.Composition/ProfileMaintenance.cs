@@ -173,11 +173,24 @@ public static partial class ProfileMaintenance
             text = "[]\n";
         }
 
+        var edited = WithEnabled(text, id, name, enabled);
+        if (edited == text)
+            return false;
+        var temporary = filename + ".tmp-" + Guid.NewGuid().ToString("N");
+        await File.WriteAllTextAsync(temporary, edited);
+        if (!OperatingSystem.IsWindows())
+            File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        File.Move(temporary, filename, true);
+        return true;
+    }
+
+    internal static string WithEnabled(string text, string id, string name, bool enabled)
+    {
         var entries = ConfigurationFile.ParseEntries(text);
         var target = entries.FindLastIndex(row =>
             row.Id == id && !row.ContainsKey("insert") && (row.Name.Length == 0 || row.Name == name));
         if (target >= 0 && entries[target].Disabled is bool disabled && disabled == !enabled)
-            return false;
+            return text;
         var parser = new Parser(new StringReader(text));
         parser.Consume<StreamStart>();
         parser.Consume<DocumentStart>();
@@ -192,7 +205,7 @@ public static partial class ProfileMaintenance
                 text = text[..node.End] + ", disabled: " + scalar + text[node.End..];
             else
             {
-                var insertion = new string(' ', node.Column) + "disabled: " + scalar + "\n";
+                var insertion = new string(' ', node.Column - 1) + "disabled: " + scalar + "\n";
                 text = text[..node.End] + (node.End > 0 && text[node.End - 1] != '\n' ? "\n" : "") + insertion +
                     text[node.End..];
             }
@@ -214,12 +227,7 @@ public static partial class ProfileMaintenance
         }
 
         _ = ConfigurationFile.ParseEntries(text);
-        var temporary = filename + ".tmp-" + Guid.NewGuid().ToString("N");
-        await File.WriteAllTextAsync(temporary, text);
-        if (!OperatingSystem.IsWindows())
-            File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-        File.Move(temporary, filename, true);
-        return true;
+        return text;
     }
 
     /// <summary>Grants or revokes an exact DSH compatibility exemption, independently of manifest and patch files.</summary>

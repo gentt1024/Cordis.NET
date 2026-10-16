@@ -729,7 +729,9 @@ public sealed class HmrWatchTests
                 async () => refreshed.TrySetResult(await File.ReadAllTextAsync(target)),
                 refreshExisting: false);
             await File.WriteAllTextAsync(child, "sdk output");
-            await File.WriteAllTextAsync(target, "after");
+            var staged = Path.Combine(directory.FullName, "plugins.next");
+            await File.WriteAllTextAsync(staged, "after");
+            File.Move(staged, target, overwrite: true);
             Assert.Equal("after", await refreshed.Task.WaitAsync(TimeSpan.FromSeconds(5)));
             Assert.Equal(0, Volatile.Read(ref childReads));
         }

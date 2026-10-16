@@ -51,8 +51,11 @@ internal static class ClientEmitter
             "export type { RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters } from './cordis-remote.mjs';\n");
         var methods = new StringBuilder("export interface RemoteClient {\n  dispose(): Promise<void>;\n");
         var services = new Dictionary<string, StringBuilder>(StringComparer.Ordinal);
+        var codecs = new StringBuilder("export const resultCodecs = Object.freeze({\n");
+        var codecTypes = new StringBuilder("export declare const resultCodecs: {\n");
+        var predicates = new StringBuilder();
         var runtime = new StringBuilder(
-            "import { createClient, mountClient } from './cordis-remote.mjs';\n" +
+            "import { createClient, mountClient, createResultCodec, resultJson, resultObject, resultEqual } from './cordis-remote.mjs';\n" +
             "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
             "export function createRemote(connection) { return createClient(connection, [\n");
         var index = 0;
@@ -92,6 +95,18 @@ internal static class ClientEmitter
                     result,
                     descriptor.Result.Schema,
                     descriptor.IsStream ? null : descriptor.Result.ResultMetadata);
+            if (descriptor.Result.AcceptsUndefined && !descriptor.Result.IsVoid)
+                result += " | undefined";
+            var codecName = "result" + index;
+            var codec = ResultCodecEmitter.Generate(descriptor.Result, codecName, !descriptor.IsStream);
+            predicates.Append(codec.Source);
+            codecs.Append("  ").Append(Quote(descriptor.Endpoint)).Append(": ").Append(codecName).Append(",\n");
+            codecTypes
+                .Append("  readonly ")
+                .Append(Quote(descriptor.Endpoint))
+                .Append(": { readonly parse: (value: unknown) => ")
+                .Append(result)
+                .Append(" };\n");
             string? input = null;
             if (descriptor.Uplink is { } uplink)
             {
@@ -151,9 +166,10 @@ internal static class ClientEmitter
                 .Append(']')
                 .Append(
                     scopeKey is null
-                        ? ""
+                        ? ", undefined"
                         : ", [" + Quote(scopeKey) + ", " + Quote(scopeWire!) + ", " +
                         (descriptor.Invocation is null ? "true" : "false") + "]")
+                .Append(codec.HasBinary && !descriptor.IsStream ? ", " + codecName + ".parse" : "")
                 .Append("],\n");
         }
 
@@ -181,7 +197,9 @@ internal static class ClientEmitter
             "export function getRemote(ctx, namespace) { const service = ctx.get('remote.' + namespace); if (!service) throw new Error('Remote namespace is not mounted: ' + namespace); return service; }\n");
         methods.Append(
             "export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection, adapters?: RemoteContextAdapters): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
-        return new(runtime.ToString(), definitions.Append(methods).ToString());
+        return new(
+            runtime.Append(predicates).Append(codecs).Append("});\n").ToString(),
+            definitions.Append(codecTypes).Append("};\n").Append(methods).ToString());
     }
 
     private static string Arguments(List<string> fields) =>

@@ -1,4 +1,122 @@
-import { createRemote, mountRemote, getRemote, TypertConnection, RemoteError, type RemoteOwner, type RemoteCaller } from './shared.mjs'
+import { createRemote, mountRemote, getRemote, resultCodecs, TypertConnection, RemoteError, type RemoteOwner, type RemoteCaller } from './shared.mjs'
+
+export async function resultContracts(origin: string) {
+  let sends = 0
+  const connection = new TypertConnection(origin + '/remote', (input, init) => {
+    sends++
+    const headers = new Headers(init?.headers); headers.set('Authorization', 'consumer-policy')
+    return fetch(input, { ...init, headers })
+  })
+  const client = createRemote(connection)
+  const bytesCodec = resultCodecs['sharedData/bytes']
+  const attachmentsCodec = resultCodecs['sharedData/attachments']
+  const rejects = (parse: (value: unknown) => unknown, value: unknown) => {
+    let error: unknown
+    try { parse(value) } catch (caught) { error = caught }
+    check(error instanceof TypeError, 'Invalid decoded result was not rejected')
+  }
+  try {
+    const plain = resultCodecs['result/plainBytes']
+    const nested = resultCodecs['result/composedObject']
+    for (const value of [new Uint8Array([1, 2, 3]), new Uint8Array()]) {
+      check(plain.parse(value) === value && bytesCodec.parse(value) === value,
+        'Redundant non-null constraint rejected decoded bytes or changed their identity')
+      const wrapped = { Payload: value }
+      check(nested.parse(wrapped) === wrapped, 'Composed object contract rejected nested bytes or copied the result')
+    }
+    for (const invalid of [null, 'AQID', undefined]) {
+      rejects(plain.parse, invalid); rejects(bytesCodec.parse, invalid)
+    }
+    for (const invalid of [null, {}, { Payload: null }, { Payload: 'AQID' }, { Payload: undefined },
+      { Payload: new Uint8Array(), extra: new Uint8Array() }]) rejects(nested.parse, invalid)
+    const bytes = await client['sharedData/bytes']({})
+    check(bytes.ok, 'Real root bytes failed')
+    equal([...bytes.value], [0, 13, 10, 255], 'Root byte contents changed')
+    check(bytesCodec.parse(bytes.value) === bytes.value, 'Codec copied the original byte view')
+    const reply = await client['sharedData/attachments']({})
+    check(reply.ok, 'Real nested binary result failed')
+    const value = reply.value
+    equal([...value.items[0]], [0, 13, 10, 255], 'Nested bytes changed')
+    equal([...value.files['part/name']], [1, 2], 'Dictionary byte path changed')
+    check(value.text === 'AA0K/w==' && !Object.hasOwn(value, 'optional'), 'Output text or omission changed')
+    check(value.child?.payload instanceof Uint8Array && value.child.next?.payload.length === 0 &&
+      value.child.next.next === null, 'Recursive binary output changed')
+    const before = sends
+    check(attachmentsCodec.parse(value) === value, 'Reusable result codec changed the result identity')
+    attachmentsCodec.parse({ ...value, optional: null })
+    attachmentsCodec.parse({ ...value, optional: new Uint8Array() })
+    for (const invalid of [
+      { ...value, items: ['AA0K/w=='] }, { ...value, files: { bad: 'AQI=' } },
+      { ...value, child: { payload: new Uint8Array(), next: { payload: 'AA==', next: null } } },
+      { ...value, items: undefined }, { ...value, optional: undefined }, { ...value, text: new Uint8Array() },
+      { files: value.files, text: value.text, child: null },
+    ]) rejects(attachmentsCodec.parse, invalid)
+    for (const invalid of ['AA0K/w==', null, undefined]) rejects(bytesCodec.parse, invalid)
+    check(resultCodecs['sharedData/nullable'].parse(null) === null, 'Explicit null was not retained')
+    rejects(resultCodecs['sharedData/nullable'].parse, undefined)
+    check(resultCodecs['sharedData/acknowledge'].parse(undefined) === undefined, 'Void lost absence')
+    rejects(resultCodecs['sharedData/acknowledge'].parse, null)
+    const optional = resultCodecs['result/optional']
+    check(optional.parse(undefined) === undefined && optional.parse(null) === null, 'Optional result lost absence or null')
+    check(optional.parse('text') === 'text', 'Optional result lost its declared value')
+    rejects(optional.parse, new Uint8Array())
+    const encoded = resultCodecs['result/encodedText']
+    check(encoded.parse('AQID') === 'AQID', 'Base64 annotation changed a string into bytes')
+    rejects(encoded.parse, new Uint8Array([1, 2, 3]))
+    const literal = resultCodecs['result/literal']
+    literal.parse(new Uint8Array([1, 2, 3])); literal.parse(null)
+    for (const invalid of [new Uint8Array([1, 2, 4]), new Uint8Array(), 'AQID', undefined]) rejects(literal.parse, invalid)
+    check(sends === before, 'Independent codec use sent a request')
+    check(Object.isFrozen(resultCodecs) && Object.isFrozen(bytesCodec), 'Result codecs are mutable')
+  } finally { await client.dispose(); await connection.dispose() }
+
+  // The same generated caller must check a reconstructed result, not just its carrier.
+  for (const mode of ['wrong-string', 'missing-part', 'good-bytes', 'good-object', 'bad-object', 'cancelled', 'withdrawn', 'remote-error', 'ordinary-json']) {
+    const abort = new AbortController()
+    let disposal: Promise<void> | undefined
+    const injected = new TypertConnection(origin + '/remote', async (_input, init) => {
+      const { rpcId } = JSON.parse(String(init?.body))
+      const envelope = { type: 'server-response', rpcId, result: { ok: true, value: 'AA0K/w==' } }
+      if (mode === 'cancelled') abort.abort(new Error('cancel before result validation'))
+      if (mode === 'withdrawn') disposal = caller.dispose()
+      if (mode === 'remote-error') return Response.json({ ...envelope,
+        result: { ok: false, error: { code: 'example/rejected', message: 'business refusal', details: {} } } })
+      if (mode === 'good-bytes' || mode === 'good-object' || mode === 'missing-part') {
+        const form = new FormData()
+        form.set('metadata', JSON.stringify({ ...envelope, result: { ok: true, value: mode === 'good-object' ? { Payload: null } : null },
+          attachments: [{ codec: 'bytes', part: 'bytes', path: mode === 'good-object' ? ['Payload'] : [] }] }))
+        if (mode !== 'missing-part') form.set('bytes', new Blob([new Uint8Array([0, 255])]))
+        return new Response(form)
+      }
+      if (mode === 'bad-object') return Response.json({ ...envelope, result: { ok: true, value: { Payload: 'AP8=' } } })
+      if (mode === 'ordinary-json') return Response.json({ ...envelope, result: { ok: true, value: 42 } })
+      return Response.json(envelope)
+    })
+    const caller = createRemote(injected)
+    try {
+      const reply = mode === 'ordinary-json'
+        ? await caller['sharedData/nullable']({})
+        : mode === 'good-object' || mode === 'bad-object' ? await caller['result/composedObject']({})
+        : await caller['sharedData/bytes']({}, abort.signal)
+      if (mode === 'good-bytes') {
+        check(reply.ok && reply.value instanceof Uint8Array, 'Valid multipart failed decoding')
+      } else if (mode === 'good-object') {
+        check(reply.ok && object(reply.value) && reply.value.Payload instanceof Uint8Array,
+          'Composed nested result rejected a valid multipart response')
+      } else if (mode === 'ordinary-json') {
+        check(reply.ok, 'Ordinary JSON acquired a new automatic validation policy')
+        rejects(resultCodecs['sharedData/nullable'].parse, reply.value)
+      } else {
+        check(!reply.ok && reply.error instanceof RemoteError, 'Invalid or failed result escaped the standard outcome')
+        const code = mode === 'remote-error' ? 'example/rejected'
+          : mode === 'cancelled' ? 'gateway/cancelled' : 'gateway/internal'
+        check(reply.error.code === code, 'Result validation replaced the established error boundary')
+        if (mode === 'wrong-string' || mode === 'bad-object') check(reply.error.cause instanceof TypeError, 'Decoder error cause was lost')
+        if (mode === 'withdrawn') check(reply.error.message.includes('withdrawn'), 'Withdrawal did not precede decoding')
+      }
+    } finally { await caller.dispose(); await disposal; await injected.dispose() }
+  }
+}
 
 function check(value: unknown, reason: string): asserts value { if (!value) throw new Error(reason) }
 function equal(actual: unknown, expected: unknown, reason: string) { check(JSON.stringify(actual) === JSON.stringify(expected), reason) }
@@ -13,6 +131,7 @@ export async function run(origin: string, socketOrigin: string, createContext: (
   const client = createRemote(connection)
   const signal = AbortSignal.timeout(15000)
   try {
+    await resultContracts(origin)
     await scopedCalls(origin, socketOrigin, createContext)
     const text = client['sharedData/inputText']({ prefix: 'ts:' }, signal)
     text.send('first'); text.send('second'); text.end(); text.end()

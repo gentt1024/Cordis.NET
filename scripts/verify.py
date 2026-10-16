@@ -290,6 +290,7 @@ def main():
         run("client-modules-build", ["node", "scripts/build-client-modules.mjs", client_artifacts])
         run("client-modules-types", ["node", "scripts/verify-client-module-types.mjs", client_artifacts])
         run("client-lifecycle", ["node", "scripts/verify-client-lifecycle.mjs", client_artifacts])
+        run("client-replacement", ["node", "scripts/verify-client-replacement.mjs", client_artifacts, OUT / "client-replacement"])
         run("client-shared-modules", ["node", "scripts/verify-client-shared-modules.mjs", client_artifacts])
         run("client-author-watch", ["node", "scripts/verify-client-author-watch.mjs"])
         cli = ["dotnet", ROOT / "tools/Cordis.Cli/bin/Release/net10.0/Cordis.Cli.dll"]

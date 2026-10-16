@@ -446,6 +446,8 @@ public sealed class Entry
         set;
     }
 
+    internal bool IsRemoving => Removing || Parent.Owner?.IsRemoving is true;
+
     internal bool IsTreeCarrier
     {
         get;
@@ -813,7 +815,7 @@ public sealed class Loader : EntryTree
                     return null;
                 if (fiber.Uid is null)
                 {
-                    if (roots.Remove(fiber) && !entry.Removing && !entry.Disabled &&
+                    if (roots.Remove(fiber) && !entry.IsRemoving && !entry.Disabled &&
                         entry.Parent.Tree.Context.Fiber.State is not (FiberState.Unloading or FiberState.Disposed))
                     {
                         entry.Options.Disabled = true;

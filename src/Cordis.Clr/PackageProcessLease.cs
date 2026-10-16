@@ -93,7 +93,7 @@ internal sealed class PackageProcessLease(string path)
 
     internal void Finish(bool pipesDrained)
     {
-        if (!pipesDrained || grouped && OperatingSystem.IsLinux() && Kill(-pid, 0) == 0 ||
+        if (!pipesDrained || grouped && OperatingSystem.IsLinux() && GroupAlive(pid) ||
             OperatingSystem.IsWindows() && (windowsJob is null || WindowsPackageProcess.IsAlive(windowsJob)))
         {
             // Keep ambiguous Windows descendants or a remaining POSIX group visible to a successor.
@@ -118,7 +118,7 @@ internal sealed class PackageProcessLease(string path)
         }
 
         if (processGroup && OperatingSystem.IsLinux())
-            return Kill(-processId, 0) == 0 || Marshal.GetLastPInvokeError() == 1;
+            return GroupAlive(processId);
         try
         {
             using var process = Process.GetProcessById(processId);
@@ -128,6 +128,50 @@ internal sealed class PackageProcessLease(string path)
         {
             return false;
         }
+    }
+
+    private static bool GroupAlive(int processGroup)
+    {
+        if (Kill(-processGroup, 0) != 0 && Marshal.GetLastPInvokeError() == 3)
+            return false;
+        var observed = false;
+        try
+        {
+            foreach (var directory in Directory.EnumerateDirectories("/proc"))
+            {
+                if (!int.TryParse(Path.GetFileName(directory), out _))
+                    continue;
+                string stat;
+                try
+                {
+                    stat = File.ReadAllText(Path.Combine(directory, "stat"));
+                }
+                catch (FileNotFoundException)
+                {
+                    continue;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    continue;
+                }
+
+                var fields = stat[(stat.LastIndexOf(')') + 1)..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (fields.Length < 18 || !int.TryParse(fields[2], out var group))
+                    return true;
+                if (group != processGroup)
+                    continue;
+                observed = true;
+                // kill(0) also finds unreaped zombies. A dead leader with other threads is still unsafe.
+                if (fields[0] is not ("Z" or "X") || fields[17] != "1")
+                    return true;
+            }
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return true;
+        }
+
+        return !observed && (Kill(-processGroup, 0) == 0 || Marshal.GetLastPInvokeError() != 3);
     }
 
     [DllImport("libc", EntryPoint = "kill", SetLastError = true)]

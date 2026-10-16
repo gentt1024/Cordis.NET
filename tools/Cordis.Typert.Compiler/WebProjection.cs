@@ -237,7 +237,8 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
         {
             if (reference.Kind == "nullable")
                 return Nullable(Read(reference.Arguments.Single()));
-            if (reference.Nullability == "None" && reference.Kind is "named" or "array" or "collection")
+            if (reference.Nullability == "None" && !IsEnum(reference) &&
+                reference.Kind is "named" or "array" or "collection")
                 throw Refuse("Oblivious reference annotation: " + reference.Name);
             JsonObject value;
             switch (reference.Kind)
@@ -325,8 +326,16 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
             return reference.Nullability == "Annotated" ? Nullable(value) : value;
         }
 
+        bool IsEnum(NativeTypeReference reference) => reference.Kind == "named" &&
+            types[reference.Name].Enumeration is not null;
+
         JsonObject Object(NativeTypeDeclaration type)
         {
+            if (type.Enumeration is not null)
+                return new()
+                {
+                    ["type"] = "integer"
+                };
             if (type.Constructors.Any(value => value.SetsRequiredMembers))
                 throw Refuse(
                     "SetsRequiredMembers constructor semantics require a further schema projection: " + type.Id);
@@ -376,7 +385,7 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                 properties.Add(member.WireName, property);
                 var condition = ignore is null ? Option("DefaultIgnoreCondition", "0") : Named(ignore, "Condition");
                 var canOmit = condition == "2" || condition == "3" &&
-                    (member.Type.Kind is "nullable" or "named" or "array" or "collection" ||
+                    (!IsEnum(member.Type) && member.Type.Kind is "nullable" or "named" or "array" or "collection" ||
                         member.Type.Name == "System_String");
                 if (output
                         ? !canOmit
