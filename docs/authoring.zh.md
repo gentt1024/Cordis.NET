@@ -253,6 +253,20 @@ File.WriteAllText("echo-result.schema.json", resultCodec.ResultSchema.GetRawText
 
 应用决定何时校验以及失败后如何处理，包括先记录业务接受事实、再校验结果。为此读取或导出同一输出合同，不以输入 Schema、DTO 反射或手写规则代替。读取属性不新增 Gateway 结果校验，也不改变接受、取消、回复或清理顺序。
 
+对于 TypeScript Connection 已还原的值，从生成模块导入可执行的输出合同：
+
+```typescript
+import { resultCodecs } from "./remote.mjs";
+
+const output = resultCodecs["sample/Echo"].parse(decodedValue);
+```
+
+使用实际声明的 endpoint，并传入应用取得的 `unknown` 值。`parse` 返回同一个值及生成的输出类型，不匹配时抛出 `TypeError`。它不发送请求、不复制对象或字节视图，也不拥有资源。map 和 codec 对象均被冻结。生成、部署模块时，应使用与其配套的 `cordis-remote.mjs` 运行时。
+
+codec 保留输出字段、必填性、省略、null、可选顶层 `undefined`、数组、string-key 字典和本地递归引用。可选字段可以不存在，显式 `undefined` 不等于 JSON null 或省略字段。默认二进制 metadata 接受包括空字节在内的 `Uint8Array`，而非序列化字符串；普通字符串和自定义 converter 输出保留其 JSON 表示。受支持的常量、联合、数值和集合约束由 emitter 使用的同一有界 Schema 编译。不支持的关键字或 pattern 在生成时拒绝。format 注解沿用既有 Schema 政策，不变成通用格式校验；递归判定限制为 256 层。保存模型的 binary metadata 仍明确拒绝，支持面不扩大。
+
+生成式 unary 调用只对二进制结果自动执行该 codec，顺序在附件还原和既有取消／撤销检查之后。无效值转为 `RemoteResult` 失败，code 为 `gateway/internal`，保留原本地 `TypeError` cause。普通 JSON 结果和流条目不增加自动业务校验。应用可在自行选择的校验边界独立使用导出 codec。这不提供 multipart 还原前的接受观察入口；若还原或 strict 二进制解码失败，应由应用通过请求身份和回执恢复消解未知结果。
+
 ```typescript
 import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";
 

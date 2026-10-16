@@ -253,6 +253,20 @@ Access preserves lazy projection and precise `NotSupportedException` diagnostics
 
 Applications choose when to validate and how to handle failure, including recording business acceptance before validation. Read or export this schema for that purpose; do not substitute input Schema, reflect DTOs or duplicate the output rules. Reading the property adds no Gateway result validation and changes no acceptance, cancellation, reply or cleanup ordering.
 
+For values already reconstructed by the TypeScript Connection, import the executable output contract from the generated module:
+
+```typescript
+import { resultCodecs } from "./remote.mjs";
+
+const output = resultCodecs["sample/Echo"].parse(decodedValue);
+```
+
+Use your declared endpoint and an `unknown` value obtained by your application. `parse` returns the same value with the generated output type, or throws `TypeError`. It sends no request, clones no objects or byte views, and owns no resources. The map and its codec objects are frozen. Generate and deploy the module with its matching `cordis-remote.mjs` runtime.
+
+The codec preserves output properties, requiredness, omission, null, optional top-level `undefined`, arrays, string-key dictionaries and local recursive references. An optional property may be absent; explicit `undefined` is not JSON null or an omitted field. Default binary metadata admits `Uint8Array`, including empty bytes, instead of its serialized string. Ordinary strings and custom-converter outputs retain their JSON representation. Supported literal, union, numeric and collection constraints are compiled from the same bounded schema used by the emitter. Unsupported keywords or patterns refuse generation. Format annotations retain the existing schema policy, rather than acquiring general format validation; recursive predicate evaluation is bounded to 256 levels. Saved-model binary metadata remains unsupported and explicitly refused.
+
+Generated unary callers automatically use this codec for binary results, after attachment recovery and the existing cancellation/withdrawal checks. Invalid values become `RemoteResult` failures with code `gateway/internal` and the original local `TypeError` cause. Ordinary JSON results and stream items acquire no automatic business validation. Applications can use the exported codec independently at their chosen validation boundary. This does not expose acceptance before multipart reconstruction: if reconstruction or strict binary decoding fails, use the application's request identity and receipt recovery to resolve the unknown outcome.
+
 ```typescript
 import { createRemote, mountRemote, TypertConnection } from "./remote.mjs";
 

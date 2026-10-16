@@ -26,7 +26,9 @@ Bundle 保护和激活要求对捕获的 base 与有序候选层调用现有补�
 
 输出 JSON 的字段存在性在原生读取之前由 ResultSchema 校验。输出 metadata modifier 只为存在 setter 的成员保留必填写入，只有 getter 的值遵循作者的原生 STJ 构造方式。构造参数的必填性仍由输出投影决定，条件省略的输出不会重新获得输入侧的必填要求。原生输入 metadata 和输出 Schema 生成不变。这是纠正此前 adapter 建立的 required 但不可反序列化 metadata，不是绕过 STJ 对只读 DTO 的固有限制。
 
-当前生成的 TypeScript unary 客户端检查载体封套和附件结构，恢复二进制值后才返回 `RemoteResult`。它没有针对解码后业务值的可执行校验器，也没有在附件解码前暴露结果信封的分阶段结果 API。`ResultSchema` 描述附件提取前的 JSON 输出，其中默认 `byte[]` 是 base64 字符串；它不能直接校验恢复后的 `Uint8Array` 或 multipart 占位值。生成的 TypeScript 声明只提供静态类型。复用输出合同校验解码后的值，或将接受事实的观察与完整解码分开，仍是未闭合的消费边界。应用的接受与回执权威继续由应用持有。
+生成的 TypeScript 模块公开只读 `resultCodecs[endpoint].parse(value)`，校验解码后的输出值。共享 emitter 将现有输出投影与实际序列化 metadata 编译成判定函数；运行时 descriptor 导出和受支持的保存模型投影使用同一个 emitter。只有实际的默认 `byte[]` metadata 映射为 `Uint8Array`，base64 注解或自定义 converter 不构成附件身份。`ResultSchema` 继续描述附件提取前的 JSON，与解码后的可执行合同各有明确表示。
+
+固定 DSH 的[客户端调用](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts) 在 Connection 还原和取消检查后，执行已提供的 strict 结果 decoder。本 .NET port 的生成式 TypeScript unary 调用同样只对带二进制 metadata 的结果自动执行解码值 codec。不匹配转为 `gateway/internal`，保留本地 `TypeError` cause。Remote 错误、取消与撤销维持既有顺序及结果。普通 JSON 结果保留既有自动校验政策，应用可显式调用导出的 codec；流条目政策不变。不新增附件还原前的分阶段接受 API，固定 DSH 也先等待 Connection 还原。接受、未知结果与回执恢复仍由应用负责。支持的投影和独立用法见[作者指南](authoring.zh.md)。
 
 ## scoped .NET caller 适配，2026-10-11
 

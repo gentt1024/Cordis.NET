@@ -48,7 +48,23 @@ public sealed class SharedEnvelope
     }
 }
 
-public sealed record SharedAttachments(byte[][] Items, Dictionary<string, byte[]> Files, string Text);
+public sealed record SharedAttachments(byte[][] Items, Dictionary<string, byte[]> Files, string Text)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public byte[]? Optional
+    {
+        get;
+        init;
+    }
+
+    public SharedAttachmentNode? Child
+    {
+        get;
+        init;
+    }
+}
+
+public sealed record SharedAttachmentNode(byte[] Payload, SharedAttachmentNode? Next);
 
 [RemoteService("sharedData", typeof(SharedRemoteJson))]
 [ArrayLabels("null", null, Types = null)]
@@ -130,7 +146,10 @@ public partial class SharedRemote
                 ["part/name"] = [1, 2],
                 ["empty"] = []
             },
-            "AA0K/w=="));
+            "AA0K/w==")
+        {
+            Child = new([4, 5], new([], null))
+        });
 
     [RemoteMethod("acknowledge")]
     public Task AcknowledgeAsync() => Task.CompletedTask;

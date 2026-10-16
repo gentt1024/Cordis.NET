@@ -1,4 +1,4 @@
-import { createRemote, TypertConnection, type RemoteClient } from './remote.mjs'
+import { createRemote, resultCodecs, TypertConnection, type RemoteClient } from './remote.mjs'
 
 type Revision = Parameters<RemoteClient['webContract/revision']>[0]
 const omitted: Revision = {}
@@ -17,6 +17,12 @@ const valid: Direction = { value: { Count: 1, GlobalCount: 1, Value: 'input', Ou
 const invalidInput: Direction = { value: { Count: 1, GlobalCount: 1, Value: null, OutputNullable: 'input' } }
 function checkOutput(result: Awaited<ReturnType<RemoteClient['webContract/direction']>>) {
   if (!result.ok) throw result.error
+  if (resultCodecs['webContract/direction'].parse(result.value) !== result.value)
+    throw new Error('Saved-model codec changed the directional output')
+  let rejected = false
+  try { resultCodecs['webContract/direction'].parse({ ...result.value, Always: undefined }) }
+  catch (error) { rejected = error instanceof TypeError }
+  if (!rejected) throw new Error('Saved-model codec lost required output presence')
   // @ts-expect-error A conditional write can omit Count.
   const requiredCount: number = result.value.Count
   // @ts-expect-error The global write condition can omit GlobalCount.
