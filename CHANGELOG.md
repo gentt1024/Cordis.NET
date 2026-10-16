@@ -1,8 +1,18 @@
 # Changelog
 
-## [0.2.0-alpha.5]
+## [0.2.0-alpha.5.1]
 
-Release validation candidate. Public NuGet publication has not occurred.
+Corrected release candidate. Publication and exact artifact identities are recorded in the matching GitHub release.
+
+- Corrected nested management reads and writes to use the mounted application's ordered base and patch facts, preserving bundle ownership during withdrawal and complete-candidate admission before enablement.
+- Preserved nullable enum identity and defaults across common .NET/Web model projections; Linux package ownership now distinguishes terminated descendants from live process members.
+- Added generated `resultCodecs[endpoint].parse(value)` for reusing the decoded output contract. Strict binary unary callers validate reconstructed attachments while preserving cancellation, withdrawal and local error causes. Composed Schema constraints no longer reject valid metadata-backed bytes.
+- Corrected explicit browser target synchronization after failed activation. A requested earlier target loads that target; retry uses the current target. This bounded fixed-upstream patch does not add automatic rollback of application state.
+- Carries the alpha.5 capabilities below under a new package, browser archive and tag identity. The original alpha.5 tag and sealed artifacts remain unchanged and must not be published.
+
+## [0.2.0-alpha.5] - Not published
+
+Sealed validation candidate, superseded by `0.2.0-alpha.5.1` before publication.
 
 - Unified ordinary, Remote and event declarations in the common model, with explicit references and supported independent .NET/Web generation through normal build, pack and design-time inputs.
 - Added shared unary/multipart and WebSocket mux clients, scoped Context/Peer routing, owned resources and typed event listeners with explicit cancellation and disposal.

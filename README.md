@@ -20,7 +20,7 @@ Optional Hosting integrates Microsoft Generic Host. Extensions provides selected
 
 ## Select a package batch
 
-This source selects `0.2.0-alpha.5` for release validation; public NuGet publication has not occurred. Consume that exact version from its matching validated feed when available. Published alpha.4 does not contain these changes. [Current support and release status](docs/development.md#current-support-and-release-status) separates implemented capabilities, known limits and pending decisions; [validation](docs/validation.md#current-candidate-index) identifies the actual tested packages.
+This source targets `0.2.0-alpha.5.1`. Use the exact package version and distribution listed in the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.1); a source version alone does not establish NuGet availability. The earlier alpha.5 archive is superseded and must not be published. Published alpha.4 does not contain these changes. [Current support and release status](docs/development.md#current-support-and-release-status) separates implemented capabilities, known limits and pending decisions; [validation](docs/validation.md#current-candidate-index) identifies the actual tested packages.
 
 Follow [getting started](docs/getting-started.md) to install the selected batch and run without cloning the repository. To explore the same composition workflow from source with the SDK in global.json:
 

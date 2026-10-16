@@ -2,11 +2,11 @@
 
 [English](publication-readiness.md)
 
-当前在 PR #16 已审实现基础上选择 `0.2.0-alpha.5` 进行正式版本验证。选定 tag 为 `v0.2.0-alpha.5`，以 `publish=false` 运行现有发行流程。两平台必须验证这份精确源码与包批次，再封存八个白名单包及匹配符号。公开发布尚未获授权，也未执行。此前实现检查、外部应用反馈及已接纳的 HMR 冷准备风险保留各自[验证身份](validation.zh.md#当前候选索引)。
+修正版在已接纳的 PR #18 实现基础上选择 `0.2.0-alpha.5.1`。维护者已于 2026-10-16 授权 squash 合并及后续发行管理。现有发行流程选择 `v0.2.0-alpha.5.1` 并使用 `publish=true`：两平台验证精确 tag 源码与包批次，封存八个白名单包及匹配符号，再由现有 `nuget-production` 环境门禁控制发布。原 `v0.2.0-alpha.5` tag 和封存字节保持不变，不得发布。此前实现检查、外部应用反馈及已接纳的 HMR 冷准备风险保留各自[验证身份](validation.zh.md#当前候选索引)。
 
 当前源码树是可供审查的公开源码快照，包含文档、包元数据、每包 README、社区模板、公开验证摘要、许可材料和本地发布检查。
 
-仓库及包元数据固定为 `gentt1024/Cordis.NET`。已发布 alpha.3 和 alpha.4 包及其 tag 保持不变。源码版本为 `0.2.0-alpha.5`，选定新的验证身份不代表 NuGet 已可获取。此前标记 alpha.4 的 CI 制品及本地候选包不得改名或替代正式批次。Cordis.NET 版本独立于固定 DSH tag。最终版本提交、tag 与验过的包／符号哈希必须对应。
+仓库及包元数据固定为 `gentt1024/Cordis.NET`。已发布 alpha.3 和 alpha.4 包及其 tag 保持不变。源码版本为 `0.2.0-alpha.5.1`，选定新的验证身份不代表 NuGet 已可获取。此前标记 alpha.4 的 CI 制品及本地候选包不得改名或替代正式批次。Cordis.NET 版本独立于固定 DSH tag。最终版本提交、tag 与验过的包／符号哈希必须对应。
 
 安装协调实现通过 [PR #9 的 Windows/Linux 验证](https://github.com/gentt1024/Cordis.NET/actions/runs/37601516995)，包括作者合同和包检查。这些版本号为 alpha.3 的验证包仅证明该实现，不证明后续发布批次。当前源码证据见[验证记录](validation.zh.md)，未来每个版本化候选须生成自己的包及配对符号包。发行说明与回调迁移要求见[变更记录](../CHANGELOG.md)，数值 Settings 的直接修正另有[消费迁移指南](settings-contract-migration.zh.md)。
 

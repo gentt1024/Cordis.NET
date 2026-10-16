@@ -4,7 +4,7 @@
 
 ## 当前支持与发行状态
 
-当前源码选择 `0.2.0-alpha.5` 进行发行验证，尚未公开发布到 NuGet。[验证索引](validation.zh.md#当前候选索引)记录验过的源码与包；[发行准备](publication-readiness.zh.md)负责发行门禁。下方历史检查点描述各自时点，不定义当前剩余工作。
+当前源码对应 `0.2.0-alpha.5.1`，[匹配发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.1)记录分发与发布结果。原 alpha.5 封存保留为历史记录，不再作为发布候选。[验证索引](validation.zh.md#当前候选索引)记录验过的源码与包；[发行准备](publication-readiness.zh.md)负责发行门禁。下方历史检查点描述各自时点，不定义当前剩余工作。
 
 | 范围 | 当前用法与边界 |
 |---|---|
