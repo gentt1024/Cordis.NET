@@ -28,6 +28,8 @@ Bundle 保护和激活要求对捕获的 base 与有序候选层调用现有补�
 
 生成的 TypeScript 模块公开只读 `resultCodecs[endpoint].parse(value)`，校验解码后的输出值。共享 emitter 将现有输出投影与实际序列化 metadata 编译成判定函数；运行时 descriptor 导出和受支持的保存模型投影使用同一个 emitter。只有实际的默认 `byte[]` metadata 映射为 `Uint8Array`，base64 注解或自定义 converter 不构成附件身份。`ResultSchema` 继续描述附件提取前的 JSON，与解码后的可执行合同各有明确表示。
 
+解码值的表示检查与 Schema 布尔约束分别执行。固定 DSH 的[生成器](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts) 用 `z.intersection` 组合类型合同，用 `z.instanceof(Uint8Array)` 表达字节；.NET emitter 在 metadata 适配后的值上表达既有 JSON Schema 约束。`allOf` 中冗余的 `not: { type: "null" }` 不得对 metadata 已确定的字节重新施加纯 JSON 限制，嵌套字节同样如此。JSON-only 位置仍拒绝 typed array，组合约束不扩大其表示范围。这修正了结果 emitter 的判定组合，不改变固定 DSH 的 strict decoder 政策或公开 codec 合同。
+
 固定 DSH 的[客户端调用](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts) 在 Connection 还原和取消检查后，执行已提供的 strict 结果 decoder。本 .NET port 的生成式 TypeScript unary 调用同样只对带二进制 metadata 的结果自动执行解码值 codec。不匹配转为 `gateway/internal`，保留本地 `TypeError` cause。Remote 错误、取消与撤销维持既有顺序及结果。普通 JSON 结果保留既有自动校验政策，应用可显式调用导出的 codec；流条目政策不变。不新增附件还原前的分阶段接受 API，固定 DSH 也先等待 Connection 还原。接受、未知结果与回执恢复仍由应用负责。支持的投影和独立用法见[作者指南](authoring.zh.md)。
 
 ## scoped .NET caller 适配，2026-10-11

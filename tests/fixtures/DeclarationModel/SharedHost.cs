@@ -93,11 +93,42 @@ server.UseWebSockets();
 var shared = SharedRemoteTypert.Contribution("IndependentData.Provider");
 using var encodedString = System.Text.Json.JsonDocument.Parse("""{"type":"string","contentEncoding":"base64"}""");
 using var binaryLiteral = System.Text.Json.JsonDocument.Parse("""{"enum":["AQID",null]}""");
+using var composedBytes = System.Text.Json.JsonDocument.Parse(
+    """
+    {"allOf":[{"type":"string"},{"not":{"type":"null"}}]}
+    """);
+using var composedObject = System.Text.Json.JsonDocument.Parse(
+    """
+    {"allOf":[{"type":"object","properties":{"Payload":{"type":"string"}},"required":["Payload"]},{"not":{"type":"null"}},{"type":"object"}]}
+    """);
+var bytesResult = TypertCodec.Create(ResultJson.Default.ByteArray, schema: composedBytes.RootElement);
+var objectResult = TypertCodec.Create(ResultJson.Default.ResultBytes, schema: composedObject.RootElement);
+foreach (var bytes in new byte[][] { [1, 2, 3], [] })
+{
+    if (!((byte[])bytesResult.DecodeOutput(bytesResult.Encode(bytes))!).SequenceEqual(bytes) ||
+        !((ResultBytes)objectResult.DecodeOutput(objectResult.Encode(new ResultBytes(bytes)))!).Payload.SequenceEqual(
+            bytes))
+        throw new Exception("Composed native output contract rejected valid bytes.");
+}
+
 var clientArtifact = TypertArtifacts.GenerateClient(
     new(
         "IndependentData.Provider",
         [
-            .. shared.Invocations,
+            .. shared.Invocations.Select(method => method.Endpoint == "sharedData/bytes"
+                ? method with
+                {
+                    Result = bytesResult
+                }
+                : method),
+            new(
+                "result#plainBytes",
+                "result",
+                "result",
+                "plainBytes",
+                [],
+                TypertCodec.Create(ResultJson.Default.ByteArray)),
+            new("result#composedObject", "result", "result", "composedObject", [], objectResult),
             new(
                 "result#optional",
                 "result",
@@ -147,5 +178,8 @@ internal partial class ExportedSchemaJson : System.Text.Json.Serialization.JsonS
 #else
 [System.Text.Json.Serialization.JsonSerializable(typeof(byte[]))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(string))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(ResultBytes))]
 internal partial class ResultJson : System.Text.Json.Serialization.JsonSerializerContext;
+
+internal sealed record ResultBytes(byte[] Payload);
 #endif

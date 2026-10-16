@@ -14,8 +14,45 @@ internal static class ResultCodecEmitter
         var source = new StringBuilder();
         var nodes = new Dictionary<(string, JsonTypeInfo?), string>();
         var pending = new Queue<(string Name, JsonElement Schema, JsonTypeInfo? Metadata)>();
+        var domains = new Dictionary<JsonTypeInfo, string>();
+        var domainQueue = new Queue<(string Name, JsonTypeInfo Metadata)>();
         var hasBinary = false;
-        var root = codec.IsVoid ? "false" : Call(codec.Schema, binaryResults ? codec.ResultMetadata : null);
+        var metadata = binaryResults ? codec.ResultMetadata : null;
+        var root = codec.IsVoid ? "false" : Domain(metadata) + " && " + Call(codec.Schema, metadata);
+        while (domainQueue.TryDequeue(out var domain))
+        {
+            var native = domain.Metadata;
+            string expression;
+            if (ClientMetadata.IsBinary(native))
+            {
+                expression = "v === null || v instanceof Uint8Array";
+            }
+            else
+            {
+                var properties = native.Kind == JsonTypeInfoKind.Object
+                    ? native.Properties.Select(property =>
+                        "k === " + Quote(property.Name) + " ? " + Domain(
+                            ClientMetadata.Property(native, property.Name),
+                            "v[k]") + " : ")
+                    : [];
+                var members = string.Concat(properties) + Domain(
+                    native.Kind == JsonTypeInfoKind.Dictionary ? Element(native) : null,
+                    "v[k]");
+                expression = "v === null || typeof v === 'string' || typeof v === 'boolean' || " +
+                    "(typeof v === 'number' && Number.isFinite(v)) || " +
+                    "(Array.isArray(v) && Array.from({length:v.length},(_,i) => i).every(i => Object.hasOwn(v,i) && " +
+                    Domain(native.Kind == JsonTypeInfoKind.Enumerable ? Element(native) : null, "v[i]") + ")) || " +
+                    "(resultObject(v) && Object.keys(v).every(k => " + members + "))";
+            }
+
+            source
+                .Append("function ")
+                .Append(domain.Name)
+                .Append("(v,d) { return d <= 256 && (")
+                .Append(expression)
+                .Append("); }\n");
+        }
+
         while (pending.TryDequeue(out var item))
         {
             var expression = Predicate(item.Schema, item.Metadata);
@@ -40,6 +77,21 @@ internal static class ResultCodecEmitter
             .Append(");\n");
         return new(source.ToString(), hasBinary);
 
+        // Representation is checked once per value, outside the Boolean schema algebra.
+        string Domain(JsonTypeInfo? native, string value = "v")
+        {
+            if (native is null || (!ClientMetadata.IsBinary(native) && native.Kind == JsonTypeInfoKind.None))
+                return "resultJson(" + value + ",d+1)";
+            if (!domains.TryGetValue(native, out var function))
+            {
+                function = name + "Domain" + domains.Count;
+                domains.Add(native, function);
+                domainQueue.Enqueue((function, native));
+            }
+
+            return function + "(" + value + ",d+1)";
+        }
+
         string Call(JsonElement node, JsonTypeInfo? metadata, string value = "v")
         {
             var key = (node.GetRawText(), metadata);
@@ -60,12 +112,7 @@ internal static class ResultCodecEmitter
             if (node.ValueKind == JsonValueKind.False)
                 return "false";
             if (node.ValueKind == JsonValueKind.True)
-            {
-                if (!ClientMetadata.IsBinary(metadata))
-                    return "resultJson(v,d)";
-                hasBinary = true;
-                return "v instanceof Uint8Array";
-            }
+                return "true";
 
             if (node.ValueKind != JsonValueKind.Object)
                 throw new NotSupportedException("Invalid output codec schema.");
@@ -182,7 +229,7 @@ internal static class ResultCodecEmitter
                     ")");
             var additional = node.TryGetProperty("additionalProperties", out var extra)
                 ? Call(extra, metadata?.Kind == JsonTypeInfoKind.Dictionary ? Element(metadata) : null, "v[k]")
-                : "resultJson(v[k],d+1)";
+                : "true";
             objectTerms.Add(
                 "Object.keys(v).every(k => " +
                 "[" + string.Join(",", properties.Select(field => Quote(field.Name))) + "].includes(k) || " +
@@ -207,7 +254,7 @@ internal static class ResultCodecEmitter
 
             var tail = node.TryGetProperty("items", out var items)
                 ? Call(items, Element(metadata), "v[i]")
-                : "resultJson(v[i],d+1)";
+                : "true";
             arrayTerms.Add(
                 "Array.from({length:v.length},(_,i) => i).every(i => Object.hasOwn(v,i) && (i < " +
                 prefixLength + " || " + tail + "))");
@@ -215,17 +262,7 @@ internal static class ResultCodecEmitter
                 node.TryGetProperty("minItems", out _) || node.TryGetProperty("maxItems", out _) ||
                 HasType(node, "array"))
                 terms.Add("(!Array.isArray(v) || (" + string.Join(" && ", arrayTerms) + "))");
-            if (!node.TryGetProperty("type", out _) && !node.TryGetProperty("$ref", out _) &&
-                !node.TryGetProperty("anyOf", out _) && !node.TryGetProperty("oneOf", out _) &&
-                !node.TryGetProperty("allOf", out _) &&
-                !(binary && (node.TryGetProperty("const", out _) || node.TryGetProperty("enum", out _))))
-                terms.Add(
-                    properties.Length == 0 && !node.TryGetProperty("additionalProperties", out _) &&
-                    !node.TryGetProperty("items", out _) && !node.TryGetProperty("prefixItems", out _)
-                        ? "resultJson(v,d)"
-                        : "(v === null || typeof v === 'string' || typeof v === 'boolean' || " +
-                        "(typeof v === 'number' && Number.isFinite(v)) || resultObject(v) || Array.isArray(v))");
-            return string.Join(" && ", terms.Select(term => "(" + term + ")"));
+            return string.Join(" && ", terms.Select(term => "(" + term + ")").DefaultIfEmpty("true"));
         }
 
         JsonElement Resolve(string pointer)

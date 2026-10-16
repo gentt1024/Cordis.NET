@@ -4,6 +4,14 @@
 
 ## 当前候选索引
 
+### 结果组合约束后续修正，2026-10-16
+
+PR #18 head `e2a9a823f55eeef3ba22174cd4c08c440839c559` 在 [run 38869223440](https://github.com/gentt1024/Cordis.NET/actions/runs/38869223440) 的十二个作业全部通过。两个 runtime checkout 日志均确认实际 merge 为 `d2976731a0252384cce5471154b266107761ae60`，base 为 `3d8eb966fb9066c10b5eab17639a8c511965e1c9`。Windows／Ubuntu runtime、JIT／AOT 包消费、八个固定上游分片和两个并集检查均通过。这记录托管执行，不代表新增本地重放或下载制品核验。
+
+随后通过现有包消费者确认 RR01：原生 byte codec 接受显式 allOf/not 输出 Schema，但实际生成的 parser 和 unary caller 拒绝合法还原字节。后续修正在共享 emitter 中分开解码表示检查与布尔子约束。主要回归位置是现有 SharedHost／SharedClient 消费者，覆盖根及嵌套字节、等价非 null 约束、错型字符串、必填字段、JSON-only 额外值和真实 multipart 调用。上述完整 CI 不覆盖本次后续修正，最终验证须绑定其自己的候选。已接纳的浏览器恢复实现及原有证据保持不变。
+
+本地 `.rr01.20261016.1` 包通过更新后的消费者、保存 Remote 生成和现有三种方向性 Web 配置。生成客户端也在真实浏览器中对实际 Host 验证通过。既有 Typert 定向 41 项全部通过，两套 C# formatter 一致。这些是定向结果，不替代完整 Windows／Linux／AOT 门禁。共享 Remote runtime 与浏览器模块实现未改动。
+
 ### 嵌套管理后续修正，2026-10-15
 
 PR #18 的分支提交 `5a199460c42a2ebd6e5ca85925c2a8568540a9a6` 在[运行 38697589724](https://github.com/gentt1024/Cordis.NET/actions/runs/38697589724) 中通过全部十二个作业。两端 runtime 日志均确认实际 merge checkout 为 `c99e6d7a343619697ccc9cb278fad83f413e6b1e`，base 为 `3d8eb966fb9066c10b5eab17639a8c511965e1c9`，两个验证脚本均完成。这些证据属于下述后续修正之前的候选。

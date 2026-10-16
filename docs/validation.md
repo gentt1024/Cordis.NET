@@ -4,6 +4,14 @@
 
 ## Current candidate index
 
+### Result composition follow-up, 2026-10-16
+
+PR #18 head `e2a9a823f55eeef3ba22174cd4c08c440839c559` passed all twelve jobs in [run 38869223440](https://github.com/gentt1024/Cordis.NET/actions/runs/38869223440). Both runtime checkout logs identify merge `d2976731a0252384cce5471154b266107761ae60` against base `3d8eb966fb9066c10b5eab17639a8c511965e1c9`. Windows and Ubuntu runtime, JIT/AOT package consumption, eight fixed-upstream shards and both union checks passed. This records hosted execution, not a new local replay or artifact download audit.
+
+RR01 was subsequently confirmed through the existing package consumer: the native byte codec accepted its explicit allOf/not output Schema, but the actual generated parser and unary caller rejected valid reconstructed bytes. The follow-up separates decoded representation checks from Boolean subconstraints in the shared emitter. Its primary regression owner is the existing SharedHost/SharedClient consumer, covering root and nested bytes, equivalent non-null constraints, wrong strings, required fields, JSON-only extras and real multipart calls. The preceding full CI does not cover this follow-up; its final verification must bind to its own candidate. The accepted browser recovery implementation and its original evidence remain unchanged.
+
+The local `.rr01.20261016.1` package passed the revised consumer, saved Remote generation and all three existing directional Web configurations. The generated consumer also passed in a real browser against the actual Host. All 41 existing Typert-focused tests passed, and both C# formatter stages agreed. These are focused results, not a replacement complete Windows/Linux/AOT gate. The shared Remote runtime and browser module implementation are unchanged.
+
 ### Nested management follow-up, 2026-10-15
 
 PR #18 head `5a199460c42a2ebd6e5ca85925c2a8568540a9a6` passed all twelve jobs in [run 38697589724](https://github.com/gentt1024/Cordis.NET/actions/runs/38697589724). Both runtime logs identify actual merge checkout `c99e6d7a343619697ccc9cb278fad83f413e6b1e` against base `3d8eb966fb9066c10b5eab17639a8c511965e1c9`, and show both verification scripts completing. This evidence belongs to that candidate, before the follow-up below.

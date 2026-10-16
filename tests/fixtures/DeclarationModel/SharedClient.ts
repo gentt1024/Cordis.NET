@@ -16,6 +16,19 @@ export async function resultContracts(origin: string) {
     check(error instanceof TypeError, 'Invalid decoded result was not rejected')
   }
   try {
+    const plain = resultCodecs['result/plainBytes']
+    const nested = resultCodecs['result/composedObject']
+    for (const value of [new Uint8Array([1, 2, 3]), new Uint8Array()]) {
+      check(plain.parse(value) === value && bytesCodec.parse(value) === value,
+        'Redundant non-null constraint rejected decoded bytes or changed their identity')
+      const wrapped = { Payload: value }
+      check(nested.parse(wrapped) === wrapped, 'Composed object contract rejected nested bytes or copied the result')
+    }
+    for (const invalid of [null, 'AQID', undefined]) {
+      rejects(plain.parse, invalid); rejects(bytesCodec.parse, invalid)
+    }
+    for (const invalid of [null, {}, { Payload: null }, { Payload: 'AQID' }, { Payload: undefined },
+      { Payload: new Uint8Array(), extra: new Uint8Array() }]) rejects(nested.parse, invalid)
     const bytes = await client['sharedData/bytes']({})
     check(bytes.ok, 'Real root bytes failed')
     equal([...bytes.value], [0, 13, 10, 255], 'Root byte contents changed')
@@ -58,7 +71,7 @@ export async function resultContracts(origin: string) {
   } finally { await client.dispose(); await connection.dispose() }
 
   // The same generated caller must check a reconstructed result, not just its carrier.
-  for (const mode of ['wrong-string', 'missing-part', 'good-bytes', 'cancelled', 'withdrawn', 'remote-error', 'ordinary-json']) {
+  for (const mode of ['wrong-string', 'missing-part', 'good-bytes', 'good-object', 'bad-object', 'cancelled', 'withdrawn', 'remote-error', 'ordinary-json']) {
     const abort = new AbortController()
     let disposal: Promise<void> | undefined
     const injected = new TypertConnection(origin + '/remote', async (_input, init) => {
@@ -68,13 +81,14 @@ export async function resultContracts(origin: string) {
       if (mode === 'withdrawn') disposal = caller.dispose()
       if (mode === 'remote-error') return Response.json({ ...envelope,
         result: { ok: false, error: { code: 'example/rejected', message: 'business refusal', details: {} } } })
-      if (mode === 'good-bytes' || mode === 'missing-part') {
+      if (mode === 'good-bytes' || mode === 'good-object' || mode === 'missing-part') {
         const form = new FormData()
-        form.set('metadata', JSON.stringify({ ...envelope, result: { ok: true, value: null },
-          attachments: [{ codec: 'bytes', part: 'bytes', path: [] }] }))
-        if (mode === 'good-bytes') form.set('bytes', new Blob([new Uint8Array([0, 255])]))
+        form.set('metadata', JSON.stringify({ ...envelope, result: { ok: true, value: mode === 'good-object' ? { Payload: null } : null },
+          attachments: [{ codec: 'bytes', part: 'bytes', path: mode === 'good-object' ? ['Payload'] : [] }] }))
+        if (mode !== 'missing-part') form.set('bytes', new Blob([new Uint8Array([0, 255])]))
         return new Response(form)
       }
+      if (mode === 'bad-object') return Response.json({ ...envelope, result: { ok: true, value: { Payload: 'AP8=' } } })
       if (mode === 'ordinary-json') return Response.json({ ...envelope, result: { ok: true, value: 42 } })
       return Response.json(envelope)
     })
@@ -82,9 +96,13 @@ export async function resultContracts(origin: string) {
     try {
       const reply = mode === 'ordinary-json'
         ? await caller['sharedData/nullable']({})
+        : mode === 'good-object' || mode === 'bad-object' ? await caller['result/composedObject']({})
         : await caller['sharedData/bytes']({}, abort.signal)
       if (mode === 'good-bytes') {
         check(reply.ok && reply.value instanceof Uint8Array, 'Valid multipart failed decoding')
+      } else if (mode === 'good-object') {
+        check(reply.ok && object(reply.value) && reply.value.Payload instanceof Uint8Array,
+          'Composed nested result rejected a valid multipart response')
       } else if (mode === 'ordinary-json') {
         check(reply.ok, 'Ordinary JSON acquired a new automatic validation policy')
         rejects(resultCodecs['sharedData/nullable'].parse, reply.value)
@@ -93,7 +111,7 @@ export async function resultContracts(origin: string) {
         const code = mode === 'remote-error' ? 'example/rejected'
           : mode === 'cancelled' ? 'gateway/cancelled' : 'gateway/internal'
         check(reply.error.code === code, 'Result validation replaced the established error boundary')
-        if (mode === 'wrong-string') check(reply.error.cause instanceof TypeError, 'Decoder error cause was lost')
+        if (mode === 'wrong-string' || mode === 'bad-object') check(reply.error.cause instanceof TypeError, 'Decoder error cause was lost')
         if (mode === 'withdrawn') check(reply.error.message.includes('withdrawn'), 'Withdrawal did not precede decoding')
       }
     } finally { await caller.dispose(); await disposal; await injected.dispose() }
