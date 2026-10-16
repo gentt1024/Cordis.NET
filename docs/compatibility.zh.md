@@ -4,9 +4,15 @@
 
 ## 数值枚举投影，2026-10-16
 
+赋给可空枚举的非 null 常量保留底层枚举身份，null 与可空 `default` 仍为 null。这适用于作者绑定、参数默认值和普通／引用数据初始化器。独立发射器使用生成后的枚举类型，不携带作者程序集依赖。
+
 固定 DSH 的 analyzer 保留枚举声明，但其 [Zod emitter](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts)明确拒绝枚举投影。因此数值 CLR 枚举支持属于 .NET 平台适配，不能称为上游已有的 Schema 保证。现有共同模型已经保存底层类型及成员常量；独立 Remote、事件和普通数据投影复用这些事实，不加载提供者程序集，也不新增保存格式。
 
 默认 [.NET 10 STJ 枚举转换器](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Converters/Value/EnumConverter.cs)读写底层整数，包括未命名值，并导出 integer Schema。保存模型 Web 输出通过共享客户端 emitter 使用同样的 Schema，不添加成员白名单。生成的 .NET 声明保留名称、常量、底层宽度及 Flags；原生反序列化检查范围。可空枚举保留 null 分支，枚举默认值引用生成后的类型。字符串枚举策略及作者枚举 converter 仍由静态投影明确拒绝。JavaScript number 的既有精度限制不变，本次不引入无损 64 位传输。
+
+## Linux 包进程完成边界，2026-10-16
+
+固定 DSH 管理器等待被中断的工具退出后才报告取消。既有 .NET SDK 进程所有者还要求终止与管道排空。在 Linux 上，已终止的后代等待其他父进程回收时，进程组仍可能存在。所有者现在先核对 `/proc` 中的组状态，再判断这种存在是否代表执行尚未结束。仅排除已观测到、没有剩余线程的死亡成员；活进程、无法读取的状态及未确认的管道排空仍阻止成功。同一检查保护运行保留记录的接管。它不回收其他所有者的子进程，不把清理失败改成取消成功，也不新增进程监督器。参见 [Linux 进程状态](https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html)与 [wait 语义](https://man7.org/linux/man-pages/man2/waitpid.2.html)。
 
 ## Group 撤回的持久化修正，2026-10-15
 

@@ -14,6 +14,11 @@ Check(
     value.External.Count == expectedDefault && value.External.Note == "external-default",
     "source-only imported declaration defaults");
 Check(value.External.Status == NumericStatus.Unavailable, "referenced enum initializer retains its generated type");
+Check(value.External.Previous == NumericStatus.Succeeded, "referenced nullable enum retains its non-null initializer");
+var nullPrevious = JsonSerializer.Deserialize(
+    """{"External":{"external_name":"imported","Code":null,"Previous":null}}""",
+    metadata)!;
+Check(nullPrevious.External.Previous is null, "explicit null overrides the nullable enum initializer");
 value.External.Status = (NumericStatus)37;
 Check(
     JsonSerializer.Deserialize(JsonSerializer.Serialize(value, metadata), metadata)!.External.Status ==

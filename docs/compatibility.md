@@ -4,9 +4,15 @@
 
 ## Numeric enum projection, 2026-10-16
 
+Non-null constants assigned to nullable enums retain the underlying enum identity; null and nullable `default` remain null. This applies to authored bindings, parameter defaults and ordinary/reference data initializers. Independent emitters use their generated enum type, without carrying an author assembly dependency.
+
 The fixed DSH analyzer retains enum declarations, while its [Zod emitter](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts) explicitly refuses enum projection. Numeric CLR enum support is a .NET platform adaptation, not an upstream schema guarantee. The existing common model already records underlying types and member constants. Independent Remote, event and ordinary data projections reuse those facts without loading provider assemblies or introducing another saved format.
 
 The default [.NET 10 STJ enum converter](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Converters/Value/EnumConverter.cs) reads and writes underlying integers, including unnamed values, and exports an integer schema. Saved-model Web output uses that same schema through the shared client emitter without a member whitelist. Generated .NET declarations retain names, constants, underlying widths and Flags; native deserialization checks range. Nullable enums retain their null alternative, and enum defaults refer to the generated type. String enum policies and authored enum converters remain explicit static projection refusals. JavaScript number precision has its existing limits; this does not introduce lossless 64-bit transport.
+
+## Linux package process completion, 2026-10-16
+
+The fixed DSH manager waits for its interrupted tool before reporting cancellation. The existing .NET SDK process owner also requires termination and pipe settlement. On Linux, a process group can still exist solely because terminated descendants await reaping by another parent. The owner now checks `/proc` group state before treating that presence as unfinished execution. Only observed dead members with no remaining threads are discounted; live members, unreadable state and unconfirmed pipe settlement still prevent success. The same check protects reservation takeover. It does not reap another owner's children, expand cancellation into success after cleanup failure, or add a process supervisor. See [Linux process states](https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html) and [wait semantics](https://man7.org/linux/man-pages/man2/waitpid.2.html).
 
 ## Group withdrawal persistence correction, 2026-10-15
 

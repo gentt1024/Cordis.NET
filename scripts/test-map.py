@@ -10,13 +10,14 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 COMPLETE = {"adapted-test-passed", "adapted-passed", "adapted-assertions-verified"}
 UNRESOLVED = {"unmapped", "unimplemented", "adapted-scenario-needs-assertion-audit"}
-WINDOWS_PROCESS_CLASS = "Cordis.Platform.Tests.PackageProcessTests"
-WINDOWS_PROCESS_METHODS = (
+PROCESS_CLASS = "Cordis.Platform.Tests.PackageProcessTests"
+PROCESS_METHODS = (
     "Exited_sdk_cannot_report_prepared_output_while_its_child_still_writes",
     "Cancelled_preparation_stops_child_with_independent_output_pipes_before_returning",
     "Host_exit_terminates_owned_package_children_without_waiting_for_sdk_exit",
 )
-WINDOWS_PROCESS_NAMES = {WINDOWS_PROCESS_CLASS + "." + method for method in WINDOWS_PROCESS_METHODS}
+PROCESS_NAMES = {PROCESS_CLASS + "." + method for method in PROCESS_METHODS}
+WINDOWS_PROCESS_NAMES = PROCESS_NAMES - {PROCESS_CLASS + ".Cancelled_preparation_stops_child_with_independent_output_pipes_before_returning"}
 WINDOWS_PROCESS_REASON = "Windows package process ownership regression."
 
 
@@ -86,7 +87,7 @@ def normalized_case(name):
 
 
 def audit_native_results(directory):
-    """Require actual passes except the three defined Windows-only cases on Linux."""
+    """Require actual passes except the two defined Windows-only cases on Linux."""
     results = []
     counts_by_assembly = Counter()
     for file in sorted(directory.glob("*.trx")):
@@ -114,11 +115,11 @@ def audit_native_results(directory):
                             "reason": result.findtext("{*}Output/{*}ErrorInfo/{*}Message")})
             counts_by_assembly[assembly] += 1
     assert results, "No native test results were discovered"
-    platform_cases = [result for result in results if result["name"] in WINDOWS_PROCESS_NAMES]
-    assert Counter(result["name"] for result in platform_cases) == Counter(WINDOWS_PROCESS_NAMES), \
-        "Each Windows process ownership test must occur exactly once"
+    platform_cases = [result for result in results if result["name"] in PROCESS_NAMES]
+    assert Counter(result["name"] for result in platform_cases) == Counter(PROCESS_NAMES), \
+        "Each process ownership test must occur exactly once"
     for result in platform_cases:
-        assert (result["class"] == WINDOWS_PROCESS_CLASS
+        assert (result["class"] == PROCESS_CLASS
                 and result["method"] == result["name"].rsplit(".", 1)[-1]
                 and result["assembly"] == "Cordis.Platform.Tests.dll"), (result, "incorrect platform test definition")
     exceptions = []

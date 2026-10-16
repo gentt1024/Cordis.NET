@@ -54,6 +54,15 @@ export async function run(origin: string) {
       throw new Error('Numeric enum values, aliases, flags or optional default changed')
     const always: number = enums.value.Always
     void always
+    for (const [input, expected] of [
+      [{}, [-1, 4, null, null]],
+      [{ negative: null, positive: null }, [null, null, null, null]],
+      [{ negative: -7, positive: 37 }, [-7, 37, null, null]],
+    ] as const) {
+      const result = await client['webContract/nullableEnums'](input)
+      if (!result.ok || JSON.stringify(result.value) !== JSON.stringify(expected))
+        throw new Error('Nullable enum default, omission or explicit null changed')
+    }
     const before = await client['webContract/calls']({})
     for (const [endpoint, input] of [
       ['webContract/enums', { value: { Status: null } }],

@@ -130,6 +130,12 @@ public sealed class Envelope<T>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class ImportedData
 {
+    public NumericStatus? Previous
+    {
+        get;
+        set;
+    } = NumericStatus.Succeeded;
+
     public NumericStatus Status
     {
         get;
@@ -221,6 +227,30 @@ public enum NumericFlags : byte
 
 public sealed class EnumData
 {
+    public NumericStatus? Previous
+    {
+        get;
+        set;
+    } = NumericStatus.Succeeded;
+
+    public NumericStatus? Missing
+    {
+        get;
+        set;
+    } = NumericStatus.Unavailable;
+
+    public NumericStatus? Absent
+    {
+        get;
+        set;
+    } = null;
+
+    public NumericStatus? Empty
+    {
+        get;
+        set;
+    } = default;
+
     public NumericStatus Status
     {
         get;

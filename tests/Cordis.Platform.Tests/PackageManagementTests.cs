@@ -796,9 +796,11 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             true);
         var waiting = operations.WaitForInstallAsync("cancel");
         var childId = await started.Task.WaitAsync(TimeSpan.FromSeconds(60));
-        Assert.Equal("cancelled", await operations.CancelInstallAsync("cancel"));
+        var cancellation = await operations.CancelInstallAsync("cancel");
         var result = await install;
-        Assert.Equal("cancelled", result.Application);
+        var diagnostic = JsonSerializer.Serialize(result) + "\n" + transcript;
+        Assert.True(cancellation == "cancelled", diagnostic);
+        Assert.True(result.Application == "cancelled", diagnostic);
         Assert.False(result.Installed);
         Assert.False(result.Selected);
         Assert.Same(result, await waiting);
@@ -807,9 +809,24 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         try
         {
             using var child = Process.GetProcessById(childId);
-            Assert.True(child.HasExited, "The package child must exit before cancellation completes.");
+            if (OperatingSystem.IsLinux() && !child.HasExited)
+            {
+                // A non-child Process can still report an unreaped zombie as present.
+                var stat = await File.ReadAllTextAsync($"/proc/{childId}/stat");
+                var fields = stat[(stat.LastIndexOf(')') + 2)..].Split(' ');
+                Assert.Equal("Z", fields[0]);
+                Assert.Equal("1", fields[17]);
+            }
+            else
+                Assert.True(child.HasExited, "The package child must exit before cancellation completes.");
         }
         catch (ArgumentException)
+        {
+        }
+        catch (FileNotFoundException) when (OperatingSystem.IsLinux())
+        {
+        }
+        catch (DirectoryNotFoundException) when (OperatingSystem.IsLinux())
         {
         }
 
