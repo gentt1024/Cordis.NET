@@ -44,9 +44,9 @@ export async function resultContracts(origin: string) {
     check(resultCodecs['sharedData/acknowledge'].parse(undefined) === undefined, 'Void lost absence')
     rejects(resultCodecs['sharedData/acknowledge'].parse, null)
     const optional = resultCodecs['result/optional']
-    check(optional.parse(undefined) === undefined && optional.parse(null) === null, 'Optional binary lost absence or null')
-    optional.parse(new Uint8Array())
-    rejects(optional.parse, '')
+    check(optional.parse(undefined) === undefined && optional.parse(null) === null, 'Optional result lost absence or null')
+    check(optional.parse('text') === 'text', 'Optional result lost its declared value')
+    rejects(optional.parse, new Uint8Array())
     const encoded = resultCodecs['result/encodedText']
     check(encoded.parse('AQID') === 'AQID', 'Base64 annotation changed a string into bytes')
     rejects(encoded.parse, new Uint8Array([1, 2, 3]))
