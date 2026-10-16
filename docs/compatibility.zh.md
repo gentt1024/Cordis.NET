@@ -26,6 +26,8 @@ Bundle 保护和激活要求对捕获的 base 与有序候选层调用现有补�
 
 输出 JSON 的字段存在性在原生读取之前由 ResultSchema 校验。输出 metadata modifier 只为存在 setter 的成员保留必填写入，只有 getter 的值遵循作者的原生 STJ 构造方式。构造参数的必填性仍由输出投影决定，条件省略的输出不会重新获得输入侧的必填要求。原生输入 metadata 和输出 Schema 生成不变。这是纠正此前 adapter 建立的 required 但不可反序列化 metadata，不是绕过 STJ 对只读 DTO 的固有限制。
 
+当前生成的 TypeScript unary 客户端检查载体封套和附件结构，恢复二进制值后才返回 `RemoteResult`。它没有针对解码后业务值的可执行校验器，也没有在附件解码前暴露结果信封的分阶段结果 API。`ResultSchema` 描述附件提取前的 JSON 输出，其中默认 `byte[]` 是 base64 字符串；它不能直接校验恢复后的 `Uint8Array` 或 multipart 占位值。生成的 TypeScript 声明只提供静态类型。复用输出合同校验解码后的值，或将接受事实的观察与完整解码分开，仍是未闭合的消费边界。应用的接受与回执权威继续由应用持有。
+
 ## scoped .NET caller 适配，2026-10-11
 
 固定生成器仅在 direct 方法恰好一个 lookup 参数，且存在同 key、同 wire 类型的 `TypertContextMap` 条目时推导可选 scope（[analyzer](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/analyzer.ts#L1177)）。接收方 Context 调用是另一种语义：身份在 Service 准入及 lookup 解析之前选择 Host Context。[Client Gateway](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/src/client/index.ts#L390) 经当前 Client adapter 取得 scoped 身份。
