@@ -4,7 +4,7 @@
 
 ## Choose the batch and SDK
 
-Use .NET 10 and the SDK selected by the chosen batch's global.json. This source checkout uses 10.0.111. Pick an exact Cordis.NET package version and feed from its release or [validation receipt](validation.md#current-candidate-index). For `0.2.0-alpha.5`, use the isolated release-validation feed supplied with its completed batch receipt; public NuGet publication has not occurred. Do not mix its packages with published alpha.4 merely because a local CI package carries the same version text.
+Use .NET 10 and the SDK selected by the chosen batch's global.json. This source checkout uses 10.0.111. Pick an exact Cordis.NET package version and feed from its release or [validation receipt](validation.md#current-candidate-index). For `0.2.0-alpha.5.1`, check the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.1) for NuGet availability and the browser client archive. Keep all packages and tools from one validated batch. Do not substitute the original alpha.5 archive or same-version CI packages.
 
 Replace `<selected-version>` and `<feed>` below with that batch's exact version and NuGet source. A public release can use https://api.nuget.org/v3/index.json; an unpublished batch requires its supplied local feed. These are placeholders, not a request to publish or rename a package.
 
