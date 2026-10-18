@@ -1,6 +1,6 @@
 {
   "name": "@cordis-net/client-tools",
-  "version": "0.2.0-alpha.5.1-clienttools.3",
+  "version": "0.2.0-alpha.5.1-clienttools.4",
   "type": "module",
   "description": "Independent browser plugin author tools for Cordis.NET",
   "license": "MIT",

@@ -3,7 +3,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
-import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -64,15 +64,24 @@ await writeFile(resolve(output, 'install.log'), npm(['install', '--ignore-script
 // npm exec must find the installed bin; no source checkout paths or .NET invocation are supplied.
 const log = npm(['exec', '--offline', '--', 'cordis-client-build', '.', 'dist', '--entry', 'src/client.tsx'], author)
 await writeFile(resolve(output, 'build.log'), log)
-for (const protectedDirectory of [author, directory]) {
-  assert.throws(() => npm(['exec', '--offline', '--', 'cordis-client-build', '.', protectedDirectory,
-    '--entry', 'src/client.tsx'], author), error =>
-    error.status !== 0 && String(error.stderr).includes('Output must not contain the author directory'))
-}
-assert.match(await readFile(resolve(author, 'src/client.tsx'), 'utf8'), /export function apply/)
 const installedTool = resolve(author, 'node_modules/@cordis-net/client-tools')
 const installedManifest = JSON.parse(await readFile(resolve(installedTool, 'package.json'), 'utf8'))
 const installedBin = resolve(installedTool, installedManifest.bin['cordis-client-build'])
+const alias = resolve(directory, 'author-alias')
+await symlink(author, alias, 'junction')
+const authorProtection = []
+for (const protectedDirectory of [author, directory, alias]) {
+  const observed = await invokeInstalled([author, protectedDirectory, '--entry', 'src/client.tsx'], false)
+  authorProtection.push({ directory: protectedDirectory, ...observed,
+    rejected: observed.code !== 0 && observed.stderr.includes('Output must not contain the author directory')
+      && !observed.frames.some(frame => frame.kind === 'client-built') })
+}
+await writeFile(resolve(output, 'author-protection.json'), JSON.stringify({
+  toolArchive: packed, toolSha256: createHash('sha256').update(await readFile(packed)).digest('hex'),
+  cases: authorProtection
+}, null, 2) + '\n')
+assert.ok(authorProtection.every(item => item.rejected), 'Author roots, parents and aliases must be refused; see author-protection.json')
+assert.match(await readFile(resolve(author, 'src/client.tsx'), 'utf8'), /export function apply/)
 const protection = []
 for (const specimen of [
   { name: 'entry', entry: 'src/client.tsx', destination: 'src',

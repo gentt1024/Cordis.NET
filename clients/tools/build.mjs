@@ -2,18 +2,26 @@
 import { build, context } from 'esbuild'
 import { transform } from 'lightningcss'
 import { createHash, randomUUID } from 'node:crypto'
-import { readFile, writeFile, mkdir, mkdtemp, rename } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, mkdtemp, realpath, rename } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path'
 
 const usage = 'cordis-client-build <author-package> <output-directory> [--entry <relative-source>] [--watch]'
 const report = value => process.stdout.write(JSON.stringify(value) + '\n')
 const outside = path => path === '..' || path.startsWith('..' + sep) || isAbsolute(path)
 
+async function outputPath(path) {
+  try { return await realpath(path) }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error
+    return resolve(await outputPath(dirname(path)), basename(path))
+  }
+}
+
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(usage + '\n'); return }
   if (args.length < 2 || args[0].startsWith('--') || args[1].startsWith('--')) throw new Error(usage)
-  const author = resolve(args[0])
-  const destination = resolve(args[1])
+  const author = await realpath(resolve(args[0]))
+  const destination = await outputPath(resolve(args[1]))
   const ancestor = relative(destination, author)
   if (!outside(ancestor)) {
     throw new Error('Output must not contain the author directory')

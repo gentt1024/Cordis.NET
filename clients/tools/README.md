@@ -13,7 +13,7 @@ npx --no-install cordis-client-build . dist --entry src/client.tsx
 
 The entry defaults to `client.ts`. `--watch` publishes complete immutable directories beneath `dist/generations`. Each successful build writes a JSON `client-built` frame containing `name`, `revision` and `directory`. A failed build writes `build-error` and keeps the previous complete generation. Changing package identity or external requests requires restarting the watcher. The host retains process and installation ownership.
 
-Choose an output directory separate from the build inputs, such as `dist`. The command refuses the author directory, its ancestors, and directories containing the entry or a bundled JavaScript, TypeScript or CSS input. It checks each completed build's inputs before writing or moving output, including watch rebuilds. An output conflict leaves the input paths and bytes unchanged and emits no `client-built` frame. This prevents accidental input replacement; it is not a sandbox against concurrent filesystem changes.
+Choose an output directory separate from the build inputs, such as `dist`. The command refuses the author directory, its ancestors, and directories containing the entry or a bundled JavaScript, TypeScript or CSS input. Author and output paths resolve existing directory aliases before comparison; a new output resolves through its nearest existing parent. The command checks each completed build's inputs before writing or moving output, including watch rebuilds. An output conflict leaves the input paths and bytes unchanged and emits no `client-built` frame. This prevents accidental input replacement; it is not a sandbox against concurrent filesystem changes.
 
 The author package declares the same loader contract:
 
