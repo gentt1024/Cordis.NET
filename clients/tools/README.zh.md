@@ -13,6 +13,8 @@ npx --no-install cordis-client-build . dist --entry src/client.tsx
 
 默认入口为 `client.ts`。`--watch` 在 `dist/generations` 下发布完整、不可变的目录。每次成功构建输出包含 `name`、`revision`、`directory` 的 JSON `client-built` 帧。失败输出 `build-error`，保留此前完整代际。包身份或 external 请求变化需要重启 watcher。宿主继续拥有进程和安装职责。
 
+输出目录应与构建输入分开，例如使用 `dist`。命令拒绝作者目录、其祖先，以及包含入口或已打包 JavaScript、TypeScript、CSS 输入的目录。每次构建完成后，包括 watch 重建，工具都会在写入或移动输出前检查本次输入。输出冲突不改变输入路径和字节，也不发送 `client-built` 帧。这项检查防止误选目录覆盖输入，不承诺抵御并发文件系统修改的沙箱隔离。
+
 作者包声明同一 Loader 合同：
 
 ```json

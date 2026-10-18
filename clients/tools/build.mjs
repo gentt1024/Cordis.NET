@@ -28,6 +28,13 @@ async function main(args) {
   const entryPath = resolve(author, entry)
   const entryRelative = relative(author, entryPath)
   if (outside(entryRelative)) throw new Error('Entry must be inside the author package')
+  const protectInputs = inputs => {
+    for (const input of inputs) {
+      const path = resolve(author, input)
+      if (!outside(relative(destination, path))) throw new Error('Output must not contain build input: ' + path)
+    }
+  }
+  protectInputs([entryPath])
   const manifestPath = resolve(author, 'package.json')
   const readManifest = async () => {
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
@@ -45,6 +52,8 @@ async function main(args) {
     '@deepseek-ai/cordis', '@deepseek-ai/cosmokit', ...(manifest.dsh.client.external ?? [])])
   const mode = process.env.NODE_ENV ?? 'production'
   const publish = async bundle => {
+    protectInputs([manifestPath, ...Object.keys(bundle.metafile.inputs)
+      .map(input => input.replace(/^css-(?:text|style):/, ''))])
     if (bundle.outputFiles.length !== 1) throw new Error('The factory artifact must have one JavaScript output')
     const code = bundle.outputFiles[0].text
     const registration = `globalThis.__ModuleLoader__.load({id:${JSON.stringify(manifest.name)},factory(require){const module={exports:{}};const exports=module.exports;\n${code}\nreturn module.exports;}});\n`
@@ -65,7 +74,7 @@ async function main(args) {
   }
   const settings = {
     absWorkingDir: author, entryPoints: [entryPath], bundle: true, format: 'cjs', platform: 'browser',
-    write: false, logLevel: 'silent', legalComments: 'eof',
+    write: false, metafile: true, logLevel: 'silent', legalComments: 'eof',
     conditions: [mode === 'development' ? 'development' : 'production', 'browser'],
     define: { 'process.versions.node': '"0.0.0"', 'process.execArgv': '[]', 'process.env.CORDIS_SHARED': 'undefined',
       'process.env.NODE_ENV': JSON.stringify(mode), 'import.meta.env.MODE': JSON.stringify(mode),

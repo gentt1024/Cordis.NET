@@ -8,7 +8,9 @@
 
 声明序列化器为身份计算固定 LF，compiler 与 analyzer 通过正常 Composition 包成套交付。定向身份检查接受 LF／CRLF 文件排版并拒绝被修改的事实。正常纯包引用的管理作者及生成式 .NET／TS 调用方已通过。仅模型修正源码阶段的本地完整验证记录为 940 通过、1 项同步 noop HMR 超时，源码未变化，后续步骤未执行。该失败继续保留，不归为环境失败，也不代表后续组合候选完整通过。
 
-独立安装的浏览器作者工具在 Windows 真实浏览器通过精确 external 身份、CSS Modules／global／inline 样式、effect 先于样式清理、撤销、重载和最终释放。源码／CSS watch 与不可变代际检查通过。最终工具还会拒绝包含作者目录的输出路径，包括以两个点开头的目录名。首次浏览器夹具漏填必需的清单 batches，被正确拒绝；修正夹具沿用原包，随后独立的输出路径修正使用新的候选归档。
+独立安装的浏览器作者工具在 Windows 真实浏览器通过精确 external 身份、CSS Modules／global／inline 样式、effect 先于样式清理、撤销、重载和最终释放。源码／CSS watch 与不可变代际检查通过。首次浏览器夹具漏填必需的清单 batches，被正确拒绝；修正夹具沿用原包，随后独立的输出路径修正使用新的候选归档。
+
+PA01 随后在已安装的 `clienttools.2` 归档上复现剩余的输入目录冲突。入口、导入依赖、普通 CSS 和 inline CSS 所在目录，在普通构建和 watch 两种模式下均错误发送了成功帧。原输入被移出原路径或混入 watch 输出，保留的失败不描述为源码字节已被删除。独立的 `clienttools.3` 归档在输出发布前拒绝这八种情况，保留输入路径和字节，不发送成功帧。正常 `..author/dist`、作者根／祖先拒绝以及相同真实浏览器生命周期检查通过。运行中的 watcher 也会拒绝新增的输出目录内导入，保留旧代际，移除该导入后恢复构建。这些定向 Windows 结果不代表最终候选完整 CI 或 Linux/macOS 验收。
 
 CI 现在记录 Linux 产出的包／runtime／工具摘要，并通过 [portable-authoring.yml](../.github/workflows/portable-authoring.yml)让 Windows、Ubuntu、macOS 消费同一批字节。各消费者先核实际 checkout 与摘要，再运行既有纯包引用管理消费者和安装后作者工具浏览器检查。原 Windows／Linux runtime、包／AOT 和上游门禁保留，必需聚合检查及发行封存也要求跨平台消费成功。这是已准备的配置，尚不是托管通过结果。macOS 作业覆盖这些具名作者消费者，不代表完整 runtime／AOT 或应用验收。
 

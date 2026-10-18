@@ -3,7 +3,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -64,10 +64,82 @@ await writeFile(resolve(output, 'install.log'), npm(['install', '--ignore-script
 // npm exec must find the installed bin; no source checkout paths or .NET invocation are supplied.
 const log = npm(['exec', '--offline', '--', 'cordis-client-build', '.', 'dist', '--entry', 'src/client.tsx'], author)
 await writeFile(resolve(output, 'build.log'), log)
-assert.throws(() => npm(['exec', '--offline', '--', 'cordis-client-build', '.', directory,
-  '--entry', 'src/client.tsx'], author), error =>
-  error.status !== 0 && String(error.stderr).includes('Output must not contain the author directory'))
+for (const protectedDirectory of [author, directory]) {
+  assert.throws(() => npm(['exec', '--offline', '--', 'cordis-client-build', '.', protectedDirectory,
+    '--entry', 'src/client.tsx'], author), error =>
+    error.status !== 0 && String(error.stderr).includes('Output must not contain the author directory'))
+}
 assert.match(await readFile(resolve(author, 'src/client.tsx'), 'utf8'), /export function apply/)
+const installedTool = resolve(author, 'node_modules/@cordis-net/client-tools')
+const installedManifest = JSON.parse(await readFile(resolve(installedTool, 'package.json'), 'utf8'))
+const installedBin = resolve(installedTool, installedManifest.bin['cordis-client-build'])
+const protection = []
+for (const specimen of [
+  { name: 'entry', entry: 'src/client.tsx', destination: 'src',
+    files: { 'src/client.tsx': 'export const value = 1' } },
+  { name: 'dependency', entry: 'client.ts', destination: 'components',
+    files: { 'client.ts': "export { value } from './components/value'", 'components/value.ts': 'export const value = 1' } },
+  { name: 'stylesheet', entry: 'client.ts', destination: 'styles',
+    files: { 'client.ts': "import './styles/theme.css'; export const value = 1", 'styles/theme.css': '.panel { color: red }' } },
+  { name: 'inline-stylesheet', entry: 'client.ts', destination: 'styles',
+    files: { 'client.ts': "export { default } from './styles/theme.css?inline'", 'styles/theme.css': '.panel { color: blue }' } }
+]) {
+  for (const watch of [false, true]) {
+    const fixture = resolve(directory, specimen.name + (watch ? '-watch' : '-once'))
+    for (const [path, content] of Object.entries({ 'package.json': JSON.stringify({ name: 'protected-author',
+      dsh: { client: { platform: 'web' } } }), ...specimen.files })) {
+      await mkdir(dirname(resolve(fixture, path)), { recursive: true })
+      await writeFile(resolve(fixture, path), content)
+    }
+    const before = await snapshotFiles(fixture)
+    const observed = await invokeInstalled([fixture, resolve(fixture, specimen.destination), '--entry', specimen.entry,
+      ...(watch ? ['--watch'] : [])], watch)
+    const after = await snapshotFiles(fixture)
+    const unchanged = JSON.stringify(before) === JSON.stringify(after)
+    const rejected = !observed.frames.some(frame => frame.kind === 'client-built')
+      && (observed.stdout + observed.stderr).includes('Output must not contain build input')
+      && (watch || observed.code !== 0)
+    protection.push({ name: specimen.name, watch, unchanged, rejected, before, after, ...observed })
+  }
+}
+await writeFile(resolve(output, 'source-protection.json'), JSON.stringify({
+  toolArchive: packed, toolSha256: createHash('sha256').update(await readFile(packed)).digest('hex'),
+  status: protection.every(item => item.unchanged && item.rejected) ? 'passed' : 'failed', cases: protection
+}, null, 2) + '\n')
+assert.ok(protection.every(item => item.unchanged && item.rejected),
+  'Installed builder must reject source/dependency/CSS outputs without changing input paths or bytes; see source-protection.json')
+
+async function snapshotFiles(directory) {
+  const result = {}
+  for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+    const path = resolve(directory, entry.name)
+    result[entry.name] = entry.isDirectory() ? await snapshotFiles(path)
+      : createHash('sha256').update(await readFile(path)).digest('hex')
+  }
+  return result
+}
+
+async function invokeInstalled(args, watch) {
+  return await new Promise((resolveResult, reject) => {
+    const child = spawn(process.execPath, [installedBin, ...args], { cwd: author,
+      windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+    let stdout = ''; let stderr = ''; let pending = ''; const frames = []
+    const timeout = setTimeout(() => { child.kill(); reject(new Error('Installed builder did not settle: ' + stderr)) }, 45000)
+    child.stderr.on('data', bytes => { stderr += bytes.toString() })
+    child.stdout.on('data', bytes => {
+      stdout += bytes.toString(); pending += bytes.toString()
+      for (;;) {
+        const newline = pending.indexOf('\n')
+        if (newline < 0) break
+        const line = pending.slice(0, newline); pending = pending.slice(newline + 1)
+        try { frames.push(JSON.parse(line)) } catch { /* Only JSON frames settle watch builds. */ }
+      }
+      if (watch && frames.length) child.kill('SIGTERM')
+    })
+    child.once('error', error => { clearTimeout(timeout); reject(error) })
+    child.once('close', (code, signal) => { clearTimeout(timeout); resolveResult({ code, signal, stdout, stderr, frames }) })
+  })
+}
 const frame = log.trim().split(/\r?\n/).map(line => JSON.parse(line)).find(item => item.kind === 'client-built')
 assert.ok(frame)
 const artifact = resolve(frame.directory, 'client.js')

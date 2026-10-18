@@ -62,5 +62,23 @@ try {
   if (styled.revision === next.revision || !bytes.equals(await readFile(resolve(next.directory, 'client.js')))) {
     throw new Error('CSS-only change did not publish an independent generation')
   }
-  console.log('Author watch passed: complete success frames, failure preserves old generation, source and CSS-only changes publish new generations.')
+  const styledBytes = await readFile(resolve(styled.directory, 'client.js'))
+  const conflictingInput = resolve(directory, 'artifacts/value.ts')
+  await writeFile(conflictingInput, 'export const value = 42')
+  const validSource = await readFile(sourcePath, 'utf8')
+  await writeFile(sourcePath, "export { value } from '../artifacts/value'\n" + validSource)
+  const refused = await frame('build-error')
+  if (!refused.diagnostic.includes('Output must not contain build input')
+    || !styledBytes.equals(await readFile(resolve(styled.directory, 'client.js')))
+    || await readFile(conflictingInput, 'utf8') !== 'export const value = 42'
+    || frames.some(item => item.kind === 'client-built')) {
+    throw new Error('A newly imported output input was not refused while preserving the previous generation')
+  }
+  await writeFile(sourcePath, validSource)
+  const recovered = await frame('client-built')
+  if (recovered.directory === styled.directory || recovered.revision !== styled.revision
+    || !styledBytes.equals(await readFile(resolve(recovered.directory, 'client.js')))) {
+    throw new Error('Removing the conflicting import did not restore a complete independent generation')
+  }
+  console.log('Author watch passed: complete success frames, compilation/input conflict failures preserve old generations, source and CSS-only changes publish new generations, removed input conflict recovers.')
 } finally { child.kill('SIGTERM') }
