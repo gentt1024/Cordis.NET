@@ -4,7 +4,7 @@
 
 ## Current support and release status
 
-This source targets `0.2.0-alpha.5.1`; the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.1) records distribution and publication. The original alpha.5 archive remains historical and is not a publication candidate. [Validation](validation.md#current-candidate-index) identifies tested source and package batches. [Publication readiness](publication-readiness.md) owns release gates. Historical checkpoints below describe their own revisions, not current remaining work.
+This source targets `0.2.0-alpha.5.2`; the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2) records distribution and publication. The original alpha.5 archive remains historical and is not a publication candidate. [Validation](validation.md#current-candidate-index) identifies tested source and package batches. [Publication readiness](publication-readiness.md) owns release gates. Historical checkpoints below describe their own revisions, not current remaining work.
 
 | Area | Current use and boundary |
 |---|---|

@@ -9,12 +9,12 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.2.0-alpha.5.1</Version>
+    <Version>0.2.0-alpha.5.2</Version>
     <Authors>gentt1024 and Cordis.NET contributors</Authors>
     <Description>A native .NET implementation of the pinned DeepSeek Harness Cordis model.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>dotnet;plugin-system;modularity;cordis</PackageTags>
-    <PackageReleaseNotes>Common declaration models and generated .NET/Web Remote contracts; scoped calls, streams and typed events; numeric Settings and generated management; stable CLR artifacts. Corrected nested management configuration, enum projections, decoded binary result constraints and explicit browser target recovery. Fixed DSH baseline unchanged. See the matching source documentation for support and release status.</PackageReleaseNotes>
+    <PackageReleaseNotes>Portable declaration model identity and independently installable browser author tools with input-preserving output guards. Common models, generated Remote contracts, Settings, management and stable CLR artifacts retain their existing semantics. Fixed DSH baseline unchanged. See the matching release for exact artifacts and validation.</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/gentt1024/Cordis.NET.git</RepositoryUrl>
     <PackageProjectUrl>https://github.com/gentt1024/Cordis.NET</PackageProjectUrl>

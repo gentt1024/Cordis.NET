@@ -8,7 +8,7 @@
 
 `@cordis-net/client-tools` 包交付既有单 factory 作者构建，不要求 Cordis 源码仓库或 .NET SDK。它沿用 esbuild，使用与固定 DSH 依赖一致的 Lightning CSS 1.32.0。[固定作者构建](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/tsdown.client.ts)定义精确 external 请求、CSS Modules、样式所有权标记和 inline CSS 文本。既有 Loader 负责 effect 清理及之后的样式移除。命令不引入另一套 Loader、资源服务器或动态 chunk 协议；相对 CSS URL 和 import 保持固定 transform 行为。参见[安装后用法](../clients/tools/README.zh.md)。
 
-已安装归档构建了仓外 TSX 作者包，Windows 真实浏览器验证了实际样式、外部对象身份、撤销、重新加载和最终清理。首次测试清单不完整被拒绝，失败记录保留后修正夹具。此前 ce8c17b CI 的 Windows/Linux runtime 及同批作者消费通过，但 macOS 在作者目录保护断言处停止，尚未启动浏览器。修正后的候选仍需自己的完整托管门禁。已发布 alpha.5.1 不包含此作者工具。
+已安装归档构建了仓外 TSX 作者包，Windows 真实浏览器验证了实际样式、外部对象身份、撤销、重新加载和最终清理。首次测试清单不完整被拒绝，失败记录保留后修正夹具。此前 ce8c17b CI 的 Windows/Linux runtime 及同批作者消费通过，但 macOS 在作者目录保护断言处停止，尚未启动浏览器。修正候选 `83dad802` 随后在 [CI 39117111127](https://github.com/gentt1024/Cordis.NET/actions/runs/39117111127) 通过全部 15 项作业，包括 Windows、Ubuntu、macOS 消费同一 Linux 产出批次。实际 checkout 为 PR 临时合并 `3693949d`；后续发行版本仍须验证自己的 tag 源码。已发布 alpha.5.1 不包含此作者工具。
 
 ## 声明身份的跨平台一致性，2026-10-18
 
