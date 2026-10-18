@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.0-alpha.5.2]
+
+Publication and exact artifact identities are recorded in the matching GitHub release.
+
+- Fixed saved declaration model identity to use LF consistently across operating systems, delivered through the normal matching compiler/analyzer package chain. Windows-dependent development models require re-extraction; strict identity checks remain in place.
+- Added the independently installable `@cordis-net/client-tools` archive and `cordis-client-build` command. Authors retain exact external requests, CSS Modules/global/inline behavior and the existing Loader's effect and stylesheet ownership.
+- Prevented author output from overlapping actual entry, dependency and CSS inputs, including directory aliases. Watch conflicts preserve inputs and the last successful generation, and recover when the conflict is removed.
+- Added Windows, Ubuntu and macOS consumption of the same Linux-produced package, runtime and author-tool batch to CI and release gates. macOS evidence covers named authoring consumers, not the complete runtime or AOT suite.
+- Preserved the fixed DSH baseline, runtime protocol and published alpha.5.1 artifacts. Earlier failed checks remain recorded separately from passing candidate CI.
+
 ## [0.2.0-alpha.5.1]
 
 Corrected release candidate. Publication and exact artifact identities are recorded in the matching GitHub release.

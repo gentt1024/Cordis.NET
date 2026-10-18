@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-这个 Node 包把仓外作者项目构建成现有 Cordis.NET 客户端 factory 和 manifest，不需要 Cordis 源码仓库或 .NET SDK。当前为源码候选，已发布 alpha.5.1 浏览器归档中不包含此工具。
+这个 Node 包把仓外作者项目构建成现有 Cordis.NET 客户端 factory 和 manifest，不需要 Cordis 源码仓库或 .NET SDK。`0.2.0-alpha.5.2` 版本以独立可安装归档随浏览器 runtime 一起交付，发布状态及精确制品摘要见[匹配发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2)。已发布 alpha.5.1 不包含此工具。
 
 将选定工具归档安装为开发依赖，再使用已安装命令：
 

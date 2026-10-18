@@ -2,7 +2,7 @@
 
 [中文](README.zh.md)
 
-This Node package builds an independent author project into the existing Cordis.NET client factory and manifest. It needs no Cordis source checkout or .NET SDK. This is a source candidate; it is not included in the published alpha.5.1 browser archive.
+This Node package builds an independent author project into the existing Cordis.NET client factory and manifest. It needs no Cordis source checkout or .NET SDK. Version `0.2.0-alpha.5.2` is distributed as a separate installable archive alongside the browser runtime in the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2). Check that release for publication and exact artifact hashes. Published alpha.5.1 does not include this tool.
 
 Install the selected tool archive as a development dependency, then use the installed command:
 
