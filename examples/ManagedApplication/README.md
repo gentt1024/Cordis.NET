@@ -21,8 +21,10 @@ Build the optional browser runtime and independent client packages:
 
 ```sh
 npm ci --prefix clients/modules
-node scripts/build-client-modules.mjs artifacts/client-runtime clients/modules/examples/provider artifacts/client-provider
-node scripts/build-client-modules.mjs artifacts/client-runtime clients/modules/examples/panel artifacts/client-panel
+npm ci --prefix clients/tools
+node scripts/build-client-modules.mjs artifacts/client-runtime
+node clients/tools/build.mjs clients/modules/examples/provider artifacts/client-provider
+node clients/tools/build.mjs clients/modules/examples/panel artifacts/client-panel
 dotnet run --project examples/ManagedApplication -- artifacts/managed-profile artifacts/managed-feed artifacts/client-runtime artifacts/client-provider artifacts/client-panel
 ```
 
@@ -37,7 +39,7 @@ The page has one management connection owner. Explicit reconnect closes its pred
 For an explicitly requested frontend development worker, append:
 
 ```sh
---watch=clients/modules/examples/provider --client-build-script=scripts/build-client-modules.mjs
+--watch=clients/modules/examples/provider --client-build-script=clients/tools/build.mjs
 ```
 
 `--node=` optionally names the approved Node executable. Node is only needed for this author toolchain. Each successful watch build supplies a completed immutable generation directory. The Host validates its package identity and captured SHA, then publishes a full catalog inside the profile session's existing queue and emits `client-modules/changed`. Compiler errors retain the previous catalog. A failed output callback, invalid frame, oversized output or unconfirmed process cleanup is a failure, not completion.

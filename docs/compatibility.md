@@ -2,6 +2,16 @@
 
 [中文](compatibility.zh.md)
 
+## Independently installed browser author tools, 2026-10-18
+
+The `@cordis-net/client-tools` package delivers the existing single-factory author build without requiring a Cordis source checkout or .NET SDK. It retains esbuild and uses Lightning CSS 1.32.0, matching the fixed DSH dependency. The [fixed author build](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/tsdown.client.ts) defines exact external requests, CSS Modules, stylesheet ownership tags and inline CSS text. The existing Loader owns effect cleanup and subsequent stylesheet removal. The command does not introduce another loader, asset server or dynamic-chunk protocol; relative CSS URLs and imports retain the fixed transform behavior. See the [installed tool usage](../clients/tools/README.md).
+
+An installed archive built an independent TSX author package; a Windows browser verified actual styles, external object identity, withdrawal, reload and final cleanup. A malformed initial test manifest was rejected and its failure retained before correcting the fixture. Linux/macOS consumption and a complete gate for this combined candidate are not yet established. Published alpha.5.1 does not contain this author tool.
+
+## Portable declaration identity, 2026-10-18
+
+The saved C# declaration model is an existing .NET authoring adaptation, not a DSH wire format. Its serializer now fixes LF instead of inheriting the operating system newline. Previously, a Linux-produced model could fail the unchanged Windows compiler's identity check despite identical authored facts. This corrects cross-platform artifact consumption without changing the fixed DSH baseline, Remote protocol, declaration structure or strict identity validation. Existing LF identities remain valid; Windows-dependent development models require re-extraction. Published alpha.5.1 bytes are preserved, and its bundled compiler does not contain this correction.
+
 ## Numeric enum projection, 2026-10-16
 
 Non-null constants assigned to nullable enums retain the underlying enum identity; null and nullable `default` remain null. This applies to authored bindings, parameter defaults and ordinary/reference data initializers. Independent emitters use their generated enum type, without carrying an author assembly dependency.

@@ -242,7 +242,7 @@ foreach (var author in watchSources)
             {
                 await DevelopmentBuildProcess.RunAsync(
                     node,
-                    [Path.GetFullPath(buildScript!), Path.Combine(work, "runtime"), author, destination, "--watch"],
+                    [Path.GetFullPath(buildScript!), author, destination, "--watch"],
                     author,
                     Path.Combine(work, "process.json"),
                     async line =>

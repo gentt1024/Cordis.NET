@@ -4,6 +4,16 @@
 
 ## Current candidate index
 
+### Portable authoring candidate, 2026-10-18
+
+The declaration serializer fixes LF for identity calculations; compiler and analyzer ship together in the normal Composition package. Focused identity checks reject changed facts and accept LF/CRLF file layouts. Normal package-only management authors and generated .NET/TS callers passed. A local full verification of the model-only source stage recorded 940 passes and one synchronous noop HMR timeout, with unchanged source; downstream steps did not execute. This failure remains open evidence, not an environment-failure diagnosis or a complete pass for the later combined candidate.
+
+The independently installed browser author tool passed exact external identity, CSS Modules/global/inline styling, effect-before-style cleanup, withdrawal, reload and final disposal in a Windows browser. Source/CSS watch and immutable generation checks passed. The final tool also rejects an output directory containing its author, including names starting with two dots. The first browser fixture omitted required manifest batches and was rejected; correcting the fixture preserved the same package before the separate output-path correction received its own candidate archive.
+
+CI now records the Linux package/runtime/tool hashes and sends that same batch to Windows, Ubuntu and macOS through [portable-authoring.yml](../.github/workflows/portable-authoring.yml). Each consumer checks the actual checkout and bytes before running the existing package-only management consumer and an installed author-tool browser check. The existing Windows/Linux runtime, package/AOT and upstream gates remain; required aggregate checks and release sealing also require portable consumption. This configuration is prepared, not yet a passing hosted result. The macOS job covers these named authoring consumers, not full runtime/AOT or application acceptance.
+
+Local preparation requires `npm ci --prefix clients/tools --ignore-scripts` in addition to the existing client-module dependencies. Focused installed-tool consumption uses `node scripts/verify-client-author-package.mjs <runtime-output> <new-evidence-directory> --serve`; open the printed local URL in a browser. CI uses `--headless` with an installed Chromium browser and a fresh temporary profile. Published alpha.5.1 artifacts remain unchanged.
+
 ### Result composition follow-up, 2026-10-16
 
 PR #18 head `e2a9a823f55eeef3ba22174cd4c08c440839c559` passed all twelve jobs in [run 38869223440](https://github.com/gentt1024/Cordis.NET/actions/runs/38869223440). Both runtime checkout logs identify merge `d2976731a0252384cce5471154b266107761ae60` against base `3d8eb966fb9066c10b5eab17639a8c511965e1c9`. Windows and Ubuntu runtime, JIT/AOT package consumption, eight fixed-upstream shards and both union checks passed. This records hosted execution, not a new local replay or artifact download audit.

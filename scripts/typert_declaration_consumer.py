@@ -8,6 +8,31 @@ from xml.sax.saxutils import escape
 import zipfile
 
 
+def verify_portable_model_identity(directory, dotnet, compiler, roslyn, run):
+    facts = {
+        "compilation": {"assemblyName": "Portable", "languageVersion": "14.0", "nullable": "Enable",
+            "defines": [], "allowUnsafe": False, "checkOverflow": False,
+            "outputKind": "DynamicallyLinkedLibrary", "platform": "AnyCpu", "optimization": "Release"},
+        "contexts": [], "roots": [], "declarations": [], "diagnostics": []}
+    # This ASCII-only saved contract has an independently computed LF identity.
+    identity = "sha256:" + hashlib.sha256(json.dumps(facts, indent=2).encode("utf-8")).hexdigest()
+    model = dict(contractIdentity=identity, **facts)
+    destination = directory / "portable.catalog.json"
+    for label, newline in (("lf", "\n"), ("crlf", "\r\n")):
+        path = directory / ("portable-" + label + ".cordis.model.json")
+        path.write_bytes(json.dumps(model, indent=2).replace("\n", newline).encode("utf-8"))
+        run("declaration-portable-identity-" + label, [dotnet, compiler, "--roslyn-directory", roslyn,
+            "inspect-model", "--model", path, "--output", destination])
+        assert json.loads(destination.read_text(encoding="utf-8"))["contractIdentity"] == identity
+    model["compilation"]["assemblyName"] = "Changed"
+    path = directory / "portable-changed.cordis.model.json"
+    path.write_text(json.dumps(model), encoding="utf-8")
+    rejected = run("declaration-portable-changed-facts-rejected", [dotnet, compiler,
+        "--roslyn-directory", roslyn, "inspect-model", "--model", path, "--output", destination], True)
+    assert b"Declaration model identity does not match its authored facts" in rejected
+    assert not destination.exists(), "Rejected changed facts retained a stale catalog"
+
+
 def design_time_sources(label, project, dotnet, run, names):
     command = [dotnet, "msbuild", project, "-restore", "-t:Compile", "-p:Configuration=Release",
         "-p:DesignTimeBuild=true", "-p:SkipCompilerExecution=true", "-p:ProvideCommandLineArgs=true",
@@ -100,6 +125,7 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
     sdk = run("declaration-selected-sdk", [dotnet, "--version"]).decode("utf-8").strip()
     compiler = source / "cache/cordis.net.composition" / version / "tools/net10.0/typert/Cordis.Typert.Compiler.dll"
     roslyn = dotnet.parent / "sdk" / sdk / "Roslyn/bincore"
+    verify_portable_model_identity(source, dotnet, compiler, roslyn, run)
 
     def extract_declarations(label, destination, selected_roots=None, expected_failure=False):
         compilation = authored["compilation"]

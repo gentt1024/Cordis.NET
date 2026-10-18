@@ -4,6 +4,16 @@
 
 ## 当前候选索引
 
+### 跨平台作者候选，2026-10-18
+
+声明序列化器为身份计算固定 LF，compiler 与 analyzer 通过正常 Composition 包成套交付。定向身份检查接受 LF／CRLF 文件排版并拒绝被修改的事实。正常纯包引用的管理作者及生成式 .NET／TS 调用方已通过。仅模型修正源码阶段的本地完整验证记录为 940 通过、1 项同步 noop HMR 超时，源码未变化，后续步骤未执行。该失败继续保留，不归为环境失败，也不代表后续组合候选完整通过。
+
+独立安装的浏览器作者工具在 Windows 真实浏览器通过精确 external 身份、CSS Modules／global／inline 样式、effect 先于样式清理、撤销、重载和最终释放。源码／CSS watch 与不可变代际检查通过。最终工具还会拒绝包含作者目录的输出路径，包括以两个点开头的目录名。首次浏览器夹具漏填必需的清单 batches，被正确拒绝；修正夹具沿用原包，随后独立的输出路径修正使用新的候选归档。
+
+CI 现在记录 Linux 产出的包／runtime／工具摘要，并通过 [portable-authoring.yml](../.github/workflows/portable-authoring.yml)让 Windows、Ubuntu、macOS 消费同一批字节。各消费者先核实际 checkout 与摘要，再运行既有纯包引用管理消费者和安装后作者工具浏览器检查。原 Windows／Linux runtime、包／AOT 和上游门禁保留，必需聚合检查及发行封存也要求跨平台消费成功。这是已准备的配置，尚不是托管通过结果。macOS 作业覆盖这些具名作者消费者，不代表完整 runtime／AOT 或应用验收。
+
+本地除原客户端模块依赖外，还需执行 `npm ci --prefix clients/tools --ignore-scripts`。定向安装消费使用 `node scripts/verify-client-author-package.mjs <runtime-output> <新证据目录> --serve`，再用浏览器打开输出的本地 URL。CI 使用已安装的 Chromium 浏览器、独立临时 profile 及 `--headless`。已发布 alpha.5.1 制品保持原样。
+
 ### 结果组合约束后续修正，2026-10-16
 
 PR #18 head `e2a9a823f55eeef3ba22174cd4c08c440839c559` 在 [run 38869223440](https://github.com/gentt1024/Cordis.NET/actions/runs/38869223440) 的十二个作业全部通过。两个 runtime checkout 日志均确认实际 merge 为 `d2976731a0252384cce5471154b266107761ae60`，base 为 `3d8eb966fb9066c10b5eab17639a8c511965e1c9`。Windows／Ubuntu runtime、JIT／AOT 包消费、八个固定上游分片和两个并集检查均通过。这记录托管执行，不代表新增本地重放或下载制品核验。

@@ -9,8 +9,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const directory = await mkdtemp(resolve(tmpdir(), 'cordis-author-watch-'))
 const author = resolve(directory, 'author')
 await cp(resolve(root, 'clients/modules/examples/provider'), author, { recursive: true })
-const child = spawn(process.execPath, [resolve(root, 'scripts/build-client-modules.mjs'),
-  resolve(directory, 'runtime'), author, resolve(directory, 'artifacts'), '--watch'], { stdio: ['ignore', 'pipe', 'pipe'] })
+const entry = resolve(author, 'client.ts')
+await writeFile(entry, "import './watch.css'\n" + await readFile(entry, 'utf8'))
+await writeFile(resolve(author, 'watch.css'), '.provider { color: red; }')
+const child = spawn(process.execPath, [resolve(root, 'clients/tools/build.mjs'),
+  author, resolve(directory, 'artifacts'), '--watch'], { stdio: ['ignore', 'pipe', 'pipe'] })
 const frames = []
 let output = ''
 let errors = ''
@@ -54,5 +57,10 @@ try {
   const bytes = await readFile(resolve(next.directory, 'client.js'))
   if (next.directory === first.directory || next.revision === first.revision || hash(bytes) !== next.revision
     || !original.equals(await readFile(resolve(first.directory, 'client.js')))) throw new Error('Rebuild did not publish an independent immutable generation')
-  console.log('Author watch passed: complete success frames, failure preserves old generation, recovery publishes a new generation.')
+  await writeFile(resolve(author, 'watch.css'), '.provider { color: blue; }')
+  const styled = await frame('client-built')
+  if (styled.revision === next.revision || !bytes.equals(await readFile(resolve(next.directory, 'client.js')))) {
+    throw new Error('CSS-only change did not publish an independent generation')
+  }
+  console.log('Author watch passed: complete success frames, failure preserves old generation, source and CSS-only changes publish new generations.')
 } finally { child.kill('SIGTERM') }

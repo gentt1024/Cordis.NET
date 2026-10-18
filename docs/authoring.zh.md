@@ -400,6 +400,10 @@ Composition 包会把自身声明模型接入 MSBuild 客户端引用集合。�
 
 普通根与 Remote 根在正常 build/pack 中使用同一 `$(AssemblyName).cordis.model.json`，打包到 `cordis/typert/`。`CordisTypertModelPath` 控制本地输出路径。定义与应用引用分开。保留泛型参数 owner/ordinal/constraints、直接 base/interfaces、成员签名、重载、事件/delegate、required/accessor/nullability/default 事实、initializer 和文档。attributes 包含 return、getter/setter 及 setter-value 目标；参数事实包括扩展 `this` 与 `scoped`。attribute 类型和 `typeof` 值保留完整声明引用，包括数组值，并进入引用图。源码 partial 声明、隐式成员／成员来源、实例构造器、显式标记的非公开 Remote 方法及作者 JSON metadata 签名作为事实保存，不复制方法体。外部声明保留完整程序集／metadata 身份及记录的签名来源，不重建缺失的源 initializer 或实现。
 
+声明身份使用 UTF-8 JSON 与固定 LF 格式，不随生产者或消费者的操作系统变化。文件排版不参与身份，作者事实仍参与。Linux 生成的保存模型可以在 Windows 消费。此前使用 Windows 默认换行计算身份的模型需要重新提取，不手改模型，也不通过备用 hash 接受。
+
+Composition 包包含匹配的 compiler 和 analyzer。正常使用 PackageReference 及其构建 targets；临时 compiler 路径和替换 analyzer 的 import 仅用于诊断，不属于作者使用合同。作者 SDK 打包前，使用匹配工具重新提取实际消费的引用模型闭包。
+
 打包 compiler 在不加载、不引用 provider 实现的情况下验证制品并投影声明目录：
 
 ```console

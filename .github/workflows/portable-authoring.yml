@@ -1,0 +1,66 @@
+name: portable authoring consumption
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        required: true
+        type: string
+      package-artifact:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  consume:
+    name: same-batch authoring (${{ matrix.os }})
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          persist-credentials: false
+      - name: Read SDK version
+        id: sdk
+        shell: pwsh
+        run: |
+          $version = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/cordis-dotnet
+        with:
+          dotnet-version: ${{ steps.sdk.outputs.version }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: ${{ inputs.package-artifact }}
+          path: artifacts/portable-packages
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: portable-authoring-inputs
+          path: artifacts/portable-inputs
+      - name: Install consumer verification dependencies
+        run: npm ci --prefix clients/modules --ignore-scripts
+      - name: Consume exact Linux packages and installed author tool
+        run: python scripts/verify-portable-authoring.py --packages artifacts/portable-packages --inputs artifacts/portable-inputs --output artifacts/portable-results
+      - name: Preserve consumer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: portable-authoring-${{ matrix.os }}
+          path: artifacts/portable-results
+          if-no-files-found: error
+          retention-days: 30

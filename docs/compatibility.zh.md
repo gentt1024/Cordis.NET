@@ -2,6 +2,16 @@
 
 [English](compatibility.md)
 
+## 可独立安装的浏览器作者工具，2026-10-18
+
+`@cordis-net/client-tools` 包交付既有单 factory 作者构建，不要求 Cordis 源码仓库或 .NET SDK。它沿用 esbuild，使用与固定 DSH 依赖一致的 Lightning CSS 1.32.0。[固定作者构建](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/tsdown.client.ts)定义精确 external 请求、CSS Modules、样式所有权标记和 inline CSS 文本。既有 Loader 负责 effect 清理及之后的样式移除。命令不引入另一套 Loader、资源服务器或动态 chunk 协议；相对 CSS URL 和 import 保持固定 transform 行为。参见[安装后用法](../clients/tools/README.zh.md)。
+
+已安装归档构建了仓外 TSX 作者包，Windows 真实浏览器验证了实际样式、外部对象身份、撤销、重新加载和最终清理。首次测试清单不完整被拒绝，失败记录保留后修正夹具。Linux/macOS 消费及这一组合候选的完整门禁尚未成立。已发布 alpha.5.1 不包含此作者工具。
+
+## 声明身份的跨平台一致性，2026-10-18
+
+保存的 C# 声明模型属于已有 .NET 作者工具适配，不是 DSH wire 格式。其序列化器现在固定 LF，不再继承操作系统换行。此前 Linux 生成的模型即使作者事实完全相同，也可能被未修改的 Windows compiler 拒绝身份校验。本修正恢复跨平台制品消费，不改变固定 DSH 基线、Remote 协议、声明结构或严格身份校验。已有 LF 身份继续有效，使用 Windows 默认换行的开发模型需要重新提取。已发布 alpha.5.1 字节保持原样，其内置 compiler 不包含此修正。
+
 ## 数值枚举投影，2026-10-16
 
 赋给可空枚举的非 null 常量保留底层枚举身份，null 与可空 `default` 仍为 null。这适用于作者绑定、参数默认值和普通／引用数据初始化器。独立发射器使用生成后的枚举类型，不携带作者程序集依赖。
