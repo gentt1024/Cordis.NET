@@ -400,6 +400,10 @@ Generic arity uses the CLR backtick form; nested names use `+`. Ordinary roots m
 
 Normal build/pack writes the same `$(AssemblyName).cordis.model.json` under `cordis/typert/` for ordinary and Remote roots. `CordisTypertModelPath` controls the local output path. Definitions and applied references are distinct. Generic parameter owners/ordinals/constraints, direct bases/interfaces, member signatures, overloads, events/delegates, required/accessor/nullability/default facts, initializers and documentation are retained. Attributes include return, getter/setter and setter-value targets; parameter facts include extension `this` and `scoped`. Attribute types and `typeof` values retain complete declaration references, including array values, and enter the referenced graph. Source partial declarations, implicit/member provenance, instance constructors, explicitly marked non-public Remote methods and authored JSON metadata signatures remain facts rather than copied method bodies. External declarations keep complete assembly/metadata identity and their recorded signature provenance; absent source initializers and implementations are not reconstructed.
 
+Declaration identity uses UTF-8 JSON with LF formatting, independently of the producer or consumer operating system. File formatting is not part of the identity; authored facts still are. A saved model can be generated on Linux and consumed on Windows. Models produced with the former Windows-dependent identity must be re-extracted, rather than edited or accepted through a fallback hash.
+
+The Composition package carries the matching compiler and analyzer. Use its normal PackageReference and build targets; temporary compiler paths or analyzer replacement imports are diagnostic tools, not the authoring contract. Re-extract the actual reference-model closure with the matching toolset before packing author SDKs.
+
 The packaged compiler validates and projects an artifact-only declaration catalog without loading or referencing the provider implementation:
 
 ```console

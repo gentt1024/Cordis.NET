@@ -293,6 +293,7 @@ def main():
         run("client-replacement", ["node", "scripts/verify-client-replacement.mjs", client_artifacts, OUT / "client-replacement"])
         run("client-shared-modules", ["node", "scripts/verify-client-shared-modules.mjs", client_artifacts])
         run("client-author-watch", ["node", "scripts/verify-client-author-watch.mjs"])
+        run("client-author-package", ["node", "scripts/verify-client-author-package.mjs", client_artifacts, OUT / "client-author-package"])
         cli = ["dotnet", ROOT / "tools/Cordis.Cli/bin/Release/net10.0/Cordis.Cli.dll"]
         fixture = OUT / "cli-input.yml"
         fixture.write_text(

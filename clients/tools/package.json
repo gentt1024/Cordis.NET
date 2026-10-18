@@ -1,0 +1,12 @@
+{
+  "name": "@cordis-net/client-tools",
+  "version": "0.2.0-alpha.5.1-clienttools.4",
+  "type": "module",
+  "description": "Independent browser plugin author tools for Cordis.NET",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/gentt1024/Cordis.NET.git" },
+  "engines": { "node": ">=22" },
+  "bin": { "cordis-client-build": "build.mjs" },
+  "files": ["build.mjs", "LICENSE", "NOTICE.md", "README.md", "README.zh.md"],
+  "dependencies": { "esbuild": "0.28.2", "lightningcss": "1.32.0" }
+}

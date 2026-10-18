@@ -9,8 +9,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const directory = await mkdtemp(resolve(tmpdir(), 'cordis-author-watch-'))
 const author = resolve(directory, 'author')
 await cp(resolve(root, 'clients/modules/examples/provider'), author, { recursive: true })
-const child = spawn(process.execPath, [resolve(root, 'scripts/build-client-modules.mjs'),
-  resolve(directory, 'runtime'), author, resolve(directory, 'artifacts'), '--watch'], { stdio: ['ignore', 'pipe', 'pipe'] })
+const entry = resolve(author, 'client.ts')
+await writeFile(entry, "import './watch.css'\n" + await readFile(entry, 'utf8'))
+await writeFile(resolve(author, 'watch.css'), '.provider { color: red; }')
+const child = spawn(process.execPath, [resolve(root, 'clients/tools/build.mjs'),
+  author, resolve(directory, 'artifacts'), '--watch'], { stdio: ['ignore', 'pipe', 'pipe'] })
 const frames = []
 let output = ''
 let errors = ''
@@ -54,5 +57,28 @@ try {
   const bytes = await readFile(resolve(next.directory, 'client.js'))
   if (next.directory === first.directory || next.revision === first.revision || hash(bytes) !== next.revision
     || !original.equals(await readFile(resolve(first.directory, 'client.js')))) throw new Error('Rebuild did not publish an independent immutable generation')
-  console.log('Author watch passed: complete success frames, failure preserves old generation, recovery publishes a new generation.')
+  await writeFile(resolve(author, 'watch.css'), '.provider { color: blue; }')
+  const styled = await frame('client-built')
+  if (styled.revision === next.revision || !bytes.equals(await readFile(resolve(next.directory, 'client.js')))) {
+    throw new Error('CSS-only change did not publish an independent generation')
+  }
+  const styledBytes = await readFile(resolve(styled.directory, 'client.js'))
+  const conflictingInput = resolve(directory, 'artifacts/value.ts')
+  await writeFile(conflictingInput, 'export const value = 42')
+  const validSource = await readFile(sourcePath, 'utf8')
+  await writeFile(sourcePath, "export { value } from '../artifacts/value'\n" + validSource)
+  const refused = await frame('build-error')
+  if (!refused.diagnostic.includes('Output must not contain build input')
+    || !styledBytes.equals(await readFile(resolve(styled.directory, 'client.js')))
+    || await readFile(conflictingInput, 'utf8') !== 'export const value = 42'
+    || frames.some(item => item.kind === 'client-built')) {
+    throw new Error('A newly imported output input was not refused while preserving the previous generation')
+  }
+  await writeFile(sourcePath, validSource)
+  const recovered = await frame('client-built')
+  if (recovered.directory === styled.directory || recovered.revision !== styled.revision
+    || !styledBytes.equals(await readFile(resolve(recovered.directory, 'client.js')))) {
+    throw new Error('Removing the conflicting import did not restore a complete independent generation')
+  }
+  console.log('Author watch passed: complete success frames, compilation/input conflict failures preserve old generations, source and CSS-only changes publish new generations, removed input conflict recovers.')
 } finally { child.kill('SIGTERM') }

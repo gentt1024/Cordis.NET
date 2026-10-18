@@ -12,7 +12,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const directory = await mkdtemp(resolve(tmpdir(), 'cordis-shared-modules-'))
 const runtime = resolve(process.argv[2] ?? directory, process.argv[2] ? '' : 'runtime')
 const plugin = resolve(directory, 'plugin')
-execFileSync(process.execPath, [resolve(root, 'scripts/build-client-modules.mjs'), runtime,
+if (!process.argv[2]) execFileSync(process.execPath, [resolve(root, 'scripts/build-client-modules.mjs'), runtime], { stdio: 'inherit' })
+execFileSync(process.execPath, [resolve(root, 'clients/tools/build.mjs'),
   resolve(root, 'clients/modules/examples/shared'), plugin], { stdio: 'inherit' })
 const bytes = await readFile(resolve(plugin, 'client.js'))
 const revision = createHash('sha256').update(bytes).digest('hex')
@@ -48,7 +49,7 @@ await writeFile(resolve(author, 'client.ts'), `import { value } from '@example/s
 export function apply(ctx) { ctx.provide('embedded-value', value) }
 `)
 const embeddedPlugin = resolve(directory, 'embedded-plugin')
-execFileSync(process.execPath, [resolve(root, 'scripts/build-client-modules.mjs'), runtime, author, embeddedPlugin], { stdio: 'inherit' })
+execFileSync(process.execPath, [resolve(root, 'clients/tools/build.mjs'), author, embeddedPlugin], { stdio: 'inherit' })
 const embeddedBytes = await readFile(resolve(embeddedPlugin, 'client.js'))
 const embeddedRevision = createHash('sha256').update(embeddedBytes).digest('hex')
 const embeddedUrl = 'http://localhost/client/embedded?rev=' + embeddedRevision

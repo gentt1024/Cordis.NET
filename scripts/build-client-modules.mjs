@@ -1,9 +1,13 @@
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { dirname, relative, resolve } from 'node:path'
-import { cp, mkdir, mkdtemp, readFile, readdir, rename, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
+
+if (process.argv.length > 3) {
+  throw new Error('This entry builds the runtime only. Use cordis-client-build for author packages.')
+}
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const source = resolve(root, 'clients/modules')
@@ -25,9 +29,8 @@ const generateStandard = spawnSync(process.env.DOTNET_HOST_PATH ?? 'dotnet', [
 if (generateStandard.status !== 0) throw new Error('Standard generated client assets failed')
 let requireTools = createRequire(resolve(source, 'package.json'))
 let build
-let buildContext
-try { ({ build, context: buildContext } = requireTools('esbuild')) }
-catch { requireTools = createRequire(resolve(root, 'reference/package.json')); ({ build, context: buildContext } = requireTools('esbuild')) }
+try { ({ build } = requireTools('esbuild')) }
+catch { requireTools = createRequire(resolve(root, 'reference/package.json')); ({ build } = requireTools('esbuild')) }
 const alias = {
   '@deepseek-ai/cordis': resolve(source, 'vendor/cordis/src/index.ts'),
   '@deepseek-ai/cosmokit': resolve(source, 'vendor/cosmokit/src/index.ts'),
@@ -120,76 +123,3 @@ await writeFile(resolve(output, 'package.json'), JSON.stringify({ name: '@cordis
     ...Object.fromEntries(['management', 'events', 'settings'].map(name => [
       './' + name, { types: './types/standard/' + name + '.d.ts', default: './' + name + '.mjs' },
     ])) } }, null, 2) + '\n')
-
-// Optional author build: preserve declared cross-package requests instead of bundling dependency copies.
-// Usage: node scripts/build-client-modules.mjs <runtime-output> <author-package> <plugin-output>
-if (process.argv[3] !== undefined) {
-  const author = resolve(process.argv[3])
-  const destination = resolve(process.argv[4] ?? resolve(author, 'dist'))
-  if (destination === output) throw new Error('Author artifacts require a separate output directory')
-  const watching = process.argv[5] === '--watch'
-  const readManifest = async () => {
-    const manifest = JSON.parse(await readFile(resolve(author, 'package.json'), 'utf8'))
-    const client = manifest.dsh?.client
-    if (typeof manifest.name !== 'string' || client?.platform !== 'web'
-      || !Array.isArray(client.external) || client.external.some(value => typeof value !== 'string')) {
-      throw new Error('Author package requires a name, web dsh.client, and explicit external requests')
-    }
-    return manifest
-  }
-  let manifest = await readManifest()
-  const publish = async (bundle) => {
-    const code = bundle.outputFiles[0].text
-    const registration = `globalThis.__ModuleLoader__.load({id:${JSON.stringify(manifest.name)},factory(require){const module={exports:{}};const exports=module.exports;\n${code}\nreturn module.exports;}});\n`
-    const revision = createHash('sha256').update(registration).digest('hex')
-    const parent = watching ? resolve(destination, 'generations') : dirname(destination)
-    await mkdir(parent, { recursive: true })
-    const staged = await mkdtemp(resolve(parent, '.client-pending-'))
-    await writeFile(resolve(staged, 'client.js'), registration)
-    await writeFile(resolve(staged, 'package.json'), JSON.stringify({ ...manifest,
-      exports: { ...manifest.exports, './client': './client.js' } }, null, 2) + '\n')
-    const directory = watching ? resolve(parent, revision + '-' + randomUUID()) : destination
-    if (!watching) {
-      // Preserve the prior complete directory; never overwrite files a capture may be reading.
-      try { await rename(destination, destination + '.retired-' + randomUUID()) }
-      catch (error) { if (error.code !== 'ENOENT') throw error }
-    }
-    await rename(staged, directory)
-    console.log(JSON.stringify({ kind: 'client-built', name: manifest.name, revision, directory }))
-  }
-  const reportFailure = error => console.log(JSON.stringify({ kind: 'build-error', name: manifest.name, diagnostic: String(error) }))
-  // DSH selects externals by the complete request. esbuild's external package patterns also
-  // match every subpath, which would silently ask the shell for undeclared module identities.
-  const requests = new Set(['@cordis-net/client-modules', '@cordis-net/client-modules/slots',
-    '@deepseek-ai/cordis', '@deepseek-ai/cosmokit', ...manifest.dsh.client.external])
-  const settings = { entryPoints: [resolve(author, 'client.ts')], bundle: true, format: 'cjs', platform: 'browser',
-    write: false, plugins: [{ name: 'exact-client-externals', setup(plugin) {
-      plugin.onResolve({ filter: /.*/ }, args => requests.has(args.path) ? { path: args.path, external: true } : undefined)
-    } }],
-    define, legalComments: 'eof' }
-  if (!watching) {
-    try { await publish(await build(settings)) } catch (error) { reportFailure(error); process.exitCode = 1 }
-  } else {
-    const compiler = await buildContext({ ...settings, plugins: [...settings.plugins, { name: 'complete-client-artifact', setup(plugin) {
-      plugin.onStart(async () => {
-        const next = await readManifest()
-        if (next.name !== manifest.name) throw new Error('Package identity changed; restart the author watch')
-        if (JSON.stringify(next.dsh.client.external) !== JSON.stringify(manifest.dsh.client.external)) {
-          throw new Error('External requests changed; restart the author watch with the new manifest')
-        }
-        manifest = next
-      })
-      plugin.onLoad({ filter: /client\.ts$/ }, async args => {
-        if (args.path !== resolve(author, 'client.ts')) return
-        return { contents: await readFile(args.path, 'utf8'), loader: 'ts', resolveDir: dirname(args.path),
-          watchFiles: [resolve(author, 'package.json')] }
-      })
-      plugin.onEnd(async result => {
-        if (result.errors.length > 0) { reportFailure(result.errors.map(error => error.text).join('; ')); return }
-        try { await publish(result) } catch (error) { reportFailure(error) }
-      })
-    } }] })
-    await compiler.watch()
-    for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, async () => { await compiler.dispose() })
-  }
-}

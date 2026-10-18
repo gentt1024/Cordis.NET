@@ -118,6 +118,7 @@ internal static class DeclarationModelJson
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
+        NewLine = "\n",
         RespectRequiredConstructorParameters = true,
         RespectNullableAnnotations = true,
         UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow

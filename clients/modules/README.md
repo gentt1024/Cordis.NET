@@ -23,7 +23,9 @@ An author package has `client.ts`, a package name, and an explicit `dsh.client` 
 Authors can import the public `Context` and `Service` values from `@cordis-net/client-modules`. The author build preserves that request, and the browser supplies the same Cordis instance as the page root. Declare cross-package imports in `external`, including `/client` requests, and service-provider package dependencies in `inject`.
 
 ```sh
-node scripts/build-client-modules.mjs artifacts/client-modules path/to/author-package artifacts/my-panel
+cd path/to/author-package
+npm install --save-dev <client-tools-tgz>
+npx --no-install cordis-client-build . dist --entry client.ts
 ```
 
 Add `--watch` as the final argument for optional author development. Each successful build publishes a complete immutable generation directory and a JSON stdout frame `{kind:"client-built",name,revision,directory}`. Compilation failure emits `{kind:"build-error",name,diagnostic}` and preserves earlier directories. A later success publishes a new directory. Changes to the declared external requests require restarting the watch. The Host consumes only successful frames through its session queue, captures a new catalog, and sends its `client-modules` event. Host-owned process startup, cancellation and shutdown remain integration responsibilities; this compiler command does not manage those tasks.
