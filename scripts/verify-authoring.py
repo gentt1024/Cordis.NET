@@ -445,6 +445,7 @@ def application_client(gate: Gate, label: str, executable: Path, *, expected_fai
     with stdout.open("wb") as out, stderr.open("wb") as err:
         host = subprocess.Popen([str(executable), "--application-host", origin + "/", str(package)],
                                 cwd=ROOT, env=gate.env, stdout=out, stderr=err)
+        client_error = None
         try:
             deadline = time.monotonic() + 30
             while True:
@@ -460,18 +461,47 @@ def application_client(gate: Gate, label: str, executable: Path, *, expected_fai
                     time.sleep(0.1)
             gate.run(label + "-real-client", ["node", "scripts/application-client-consumer.mjs", origin, package],
                      runtime_failure=expected_failure)
-            gate.record(label + "-delivery", executableSha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
-                        hostStdout=stdout.relative_to(OUT).as_posix(), hostStderr=stderr.relative_to(OUT).as_posix(),
-                        protocol="generated standard Settings Remote and immutable self-contained ESM",
-                        execution="actual Node ESM client; browser UI rendering not asserted")
+        except BaseException as error:
+            client_error = error
+            raise
         finally:
+            shutdown = {"name": label + "-host-stop", "status": "failed",
+                        "hostStdout": stdout.relative_to(OUT).as_posix(),
+                        "hostStderr": stderr.relative_to(OUT).as_posix()}
+            gate.steps.append(shutdown)
             try:
-                with urllib.request.urlopen(urllib.request.Request(origin + "/stop", data=b"", method="POST"), timeout=3):
-                    pass
-                host.wait(timeout=10)
-            except (OSError, subprocess.TimeoutExpired):
-                host.kill()
-                host.wait(timeout=10)
+                try:
+                    with urllib.request.urlopen(urllib.request.Request(origin + "/stop", data=b"", method="POST"), timeout=3):
+                        pass
+                    shutdown["exitCode"] = host.wait(timeout=10)
+                except (OSError, subprocess.TimeoutExpired) as error:
+                    shutdown["forcedTermination"] = True
+                    try:
+                        host.kill()
+                        shutdown["forcedExitCode"] = host.wait(timeout=10)
+                    except Exception as termination_error:
+                        shutdown["terminationError"] = f"{type(termination_error).__name__}: {termination_error}"
+                    raise RuntimeError(f"{label}: host stop failed ({type(error).__name__}: {error}); "
+                                       f"forced termination required; inspect {stdout} and {stderr}") from error
+                if shutdown["exitCode"] != 0:
+                    raise RuntimeError(f"{label}: host exited {shutdown['exitCode']} during stop; "
+                                       f"inspect {stdout} and {stderr}")
+                shutdown["status"] = "passed"
+            except Exception as error:
+                shutdown["error"] = str(error)
+                if "terminationError" in shutdown:
+                    error.add_note(shutdown["terminationError"])
+                if client_error is None:
+                    raise
+                client_error.add_note(str(error))
+                if "terminationError" in shutdown:
+                    client_error.add_note(shutdown["terminationError"])
+            finally:
+                print(f"{'PASS' if shutdown['status'] == 'passed' else 'FAIL'} {label}-host-stop", flush=True)
+        gate.record(label + "-delivery", executableSha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
+                    hostStdout=stdout.relative_to(OUT).as_posix(), hostStderr=stderr.relative_to(OUT).as_posix(),
+                    protocol="generated standard Settings Remote and immutable self-contained ESM",
+                    execution="actual Node ESM client; browser UI rendering not asserted")
 
 
 def application_contracts(gate: Gate):
