@@ -10,41 +10,9 @@ Read [development](docs/development.md), [compatibility](docs/compatibility.md),
 
 ## Validate the change
 
-### C# style and lint
+Create a branch from main, locate the owner and tests, and complete one concrete change with paired documentation. Describe the problem, change, risks and verification entry in the PR.
 
-The root `.editorconfig` is the style authority. The pinned SDK's compiler and Roslyn analyzers own correctness, nullable, async, lifetime, interop, performance, and API-usage diagnostics. Build warnings are errors. Formatting does not apply semantic fixes.
-
-```console
-python scripts/format.py
-python scripts/format.py --check
-```
-
-The script restores the repository-local JetBrains ReSharper GlobalTools version from `dotnet-tools.json` and the solution's locked dependencies. It runs `jb cleanupcode` with `Built-in: Reformat Code` on repository C# files, then `dotnet format whitespace` in folder and solution modes, then CleanupCode again. Solution mode covers conditional compilation branches. Every stage uses the same explicit C# file list, including fixtures and tools outside the solution. Each later stage must leave the previous output unchanged.
-
-`--check` copies current tracked and non-ignored new files, including configuration and uncommitted edits, to a temporary directory. Restore and formatting run there; nothing is written back to the working tree. Any stage changing the copied C# files fails the check. Files resolving outside the repository are rejected. CI runs this check on Windows and Linux. Git and Python are required.
-
-Roslyn defines braces, newlines, spacing, and indentation; single-line blocks and embedded statements are expanded. JetBrains adds wrapping for signatures, arguments, call chains, and initializers at a target width of 120 columns. Unbreakable tokens and string contents may exceed that width. GlobalTools is a development tool, not a dependency of any `Cordis.NET.*` package. CSharpier is not used.
-
-To keep both formatters stable, nested loops are indented, `for` semicolons have no padding, and explicit line breaks are preserved, including before a call after a multiline constructor. Existing lifecycle exceptions have narrow, commented analyzer suppressions; formatting must not change cleanup or cancellation timing.
-
-Rider and Visual Studio read `.editorconfig` automatically. In Rider or Visual Studio with ReSharper, use **Reformat Code**, with Roslyn analyzers enabled. Visual Studio's built-in formatter handles the Roslyn rules; run the script before submitting changes to apply width-aware wrapping too. The pinned CLI output is canonical. Avoid Full Cleanup for formatting-only changes because it can rewrite code. See the [CleanupCode reference](https://www.jetbrains.com/help/resharper/CleanupCode.html) and [wrapping settings](https://www.jetbrains.com/help/resharper/EditorConfig_CSHARP_LineBreaksPageSchema.html).
-
-### Build and tests
-
-Install the exact SDK in `global.json` and select that installation in Rider/Visual Studio and your CLI. SDK patch roll-forward is disabled to keep SDK-supplied dependencies, including ILLink, aligned with CI and the lock files. Regenerate dependency locks only with that SDK; normal validation uses locked restore.
-
-```console
-dotnet restore Cordis.slnx --locked-mode
-dotnet build Cordis.slnx -c Release --no-restore
-dotnet test Cordis.slnx -c Release --no-build
-python scripts/check-docs.py
-```
-
-Run `python scripts/verify.py` for runtime, packaging, compatibility, or release changes. Documentation-only changes need the documentation check and a focused review; they do not require every Windows, Linux, or AOT gate.
-
-PR and main-branch CI run the .NET verification and fixed upstream source tests in parallel on both platforms. Four isolated upstream jobs split the 4,800 linked-resolution matrix cases; each group remains sequential, and the first job also runs the remaining original suites. Each job discovers the complete original case list. The final `verify (windows-latest)` and `verify (ubuntu-24.04)` checks require all runtime jobs and all shards, identical source/toolchain identities within each platform, and an exact union of the discovered cases. Missing, duplicate, failed, or unexpectedly skipped cases fail the gate. The known upstream filesystem-capability skip remains explicit. Filtered-out matrix cases are not counted as executions.
-
-CI uses `verify.py --defer-upstream-source-tests` only with those required shard gates. That option retains the current .NET/DSH trace comparisons but does not independently establish original-source test coverage. The default local command and release workflow still run the full original suites. No test results are reused across CI runs. A shard can be reproduced in a fresh checkout with `python scripts/verify_upstream.py run --dsh <fixed-dsh> --origin <fixed-cordis> --shard 1` (use 1 through 4); preserve each job's `artifacts/upstream-shard-*` JSON and logs for aggregation.
+For documentation, run `python scripts/check-docs.py` and check changed anchors. For C#, run related tests, build and formatting checks. Runtime, package, compatibility and release changes require `python scripts/verify.py`. See [contributor tooling and CI](docs/development.md#contributor-tooling-and-ci) for SDK, formatter and CI shard details. Pure prose does not require manually repeating the full AOT/browser matrix.
 
 Keep English and Chinese partner documents synchronized when a promise, command, or code sample changes. Add third-party code only with its license and provenance. Never commit credentials, personal paths, raw local logs, or undisclosed vulnerability details.
 

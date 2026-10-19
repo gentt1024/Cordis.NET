@@ -94,7 +94,7 @@ Composition 在 `cordis/typert/Cordis.Composition.cordis.model.json` 供应选�
 浏览器管理 facade 中对应的方法和解码器一并退出，不保留 legacy 路由或版本化 Remote。
 原生宿主状态、完整配置及客户端制品路由继续承担独立职责和授权。
 
-Settings 保持唯一的[数值 revision 合同](settings-contract-migration.zh.md)。
+Settings 保持唯一的[数值 revision 合同](settings.zh.md)。
 应用消费者重新生成客户端、绑定当前宿主授权、订阅后读取快照，并保留安装结果未知状态。旧生成代码不构成兼容要求。
 
 共享 Connection 使用固定 unary 封套、unary multipart 附件及文本 WebSocket mux。

@@ -52,7 +52,7 @@ Bundle 保护和激活要求对捕获的 base 与有序候选层调用现有补�
 
 生成的 `ForContext(callerContext, registry)` 视图对应上下文关联的 Service 访问。它显式选择 scoped 签名；父客户端提供 direct 签名，不复刻 JavaScript 在参数列表之间的动态回退。接收方 scoped 方法不暴露公开的原始身份参数入口。direct lookup-scoped 方法保留普通身份参数，并获得省去该参数的视图方法。没有匹配 Context 声明或含多个 lookup 参数时仍为 direct。scoped 调用每次进入已有 Cordis 执行域读取当前 adapter 和身份，不缓存两者，不制造 Context，也不拥有借入的 Context／registry／HttpClient。父客户端释放及现有流取消继续沿用当前所有者。
 
-上游缺失哨兵对应 `Undefined.Value`。引用类型身份的显式 null 保留在内部请求封套中，由 Host codec 校验，不合并为缺失，也不提前变成 STJ 序列化失败。值类型身份在进入强类型调用之前须匹配声明的 CLR 类型。Host lookup 对象类型仍保留在声明分析中；独立 caller 只投影其 wire 身份类型。本段说明原 .NET scoped 切片。后续 owned Context、Peer／uplink、事件与浏览器工作在[验证记录](validation.zh.md)中各有证据；当前剩余职责见[开发记录](development.zh.md#remote-语义与互通d-wire)。[作者用法](authoring.zh.md)说明当前消费方式。
+上游缺失哨兵对应 `Undefined.Value`。引用类型身份的显式 null 保留在内部请求封套中，由 Host codec 校验，不合并为缺失，也不提前变成 STJ 序列化失败。值类型身份在进入强类型调用之前须匹配声明的 CLR 类型。Host lookup 对象类型仍保留在声明分析中；独立 caller 只投影其 wire 身份类型。本段说明原 .NET scoped 切片。后续 owned Context、Peer／uplink、事件与浏览器工作在[验证记录](validation.zh.md)中各有证据；当前支持与拒绝形状见[后端支持表](development.zh.md#alpha5-独立后端处置)，剩余具名集成见[剩余支持边界](development.zh.md#剩余支持边界)。[作者用法](authoring.zh.md)说明当前消费方式。
 
 Cordis.NET 以[上游文档](upstream.zh.md)所述、DeepSeek Harness 锁定的 vendored Cordis 行为为目标。兼容性按可观察契约评估，不能只看包名或测试数量。
 
@@ -65,6 +65,8 @@ Cordis.NET 以[上游文档](upstream.zh.md)所述、DeepSeek Harness 锁定的 
 普通数据后端通过既有共同声明组合与共享框架投影支持 `Dictionary<string,T>`、`IDictionary<string,T>` 和 `IReadOnlyDictionary<string,T>`。JSON 对象键保持字符串，不推断数值键转换。值保留声明的空性、默认值和引用声明身份。这是有界的静态 DTO／STJ 投影，不执行泛型作者代码，也不代表任意 CLR 集合均已支持。
 
 Cordis.NET 是固定 DSH 基线及仓库已确认通用应用基础设施的忠实、地道的 .NET port。仓库历次试验设计不构成另一套独立框架规范，也不自动形成长期兼容义务。规范依据是固定上游行为、已确认的仓库范围，以及有具体平台需要支持的 .NET 适配。
+
+已发布 alpha.5.2 是仓库维护的公共使用基线。组织整理保留其 API、生成合同和包布局。真实错误的修正必须说明受影响消费者及必要迁移，预览版身份本身不构成破坏用法的理由。
 
 当前代码、API 快照、生成客户端和测试都应据此校正。签名曾进入 main、随旧版本公开或通过旧测试，不能单独成为保留错误移植的理由。确认错误后，应直接修正并迁移消费者；兼容路径必须有独立的消费职责或兼容承诺依据。持久数据与 Git 历史的保全应单独处理，不等同于保留被取代的运行接口。这一原则不要求逐行翻译 TypeScript，也不授权重写已经满足合同的机制。
 
@@ -160,7 +162,7 @@ Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 P
 
 ## 2026-10-09 模块导出与 Typert 续建
 
-[范围续账](development.zh.md#2026-10-09-应用基础设施范围续账) 将起始 HEAD 的遗漏与本次实施分别记录。行为依据仍是 DSH `639ed015397290b3745d163aafe02ffee4aa3f84`。历史完成记录与固定基线保持不变。本次源码续建不声明已发布包批次。
+[范围续账](https://github.com/gentt1024/Cordis.NET/blob/1ed99e39c44c8f7ecbd064b365b8ebb31530f3c4/docs/development.zh.md#2026-10-09-应用基础设施范围续账) 将起始 HEAD 的遗漏与本次实施分别记录。行为依据仍是 DSH `639ed015397290b3745d163aafe02ffee4aa3f84`。历史完成记录与固定基线保持不变。本次源码续建不声明已发布包批次。
 
 ### CLR 模块身份与所有权
 
@@ -190,7 +192,7 @@ Host unary 取消遵循固定调用边界：成功业务不会仅因传输信号
 
 Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provider 值。caller-bound view 是实际调用 receiver；`Service<TState>.CreateView` 每次新建视图不会使活跃 provider 失效。准入在 contextual tracing 前捕获注册及原始值。后续每次检查先执行正常 contextual 查询，再读取最终注册及原始值，因此同步重入不能掩盖 provider 变化。重新提供同一个对象，包括在同一个 Fiber 内重提供，都会形成不同注册，使此前准入失效。设置不同原始值也会使其失效，即使注册身份未变；同值 `Set`、普通 `Notify` 和无关隔离 realm 的变化保持准入。这些观察仅在 Core 与 Composition 内部使用，不新增公开 API、服务 registry 或持久代数。未完成调用可以保留其注册及 provider，直至结束，仍遵循既有 CLR 协作寿命边界。
 
-共同声明分析、选定反向 Context/owned-value、类型化固定事件、Peer 路由及原生 Scope store/layer 现已有实现和有界消费证据。文本 mux、typed uplink 和 unary multipart 的实施边界见下方共享 Connection 记录。当前剩余职责见[开发记录](development.zh.md#分析投影与消费d-model)，不据此声称任意类型图或所有 Peer/codec 组合均已完成。标准 Settings、PluginManager 和宿主选择的 emit 通知使用生成合同。原生 state、完整配置、制品路由及独立 `MapCordisService` 适配继续承担各自职责。固定线协议互通仅限[验证记录](validation.zh.md)中的具名用例。
+共同声明分析、选定反向 Context/owned-value、类型化固定事件、Peer 路由及原生 Scope store/layer 现已有实现和有界消费证据。文本 mux、typed uplink 和 unary multipart 的实施边界见下方共享 Connection 记录。当前支持与拒绝形状见[后端支持表](development.zh.md#alpha5-独立后端处置)，剩余具名集成见[剩余支持边界](development.zh.md#剩余支持边界)，不据此声称任意类型图或所有 Peer/codec 组合均已完成。标准 Settings、PluginManager 和宿主选择的 emit 通知使用生成合同。原生 state、完整配置、制品路由及独立 `MapCordisService` 适配继续承担各自职责。固定线协议互通仅限[验证记录](validation.zh.md)中的具名用例。
 
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
 
@@ -220,7 +222,7 @@ Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对�
 
 原生 Gateway 现在对应固定 prepareInvocation 顺序：参数名和 receiver Context 之后检查实际 Service／binding，再启动全部参数解析。解析保持参数顺序，按首先观察到的失败返回，捕获已启动工作的晚到错误而不取消它们。definition／provider／原始 Service 注册检查仍在分发前拒绝失效的成功准备结果。原生代际检查仍是明确 CLR 适配；未结束 resolver 可以保留提供者直到结束。调用取消不覆盖准备错误，也不强制终止 resolver。本修复有聚焦反例和生成包消费者，正式完成证据另行记录。零参数 Settings 切片不作为 lookup 顺序证明。
 
-本轮标准 Settings 的数值 revision／可省略 expectedRevision、独立模型事实支持矩阵，以及语义对应／固定协议互通的区别，见[已确认续行合同](development.zh.md#已确认的续行合同与-r022026-10-11)。标准 Settings 的合同修正见下文；已有 base64 二进制结果不等价于 connection attachment。
+数值 Settings revision、独立模型事实和固定协议互通的原始决定见[历史续行合同](https://github.com/gentt1024/Cordis.NET/blob/1ed99e39c44c8f7ecbd064b365b8ebb31530f3c4/docs/development.zh.md#已确认的续行合同与-r022026-10-11)。标准 Settings 的合同修正见下文；已有 base64 二进制结果不等价于 connection attachment。
 ## 普通声明分析，2026-10-11
 
 普通根与 Remote 根共享声明提取及同一保存模型。模型在 Remote 投影前保留作者方法返回 wrapper 和取消参数。声明定义使用完整程序集身份及 CLR metadata name；构造引用保留实参、包含泛型类型和空性。泛型参数标明类型／方法 owner 和 ordinal。直接 base/interface 边、public/protected 成员、事件/delegate、accessor、required/default 事实、常量、未执行 initializer 和源码文档均为模型数据。结构化 attribute 类型和 `typeof` 值进入引用图；partial 声明、隐式成员／成员来源、构造器、显式非公开 Remote 标记及作者 JSON metadata 签名为准确解释及拒绝而保留。这些事实不注册运行能力，也不承诺可执行投影。
@@ -235,7 +237,7 @@ Typert 自动发现将已知 Loader 内建入口视为无制品贡献者，对�
 
 上游将标记为 secret 的整个 live 根脱敏为 JavaScript undefined。原生 JSON namespace 要求有值，因此省略该根并返回原生诊断，其他 namespace 仍可读取。hidden 根按宿主政策省略。这项有界 JSON 适配不公开 secret，也不伪造替代值。
 
-标准 Settings 直接纠正为数值 revision 和可省略的 expected revision。旧字符串 Settings 合同明确拒绝；没有版本化 Remote、双格式解析或转换服务。具有独立用途的完整配置 hash 编辑继续单独保留。新公共用法与退出路径见[Settings 合同迁移](settings-contract-migration.zh.md)。R02 已由其修复所有者经 PR #15 合入 main；本候选以该主线为基点复验调用链。
+标准 Settings 直接纠正为数值 revision 和可省略的 expected revision。旧字符串 Settings 合同明确拒绝；没有版本化 Remote、双格式解析或转换服务。具有独立用途的完整配置 hash 编辑继续单独保留。新公共用法与退出路径见[Settings 合同迁移](settings.zh.md)。R02 已由其修复所有者经 PR #15 合入 main；本候选以该主线为基点复验调用链。
 
 ### Remote Connection 修正，2026-10-11
 

@@ -178,7 +178,7 @@ await forms.MutateAsync("worker",
 var formSchema = (await forms.DescribeAsync()).Value.Namespaces.Single(row => row.Ns == "worker").Schema;
 ```
 
-`DescribeAsync` 返回一次一致的读取，包含脱离 runtime 的选中值、base/user 层、数值观察 revision 和 `SettingsNamespaceView.Secrets`。具体路径与 `Set` 标记只表示存在性。object/dict secret 值被移除，数组位置保留 null 占位。union/intersection 各分支的 secret 保守合并。hidden 值被移除，选中 object 表单不公开未知成员。原生 Settings schema 投影保留脱敏后的公开默认值，省略 hidden 属性，移除 secret 默认值和 required 标记，并保留 write-only role。非 live 对象路径使用默认值为空对象的新包装；进入 live 边界后保留作者元数据。完整 `ReadConfigurationSchemasAsync` 可含默认值，宿主须另行授权。读取先通过正常生命周期同步；同步可能执行插件代码，随后才做数据投影。写入及省略/null 语义见[Settings 迁移指南](settings-contract-migration.zh.md)。
+`DescribeAsync` 返回一次一致的读取，包含脱离 runtime 的选中值、base/user 层、数值观察 revision 和 `SettingsNamespaceView.Secrets`。具体路径与 `Set` 标记只表示存在性。object/dict secret 值被移除，数组位置保留 null 占位。union/intersection 各分支的 secret 保守合并。hidden 值被移除，选中 object 表单不公开未知成员。原生 Settings schema 投影保留脱敏后的公开默认值，省略 hidden 属性，移除 secret 默认值和 required 标记，并保留 write-only role。非 live 对象路径使用默认值为空对象的新包装；进入 live 边界后保留作者元数据。完整 `ReadConfigurationSchemasAsync` 可含默认值，宿主须另行授权。读取先通过正常生命周期同步；同步可能执行插件代码，随后才做数据投影。写入及省略/null 语义见[Settings 迁移指南](settings.zh.md)。
 
 已解析的递归描述只沿实际存在的值后代遍历，缺失或 null 容器终止遍历。lazy/union 无进展环会省略受影响值并记录脱敏诊断，不把未完成遍历的原值返回给客户端。
 
