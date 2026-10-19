@@ -290,7 +290,7 @@ await connection.dispose();
 
 [多入口门禁](../scripts/verify-clr-multi-entry.py) 独立打包作者 NuGet，通过 `PackageReference` 消费，安装包根/子路径入口，并验证共享身份、独立配置、成功与失败替换、撤销、真实 HTTP 上的生成 TypeScript 调用及错误参数。独立的 [Remote 门禁](../scripts/verify-typert.py) 覆盖原生 Remote 作者链。使用最新本地包批次及所需 Node/TypeScript 依赖。平台验收以[验证记录](validation.zh.md)中已完成结果为准；这些示例本身不能证明 Windows/Linux 或 Native AOT 闭环。动态 CLR 加载要求普通运行时。
 
-选定的固定事件工作流、反向 Context 和 owned-value 处理使用[Remote 事件](remote-events.zh.md)所述共同声明。浏览器出站 scoped 调用、原生 Peer 路由及 Scope store/layer 已有有界消费证据；对应候选和剩余出口见[开发记录](development.zh.md)与[验证记录](validation.zh.md)。operator Peer 所有权、typed uplink 和 unary multipart 也已有实现。这些结果不证明任意类型图或所有 Peer 工作流均已完成。Settings、PluginManager 与选定宿主 emit 通知通过既有 profile owner 使用生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
+选定的固定事件工作流、反向 Context 和 owned-value 处理使用[Remote 事件](remote-events.zh.md)所述共同声明。浏览器出站 scoped 调用、原生 Peer 路由及 Scope store/layer 已有有界消费证据；当前支持与拒绝形状见[后端支持表](development.zh.md#alpha5-独立后端处置)，剩余具名集成见[剩余支持边界](development.zh.md#剩余支持边界)；历史候选及证据通过[验证记录](validation.zh.md#历史证据)追溯。operator Peer 所有权、typed uplink 和 unary multipart 也已有实现。这些结果不证明任意类型图或所有 Peer 工作流均已完成。Settings、PluginManager 与选定宿主 emit 通知通过既有 profile owner 使用生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
 
 
 ## 原生作者模型与 .NET 消费者，2026-10-10
