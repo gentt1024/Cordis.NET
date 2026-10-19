@@ -111,7 +111,7 @@ routes are removed. The browser management facade's matching methods and decoder
 with them. No legacy route or versioned Remote is retained. Native host state, raw configuration
 and client artifact routes retain their independent duties and authorization.
 
-Settings keeps its single [numeric revision contract](settings-contract-migration.md).
+Settings keeps its single [numeric revision contract](settings.md).
 Application consumers regenerate clients, bind current host authorization, subscribe before snapshot reads,
 and preserve unknown installation outcomes. Old generated code does not establish a compatibility requirement.
 

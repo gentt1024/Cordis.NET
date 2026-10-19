@@ -4,8 +4,6 @@
 
 Cordis.NET is a faithful, idiomatic .NET port of the fixed DSH-maintained Cordis runtime and generic application infrastructure. Build ordinary C# plugins and services, compose applications, or expose selected services to .NET and Web clients. Remote is optional; ordinary plugin development does not require Node.
 
-Fixed upstream behavior and justified platform adaptations govern the implementation. Earlier experiments do not establish a separate framework specification or compatibility obligation. See [compatibility](docs/compatibility.md).
-
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft. The behavior baseline is deepseek-ai/deepseek-harness at 639ed015397290b3745d163aafe02ffee4aa3f84, whose vendored Cordis reports 4.0.4; arbitrary TypeScript plugins are not a supported deployment format.
 
 ## Start with your task
@@ -20,7 +18,7 @@ Optional Hosting integrates Microsoft Generic Host. Extensions provides selected
 
 ## Select a package batch
 
-This source targets `0.2.0-alpha.5.2`. Use the exact package version and distribution listed in the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2); a source version alone does not establish NuGet availability. The earlier alpha.5 archive is superseded and must not be published. Published alpha.4 does not contain these changes. [Current support and release status](docs/development.md#current-support-and-release-status) separates implemented capabilities, known limits and pending decisions; [validation](docs/validation.md#current-candidate-index) identifies the actual tested packages.
+Install `0.2.0-alpha.5.2` from NuGet. The [release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2) also provides browser runtime and author-tool archives. See [current support](docs/development.md#current-support-and-release-status) for capability limits and [release evidence](docs/validation.md#released-version-evidence) for the verified batch.
 
 Follow [getting started](docs/getting-started.md) to install the selected batch and run without cloning the repository. To explore the same composition workflow from source with the SDK in global.json:
 
@@ -35,6 +33,7 @@ The example mounts a static plugin, reads its service and updates configuration.
 - [Getting started](docs/getting-started.md): package selection, first call and shutdown.
 - [Authoring](docs/authoring.md): declarations, generated consumers, errors and ownership.
 - [Core concepts](docs/core-concepts.md) and [architecture](docs/architecture.md): runtime and subsystem responsibilities.
+- [Settings](docs/settings.md): live forms, revisions and coordinated writes.
 - [Development](docs/development.md): current support, maintenance navigation and verification.
 - [Compatibility](docs/compatibility.md), [upstream provenance](docs/upstream.md) and [upgrade matrix](docs/upgrade-0.2.0-rc.2.md): fixed behavior and platform adaptations.
 - [Publication readiness](docs/publication-readiness.md), [changelog](CHANGELOG.md), [contributing](CONTRIBUTING.md), [security](SECURITY.md) and [notices](NOTICE.md).

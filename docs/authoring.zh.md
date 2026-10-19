@@ -6,7 +6,7 @@
 
 ## 从可运行示例开始
 
-首个仅依赖包的应用请从[入门指南](getting-started.zh.md)开始。本页描述当前所选批次，包括生成式 Remote 和模型消费者。请从[验证索引](validation.zh.md#当前候选索引)选择精确 feed／版本，不要假设已发布 alpha.4 含有后续变更。下方可选示例使用源码项目引用和 global.json 的 SDK。
+首个仅依赖包的应用请从[入门指南](getting-started.zh.md)开始。本页描述当前所选批次，包括生成式 Remote 和模型消费者。请从[验证索引](validation.zh.md#已发行版本证据)选择精确 feed／版本。下方可选示例使用源码项目引用和 global.json 的 SDK。
 
 [共享契约](../examples/Probes.Contracts/Probes.cs)、[提供者与配置](../examples/Probes.Plugin/ProbeModule.cs)和[包含两个消费者的静态宿主](../examples/Probes/Program.cs)是示例的权威源码。它们展示普通格式化能力、caller-bound 状态探针注册服务、类型化事件、提前撤销、提供者消失和消费者重新激活。
 
@@ -123,7 +123,7 @@ node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/ap
 
 ## 部署与验证边界
 
-下述候选准入与协调 metadata 保存 API 为 `0.2.0-alpha.4` 引入，alpha.3 不提供。当前源码还包含[标准 Settings 迁移](settings-contract-migration.zh.md)等后续合同修正，需要未来使用新的包版本。这些变更应通过当前 project reference 或隔离本地验证 feed 消费，不替换已发布的 alpha.4 包。
+以下 API 已包含于 `0.2.0-alpha.5.2`。使用[发行批次](validation.zh.md#已发行版本证据)中相互匹配的包和工具；标准配置合同见 [Settings 指南](settings.zh.md)。
 
 包与 bundle 选择的产品政策通过 `session.ConfigurationOperations.AdmitProfileAsync` 设置。回调接收 `ProfileCandidate.ManifestJson`（拟保存的确切文本）、`ConfigurationJson`（不执行表达式的有效原始根条目），以及包含来源层和跳过选择的独立 `Composition` 视图。安装时，`Package` 还提供准备目录及计划发布目录，政策可在 Publish 前读取产物；其他操作中它为 null。抛出异常即拒绝。应校验库提供的候选，不再在 `IProfilePackageToolchain.PublishAsync` 中重新读 Profile 并预测另一份候选。准入期间不要重入配置操作。产品自身政策输入须保持稳定直到操作结束；此回调不冻结外部 SDK 或应用状态。`ProfileSession` 自动提供候选应用路径。
 
@@ -152,7 +152,7 @@ python scripts/verify.py
 
 ## 2026-10-09 模块导出与生成式 Remote 合同
 
-本次源码续建属于既有应用基础设施范围，见[范围续账](development.zh.md#2026-10-09-应用基础设施范围续账)。这不表示已发布新包批次。以下合同要求使用包含本次续建的源码构建包批次。
+这些工作流复用[架构文档](architecture.md)中的职责及上方已发布包批次。
 
 ### 一个作者包中的多个 CLR 入口
 
@@ -284,7 +284,7 @@ await connection.dispose();
 
 必须等待 `mountRemote`，它在所有者上登记清理，并向共享的根 `remote.<namespace>` Service 贡献方法。不同贡献可以共享命名空间，重复方法或无关 Service 会被拒绝。撤销只移除本贡献，最后一个贡献退出才撤销命名空间。客户端释放等待自身工作，不关闭借用的 Connection；应用负责释放 Connection。可选的 fetch 与 WebSocket 工厂配置应用的传输身份，不改变生成方法或 Host 授权。
 
-共享运行时支持 unary 结果、unary multipart 附件恢复、下行及 typed uplink mux，并供生成式 .NET/TS 客户端消费。[验证记录](validation.zh.md#共享-remote-connection-包门禁2026-10-12)区分冻结包门禁、固定 DSH 互通及 Native AOT 证据。选定的反向 Context／owned-value 和固定事件转发见[Remote 事件](remote-events.zh.md)。原 base64 线格式与每方法 NDJSON 路径已退出。
+共享运行时支持 unary 结果、unary multipart 附件恢复、下行及 typed uplink mux，并供生成式 .NET/TS 客户端消费。[验证记录](https://github.com/gentt1024/Cordis.NET/blob/1ed99e39c44c8f7ecbd064b365b8ebb31530f3c4/docs/validation.zh.md#共享-remote-connection-包门禁2026-10-12)区分冻结包门禁、固定 DSH 互通及 Native AOT 证据。选定的反向 Context／owned-value 和固定事件转发见[Remote 事件](remote-events.zh.md)。原 base64 线格式与每方法 NDJSON 路径已退出。
 
 ### 消费者证据与剩余范围
 
@@ -344,11 +344,11 @@ var view = reply.Value;
 
 调用者拥有 HttpClient 与共享的 `TypertConnection`。普通调用返回 `Task<RemoteResult<T>>`，先检查 `Ok`，再读取 `Value` 或 `Error`。无值作者返回 `Task`，投影为 `Task<RemoteResult>`，无值成功与显式 null 保持区分。缺失 adapter 或 Connection 是本地装配异常。远端失败保留任意所有者 code 与独立 JSON details；传输失败和取消成为 unary 结果。下行调用在异步准备后返回立即开始打开的 `RemoteStreamHandle<T>`，单次枚举直接读取业务项，并等待释放。流的远端错误、carrier 故障、本地误用和外部取消分别以对应异常表达。客户端释放等待自身调用与清理，不释放借用资源。
 
-生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsProvider`。将 `SettingsForms` 挂在会话已有 `ConfigurationOperations` 之上；它根据作者的 live Config 声明推导 active、唯一可寻址的表单。数值 revision 观察 Fiber 身份、完整 schema 和原始配置。层级脱敏读取、完整候选校验和写入都归同一个 profile 队列。describe/update/replace/mutate 使用唯一生成合同。公开调用与退出的 Settings hash 路径见[Settings 合同迁移](settings-contract-migration.zh.md)。
+生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsProvider`。将 `SettingsForms` 挂在会话已有 `ConfigurationOperations` 之上；它根据作者的 live Config 声明推导 active、唯一可寻址的表单。数值 revision 观察 Fiber 身份、完整 schema 和原始配置。层级脱敏读取、完整候选校验和写入都归同一个 profile 队列。describe/update/replace/mutate 使用唯一生成合同。公开调用与退出的 Settings hash 路径见[Settings 合同迁移](settings.zh.md)。
 
 [独立 .NET Settings 门禁](../scripts/verify-typert-dotnet.py) 打包作者与合同包，再于仓库外构建仅依赖包的调用者。调用者不引用提供者实现，关闭 reflection fallback 并使用静态 metadata。门禁覆盖类型化 describe、脱敏、provider 缺失/失败、重试、已持视图失效重读、definition 撤销/重注册、局部 suspend 和借用客户端所有权；基础类型根、null/default 参数、空状态注解及拒绝不支持投影另有用例。`--aot` 验证静态调用者；动态 CLR Host 仍属于普通运行时边界。正式平台结果以[验证记录](validation.zh.md)中的确切完成检查点为准。
 
-此路线覆盖受支持的 unary／stream、Settings、PluginManager 和事件消费者。拒绝形状见[后端处置](development.zh.md#alpha5-独立后端处置)，具名平台证据见[验证索引](validation.zh.md#当前候选索引)。
+此路线覆盖受支持的 unary／stream、Settings、PluginManager 和事件消费者。拒绝形状见[后端处置](development.zh.md#alpha5-独立后端处置)，具名平台证据见[验证索引](validation.zh.md#已发行版本证据)。
 
 
 ## 类型化 Remote 上行

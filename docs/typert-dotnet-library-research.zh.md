@@ -2,7 +2,7 @@
 
 [English](typert-dotnet-library-research.md)
 
-本研究附录属于[原应用基础设施范围](development.zh.md#2026-10-09-应用基础设施范围续账)，为大规模修改之前的架构判断提供证据。它不引入实现决定、包选型、新规划或验收结论。[upstream.lock.json](../upstream.lock.json) 中的 DSH `639ed015397290b3745d163aafe02ffee4aa3f84` 继续作为行为依据。
+本研究附录属于[原应用基础设施范围](https://github.com/gentt1024/Cordis.NET/blob/1ed99e39c44c8f7ecbd064b365b8ebb31530f3c4/docs/development.zh.md#2026-10-09-应用基础设施范围续账)，为大规模修改之前的架构判断提供证据。它不引入实现决定、包选型、新规划或验收结论。[upstream.lock.json](../upstream.lock.json) 中的 DSH `639ed015397290b3745d163aafe02ffee4aa3f84` 继续作为行为依据。
 
 官方文档与源码核对日期为 2026-10-10。下列仓库链接固定所检查的库版本，仅是调研快照，并非选定发布版本。未安装依赖，未编译或运行候选库。Cordis.NET 既有证据仍见[验证记录](validation.zh.md)。
 
