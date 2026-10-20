@@ -228,7 +228,7 @@
       "sourceTitle": "Effects / async yield 1",
       "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
       "dotnet": [
-        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence(mode: 0)"
       ],
       "keyAssertions": [
         "expect(seq).to.deep.equal([])",
@@ -236,7 +236,7 @@
         "expect(seq).to.deep.equal([1, 3, 5, 6, 4, 2])"
       ],
       "status": "adapted-test-passed",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. Modes 0, 1 and 2 retain normal completion and the two distinct abort positions. The two upstream completion cases share mode 0 because .NET DisposeAsync already awaits cleanup.",
       "evidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
       ],
@@ -248,14 +248,14 @@
       "sourceTitle": "Effects / async yield 2 (aborted)",
       "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
       "dotnet": [
-        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence(mode: 1)"
       ],
       "keyAssertions": [
         "expect(seq).to.deep.equal([])",
         "expect(seq).to.deep.equal([1, 2])"
       ],
       "status": "adapted-test-passed",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. Modes 0, 1 and 2 retain normal completion and the two distinct abort positions. The two upstream completion cases share mode 0 because .NET DisposeAsync already awaits cleanup.",
       "evidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
       ],
@@ -267,7 +267,7 @@
       "sourceTitle": "Effects / async yield 3 (aborted)",
       "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
       "dotnet": [
-        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence(mode: 2)"
       ],
       "keyAssertions": [
         "expect(seq).to.deep.equal([])",
@@ -276,7 +276,7 @@
         "expect(seq).to.deep.equal([1, 3, 4, 2])"
       ],
       "status": "adapted-test-passed",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. Modes 0, 1 and 2 retain normal completion and the two distinct abort positions. The two upstream completion cases share mode 0 because .NET DisposeAsync already awaits cleanup.",
       "evidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
       ],
@@ -288,7 +288,7 @@
       "sourceTitle": "Effects / async yield 4 (await dispose)",
       "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
       "dotnet": [
-        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence(mode: 0)"
       ],
       "keyAssertions": [
         "expect(seq).to.deep.equal([])",
@@ -296,7 +296,7 @@
         "expect(seq).to.deep.equal([1, 3, 5, 6, 4, 2])"
       ],
       "status": "adapted-test-passed",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. Modes 0, 1 and 2 retain normal completion and the two distinct abort positions. The two upstream completion cases share mode 0 because .NET DisposeAsync already awaits cleanup.",
       "evidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
       ],
@@ -538,7 +538,7 @@
       "sourceTitle": "Fiber / inertia lock 1",
       "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
       "dotnet": [
-        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload(scenario: 1)"
       ],
       "keyAssertions": [
         "expect(fiber.state).to.equal(FiberState.LOADING)",
@@ -548,7 +548,7 @@
         "expect(fiber.state).to.equal(FiberState.ACTIVE)"
       ],
       "status": "adapted-test-passed",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. The test releases its load and cleanup barriers in finally if an assertion fails, while preserving their normal release points.",
       "evidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
       ],
@@ -560,7 +560,7 @@
       "sourceTitle": "Fiber / inertia lock 2",
       "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
       "dotnet": [
-        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload(scenario: 2)"
       ],
       "keyAssertions": [
         "expect(fiber.state).to.equal(FiberState.LOADING)",
@@ -568,7 +568,7 @@
         "expect(fiber.state).to.equal(FiberState.ACTIVE)"
       ],
       "status": "adapted-test-passed",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. The test releases its load and cleanup barriers in finally if an assertion fails, while preserving their normal release points.",
       "evidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
       ],
@@ -580,7 +580,7 @@
       "sourceTitle": "Fiber / inertia lock 3",
       "sourceCommit": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
       "dotnet": [
-        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload(scenario: 3)"
       ],
       "keyAssertions": [
         "expect(fiber.state).to.equal(FiberState.LOADING)",
@@ -588,7 +588,7 @@
         "expect(fiber.state).to.equal(FiberState.PENDING)"
       ],
       "status": "adapted-test-passed",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. The test releases its load and cleanup barriers in finally if an assertion fails, while preserving their normal release points.",
       "evidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
       ],

@@ -28,6 +28,10 @@ Every upstream path below uses [upstream.lock.json](../upstream.lock.json). This
 | Remote / events | packages/api/gateway and packages/typert/protocol; async and disposal adapt ownership | [Composition](../src/Cordis.Composition) Registry/Gateway/Connection, [AspNetCore](../src/Cordis.AspNetCore) | [Registry](../tests/Cordis.Composition.Tests/TypertRegistryTests.cs), [events](../tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs); [real clients](../scripts/verify-typert.py) |
 | CLR lifecycle | packages/boot/hmr; collectible ALC and stable files adapt loading/retirement | [ClrModuleResolver](../src/Cordis.Clr/ClrModuleResolver.cs), Loader | [ClrTests](../tests/Cordis.Platform.Tests/ClrTests.cs); [multi-entry consumer](../scripts/verify-clr-multi-entry.py) |
 
+The default JIT package-consumer path is `python scripts/verify-typert-dotnet.py --packages <validated-batch> --output <new-empty-directory>`. Select at most one of its five `--…-only` options; omitting them runs the default path, and `--aot` remains independent. Existing negative checks must identify their intended refusal: caller DTO projection for `recordStruct`, `gateway/input-invalid` for illegal Web inputs before business calls, and the compiler's missing-file diagnostic for the deleted explicit event model. A missing file is different from an omitted reference model.
+
+This consumer maps `Cordis.NET.*` to the validated batch, its `Independent*` fixture packages to the temporary author feed, and public dependencies to nuget.org. It clears fallback folders and uses a private cache. Existing assets checks verify that cache and the selected Cordis package version; a public package with the same version does not establish candidate provenance.
+
 ## Model pipeline contract
 
 Ordinary and Remote roots share one declaration fact model. An incomplete port cannot define the next architecture: correct missing facts and stage responsibilities before creating another public protocol. Published alpha.5.2 is the public-use baseline. Corrections require explicit impact and regeneration guidance; historical experiments do not independently define the target contract.
@@ -175,6 +179,16 @@ dotnet build Cordis.slnx -c Release --no-restore
 dotnet test Cordis.slnx -c Release --no-build
 python scripts/check-docs.py
 ```
+
+For focused maintenance, Core's `InertiaSerializesLoadAndUnload` owns load/unload serialization and `AsyncYieldExactSequence` owns normal completion and distinct abort positions. Composition's `MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite` owns malformed configuration refusal before writing; `LoaderOriginalTests.LoaderInterceptReadiness` owns the state observations before and after readiness release.
+
+```console
+dotnet test tests/Cordis.Core.Tests -c Release --no-build --no-restore --filter "FullyQualifiedName~InertiaSerializesLoadAndUnload|FullyQualifiedName~AsyncYieldExactSequence"
+dotnet test tests/Cordis.Composition.Tests -c Release --no-build --no-restore --filter "FullyQualifiedName~EnablementRejectsMalformedFileWithoutOverwrite|FullyQualifiedName~LoaderInterceptReadiness"
+python scripts/test-map.py
+```
+
+Parameterized cases should exercise a different path or observation. Prefer a lightweight owner check over an equivalent fixture whose extra setup is unused. Release test-owned barriers in `finally` when failed assertions could otherwise leave teardown waiting on them. Focused test results do not establish execution of the full upstream map.
 
 Run `python scripts/verify.py` for runtime, packaging, compatibility, or release changes. Documentation-only changes need the documentation check and a focused review; they do not require every Windows, Linux, or AOT gate.
 

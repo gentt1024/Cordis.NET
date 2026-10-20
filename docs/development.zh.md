@@ -28,6 +28,10 @@
 | Remote／事件 | packages/api/gateway、packages/typert/protocol；async 和释放适配所有权 | [Composition](../src/Cordis.Composition) Registry／Gateway／Connection、[AspNetCore](../src/Cordis.AspNetCore) | [Registry](../tests/Cordis.Composition.Tests/TypertRegistryTests.cs)、[事件](../tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs)；[真实客户端](../scripts/verify-typert.py) |
 | CLR 生命周期 | packages/boot/hmr；collectible ALC 和稳定文件适配加载／退休 | [ClrModuleResolver](../src/Cordis.Clr/ClrModuleResolver.cs)、Loader | [ClrTests](../tests/Cordis.Platform.Tests/ClrTests.cs)；[多入口消费](../scripts/verify-clr-multi-entry.py) |
 
+默认 JIT 包消费入口是 `python scripts/verify-typert-dotnet.py --packages <validated-batch> --output <new-empty-directory>`。五个 `--…-only` 选项最多选择一个；省略时运行默认路径，`--aot` 保持独立。既有负向检查须识别目标拒绝：`recordStruct` 的 caller DTO 投影拒绝、非法 Web 输入进入业务前的 `gateway/input-invalid`，以及编译器对已删除的显式事件模型文件的缺失诊断。文件缺失不同于省略引用模型。
+
+该消费者将 `Cordis.NET.*` 映射到已验证批次、将其 `Independent*` 夹具包映射到临时作者源，公共依赖仍走 nuget.org；清除 fallback 目录并使用私有缓存。既有 assets 检查核对缓存及选定的 Cordis 包版本；公共源中存在同版本包不能证明候选来源。
+
 ## 模型管线合同
 
 普通根与 Remote 根使用同一个声明事实模型。已发布 alpha.5.2 是公共使用基线。修正需明确影响及重新生成指引；历史试验本身不定义目标合同。应用持久数据、Git 历史与已发布包身份分别保全。
@@ -175,6 +179,16 @@ dotnet build Cordis.slnx -c Release --no-restore
 dotnet test Cordis.slnx -c Release --no-build
 python scripts/check-docs.py
 ```
+
+定向维护时，Core 的 `InertiaSerializesLoadAndUnload` 负责加载／卸载串行语义，`AsyncYieldExactSequence` 负责正常完成及不同中止位置。Composition 的 `MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite` 负责写入前的非法配置拒绝；`LoaderOriginalTests.LoaderInterceptReadiness` 负责 readiness 释放前后的状态观察。
+
+```console
+dotnet test tests/Cordis.Core.Tests -c Release --no-build --no-restore --filter "FullyQualifiedName~InertiaSerializesLoadAndUnload|FullyQualifiedName~AsyncYieldExactSequence"
+dotnet test tests/Cordis.Composition.Tests -c Release --no-build --no-restore --filter "FullyQualifiedName~EnablementRejectsMalformedFileWithoutOverwrite|FullyQualifiedName~LoaderInterceptReadiness"
+python scripts/test-map.py
+```
+
+参数实例应对应不同路径或观察。优先使用轻量的所属边界检查，避免搭建额外准备并未参与目标检查的同义夹具。若断言失败会导致收尾等待测试自有屏障，应在 `finally` 中释放该屏障。定向测试结果不能证明完整上游映射已经执行。
 
 运行时、打包、兼容性或发布改动应运行 `python scripts/verify.py`。纯文档改动只需运行文档检查并进行针对性审阅，不要求执行全部 Windows、Linux 或 AOT 门禁。
 

@@ -285,10 +285,8 @@ public sealed class LoaderOriginalTests
                 f.Loader.Root.Data));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task LoaderInterceptReadiness(bool finish)
+    [Fact]
+    public async Task LoaderInterceptReadiness()
     {
         await using var f = await Fixture.Start();
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -341,12 +339,9 @@ public sealed class LoaderOriginalTests
         Assert.Equal(FiberState.Pending, f.Loader.Resolve("qux").Fiber!.State);
         gate.SetResult();
         await f.Loader.WaitAsync();
-        if (finish)
-        {
-            Assert.Equal(FiberState.Active, f.Loader.Resolve("slow").Fiber!.State);
-            Assert.Equal(FiberState.Active, f.Loader.Resolve("qux").Fiber!.State);
-            Assert.Equal(FiberState.Pending, f.Loader.Resolve("never").Fiber!.State);
-        }
+        Assert.Equal(FiberState.Active, f.Loader.Resolve("slow").Fiber!.State);
+        Assert.Equal(FiberState.Active, f.Loader.Resolve("qux").Fiber!.State);
+        Assert.Equal(FiberState.Pending, f.Loader.Resolve("never").Fiber!.State);
     }
 
     [Theory]

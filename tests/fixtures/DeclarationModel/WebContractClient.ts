@@ -82,7 +82,8 @@ export async function run(origin: string) {
       ['webContract/direction', { value: { GlobalCount: 1, Value: 'input', OutputNullable: 'input' } }],
     ] as const) {
       const rejected = await connection.call(endpoint, input)
-      if (rejected.ok) throw new Error('Host admitted invalid input: ' + endpoint)
+      if (rejected.ok || rejected.error.code !== 'gateway/input-invalid')
+        throw new Error('Host did not reject invalid input with gateway/input-invalid: ' + endpoint)
     }
     const after = await client['webContract/calls']({})
     if (!before.ok || !after.ok || before.value !== after.value) throw new Error('Invalid input entered business code')

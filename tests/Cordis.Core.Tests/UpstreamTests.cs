@@ -410,43 +410,51 @@ public sealed class UpstreamTests
             var loaded = new TaskCompletionSource();
             var entered = new TaskCompletionSource();
             var clean = new TaskCompletionSource();
-            var provider = ctx.Provide("foo", 1);
-            int starts = 0;
-            var consumer = ctx.Inject(
-                ["foo"],
-                async c =>
-                {
-                    starts++;
-                    entered.TrySetResult();
-                    await loaded.Task;
-                    c.Effect(() => new AwaitCleanup(clean.Task));
-                });
-            await entered.Task;
-            Assert.Equal(FiberState.Loading, consumer.State);
-            var remove = provider.DisposeAsync().AsTask();
-            Assert.Equal(FiberState.Loading, consumer.State);
-            if (scenario == 2)
-                ctx.Provide("foo", 2);
-            loaded.SetResult();
-            if (scenario == 2)
+            try
             {
-                await consumer.WaitAsync();
-                Assert.Equal(FiberState.Active, consumer.State);
-                Assert.Equal(1, starts);
+                var provider = ctx.Provide("foo", 1);
+                int starts = 0;
+                var consumer = ctx.Inject(
+                    ["foo"],
+                    async c =>
+                    {
+                        starts++;
+                        entered.TrySetResult();
+                        await loaded.Task;
+                        c.Effect(() => new AwaitCleanup(clean.Task));
+                    });
+                await entered.Task;
+                Assert.Equal(FiberState.Loading, consumer.State);
+                var remove = provider.DisposeAsync().AsTask();
+                Assert.Equal(FiberState.Loading, consumer.State);
+                if (scenario == 2)
+                    ctx.Provide("foo", 2);
+                loaded.SetResult();
+                if (scenario == 2)
+                {
+                    await consumer.WaitAsync();
+                    Assert.Equal(FiberState.Active, consumer.State);
+                    Assert.Equal(1, starts);
+                    clean.SetResult();
+                    await remove;
+                    return;
+                }
+
+                await Task.Yield();
+                Assert.Equal(FiberState.Unloading, consumer.State);
+                if (scenario == 1)
+                    ctx.Provide("foo", 2);
                 clean.SetResult();
                 await remove;
-                return;
+                await consumer.WaitAsync();
+                Assert.Equal(scenario == 1 ? FiberState.Active : FiberState.Pending, consumer.State);
+                Assert.Equal(scenario == 1 ? 2 : 1, starts);
             }
-
-            await Task.Yield();
-            Assert.Equal(FiberState.Unloading, consumer.State);
-            if (scenario == 1)
-                ctx.Provide("foo", 2);
-            clean.SetResult();
-            await remove;
-            await consumer.WaitAsync();
-            Assert.Equal(scenario == 1 ? FiberState.Active : FiberState.Pending, consumer.State);
-            Assert.Equal(scenario == 1 ? 2 : 1, starts);
+            finally
+            {
+                loaded.TrySetResult();
+                clean.TrySetResult();
+            }
         });
     }
 

@@ -97,11 +97,18 @@ def verify_management_consumer(root, source, feed, output, version, dotnet, comp
                 assert not target.exists() or target.read_bytes() == payload, "Event packages disagree on shared runtime"
                 target.write_bytes(payload)
         assets = json.loads((folder / "obj/project.assets.json").read_text(encoding="utf-8"))
+        assert {Path(path).resolve() for path in assets["packageFolders"]} == {(source / "cache").resolve()}, \
+            "Saved Web event consumer used a shared/fallback package cache"
+        assert f"Cordis.NET.Composition/{version}" in assets["libraries"] and all(
+            name.split("/", 1)[1] == version for name in assets["libraries"] if name.startswith("Cordis.NET.")), \
+            "Saved Web event consumer did not resolve the selected candidate version"
         assert not any(key.startswith(("IndependentEvents.Author/", "ManagementHost/"))
             for key in assets["libraries"]), "Saved Web event generation acquired author assemblies"
         if references:
             (folder / "events.model.json").unlink()
-            run("saved-web-events-missing-reference", [dotnet, "build", path, "-c", "Release"], expected_failure=True)
+            rejected = run("saved-web-events-missing-reference", [dotnet, "build", path, "-c", "Release"], expected_failure=True)
+            assert any(line.strip().startswith(b"CORDISTYPERT: Could not find file '") and
+                line.rstrip().endswith(b"events.model.json'.") for line in rejected.splitlines()), rejected[-5000:]
             assert not any(generated.glob("*")), "Failed event generation retained stale assets"
             (folder / "events.model.json").write_bytes(event_model)
             run("saved-web-events-reference-restored", [dotnet, "build", path, "-c", "Release"])

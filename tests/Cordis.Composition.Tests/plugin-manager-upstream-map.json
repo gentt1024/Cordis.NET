@@ -3600,9 +3600,9 @@
         "expect(await readFile(file, 'utf8')).toBe(text)"
       ],
       "dotnet": [
-        "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+        "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
       ],
-      "platform": "Explicit CLR module/deployment maps and host HMR callback; no npm installation, pnpm subprocess, application build approval, remote UI or LLM tool API.",
+      "platform": "Portable filesystem and configuration parsing; no Context, module resolver, profile initialization or Loader is involved.",
       "status": "adapted-assertions-verified",
       "originalTestPassClaim": false,
       "assertionCoverage": [
@@ -3610,23 +3610,23 @@
           "assertion": "await expect(writePluginEnabled(file, 'tool', 'package', true)).rejects.toThrow()",
           "status": "portable-assertion-tested",
           "dotnet": [
-            "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+            "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
           ],
-          "adaptation": "The named xUnit method asserts this configuration outcome using explicit package deployment maps and a real Cordis Loader."
+          "adaptation": "The retained Maintenance theory asserts rejection and exact file text preservation at the direct ProfileMaintenance.WriteEnabledAsync boundary, without a Context, resolver, profile or Loader."
         },
         {
           "assertion": "expect(await readFile(file, 'utf8')).toBe(text)",
           "status": "portable-assertion-tested",
           "dotnet": [
-            "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+            "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
           ],
-          "adaptation": "The named xUnit method asserts this configuration outcome using explicit package deployment maps and a real Cordis Loader."
+          "adaptation": "The retained Maintenance theory asserts rejection and exact file text preservation at the direct ProfileMaintenance.WriteEnabledAsync boundary, without a Context, resolver, profile or Loader."
         }
       ],
       "evidence": [
         "tests/Cordis.Composition.Tests/TestResults/plugin-manager.trx"
       ],
-      "adaptation": "PluginConfigurationOperations owns profile file persistence, current Loader targeting, bundle selection/inventory, protection, disk-state change reporting and reconciliation. Hosts set RunExclusiveAsync to their active HmrCoordinator.RunExclusiveAsync, and clear it for startup-only operation. Module URL and root entry labels are replaced by explicit CLR module specifiers and root:<id>; OptionalBundles and management module protections are explicit host policy. Profiles.Preview retains raw expressions without evaluating them.",
+      "adaptation": "The retained Maintenance theory directly calls ProfileMaintenance.WriteEnabledAsync and verifies rejection plus exact file text preservation for malformed YAML and a mapping root. ConfigurationFile.ParseEntries rejects each input before any temporary file write.",
       "remainingGap": "None for the listed portable assertions. These are adapted xUnit assertions, not execution of the original TypeScript test."
     },
     {
@@ -3644,9 +3644,9 @@
         "expect(await readFile(file, 'utf8')).toBe(text)"
       ],
       "dotnet": [
-        "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+        "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
       ],
-      "platform": "Explicit CLR module/deployment maps and host HMR callback; no npm installation, pnpm subprocess, application build approval, remote UI or LLM tool API.",
+      "platform": "Portable filesystem and configuration parsing; no Context, module resolver, profile initialization or Loader is involved.",
       "status": "adapted-assertions-verified",
       "originalTestPassClaim": false,
       "assertionCoverage": [
@@ -3654,23 +3654,23 @@
           "assertion": "await expect(writePluginEnabled(file, 'tool', 'package', true)).rejects.toThrow()",
           "status": "portable-assertion-tested",
           "dotnet": [
-            "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+            "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
           ],
-          "adaptation": "The named xUnit method asserts this configuration outcome using explicit package deployment maps and a real Cordis Loader."
+          "adaptation": "The retained Maintenance theory asserts rejection and exact file text preservation at the direct ProfileMaintenance.WriteEnabledAsync boundary, without a Context, resolver, profile or Loader."
         },
         {
           "assertion": "expect(await readFile(file, 'utf8')).toBe(text)",
           "status": "portable-assertion-tested",
           "dotnet": [
-            "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+            "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
           ],
-          "adaptation": "The named xUnit method asserts this configuration outcome using explicit package deployment maps and a real Cordis Loader."
+          "adaptation": "The retained Maintenance theory asserts rejection and exact file text preservation at the direct ProfileMaintenance.WriteEnabledAsync boundary, without a Context, resolver, profile or Loader."
         }
       ],
       "evidence": [
         "tests/Cordis.Composition.Tests/TestResults/plugin-manager.trx"
       ],
-      "adaptation": "PluginConfigurationOperations owns profile file persistence, current Loader targeting, bundle selection/inventory, protection, disk-state change reporting and reconciliation. Hosts set RunExclusiveAsync to their active HmrCoordinator.RunExclusiveAsync, and clear it for startup-only operation. Module URL and root entry labels are replaced by explicit CLR module specifiers and root:<id>; OptionalBundles and management module protections are explicit host policy. Profiles.Preview retains raw expressions without evaluating them.",
+      "adaptation": "The retained Maintenance theory directly calls ProfileMaintenance.WriteEnabledAsync and verifies rejection plus exact file text preservation for malformed YAML and a mapping root. ConfigurationFile.ParseEntries rejects each input before any temporary file write.",
       "remainingGap": "None for the listed portable assertions. These are adapted xUnit assertions, not execution of the original TypeScript test."
     },
     {

@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+from pathlib import Path
 import shutil
 import subprocess
 from xml.sax.saxutils import escape
@@ -257,6 +258,10 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
         packaged_model, catalog])
     assert b"ordinary declaration catalog consumer passed" in result
     assets = json.loads((consumer / "obj/project.assets.json").read_text(encoding="utf-8"))
+    assert {Path(folder).resolve() for folder in assets["packageFolders"]} == {(source / "cache").resolve()}, \
+        "Declaration catalog consumer used a shared/fallback package cache"
+    assert "IndependentDeclarations.Contracts/1.0.0-alpha" in assets["libraries"], \
+        "Declaration catalog consumer did not resolve the authored model package"
     assert not any(name.startswith(("IndependentDeclarations.Provider/", "IndependentDeclarations.External/")) for name in assets["libraries"])
     assert not list((consumer / "bin").rglob("IndependentDeclarations.Provider.dll"))
     assert not list((consumer / "bin").rglob("IndependentDeclarations.External.dll"))
