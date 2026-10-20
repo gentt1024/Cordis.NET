@@ -24,15 +24,16 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--dotnet", default="dotnet")
     parser.add_argument("--aot", action="store_true")
-    parser.add_argument("--declarations-only", action="store_true",
+    selectors = parser.add_mutually_exclusive_group()
+    selectors.add_argument("--declarations-only", action="store_true",
         help="Run only the ordinary declaration package and catalog checks.")
-    parser.add_argument("--management-only", action="store_true",
+    selectors.add_argument("--management-only", action="store_true",
         help="Run only standard generated management and notification package consumers.")
-    parser.add_argument("--data-references-only", action="store_true",
+    selectors.add_argument("--data-references-only", action="store_true",
         help="Run only ordinary DTO projections composed from explicit referenced models.")
-    parser.add_argument("--web-contracts-only", action="store_true",
+    selectors.add_argument("--web-contracts-only", action="store_true",
         help="Run only directional Web contracts and the runtime numeric metadata consumer.")
-    parser.add_argument("--saved-remote-only", action="store_true",
+    selectors.add_argument("--saved-remote-only", action="store_true",
         help="Run only the saved declaration model and real unary Remote package consumer.")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -56,6 +57,10 @@ def main():
     ET.SubElement(feeds, "clear")
     for name, path in (("validated", options.packages.resolve()), ("author", feed), ("nuget.org", "https://api.nuget.org/v3/index.json")):
         ET.SubElement(feeds, "add", key=name, value=str(path))
+    ET.SubElement(ET.SubElement(config, "fallbackPackageFolders"), "clear")
+    mapping = ET.SubElement(config, "packageSourceMapping")
+    for name, pattern in (("validated", "Cordis.NET.*"), ("author", "Independent*"), ("nuget.org", "*")):
+        ET.SubElement(ET.SubElement(mapping, "packageSource", key=name), "package", pattern=pattern)
     ET.ElementTree(config).write(source / "NuGet.Config", encoding="utf-8")
     dotnet = Path(shutil.which(options.dotnet) or options.dotnet).resolve()
     env = dict(os.environ, DOTNET_ROOT=str(dotnet.parent), NUGET_PACKAGES=str(source / "cache"), DOTNET_CLI_UI_LANGUAGE="en")
@@ -301,6 +306,9 @@ def main():
                         "A client projection refusal contaminated declaration analysis"
                 elif service == "collision":
                     assert b"collide" in emitted
+                elif service == "recordStruct":
+                    assert b"CORDISTYPERT: Caller projection currently supports only non-generic ordinary data records/classes without data inheritance:" in emitted \
+                        and b"Author.ValueRecord" in emitted, emitted
             elif service == "optional":
                 facts = json.loads(artifact.read_text(encoding="utf-8"))
                 optional_type = next(value for value in facts["declarations"] if value["metadataName"] == "Author.OptionalService")
@@ -382,6 +390,11 @@ def main():
         (projection_author / "Author.cs").write_text(original_projection, encoding="utf-8")
         run("projection-caller-jit", [dotnet, "run", "--project", projection_caller, "-c", "Release"])
         projection_assets = json.loads((projection / "obj/project.assets.json").read_text(encoding="utf-8"))
+        assert {Path(folder).resolve() for folder in projection_assets["packageFolders"]} == {(source / "cache").resolve()}, \
+            "Projection caller used a shared/fallback package cache"
+        assert f"Cordis.NET.Composition/{version}" in projection_assets["libraries"] and all(
+            name.split("/", 1)[1] == version for name in projection_assets["libraries"] if name.startswith("Cordis.NET.")), \
+            "Projection caller did not resolve the selected candidate version"
         assert not any(name.startswith("IndependentProjection.Provider/") for name in projection_assets["libraries"])
         assert not list((projection / "bin").rglob("ProjectionAuthor.dll"))
         if options.aot:
@@ -404,6 +417,11 @@ def main():
         shutil.copyfile(root / "tests/fixtures/SettingsDotnet/Client.cs", caller / "Program.cs")
         run("caller-build", [dotnet, "build", caller_project, "-c", "Release"])
         assets = json.loads((caller / "obj/project.assets.json").read_text(encoding="utf-8"))
+        assert {Path(folder).resolve() for folder in assets["packageFolders"]} == {(source / "cache").resolve()}, \
+            "Settings caller used a shared/fallback package cache"
+        assert f"Cordis.NET.Composition/{version}" in assets["libraries"] and all(
+            name.split("/", 1)[1] == version for name in assets["libraries"] if name.startswith("Cordis.NET.")), \
+            "Settings caller did not resolve the selected candidate version"
         assert not any(name.startswith("IndependentSettings.Provider/") for name in assets["libraries"])
         assert not list((caller / "bin").rglob("IndependentSettings.Provider.dll"))
         provider_referenced = False

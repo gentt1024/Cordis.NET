@@ -4714,7 +4714,7 @@
       "evidence": [
         "dotnet test tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj -c Release; 44 passed, 0 skipped"
       ],
-      "note": "Original source test assertion closure is not implied by a scenario mapping."
+      "note": "The retained Maintenance theory directly calls ProfileMaintenance.WriteEnabledAsync and verifies rejection plus exact file text preservation for malformed YAML and a mapping root. ConfigurationFile.ParseEntries rejects each input before any temporary file write; no Context, resolver, profile or Loader participates."
     },
     {
       "id": "U-782781580e84a1c3",
@@ -4733,7 +4733,7 @@
       "evidence": [
         "dotnet test tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj -c Release; 44 passed, 0 skipped"
       ],
-      "note": "Original source test assertion closure is not implied by a scenario mapping."
+      "note": "The retained Maintenance theory directly calls ProfileMaintenance.WriteEnabledAsync and verifies rejection plus exact file text preservation for malformed YAML and a mapping root. ConfigurationFile.ParseEntries rejects each input before any temporary file write; no Context, resolver, profile or Loader participates."
     },
     {
       "id": "U-ed4b46fdfa66a9a1",
@@ -5108,14 +5108,14 @@
         "expect(loader.expectFiber(qux).state).to.equal(FiberState.PENDING)"
       ],
       "dotnet": [
-        "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs::LoaderInterceptReadiness(finish: False)"
+        "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs::LoaderInterceptReadiness"
       ],
       "status": "adapted-passed",
       "platform": "CLR and portable static core",
       "evidence": [
         "dotnet test tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj -c Release --filter FullyQualifiedName~LoaderOriginalTests; 37 passed, 0 skipped"
       ],
-      "note": "Each original stateful suite is replayed in a fresh fixture through the named step. JS service objects map to named CLR values, prototype intercept assertions to ordered Context.Intercepts, and settle sleeps to WaitAsync. All step apply/dispose counts and owning-entry states are asserted."
+      "note": "Each original stateful suite is replayed in a fresh fixture through the named step. JS service objects map to named CLR values, prototype intercept assertions to ordered Context.Intercepts, and settle sleeps to WaitAsync. All step apply/dispose counts and owning-entry states are asserted. One fact preserves all three states before releasing the import gate and all three states after Loader.WaitAsync."
     },
     {
       "id": "U-d8fa17748335bfec",
@@ -5128,14 +5128,14 @@
         "expect(loader.expectFiber(qux).state).to.equal(FiberState.ACTIVE)"
       ],
       "dotnet": [
-        "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs::LoaderInterceptReadiness(finish: True)"
+        "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs::LoaderInterceptReadiness"
       ],
       "status": "adapted-passed",
       "platform": "CLR and portable static core",
       "evidence": [
         "dotnet test tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj -c Release --filter FullyQualifiedName~LoaderOriginalTests; 37 passed, 0 skipped"
       ],
-      "note": "Each original stateful suite is replayed in a fresh fixture through the named step. JS service objects map to named CLR values, prototype intercept assertions to ordered Context.Intercepts, and settle sleeps to WaitAsync. All step apply/dispose counts and owning-entry states are asserted."
+      "note": "Each original stateful suite is replayed in a fresh fixture through the named step. JS service objects map to named CLR values, prototype intercept assertions to ordered Context.Intercepts, and settle sleeps to WaitAsync. All step apply/dispose counts and owning-entry states are asserted. One fact preserves all three states before releasing the import gate and all three states after Loader.WaitAsync."
     },
     {
       "id": "U-0270738ce4e75129",

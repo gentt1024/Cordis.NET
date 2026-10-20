@@ -419,7 +419,7 @@
         "expect(seq).to.deep.equal([1, 3, 5, 6, 4, 2])"
       ],
       "dotnet": [
-        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence(mode: 0)"
       ],
       "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT",
       "status": "adapted-test-passed",
@@ -429,7 +429,7 @@
       ],
       "sourceFile": "packages/core/tests/dispose.spec.ts",
       "sourceTitle": "Effects / async yield 1",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. Modes 0, 1 and 2 retain normal completion and the two distinct abort positions. The two upstream completion cases share mode 0 because .NET DisposeAsync already awaits cleanup.",
       "mappingSource": "tests/Cordis.Core.Tests/upstream-map.json",
       "componentEvidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
@@ -452,7 +452,7 @@
         "expect(seq).to.deep.equal([1, 2])"
       ],
       "dotnet": [
-        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence(mode: 1)"
       ],
       "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT",
       "status": "adapted-test-passed",
@@ -462,7 +462,7 @@
       ],
       "sourceFile": "packages/core/tests/dispose.spec.ts",
       "sourceTitle": "Effects / async yield 2 (aborted)",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. Modes 0, 1 and 2 retain normal completion and the two distinct abort positions. The two upstream completion cases share mode 0 because .NET DisposeAsync already awaits cleanup.",
       "mappingSource": "tests/Cordis.Core.Tests/upstream-map.json",
       "componentEvidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
@@ -487,7 +487,7 @@
         "expect(seq).to.deep.equal([1, 3, 4, 2])"
       ],
       "dotnet": [
-        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence(mode: 2)"
       ],
       "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT",
       "status": "adapted-test-passed",
@@ -497,7 +497,7 @@
       ],
       "sourceFile": "packages/core/tests/dispose.spec.ts",
       "sourceTitle": "Effects / async yield 3 (aborted)",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. Modes 0, 1 and 2 retain normal completion and the two distinct abort positions. The two upstream completion cases share mode 0 because .NET DisposeAsync already awaits cleanup.",
       "mappingSource": "tests/Cordis.Core.Tests/upstream-map.json",
       "componentEvidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
@@ -521,7 +521,7 @@
         "expect(seq).to.deep.equal([1, 3, 5, 6, 4, 2])"
       ],
       "dotnet": [
-        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence"
+        "Cordis.Core.Tests.OriginalEffectsTests.AsyncYieldExactSequence(mode: 0)"
       ],
       "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT",
       "status": "adapted-test-passed",
@@ -531,7 +531,7 @@
       ],
       "sourceFile": "packages/core/tests/dispose.spec.ts",
       "sourceTitle": "Effects / async yield 4 (await dispose)",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. Modes 0, 1 and 2 retain normal completion and the two distinct abort positions. The two upstream completion cases share mode 0 because .NET DisposeAsync already awaits cleanup.",
       "mappingSource": "tests/Cordis.Core.Tests/upstream-map.json",
       "componentEvidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
@@ -941,7 +941,7 @@
         "expect(fiber.state).to.equal(FiberState.ACTIVE)"
       ],
       "dotnet": [
-        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload(scenario: 1)"
       ],
       "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT",
       "status": "adapted-test-passed",
@@ -951,7 +951,7 @@
       ],
       "sourceFile": "packages/core/tests/fiber.spec.ts",
       "sourceTitle": "Fiber / inertia lock 1",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. The test releases its load and cleanup barriers in finally if an assertion fails, while preserving their normal release points.",
       "mappingSource": "tests/Cordis.Core.Tests/upstream-map.json",
       "componentEvidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
@@ -975,7 +975,7 @@
         "expect(fiber.state).to.equal(FiberState.ACTIVE)"
       ],
       "dotnet": [
-        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload(scenario: 2)"
       ],
       "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT",
       "status": "adapted-test-passed",
@@ -985,7 +985,7 @@
       ],
       "sourceFile": "packages/core/tests/fiber.spec.ts",
       "sourceTitle": "Fiber / inertia lock 2",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. The test releases its load and cleanup barriers in finally if an assertion fails, while preserving their normal release points.",
       "mappingSource": "tests/Cordis.Core.Tests/upstream-map.json",
       "componentEvidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
@@ -1009,7 +1009,7 @@
         "expect(fiber.state).to.equal(FiberState.PENDING)"
       ],
       "dotnet": [
-        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload"
+        "Cordis.Core.Tests.UpstreamTests.InertiaSerializesLoadAndUnload(scenario: 3)"
       ],
       "platform": "Windows x64 .NET 10; same portable code used by JIT/AOT",
       "status": "adapted-test-passed",
@@ -1019,7 +1019,7 @@
       ],
       "sourceFile": "packages/core/tests/fiber.spec.ts",
       "sourceTitle": "Fiber / inertia lock 3",
-      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested.",
+      "adaptation": "Context.RunAsync models one synchronous execution turn; controlled TaskCompletionSource signals replace fake timers. Explicit delegates replace JS function/class syntax. EffectHandle.Ready replaces the awaitable disposer, and DisposeAsync replaces invoking it; structural owner joining remains separately tested. The test releases its load and cleanup barriers in finally if an assertion fails, while preserving their normal release points.",
       "mappingSource": "tests/Cordis.Core.Tests/upstream-map.json",
       "componentEvidence": [
         "tests/Cordis.Core.Tests/TestResults/core-tests.trx"
@@ -2651,7 +2651,7 @@
         "expect(loader.expectFiber(qux).state).to.equal(FiberState.PENDING)"
       ],
       "dotnet": [
-        "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs::LoaderInterceptReadiness(finish: False)"
+        "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs::LoaderInterceptReadiness"
       ],
       "platform": "CLR and portable static core",
       "status": "adapted-passed",
@@ -2659,7 +2659,7 @@
         "verification/publication-readiness/windows/test-map-evidence.json",
         "verification/publication-readiness/linux/test-map-evidence.json"
       ],
-      "note": "Each original stateful suite is replayed in a fresh fixture through the named step. JS service objects map to named CLR values, prototype intercept assertions to ordered Context.Intercepts, and settle sleeps to WaitAsync. All step apply/dispose counts and owning-entry states are asserted.",
+      "note": "Each original stateful suite is replayed in a fresh fixture through the named step. JS service objects map to named CLR values, prototype intercept assertions to ordered Context.Intercepts, and settle sleeps to WaitAsync. All step apply/dispose counts and owning-entry states are asserted. One fact preserves all three states before releasing the import gate and all three states after Loader.WaitAsync.",
       "mappingSource": "tests/Cordis.Composition.Tests/upstream-map.json",
       "componentEvidence": [
         "dotnet test tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj -c Release --filter FullyQualifiedName~LoaderOriginalTests; 37 passed, 0 skipped"
@@ -2683,7 +2683,7 @@
         "expect(loader.expectFiber(qux).state).to.equal(FiberState.ACTIVE)"
       ],
       "dotnet": [
-        "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs::LoaderInterceptReadiness(finish: True)"
+        "tests/Cordis.Composition.Tests/LoaderOriginalTests.cs::LoaderInterceptReadiness"
       ],
       "platform": "CLR and portable static core",
       "status": "adapted-passed",
@@ -2691,7 +2691,7 @@
         "verification/publication-readiness/windows/test-map-evidence.json",
         "verification/publication-readiness/linux/test-map-evidence.json"
       ],
-      "note": "Each original stateful suite is replayed in a fresh fixture through the named step. JS service objects map to named CLR values, prototype intercept assertions to ordered Context.Intercepts, and settle sleeps to WaitAsync. All step apply/dispose counts and owning-entry states are asserted.",
+      "note": "Each original stateful suite is replayed in a fresh fixture through the named step. JS service objects map to named CLR values, prototype intercept assertions to ordered Context.Intercepts, and settle sleeps to WaitAsync. All step apply/dispose counts and owning-entry states are asserted. One fact preserves all three states before releasing the import gate and all three states after Loader.WaitAsync.",
       "mappingSource": "tests/Cordis.Composition.Tests/upstream-map.json",
       "componentEvidence": [
         "dotnet test tests/Cordis.Composition.Tests/Cordis.Composition.Tests.csproj -c Release --filter FullyQualifiedName~LoaderOriginalTests; 37 passed, 0 skipped"
@@ -20689,9 +20689,9 @@
         "expect(await readFile(file, 'utf8')).toBe(text)"
       ],
       "dotnet": [
-        "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+        "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
       ],
-      "platform": "Explicit CLR module/deployment maps and host HMR callback; no npm installation, pnpm subprocess, application build approval, remote UI or LLM tool API.",
+      "platform": "Portable filesystem and configuration parsing; no Context, module resolver, profile initialization or Loader is involved.",
       "status": "adapted-assertions-verified",
       "evidence": [
         "verification/publication-readiness/windows/test-map-evidence.json",
@@ -20703,20 +20703,20 @@
           "assertion": "await expect(writePluginEnabled(file, 'tool', 'package', true)).rejects.toThrow()",
           "status": "portable-assertion-tested",
           "dotnet": [
-            "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+            "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
           ],
-          "adaptation": "The named xUnit method asserts this configuration outcome using explicit package deployment maps and a real Cordis Loader."
+          "adaptation": "The retained Maintenance theory asserts rejection and exact file text preservation at the direct ProfileMaintenance.WriteEnabledAsync boundary, without a Context, resolver, profile or Loader."
         },
         {
           "assertion": "expect(await readFile(file, 'utf8')).toBe(text)",
           "status": "portable-assertion-tested",
           "dotnet": [
-            "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+            "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
           ],
-          "adaptation": "The named xUnit method asserts this configuration outcome using explicit package deployment maps and a real Cordis Loader."
+          "adaptation": "The retained Maintenance theory asserts rejection and exact file text preservation at the direct ProfileMaintenance.WriteEnabledAsync boundary, without a Context, resolver, profile or Loader."
         }
       ],
-      "adaptation": "PluginConfigurationOperations owns profile file persistence, current Loader targeting, bundle selection/inventory, protection, disk-state change reporting and reconciliation. Hosts set RunExclusiveAsync to their active HmrCoordinator.RunExclusiveAsync, and clear it for startup-only operation. Module URL and root entry labels are replaced by explicit CLR module specifiers and root:<id>; OptionalBundles and management module protections are explicit host policy. Profiles.Preview retains raw expressions without evaluating them.",
+      "adaptation": "The retained Maintenance theory directly calls ProfileMaintenance.WriteEnabledAsync and verifies rejection plus exact file text preservation for malformed YAML and a mapping root. ConfigurationFile.ParseEntries rejects each input before any temporary file write.",
       "remainingGap": "None for the listed portable assertions. These are adapted xUnit assertions, not execution of the original TypeScript test.",
       "mappingSource": "tests/Cordis.Composition.Tests/plugin-manager-upstream-map.json",
       "componentEvidence": [
@@ -20740,9 +20740,9 @@
         "expect(await readFile(file, 'utf8')).toBe(text)"
       ],
       "dotnet": [
-        "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+        "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
       ],
-      "platform": "Explicit CLR module/deployment maps and host HMR callback; no npm installation, pnpm subprocess, application build approval, remote UI or LLM tool API.",
+      "platform": "Portable filesystem and configuration parsing; no Context, module resolver, profile initialization or Loader is involved.",
       "status": "adapted-assertions-verified",
       "evidence": [
         "verification/publication-readiness/windows/test-map-evidence.json",
@@ -20754,20 +20754,20 @@
           "assertion": "await expect(writePluginEnabled(file, 'tool', 'package', true)).rejects.toThrow()",
           "status": "portable-assertion-tested",
           "dotnet": [
-            "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+            "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
           ],
-          "adaptation": "The named xUnit method asserts this configuration outcome using explicit package deployment maps and a real Cordis Loader."
+          "adaptation": "The retained Maintenance theory asserts rejection and exact file text preservation at the direct ProfileMaintenance.WriteEnabledAsync boundary, without a Context, resolver, profile or Loader."
         },
         {
           "assertion": "expect(await readFile(file, 'utf8')).toBe(text)",
           "status": "portable-assertion-tested",
           "dotnet": [
-            "Cordis.Composition.Tests.PluginManagerOriginalTests.PatchRejectsMalformedWithoutOverwriting"
+            "Cordis.Composition.Tests.MaintenanceTests.EnablementRejectsMalformedFileWithoutOverwrite"
           ],
-          "adaptation": "The named xUnit method asserts this configuration outcome using explicit package deployment maps and a real Cordis Loader."
+          "adaptation": "The retained Maintenance theory asserts rejection and exact file text preservation at the direct ProfileMaintenance.WriteEnabledAsync boundary, without a Context, resolver, profile or Loader."
         }
       ],
-      "adaptation": "PluginConfigurationOperations owns profile file persistence, current Loader targeting, bundle selection/inventory, protection, disk-state change reporting and reconciliation. Hosts set RunExclusiveAsync to their active HmrCoordinator.RunExclusiveAsync, and clear it for startup-only operation. Module URL and root entry labels are replaced by explicit CLR module specifiers and root:<id>; OptionalBundles and management module protections are explicit host policy. Profiles.Preview retains raw expressions without evaluating them.",
+      "adaptation": "The retained Maintenance theory directly calls ProfileMaintenance.WriteEnabledAsync and verifies rejection plus exact file text preservation for malformed YAML and a mapping root. ConfigurationFile.ParseEntries rejects each input before any temporary file write.",
       "remainingGap": "None for the listed portable assertions. These are adapted xUnit assertions, not execution of the original TypeScript test.",
       "mappingSource": "tests/Cordis.Composition.Tests/plugin-manager-upstream-map.json",
       "componentEvidence": [

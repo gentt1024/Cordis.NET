@@ -95,7 +95,6 @@ public sealed class OriginalEffectsTests
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
-    [InlineData(3)]
     public async Task AsyncYieldExactSequence(int mode)
     {
         await using var root = new Context();

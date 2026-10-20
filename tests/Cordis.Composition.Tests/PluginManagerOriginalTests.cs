@@ -40,18 +40,6 @@ public sealed class PluginManagerOriginalTests
             await Profiles.ReadPatchesAsync(f.Patch));
     }
 
-    [Theory]
-    [InlineData("- id: [broken")]
-    [InlineData("mapping: true\n")]
-    public async Task PatchRejectsMalformedWithoutOverwriting(string text)
-    {
-        await using var f = new Fixture();
-        await File.WriteAllTextAsync(f.Patch, text);
-        await Assert.ThrowsAnyAsync<Exception>(() =>
-            ProfileMaintenance.WriteEnabledAsync(f.Patch, "tool", "package", true));
-        Assert.Equal(text, await File.ReadAllTextAsync(f.Patch));
-    }
-
     [Fact]
     public async Task PatchRetainsNameAssertions()
     {
