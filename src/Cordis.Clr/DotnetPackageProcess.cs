@@ -16,8 +16,8 @@ internal static class DotnetPackageProcess
         CancellationToken cancellationToken,
         Action<string, bool>? streamOutput = null)
     {
-        var grouped = OperatingSystem.IsLinux();
-        var start = new ProcessStartInfo(grouped ? "/usr/bin/setsid" : command)
+        var grouped = OperatingSystem.IsLinux() || OperatingSystem.IsMacOS();
+        var start = new ProcessStartInfo(OperatingSystem.IsLinux() ? "/usr/bin/setsid" : command)
         {
             WorkingDirectory = directory,
             UseShellExecute = false,
@@ -27,7 +27,7 @@ internal static class DotnetPackageProcess
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
         };
-        if (grouped)
+        if (OperatingSystem.IsLinux())
             start.ArgumentList.Add(command);
         foreach (var argument in arguments)
             start.ArgumentList.Add(argument);
@@ -63,6 +63,10 @@ internal static class DotnetPackageProcess
         };
         var process = fallback;
         WindowsPackageProcess? windows = null;
+        MacPackageProcess? mac = null;
+        Task WaitForExitAsync(CancellationToken token = default) => OperatingSystem.IsMacOS()
+            ? mac!.WaitForExitAsync(token) : process.WaitForExitAsync(token);
+        int ExitCode() => OperatingSystem.IsMacOS() ? mac!.ExitCode : process.ExitCode;
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(timeout);
         var tail = new StringBuilder();
@@ -86,6 +90,11 @@ internal static class DotnetPackageProcess
                     windows = WindowsPackageProcess.Start(start);
                     process = windows.Process;
                 }
+                else if (OperatingSystem.IsMacOS())
+                {
+                    mac = MacPackageProcess.Start(start);
+                    process = mac.Process;
+                }
                 else
                     process.Start();
 
@@ -93,6 +102,8 @@ internal static class DotnetPackageProcess
                 lease.Started(process, grouped, OperatingSystem.IsWindows() ? windows?.JobName : null);
                 if (OperatingSystem.IsWindows())
                     windows!.Resume();
+                else if (OperatingSystem.IsMacOS())
+                    mac!.Resume();
             }
             catch (Exception error)
             {
@@ -105,9 +116,13 @@ internal static class DotnetPackageProcess
                     {
                         if (OperatingSystem.IsWindows())
                             windows!.Stop();
-                        else if (!process.HasExited)
-                            process.Kill(entireProcessTree: true);
-                        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+                        else
+                        {
+                            lease.StopGroup();
+                            if (!process.HasExited)
+                                process.Kill(entireProcessTree: true);
+                        }
+                        await WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
                     }
                     catch (Exception cleanup)
                     {
@@ -155,14 +170,14 @@ internal static class DotnetPackageProcess
 
             var drains = Task.WhenAll(
                 DrainAsync(
-                    OperatingSystem.IsWindows() ? windows!.StandardOutput : process.StandardOutput,
+                    OperatingSystem.IsWindows() ? windows!.StandardOutput : OperatingSystem.IsMacOS() ? mac!.StandardOutput : process.StandardOutput,
                     isError: false),
                 DrainAsync(
-                    OperatingSystem.IsWindows() ? windows!.StandardError : process.StandardError,
+                    OperatingSystem.IsWindows() ? windows!.StandardError : OperatingSystem.IsMacOS() ? mac!.StandardError : process.StandardError,
                     isError: true));
             try
             {
-                await process.WaitForExitAsync(deadline.Token);
+                await WaitForExitAsync(deadline.Token);
                 if (OperatingSystem.IsWindows() &&
                     !await windows!.WaitUntilEmptyAsync(TimeSpan.FromSeconds(5), deadline.Token))
                     throw new IOException("The requested tool exited while child processes remained active.");
@@ -170,11 +185,11 @@ internal static class DotnetPackageProcess
                 // must settle before output can be advertised as complete.
                 await drains.WaitAsync(TimeSpan.FromSeconds(5), deadline.Token);
                 lease.Finish(pipesDrained: true);
-                if (process.ExitCode != 0)
+                if (ExitCode() != 0)
                     throw new PackageToolException(
-                        $"The requested tool exited with {process.ExitCode}: {OutputTail()}",
+                        $"The requested tool exited with {ExitCode()}: {OutputTail()}",
                         directory,
-                        process.ExitCode);
+                        ExitCode());
             }
             catch (Exception error)
             {
@@ -193,10 +208,12 @@ internal static class DotnetPackageProcess
                             process.Kill(entireProcessTree: true);
                     }
 
-                    await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+                    await WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
                     exited = true;
                     if (OperatingSystem.IsWindows())
                         childrenExited = await windows!.WaitUntilEmptyAsync(TimeSpan.FromSeconds(5));
+                    else if (grouped)
+                        childrenExited = await lease.WaitForGroupExitAsync(TimeSpan.FromSeconds(5));
                 }
                 catch (Exception cleanup)
                 {
@@ -222,7 +239,7 @@ internal static class DotnetPackageProcess
                     recovery.Add(cleanup.Message);
                 }
 
-                var exitCode = exited ? process.ExitCode : (int?)null;
+                var exitCode = exited ? ExitCode() : (int?)null;
                 var cancellationRequested = cancellationToken.IsCancellationRequested;
                 // "cancelled" is a settled management outcome, not merely a request.
                 // Unconfirmed termination/drain remains a failure with its recovery record.
@@ -239,6 +256,8 @@ internal static class DotnetPackageProcess
         {
             if (OperatingSystem.IsWindows())
                 windows?.Dispose();
+            else if (OperatingSystem.IsMacOS())
+                mac?.Dispose();
         }
     }
 }

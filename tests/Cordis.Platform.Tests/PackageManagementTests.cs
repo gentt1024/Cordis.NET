@@ -99,11 +99,13 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Known_incompatible_peers_are_refused_before_build_even_when_not_selected(bool enabled)
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    public async Task Known_incompatible_requirements_are_refused_before_build_even_when_not_selected(bool enabled, bool engines)
     {
-        var marker = await PackIncompatibleAsync();
+        var marker = await PackIncompatibleAsync(engines);
         await using var host = await StartAsync(runtime: new DshRuntimeIdentity("0.2.0-rc.2"));
         var manifest = await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json"));
         var phases = new List<string>();
@@ -115,7 +117,8 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             buildApproved: true,
             enabled: enabled);
         Assert.False(result.Installed, result.Diagnostic);
-        Assert.Contains("incompatible DSH peers", result.Diagnostic);
+        Assert.Contains("incompatible DSH requirements", result.Diagnostic);
+        Assert.Contains(engines ? "engines.dsh: ^9.0.0" : "@deepseek-ai/dsh: ^9.0.0", result.Diagnostic);
         Assert.False(File.Exists(marker), "An incompatible package executed its MSBuild target before admission.");
         Assert.DoesNotContain("prepare", phases);
         Assert.False(Directory.Exists(Path.Combine(host.Profile, ".cordis", "work")));
@@ -124,11 +127,13 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("IndependentPlugin")]
-    [InlineData("independentplugin")]
-    public async Task Nuget_compatibility_grants_use_one_exact_identity_across_http_install_and_restart(string spelling)
+    [InlineData("IndependentPlugin", false)]
+    [InlineData("independentplugin", false)]
+    [InlineData("IndependentPlugin", true)]
+    [InlineData("independentplugin", true)]
+    public async Task Nuget_compatibility_grants_use_one_exact_identity_across_http_install_and_restart(string spelling, bool engines)
     {
-        var marker = await PackIncompatibleAsync();
+        var marker = await PackIncompatibleAsync(engines);
         var runtime = new DshRuntimeIdentity("0.2.0-rc.2");
         string profile;
         string deployedManifest;
@@ -144,7 +149,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                 request,
                 "neither",
                 buildApproved: false);
-            Assert.Contains("incompatible DSH peers", neither.Diagnostic);
+            Assert.Contains("incompatible DSH requirements", neither.Diagnostic);
             Assert.False(File.Exists(marker));
             var builder = WebApplication.CreateSlimBuilder();
             builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -212,7 +217,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                 },
                 "other-version",
                 buildApproved: true);
-            Assert.Contains("incompatible DSH peers", otherVersion.Diagnostic);
+            Assert.Contains("incompatible DSH requirements", otherVersion.Diagnostic);
             Assert.False(File.Exists(marker));
             var notApproved = await operations.InstallPackageAsync(
                 host.Toolchain,
@@ -250,6 +255,8 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             Assert.Single(PackageManifest.Read(Path.Combine(profile, "package.json")).Bundles);
             deployedManifest = Path.Combine(host.Toolchain.Bundles[request.Name], "package.json");
             manifestText = await File.ReadAllTextAsync(deployedManifest);
+            if (engines)
+                Assert.Equal("^9.0.0", Assert.IsType<EntryOptions>(PackageManifest.Read(deployedManifest).Raw["engines"])["dsh"]);
             Assert.Equal("IndependentPlugin", PackageManifest.Read(deployedManifest).Raw["name"]);
             // Grant aliases converge to one exact key through the real CLI as well.
             await RunAsync(
@@ -329,10 +336,12 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.Equal(manifestText, await File.ReadAllTextAsync(deployedManifest));
     }
 
-    [Fact]
-    public async Task Generic_nuget_profile_does_not_apply_dsh_peer_policy()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Generic_nuget_profile_does_not_apply_dsh_requirement_policy(bool engines)
     {
-        var marker = await PackIncompatibleAsync();
+        var marker = await PackIncompatibleAsync(engines);
         await using var host = await StartAsync();
         var result = await host.Session.ConfigurationOperations.InstallPackageAsync(
             host.Toolchain,
@@ -345,15 +354,57 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.False(File.Exists(Path.Combine(host.Profile, DshProfilePolicy.CompatibilityFilename)));
     }
 
-    private async Task<string> PackIncompatibleAsync()
+    [Theory]
+    [InlineData("null", "engines must be an object")]
+    [InlineData("{\"dsh\":null}", "engines.dsh must be a string")]
+    public async Task Malformed_engines_survive_inspection_and_are_refused_before_build(string enginesJson, string diagnostic)
+    {
+        var marker = await PackIncompatibleAsync(true,
+            "{\"assembly\":\"IndependentPlugin.dll\",\"entryType\":\"Entry\",\"engines\":" + enginesJson + "}");
+        await using var host = await StartAsync(runtime: new("0.2.1-rc.2"));
+        var result = await host.Session.ConfigurationOperations.InstallPackageAsync(
+            host.Toolchain, new("IndependentPlugin", "5.0.0", Feed), "malformed", buildApproved: true, enabled: false);
+        Assert.False(result.Installed);
+        Assert.Contains(diagnostic, result.Diagnostic);
+        Assert.False(File.Exists(marker));
+        Assert.Empty(host.Session.SelectedBundles);
+    }
+
+    [Fact]
+    public async Task Compatible_engine_overrides_malformed_peers_through_install_and_restart()
+    {
+        const string metadata = """{"assembly":"IndependentPlugin.dll","entryType":"Entry","engines":{"dsh":"^0.2.1-rc.1"},"peerDependencies":null}""";
+        var marker = await PackIncompatibleAsync(true, metadata);
+        string profile;
+        await using (var host = await StartAsync(runtime: new("0.2.1-rc.2")))
+        {
+            profile = host.Profile;
+            var result = await host.Session.ConfigurationOperations.InstallPackageAsync(
+                host.Toolchain, new("IndependentPlugin", "5.0.0", Feed), "compatible", buildApproved: true);
+            Assert.True(result.Installed, result.Diagnostic);
+            Assert.Equal("applied", result.Application);
+            Assert.True(File.Exists(marker));
+            Assert.False(File.Exists(Path.Combine(profile, DshProfilePolicy.CompatibilityFilename)));
+        }
+
+        await using var restarted = await StartAsync(runtime: new("0.2.1-rc.2"), profileDirectory: profile);
+        Assert.Equal(["IndependentPlugin"], restarted.Session.LoadedBundles);
+        await restarted.Session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal(1, ctx.Get<ConfigReference<int>>("installed-limit")!.Value);
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task<string> PackIncompatibleAsync(bool engines, string? metadata = null)
     {
         var author = Path.Combine(directory, "author");
         var marker = Path.Combine(directory, "incompatible-build-marker.txt");
         await File.WriteAllTextAsync(
             Path.Combine(author, "cordis.plugin.json"),
-            """
-            {"assembly":"IndependentPlugin.dll","entryType":"Entry","peerDependencies":{"@deepseek-ai/dsh":"^9.0.0"}}
-            """);
+            metadata ?? (engines
+                ? """{"assembly":"IndependentPlugin.dll","entryType":"Entry","engines":{"dsh":"^9.0.0"},"peerDependencies":{"@deepseek-ai/dsh":"*"}}"""
+                : """{"assembly":"IndependentPlugin.dll","entryType":"Entry","peerDependencies":{"@deepseek-ai/dsh":"^9.0.0"}}"""));
         await File.WriteAllTextAsync(
             Path.Combine(author, "Reject.targets"),
             $$"""

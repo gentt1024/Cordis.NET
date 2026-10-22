@@ -17,8 +17,6 @@ public sealed class PackageProcessTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())
-            return;
         var helper = Directory.CreateDirectory(Path.Combine(directory, "helper")).FullName;
 
         string Reference(string file) =>
@@ -97,13 +95,31 @@ public sealed class PackageProcessTests : IAsyncLifetime
             {
                 // Do not inherit any SDK pipe handles. The child stays in the ordinary
                 // parent job: there is no CREATE_BREAKAWAY_FROM_JOB or shell delegation.
-                var startup = new Native.StartupInfo { Size = Marshal.SizeOf<Native.StartupInfo>() };
-                var command = new StringBuilder($"dotnet \"{typeof(Program).Assembly.Location}\" writer \"{args[1]}\"");
-                if (!Native.CreateProcess(null, command, 0, 0, false, 0x08000000, 0, null, ref startup, out var process))
-                    throw new System.ComponentModel.Win32Exception(Marshal.GetLastPInvokeError());
-                Native.CloseHandle(process.Thread);
-                Native.CloseHandle(process.Process);
-                using var child = Process.GetProcessById(process.Id);
+                Process child;
+                if (OperatingSystem.IsWindows())
+                {
+                    var startup = new Native.StartupInfo { Size = Marshal.SizeOf<Native.StartupInfo>() };
+                    var command = new StringBuilder($"dotnet \"{typeof(Program).Assembly.Location}\" writer \"{args[1]}\"");
+                    if (!Native.CreateProcess(null, command, 0, 0, false, 0x08000000, 0, null, ref startup, out var process))
+                        throw new System.ComponentModel.Win32Exception(Marshal.GetLastPInvokeError());
+                    Native.CloseHandle(process.Thread);
+                    Native.CloseHandle(process.Process);
+                    child = Process.GetProcessById(process.Id);
+                }
+                else
+                {
+                    var start = new ProcessStartInfo("dotnet")
+                    {
+                        UseShellExecute = false,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                    };
+                    foreach (var argument in new[] { typeof(Program).Assembly.Location, "writer", args[1] })
+                        start.ArgumentList.Add(argument);
+                    child = Process.Start(start)!;
+                }
+                using var ownedChild = child;
                 var timer = Stopwatch.StartNew();
                 while (!File.Exists(Path.Combine(args[1], "child.pid")))
                 {
@@ -148,8 +164,6 @@ public sealed class PackageProcessTests : IAsyncLifetime
             }
             """);
         await RunAsync(helper, "build", "-c", "Release");
-        if (OperatingSystem.IsLinux())
-            return;
         var author = Directory.CreateDirectory(Path.Combine(directory, "author")).FullName;
         Directory.CreateDirectory(Feed);
         var tools = SecurityElement.Escape(Path.GetDirectoryName(Helper)!);
@@ -172,7 +186,7 @@ public sealed class PackageProcessTests : IAsyncLifetime
         await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", Feed, "-p:Version=2.0.0");
     }
 
-    [WindowsFact]
+    [Fact]
     public async Task Exited_sdk_cannot_report_prepared_output_while_its_child_still_writes()
     {
         var profile = NewProfile();

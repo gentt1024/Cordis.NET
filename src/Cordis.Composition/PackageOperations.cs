@@ -27,8 +27,8 @@ public sealed record PackageInspection(
     bool RequiresBuildApproval)
 {
     /// <summary>Optional immutable manifest snapshot read from the archive identified by ContentHash, before executing tools.</summary>
-    /// <remarks>Contains package identity and declared peers. Null means metadata cannot be known before preparation;
-    /// the prepared manifest is still admitted separately. Serialization prevents callers from mutating captured peers.</remarks>
+    /// <remarks>Contains package identity and declared engines and peers. Null means metadata cannot be known before preparation;
+    /// the prepared manifest is still admitted separately. Serialization prevents callers from mutating captured requirements.</remarks>
     public string? ManifestJson
     {
         get;
