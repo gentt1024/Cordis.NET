@@ -122,6 +122,8 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         };
         if (metadata.TryGetValue("peerDependencies", out var peers))
             manifest["peerDependencies"] = peers;
+        if (metadata.TryGetValue("engines", out var engines))
+            manifest["engines"] = engines;
         return new(
             request,
             Convert.ToHexString(SHA256.HashData(bytes)),
@@ -316,6 +318,8 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             };
             if (metadata.TryGetValue("peerDependencies", out var peers))
                 manifest["peerDependencies"] = peers;
+            if (metadata.TryGetValue("engines", out var engines))
+                manifest["engines"] = engines;
             await File.WriteAllTextAsync(
                 Path.Combine(outputDirectory, "package.json"),
                 ConfigurationFile.Write(manifest, true),

@@ -321,7 +321,8 @@ public static partial class ProfileMaintenance
             {
                 return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             }
-            catch (IOException error) when ((error.HResult & 0xffff) is 11 or 32 or 33)
+            catch (IOException error) when ((error.HResult & 0xffff) is 11 or 32 or 33 ||
+                                            OperatingSystem.IsMacOS() && (error.HResult & 0xffff) == 35)
             {
                 await Task.Delay(20, cancellationToken);
             }

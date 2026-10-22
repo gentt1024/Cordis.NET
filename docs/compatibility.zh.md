@@ -2,6 +2,27 @@
 
 [English](compatibility.md)
 
+## DSH 0.2.1 候选准入分片，2026-10-22
+
+本分支仅实现候选 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`（0.2.1-rc.2）的插件 requirements 准入分片。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`（0.2.0-rc.2）。这是明确限定范围的升级例外，不代表已全面兼容 0.2.1。HMR、Remote 授权等候选分片仍是独立工作。
+
+候选的[判定实现](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/app-boot/src/plugin-compatibility.ts)及[原始测试](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/app-boot/tests/plugin-compatibility.spec.ts)决定以下规则：
+
+- 声明 `engines` 时必须是对象。其中存在 `dsh` 成员时，其值必须是字符串，并单独决定兼容性，即使 peers 格式错误或结论相反。其他 engine 成员不影响准入。
+- 缺少 `engines.dsh` 时回退到既有 DSH peer 检查。过滤 DSH 包族前校验所有 peer 值均为字符串。Cordis peers 仍不属于 DSH peers。
+- Engine 范围使用既有 npm semver 适配并包含预发布版本。空、无效及 `workspace:` engine 范围均不满足；只有 peer 的 `workspace:^`、`workspace:~`、`workspace:*` 按运行版本处理。
+- 存在不匹配时，name/version 必须是非空白字符串，并保留原始拼写。精确豁免仍绑定包名、包版本及原始运行版本，包括构建元数据。大小写归一仍仅由既有显式 NuGet 包名适配器负责，不归一版本字符串。构建批准与版本豁免相互独立。
+
+`DshPluginCompatibility.Peers` 改名为 `Requirements`，同时改名位置构造函数及解构参数。字典类型和参数顺序不变，结果包含 `engines.dsh` 或不匹配的 peer 包名。使用 `Peers`、命名参数或序列化属性名的消费者需要迁移并重新编译；不保留别名或第二套结果类型。`EvaluateCompatibility` 及准入方法签名不变。管理 Remote DTO 没有暴露此记录，因此 wire schema 和生成客户端签名不变。既有诊断字符串现在描述未满足的 requirements，包括 `engines.dsh`。
+
+NuGet `cordis.plugin.json` 的 engines 和 peers 在检查元数据及部署的 `package.json` 中原样保留，包含无效值，以便准入拒绝。已知不兼容在 SDK 准备之前被拒绝，禁用安装也不能绕过；准备后的清单再次检查。命名 bundle、导入前入口检查、刷新／reconciliation、重启、精确豁免及撤销共享同一判定。通用 Loader 和未显式配置 DSH runtime 的 Profile 仍不应用此策略。本片保留既有 CLR 元数据定位与准备／发布适配，不增加 Node 包执行，也不改变安装／更新生命周期语义。
+
+豁免文件锁在原有错误码之外，将 macOS `EAGAIN`（35）识别为锁竞争，修正同一精确豁免持久化路径的等待与取消；不扩大其他 macOS I/O 错误的重试范围，也不改变豁免文件格式。字典项对应 JSON 自有字段；JavaScript 原型及隐式安装版本发现没有直接 CLR 对应，宿主继续显式提供 `DshRuntimeIdentity`。原生诊断措辞与异常类型仍属 .NET 适配。
+
+验证修复将既有包进程所有权扩展到 macOS。原生 `posix_spawn` 在独立进程组中创建暂停的主进程；记录组身份后才恢复执行，并回收直属子进程、排空两条输出管道。取消时终止整个组，等待仍存活的成员退出。SDK 成功退出但仍有后代进程时拒绝成功并清理，包括重定向输出或比主进程存活更久的后代。这是进程生命周期管理，不是不可信构建代码的隔离机制：主动逃离进程组不在合同内。与 Linux 一样，macOS 不承诺宿主崩溃后自动终止后代；存活进程组通过保留的运行记录阻止后继准备。缺少组身份的旧 macOS 记录需要显式恢复。不可读取或无法判定的成员状态仍按失败处理，内核 zombie 则已不能执行。不增加公开 API。平台常量和 ABI 对照 macOS SDK 头文件及 [Apple 启动属性文档](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/posix_spawnattr_setflags.3.html)核对。
+
+执行证据见[验证记录](validation.zh.md)，其中候选原始测试与正式基线清单分开记录。
+
 ## 可独立安装的浏览器作者工具，2026-10-18
 
 作者命令在发布输出前保护本次实际输入闭包。入口在编译前检查，esbuild 输入信息及 CSS 插件的物理路径覆盖每次构建的打包依赖。源码子目录不能被退役后替换为输出目录，也不能混入 watch 代际。这是 .NET port 作者命令及输出发布的保护，不改变固定 DSH Loader 语义，不增加文件系统权威。比较前解析作者与输出路径中的目录别名，尚不存在的输出通过最近的已有父目录解析。这修正 macOS `/var` 与 `/private/var` 边界及等价目录别名。普通 `author/dist` 输出继续支持。

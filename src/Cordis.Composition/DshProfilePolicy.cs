@@ -10,7 +10,7 @@ public static partial class DshProfilePolicy
     /// <summary>The profile-local file containing explicitly acknowledged exact-version exemptions.</summary>
     public const string CompatibilityFilename = "compatibility.json";
 
-    /// <summary>Checks all own peer values before selecting the DSH package family. Cordis peers are not DSH peers.</summary>
+    /// <summary>Checks engines.dsh when declared, otherwise checks peers in the DSH package family.</summary>
     public static DshPluginCompatibility? EvaluateCompatibility(
         PackageManifest manifest,
         DshRuntimeIdentity runtime,
@@ -26,14 +26,42 @@ public static partial class DshProfilePolicy
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(runtime);
-        if (!manifest.Raw.TryGetValue("peerDependencies", out var declared))
+        var mismatches = UnmetRequirements(manifest, runtime);
+        if (mismatches.Count == 0)
             return null;
+        if (manifest.Raw.GetValueOrDefault("name") is not string packageName || string.IsNullOrWhiteSpace(packageName) ||
+            manifest.Raw.GetValueOrDefault("version") is not string version || string.IsNullOrWhiteSpace(version))
+            throw new FormatException("An incompatible plugin manifest must have a nonempty name and version.");
+        var grantName = compatibilityPackageName?.Invoke(packageName) ?? packageName;
+        var exempted = exactGrants?.TryGetValue(grantName + "@" + version, out var grants) == true &&
+            grants.Contains(runtime.Version, StringComparer.Ordinal);
+        return new(packageName, version, runtime.Version, new ReadOnlyDictionary<string, string>(mismatches), exempted);
+    }
+
+    private static Dictionary<string, string> UnmetRequirements(PackageManifest manifest, DshRuntimeIdentity runtime)
+    {
+        var mismatches = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (manifest.Raw.TryGetValue("engines", out var declaredEngines))
+        {
+            if (declaredEngines is not IDictionary<string, object?> engines)
+                throw new FormatException("engines must be an object.");
+            if (engines.TryGetValue("dsh", out var engine))
+            {
+                if (engine is not string range)
+                    throw new FormatException("engines.dsh must be a string.");
+                if (!DshSemver.Satisfies(runtime.SemVersion, range))
+                    mismatches["engines.dsh"] = range;
+                return mismatches;
+            }
+        }
+
+        if (!manifest.Raw.TryGetValue("peerDependencies", out var declared))
+            return mismatches;
         if (declared is not IDictionary<string, object?> peers)
             throw new FormatException("peerDependencies must be an object.");
         foreach (var pair in peers)
             if (pair.Value is not string)
                 throw new FormatException($"peerDependencies.{pair.Key} must be a string.");
-        var mismatches = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (name, value) in peers)
         {
             if (name != "@deepseek-ai/dsh" && !name.StartsWith("@deepseek-ai/dsh-", StringComparison.Ordinal))
@@ -44,15 +72,7 @@ public static partial class DshProfilePolicy
                 mismatches[name] = range;
         }
 
-        if (mismatches.Count == 0)
-            return null;
-        if (manifest.Raw.GetValueOrDefault("name") is not string packageName || packageName.Length == 0 ||
-            manifest.Raw.GetValueOrDefault("version") is not string version || version.Length == 0)
-            throw new FormatException("An incompatible plugin manifest must have a nonempty name and version.");
-        var grantName = compatibilityPackageName?.Invoke(packageName) ?? packageName;
-        var exempted = exactGrants?.TryGetValue(grantName + "@" + version, out var grants) == true &&
-            grants.Contains(runtime.Version, StringComparer.Ordinal);
-        return new(packageName, version, runtime.Version, new ReadOnlyDictionary<string, string>(mismatches), exempted);
+        return mismatches;
     }
 
     /// <summary>Reads valid sibling grants while retaining warnings and refusing to authorize rewriting corrupt data.</summary>
@@ -151,7 +171,7 @@ public static partial class DshProfilePolicy
             if (issue is null)
                 return;
             var message =
-                $"Plugin {issue.Name}@{issue.Version} requires incompatible DSH peers ({string.Join(", ", issue.Peers.Select(pair => pair.Key + ": " + pair.Value))}); running DSH {runtime.Version}.";
+                $"Plugin {issue.Name}@{issue.Version} has incompatible DSH requirements ({string.Join(", ", issue.Requirements.Select(pair => pair.Key + ": " + pair.Value))}); running DSH {runtime.Version}.";
             if (!issue.Exempted)
                 throw new InvalidOperationException(
                     message + " Upgrade the plugin or explicitly acknowledge an exact-version exemption.");
@@ -302,17 +322,17 @@ public sealed class DshRuntimeIdentity
     }
 }
 
-/// <summary>An incompatible plugin and all of its mismatching DSH peers.</summary>
+/// <summary>An incompatible plugin and all of its unmet DSH requirements.</summary>
 /// <param name="Name">The manifest package name.</param>
 /// <param name="Version">The manifest package version.</param>
 /// <param name="RuntimeVersion">The explicitly supplied DSH version.</param>
-/// <param name="Peers">The original mismatching peer declarations.</param>
+/// <param name="Requirements">The original unmet engines.dsh or peer declarations.</param>
 /// <param name="Exempted">Whether an exact grant exists for this plugin and runtime spelling.</param>
 public sealed record DshPluginCompatibility(
     string Name,
     string Version,
     string RuntimeVersion,
-    IReadOnlyDictionary<string, string> Peers,
+    IReadOnlyDictionary<string, string> Requirements,
     bool Exempted);
 
 /// <summary>Valid grants and diagnostics from a tolerant read of profile compatibility data.</summary>

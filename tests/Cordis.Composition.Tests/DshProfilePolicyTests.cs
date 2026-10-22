@@ -36,6 +36,97 @@ public sealed class DshProfilePolicyTests : IDisposable
                 ["peerDependencies"] = peers,
             });
 
+    private static PackageManifest EngineManifest(object? engines, object? peers = null) =>
+        new(new EntryOptions(Manifest(peers).Raw) { ["engines"] = engines });
+
+    [Theory]
+    [InlineData("^0.2.1-rc.1", true)]
+    [InlineData("^0.2.1", false)]
+    [InlineData("^9", false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData("latest", false)]
+    [InlineData("workspace:^", false)]
+    [InlineData("workspace:~", false)]
+    [InlineData("workspace:*", false)]
+    public void EngineRequirementTakesPrecedenceEvenOverMalformedPeers(string range, bool accepted)
+    {
+        var manifest = EngineManifest(new EntryOptions { ["dsh"] = range });
+        var issue = DshProfilePolicy.EvaluateCompatibility(manifest, new("0.2.1-rc.2"));
+        Assert.Equal(accepted, issue is null);
+        if (!accepted)
+            Assert.Equal(new KeyValuePair<string, string>("engines.dsh", range), Assert.Single(issue!.Requirements));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(12)]
+    [InlineData(false)]
+    [InlineData("^0.2")]
+    public void MalformedEnginesAreRejectedEvenWithCompatiblePeers(object? engines)
+    {
+        var manifest = EngineManifest(engines, new EntryOptions { ["@deepseek-ai/dsh"] = "*" });
+        Assert.Throws<FormatException>(() => DshProfilePolicy.EvaluateCompatibility(manifest, new("0.2.1-rc.2")));
+    }
+
+    [Fact]
+    public void EnginesWithoutDshFallBackToPeersAndIgnoreOtherEngineValues()
+    {
+        var manifest = EngineManifest(
+            new EntryOptions { ["node"] = 12 },
+            new EntryOptions { ["@deepseek-ai/dsh"] = "^9" });
+        var issue = DshProfilePolicy.EvaluateCompatibility(manifest, new("0.2.1-rc.2"));
+        Assert.Equal("@deepseek-ai/dsh", Assert.Single(issue!.Requirements).Key);
+        Assert.Throws<FormatException>(() => DshProfilePolicy.EvaluateCompatibility(
+            EngineManifest(new EntryOptions()), new("0.2.1-rc.2")));
+        foreach (var invalid in new object?[] { null, 12, false, Array.Empty<object>(), new EntryOptions() })
+            Assert.Throws<FormatException>(() => DshProfilePolicy.EvaluateCompatibility(
+                EngineManifest(new EntryOptions { ["dsh"] = invalid }), new("0.2.1-rc.2")));
+        Assert.Throws<FormatException>(() => DshProfilePolicy.EvaluateCompatibility(
+            EngineManifest(Array.Empty<object>()), new("0.2.1-rc.2")));
+    }
+
+    [Fact]
+    public void EngineOnlyAndConflictingPeersUseTheSameRequirementAndExactGrant()
+    {
+        var manifest = EngineManifest(new EntryOptions { ["dsh"] = "^9" });
+        manifest.Raw.Remove("peerDependencies");
+        var runtime = new DshRuntimeIdentity("0.2.1-rc.2+host");
+        var grants = new Dictionary<string, IReadOnlyList<string>>
+        {
+            ["@example/plugin@1.0.0+plugin"] = [runtime.Version],
+        };
+        var issue = DshProfilePolicy.EvaluateCompatibility(manifest, runtime, grants)!;
+        Assert.Equal(new KeyValuePair<string, string>("engines.dsh", "^9"), Assert.Single(issue.Requirements));
+        Assert.True(issue.Exempted);
+        Assert.False(DshProfilePolicy.EvaluateCompatibility(manifest, new("0.2.1-rc.2+other"), grants)!.Exempted);
+        manifest.Raw["version"] = "1.0.0+other";
+        Assert.False(DshProfilePolicy.EvaluateCompatibility(manifest, runtime, grants)!.Exempted);
+        manifest.Raw["peerDependencies"] = new EntryOptions { ["@deepseek-ai/dsh"] = "*" };
+        Assert.Equal(issue.Requirements, DshProfilePolicy.EvaluateCompatibility(manifest, runtime)!.Requirements);
+        manifest.Raw["engines"] = new EntryOptions { ["dsh"] = "^0.2.1-rc.1" };
+        manifest.Raw["peerDependencies"] = new EntryOptions { ["@deepseek-ai/dsh"] = "^9" };
+        Assert.Null(DshProfilePolicy.EvaluateCompatibility(manifest, runtime));
+    }
+
+    [Theory]
+    [InlineData("name")]
+    [InlineData("version")]
+    public void MismatchRequiresNonblankIdentityButPreservesOriginalSpelling(string field)
+    {
+        var manifest = EngineManifest(new EntryOptions { ["dsh"] = "^9" });
+        manifest.Raw[field] = " original ";
+        var issue = DshProfilePolicy.EvaluateCompatibility(manifest, new("0.2.1-rc.2"))!;
+        Assert.Equal(" original ", field == "name" ? issue.Name : issue.Version);
+        manifest.Raw[field] = " \t";
+        Assert.Throws<FormatException>(() => DshProfilePolicy.EvaluateCompatibility(manifest, new("0.2.1-rc.2")));
+        manifest.Raw["engines"] = new EntryOptions { ["dsh"] = "*" };
+        Assert.Null(DshProfilePolicy.EvaluateCompatibility(manifest, new("0.2.1-rc.2")));
+        manifest.Raw.Remove("engines");
+        manifest.Raw.Remove("peerDependencies");
+        Assert.Null(DshProfilePolicy.EvaluateCompatibility(manifest, new("0.2.1-rc.2")));
+    }
+
     [Theory]
     [InlineData("0.2.0-rc.2", "^0.2.0-rc.1", true)]
     [InlineData("0.2.0-rc.2", "^0.2.0", false)]
@@ -71,7 +162,7 @@ public sealed class DshProfilePolicyTests : IDisposable
             new(running));
         Assert.Equal(accepted, issue is null);
         if (!accepted)
-            Assert.Equal(range, issue!.Peers["@deepseek-ai/dsh-core"]);
+            Assert.Equal(range, issue!.Requirements["@deepseek-ai/dsh-core"]);
     }
 
     [Fact]
@@ -102,7 +193,7 @@ public sealed class DshProfilePolicyTests : IDisposable
                     ["@deepseek-ai/dsh-core"] = "~88"
                 }),
             new("0.2.0"));
-        Assert.Equal(2, issue!.Peers.Count);
+        Assert.Equal(2, issue!.Requirements.Count);
         Assert.False(issue.Exempted);
     }
 
@@ -457,12 +548,14 @@ public sealed class DshProfilePolicyTests : IDisposable
         Assert.Null(broken.Disabled);
     }
 
-    [Fact]
-    public async Task NamedDshBundleAdmissionDoesNotChangeGenericProfileLoadingOrGrantAutomatically()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NamedDshBundleAdmissionDoesNotChangeGenericProfileLoadingOrGrantAutomatically(bool engines)
     {
         var bundle = Path.Combine(directory, "bundle");
         Directory.CreateDirectory(bundle);
-        var manifest = Manifest(
+        var manifest = engines ? EngineManifest(new EntryOptions { ["dsh"] = "^99" }) : Manifest(
             new EntryOptions
             {
                 ["@deepseek-ai/dsh"] = "^99"
@@ -633,8 +726,10 @@ public sealed class DshProfilePolicyTests : IDisposable
         }
     }
 
-    [Fact]
-    public async Task HostManifestLocatorDeniesBareRegisteredNamesBeforeExecutingResolver()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HostManifestLocatorDeniesBareRegisteredNamesBeforeExecutingResolver(bool engines)
     {
         var path = Path.Combine(directory, "registered.yml");
         File.WriteAllText(path, "- id: bad\n  name: registered-clr\n- id: good\n  name: registered-static\n");
@@ -652,7 +747,7 @@ public sealed class DshProfilePolicyTests : IDisposable
                 null,
                 null,
                 (name, _) => name == "registered-clr"
-                    ? Manifest(
+                    ? engines ? EngineManifest(new EntryOptions { ["dsh"] = "^99" }) : Manifest(
                         new EntryOptions
                         {
                             ["@deepseek-ai/dsh"] = "^99"
@@ -663,8 +758,10 @@ public sealed class DshProfilePolicyTests : IDisposable
         });
     }
 
-    [Fact]
-    public async Task ReconcileDenialClearsPreviouslyMountedGroupSubtree()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReconcileDenialClearsPreviouslyMountedGroupSubtree(bool engines)
     {
         var path = Path.Combine(directory, "group.yml");
         File.WriteAllText(
@@ -695,7 +792,7 @@ public sealed class DshProfilePolicyTests : IDisposable
                 null,
                 null,
                 (name, _) => name == "registered-group"
-                    ? Manifest(
+                    ? engines ? EngineManifest(new EntryOptions { ["dsh"] = denied ? "^99" : "^0.2" }) : Manifest(
                         new EntryOptions
                         {
                             ["@deepseek-ai/dsh"] = denied ? "^99" : "^0.2"

@@ -17,7 +17,7 @@ PROCESS_METHODS = (
     "Host_exit_terminates_owned_package_children_without_waiting_for_sdk_exit",
 )
 PROCESS_NAMES = {PROCESS_CLASS + "." + method for method in PROCESS_METHODS}
-WINDOWS_PROCESS_NAMES = PROCESS_NAMES - {PROCESS_CLASS + ".Cancelled_preparation_stops_child_with_independent_output_pipes_before_returning"}
+WINDOWS_PROCESS_NAMES = {PROCESS_CLASS + ".Host_exit_terminates_owned_package_children_without_waiting_for_sdk_exit"}
 WINDOWS_PROCESS_REASON = "Windows package process ownership regression."
 
 
@@ -87,7 +87,7 @@ def normalized_case(name):
 
 
 def audit_native_results(directory):
-    """Require actual passes except the two defined Windows-only cases on Linux."""
+    """Require actual passes except the defined Windows Job-object case on Linux/macOS."""
     results = []
     counts_by_assembly = Counter()
     for file in sorted(directory.glob("*.trx")):
@@ -126,9 +126,9 @@ def audit_native_results(directory):
     for result in results:
         if result["outcome"] == "Passed":
             continue
-        assert (sys.platform == "linux" and result["name"] in WINDOWS_PROCESS_NAMES
+        assert (sys.platform in ("linux", "darwin") and result["name"] in WINDOWS_PROCESS_NAMES
                 and result["outcome"] == "NotExecuted" and result["reason"] == WINDOWS_PROCESS_REASON), \
-            (result, "Native tests must pass except the exact Linux Windows-only cases")
+            (result, "Native tests must pass except the exact Windows Job-object case on Linux/macOS")
         exceptions.append(result)
     # xUnit's TRX summary can report notExecuted=0 for these skips; count Results, never the counter.
     return {"testCount": len(results), "passedCount": sum(result["outcome"] == "Passed" for result in results),
@@ -164,7 +164,7 @@ def verify_results(mapping, directory):
         if matches:
             evidence.append({"id": test["id"], "disposition": test["status"], "results": matches})
     return {"format": "cordis-test-map-run/v1", **{key: value for key, value in audit.items() if key != "results"},
-            "meaning": "All mapped method instances passed in this run. Exact Windows-only cases on Linux remain reported as unexecuted, never as assertion passes. Semantic assertion correspondence is reviewed in component maps.", "tests": evidence}
+            "meaning": "All mapped method instances passed in this run. The exact Windows Job-object case on Linux/macOS remains reported as unexecuted, never as assertion passes. Semantic assertion correspondence is reviewed in component maps.", "tests": evidence}
 
 
 

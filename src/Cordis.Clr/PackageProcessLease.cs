@@ -87,13 +87,25 @@ internal sealed class PackageProcessLease(string path)
 
     internal void StopGroup()
     {
-        if (grouped && OperatingSystem.IsLinux() && pid > 0)
+        if (grouped && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) && pid > 0)
             Kill(-pid, 9);
+    }
+
+    internal async Task<bool> WaitForGroupExitAsync(TimeSpan timeout)
+    {
+        var watch = Stopwatch.StartNew();
+        while (GroupAlive(pid))
+        {
+            if (watch.Elapsed >= timeout)
+                return false;
+            await Task.Delay(20);
+        }
+        return true;
     }
 
     internal void Finish(bool pipesDrained)
     {
-        if (!pipesDrained || grouped && OperatingSystem.IsLinux() && GroupAlive(pid) ||
+        if (!pipesDrained || grouped && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) && GroupAlive(pid) ||
             OperatingSystem.IsWindows() && (windowsJob is null || WindowsPackageProcess.IsAlive(windowsJob)))
         {
             // Keep ambiguous Windows descendants or a remaining POSIX group visible to a successor.
@@ -117,8 +129,11 @@ internal sealed class PackageProcessLease(string path)
             return WindowsPackageProcess.IsAlive(job);
         }
 
-        if (processGroup && OperatingSystem.IsLinux())
+        if (processGroup && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
             return GroupAlive(processId);
+        if (OperatingSystem.IsMacOS())
+            throw new IOException(
+                "The prior macOS package run has no process-group identity; inspect its processes before removing the run record.");
         try
         {
             using var process = Process.GetProcessById(processId);
@@ -132,6 +147,8 @@ internal sealed class PackageProcessLease(string path)
 
     private static bool GroupAlive(int processGroup)
     {
+        if (OperatingSystem.IsMacOS())
+            return MacPackageProcess.GroupAlive(processGroup);
         if (Kill(-processGroup, 0) != 0 && Marshal.GetLastPInvokeError() == 3)
             return false;
         var observed = false;
