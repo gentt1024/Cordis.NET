@@ -2,9 +2,19 @@
 
 [中文](compatibility.zh.md)
 
+## Candidate management persistence slice, 2026-10-22
+
+S2 follows the fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317` [patch editor](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/plugin-manager/src/patch.ts) and [bundle removal](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/plugin-manager/src/index.ts). Together with S1 below, it is a scoped candidate exception. The formal lock and historical source inventory remain unchanged; HMR, resolver replacement and the remaining candidate slices are separate work.
+
+`PluginConfigurationOperations.SetPluginEnabledAsync` removes or omits a plain `id`/`disabled` override when the remaining selected bundle and profile patches already imply the requested literal value. Native base configuration participates so bundle insertions into base-owned groups retain their existing meaning. Home and launch overlays do not define inheritance. Expressions are compared as raw values, never evaluated; an inherited expression cannot equal a literal switch. Name assertions, additional settings, anchors on entries/keys/values and alias-valued switches prevent pruning. Editing an alias-valued switch replaces that value with the requested literal; a subsequent call may prune the now-plain switch. Standalone surrounding comments survive removal, including an emptied sequence. Native source splicing preserves untouched text rather than adopting upstream YAML reformatting; comments attached to the deleted fields may disappear.
+
+Inheritance uses the existing captured profile inputs and path-resolved patches. Complete candidate admission and conflict checks still precede atomic persistence. A rejection leaves the patch unchanged; activation failure after saving leaves the requested patch, including pruning, saved. Base files are not rewritten. The file-only `ProfileMaintenance.WriteEnabledAsync` has no composition context and retains its explicit override behavior; profile management owns inheritance pruning.
+
+`BundleConfigurationInfo.Removable` now also covers a selected name without a profile dependency. `RemovePackageAsync` deselects and settles its contributions, then returns without toolchain removal, dependency editing or marking the local package removed. A remaining local bundle can be selected again. Missing selected bundles can also be withdrawn. Installation-owned and management-required bundles remain protected; live contributions still require shutdown or cause `bundle-in-use`. There are no public signature, DTO shape, wire schema or generated-client changes. Existing removal results describe selection and installation separately. This slice adds no hot reinstall behavior.
+
 ## Candidate DSH 0.2.1 admission slice, 2026-10-22
 
-This branch implements only the plugin requirement admission slice from candidate DSH `687f282e8625c6b8d11ff58211a90524be2e4317` (0.2.1-rc.2). The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84` (0.2.0-rc.2). This is an explicit, scoped upgrade exception to that baseline, not a claim of complete 0.2.1 compatibility. Other candidate slices, including HMR and Remote authorization, remain separate work.
+The first slice implements plugin requirement admission from candidate DSH `687f282e8625c6b8d11ff58211a90524be2e4317` (0.2.1-rc.2). The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84` (0.2.0-rc.2). This is an explicit, scoped upgrade exception to that baseline, not a claim of complete 0.2.1 compatibility. Other candidate slices, including HMR and Remote authorization, remain separate work.
 
 The candidate [evaluator](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/app-boot/src/plugin-compatibility.ts) and its [original tests](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/app-boot/tests/plugin-compatibility.spec.ts) define the rules:
 

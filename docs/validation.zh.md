@@ -2,6 +2,26 @@
 
 [English](validation.md)
 
+## 候选管理持久化，2026-10-22
+
+S2 依据[兼容性说明中的候选例外](compatibility.zh.md#候选管理持久化分片2026-10-22)，固定源码为 `687f282e8625c6b8d11ff58211a90524be2e4317`。正式行为锁和历史源码测试清单保持不变。执行环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
+
+实现前，回归用例证明恢复 bundle 默认值仍留下冗余 `disabled: false`，以及选中但不是依赖的本地 bundle 无法移除。另一个反例证明 bundle 声明消失后会丢失管理保护。修复后均通过。聚焦 `PluginManagerOriginalTests` 共 **76 项通过**，其中 `PluginManagerPersistenceTests.cs` 包含 **32 个新增实例**。覆盖默认值变化、缺失 patch、注释与 flow 语法、命名断言、额外设置、entry/key/value anchor、alias、profile 插入、继承表达式、home/启动覆盖、base-owned group、准入拒绝、外部编辑冲突及删除覆盖后的激活失败。移除检查验证不卸载、再次选中、缺失 bundle、残留贡献和管理保护。
+
+完整命令返回 **`requested-checks-passed`**，**33 个步骤全部通过**，且 **`sourceUnchanged=true`**：
+
+```sh
+python3 scripts/verify.py --dsh <locked-source-checkout> \
+  --upstream-test packages/boot/app-boot/tests/user-patches.spec.ts \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts
+```
+
+- 原生测试：**999 项通过，零失败**；Composition 591、Core 147、Extensions 118、Platform 143。唯一既有 Windows Job-object 宿主退出用例仍在 macOS 上按平台排除。没有新增排除或跳过。
+- 正式基线原始测试：user-patches 与 profile 共 **55 项通过**。JIT 重复性、固定 DSH 差分轨迹、客户端构建/类型/生命周期/替换/共享模块/watch/package、CLI、API 快照、可选 Typert 消费和空白检查全部通过。
+- 候选原始测试：patch **15**、package-reload **27**、完整 manager **108**；合计 **150 项通过，零失败、零跳过**。原始源码和测试未修改。外部 Vitest 4.1.11 harness 需要候选固定的 pnpm 11.28.5：首次因缺少 pnpm 失败的四项，在安装并重跑完整 manager suite 后均通过。这是聚焦源码执行证据，不代表完成上游整个 workspace 的构建。
+
+首轮整库验证通过原生测试后，因已有客户端替换证据而拒绝覆盖。旧输出已保留，随后从空证据目录重跑完整命令。最终中英文更新通过 `scripts/check-docs.py` 和 `git diff --check`。不提交机器原始日志或依赖安装。本轮不提供 Linux/Windows、AOT、完整包消费者或原始 Core/Loader 源码 suite 证据，也不晋升行为锁。
+
 ## engines.dsh 候选准入验证，2026-10-22
 
 第一片的合同见[兼容性说明](compatibility.zh.md#dsh-021-候选准入分片2026-10-22)。候选固定为 `687f282e8625c6b8d11ff58211a90524be2e4317`；`upstream.lock.json` 和历史源测试清单仍固定在 `639ed015397290b3745d163aafe02ffee4aa3f84`。执行环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0 及锁定的 npm 开发依赖。临时目录采用文件系统规范路径，避免 macOS 符号链接别名干扰。机器原始日志不提交。
