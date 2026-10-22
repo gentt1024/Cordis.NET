@@ -184,23 +184,46 @@ public static partial class ProfileMaintenance
         return true;
     }
 
-    internal static string WithEnabled(string text, string id, string name, bool enabled)
+    internal static string WithEnabled(
+        string text,
+        string id,
+        string name,
+        bool enabled,
+        Func<int, bool>? implied = null)
     {
         var entries = ConfigurationFile.ParseEntries(text);
-        var target = entries.FindLastIndex(row =>
-            row.Id == id && !row.ContainsKey("insert") && (row.Name.Length == 0 || row.Name == name));
-        if (target >= 0 && entries[target].Disabled is bool disabled && disabled == !enabled)
-            return text;
         var parser = new Parser(new StringReader(text));
         parser.Consume<StreamStart>();
         parser.Consume<DocumentStart>();
         var root = ReadNode(parser);
+        var target = -1;
+        for (var index = entries.Count - 1;index >= 0;index--)
+        {
+            var row = entries[index];
+            if (!root.Children[index].Alias && row.Id == id && !row.ContainsKey("insert") &&
+                (row.Name.Length == 0 || row.Name == name))
+            {
+                target = index;
+                break;
+            }
+        }
+        if (implied is not null && (target < 0 || root.Children[target].PlainSwitch) &&
+            implied(target))
+        {
+            var pruned = target < 0 ? text : RemoveSwitch(text, root, target);
+            _ = ConfigurationFile.ParseEntries(pruned);
+            return pruned;
+        }
+
+        if (target >= 0 && entries[target].Disabled is bool disabled && disabled == !enabled)
+            return text;
         var scalar = !enabled ? "true" : "false";
         if (target >= 0)
         {
             var node = root.Children[target];
             if (node.Fields.TryGetValue("disabled", out var field))
-                text = text[..field.Start] + scalar + text[field.End..];
+                text = text[..field.Start] + (field.Anchor is { } anchor ? "&" + anchor + " " : "") + scalar +
+                    text[field.End..];
             else if (node.Flow)
                 text = text[..node.End] + ", disabled: " + scalar + text[node.End..];
             else
@@ -228,6 +251,27 @@ public static partial class ProfileMaintenance
 
         _ = ConfigurationFile.ParseEntries(text);
         return text;
+    }
+
+    private static string RemoveSwitch(string text, SyntaxNode root, int index)
+    {
+        var node = root.Children[index];
+        if (root.Flow)
+        {
+            var comma = FlowSeparator(text, node.ContentEnd);
+            if (comma >= 0)
+                text = text.Remove(comma, 1);
+            text = text.Remove(node.Start, node.ContentEnd - node.Start);
+            if (comma < 0 && index > 0)
+                text = text.Remove(FlowSeparator(text, root.Children[index - 1].ContentEnd), 1);
+            return text;
+        }
+
+        var start = text.LastIndexOf('\n', node.Start) + 1;
+        var end = EndOfLine(text, node.Flow ? node.ContentEnd : node.Fields.Values.Max(field => field.ContentEnd));
+        var comments = string.Concat(text[start..end].Split('\n')
+            .Where(line => line.TrimStart().StartsWith('#')).Select(line => line + "\n"));
+        return text[..start] + comments + (root.Children.Count == 1 ? "[]\n" : "") + text[end..];
     }
 
     /// <summary>Grants or revokes an exact DSH compatibility exemption, independently of manifest and patch files.</summary>
@@ -331,6 +375,23 @@ public static partial class ProfileMaintenance
 
     private sealed class SyntaxNode(int start, int column)
     {
+        public string? Anchor
+        {
+            get; init;
+        }
+        public bool Alias
+        {
+            get; init;
+        }
+        public string? ScalarValue
+        {
+            get; init;
+        }
+        public bool PlainSwitch
+        {
+            get; set;
+        }
+
         public int Start
         {
             get;
@@ -388,19 +449,29 @@ public static partial class ProfileMaintenance
         } = new(StringComparer.Ordinal);
     }
 
-    private static SyntaxNode ReadNode(IParser parser)
+    private static SyntaxNode ReadNode(IParser parser, Dictionary<string, SyntaxNode>? anchors = null)
     {
+        anchors ??= new(StringComparer.Ordinal);
         if (parser.TryConsume<Scalar>(out var scalar))
-            return new(checked((int)scalar.Start.Index), checked((int)scalar.Start.Column))
+        {
+            var node = new SyntaxNode(checked((int)scalar.Start.Index), checked((int)scalar.Start.Column))
             {
                 End = checked((int)scalar.End.Index),
-                ContentEnd = checked((int)scalar.End.Index)
+                ContentEnd = checked((int)scalar.End.Index),
+                ScalarValue = scalar.Value,
+                Anchor = scalar.Anchor.IsEmpty ? null : scalar.Anchor.Value
             };
+            if (node.Anchor is { } anchor)
+                anchors[anchor] = node;
+            return node;
+        }
         if (parser.TryConsume<AnchorAlias>(out var alias))
             return new(checked((int)alias.Start.Index), checked((int)alias.Start.Column))
             {
                 End = checked((int)alias.End.Index),
-                ContentEnd = checked((int)alias.End.Index)
+                ContentEnd = checked((int)alias.End.Index),
+                Alias = true,
+                ScalarValue = anchors.GetValueOrDefault(alias.Value.Value)?.ScalarValue
             };
         if (parser.TryConsume<SequenceStart>(out var sequence))
         {
@@ -410,7 +481,7 @@ public static partial class ProfileMaintenance
                 Container = true
             };
             while (!parser.Accept<SequenceEnd>(out _))
-                node.Children.Add(ReadNode(parser));
+                node.Children.Add(ReadNode(parser, anchors));
             var end = parser.Consume<SequenceEnd>();
             node.End = checked((int)end.Start.Index);
             node.ContentEnd = node.Flow ? checked(node.End + 1) : node.End;
@@ -422,14 +493,17 @@ public static partial class ProfileMaintenance
         var result = new SyntaxNode(checked((int)mapping.Start.Index), checked((int)mapping.Start.Column))
         {
             Flow = mapping.Style == MappingStyle.Flow,
-            Container = true
+            Container = true,
+            PlainSwitch = mapping.Anchor.IsEmpty
         };
         while (!parser.Accept<MappingEnd>(out _))
         {
-            var key = parser.Consume<Scalar>();
-            var value = ReadNode(parser);
-            value.KeyStart = checked((int)key.Start.Index);
-            result.Fields[key.Value] = value;
+            var key = ReadNode(parser, anchors);
+            var value = ReadNode(parser, anchors);
+            value.KeyStart = key.Start;
+            result.Fields[key.ScalarValue!] = value;
+            result.PlainSwitch &= !key.Alias && key.Anchor is null && key.ScalarValue is "id" or "disabled" &&
+                !value.Alias && value.Anchor is null && value.ScalarValue is not null;
         }
 
         var ending = parser.Consume<MappingEnd>();

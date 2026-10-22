@@ -36,7 +36,7 @@ public sealed record BundleConfigurationRow(string RowId, string ModuleName, str
 /// <param name="Enabled">Whether the profile selects the bundle.</param>
 /// <param name="Installed">Whether the profile declares the package dependency.</param>
 /// <param name="Optional">Whether the host marks this bundle as optional in inventory.</param>
-/// <param name="Removable">Whether this profile owns the dependency and permits its removal.</param>
+/// <param name="Removable">Whether this profile permits dependency removal or deselection of an uninstalled bundle.</param>
 /// <param name="ReadOnlyReason">The reason management is refused, or null.</param>
 /// <param name="Error">Bundle loading failure text, or null.</param>
 /// <param name="Rows">Inserted rows and their runtime mappings.</param>
@@ -295,7 +295,7 @@ public sealed partial class PluginConfigurationOperations(
         {
             var enabled = manifest.Bundles.Contains(name);
             var installed = dependencies.ContainsKey(name);
-            var removable = installed && !launch.InstallationBundles.ContainsKey(name);
+            var removable = (installed || enabled) && !launch.InstallationBundles.ContainsKey(name);
             try
             {
                 var info = await ReadBundleAsync(name, inputs);
@@ -310,8 +310,8 @@ public sealed partial class PluginConfigurationOperations(
                                 true,
                                 installed,
                                 OptionalBundles.Contains(name),
-                                removable,
-                                null,
+                                removable && !managementBundles.ContainsKey(name),
+                                managementBundles.ContainsKey(name) ? "management-required" : null,
                                 "not-bundle",
                                 [],
                                 []));
@@ -380,7 +380,8 @@ public sealed partial class PluginConfigurationOperations(
     /// </summary>
     /// <remarks>Protected or unaddressable entries are refused. Product admission checks the complete candidate before
     /// saving the user patch. Persistence precedes reconciliation; an activation failure may leave the patch saved.
-    /// With no lifecycle queue, the change requires restart. Later overlays may override it.</remarks>
+    /// Plain switches returning to the inherited base/bundle/profile value are removed. Home and launch overlays do
+    /// not define that inheritance. With no lifecycle queue, the change requires restart. Later overlays may override it.</remarks>
     public Task<ConfigurationChange> SetPluginEnabledAsync(
         string entryId,
         bool enabled,
@@ -406,10 +407,30 @@ public sealed partial class PluginConfigurationOperations(
                     previous = "[]\n";
                 }
 
-                var patch = ProfileMaintenance.WithEnabled(previous, row.PatchId!, row.ModuleName, enabled);
+                var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
+                var profile = await Profiles.LoadAsync(
+                    inputs.Launch.Profile.Directory,
+                    inputs.Launch.InstallationBundles,
+                    inputs.Launch.LocalBundles,
+                    false,
+                    null,
+                    manifest,
+                    inputs.ReadAsync);
+                var bundlePatches = ProfileComposition.Flatten(profile.Bundles.SelectMany(bundle => bundle.PatchLayers));
+                var userPatches = await Profiles.ReadPatchesAsync(PatchPath, true, inputs.ReadAsync);
+                var basis = ConfigurationFile.ParseEntries(
+                    await inputs.ReadAsync(include.Filename),
+                    Path.GetExtension(include.Filename) == ".json");
+                var patch = ProfileMaintenance.WithEnabled(previous, row.PatchId!, row.ModuleName, enabled, removedIndex =>
+                {
+                    var remaining = userPatches.Where((_, index) => index != removedIndex);
+                    var inherited = Flatten(EntryPatches.Apply(basis, [.. bundlePatches, .. remaining]))
+                        .LastOrDefault(entry => entry.Id == row.PatchId);
+                    return inherited is not null && (inherited.Disabled ?? false) is bool disabled && disabled == !enabled;
+                });
                 var candidate = await CreateCandidateAsync(
                     inputs,
-                    ParseManifest(await inputs.ReadAsync(ManifestPath)),
+                    manifest,
                     userPatch: patch);
                 await AdmitCandidateAsync(inputs, candidate);
                 if (patch != previous)
@@ -449,6 +470,8 @@ public sealed partial class PluginConfigurationOperations(
                 var inputs = await CaptureProfileAsync();
                 var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
                 var previous = manifest.Bundles;
+                if (!enabled && managementBundles.ContainsKey(name))
+                    throw new Refusal("management-required");
                 var info = await ReadBundleAsync(name, inputs);
                 if ((enabled || !previous.Contains(name)) && info is null)
                     throw new Refusal("not-bundle");

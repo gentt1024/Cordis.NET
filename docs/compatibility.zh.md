@@ -2,9 +2,19 @@
 
 [English](compatibility.md)
 
+## 候选管理持久化分片，2026-10-22
+
+S2 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 [patch 编辑器](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/plugin-manager/src/patch.ts)和 [bundle 移除](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/plugin-manager/src/index.ts)。它与下述 S1 同属限定范围的候选例外。正式行为锁及历史源码测试清单保持不变；HMR、resolver 替换和其余候选分片仍是独立工作。
+
+当其余选中 bundle 与 profile patch 已隐含请求的字面值时，`PluginConfigurationOperations.SetPluginEnabledAsync` 删除或不追加只有 `id`/`disabled` 的覆盖。原生 base 配置参与合成，以保留 bundle 向 base-owned group 插入成员的既有含义。home 和启动 overlays 不决定继承值。表达式按原始值比较、不执行；继承的表达式不能等同于字面开关。命名断言、额外设置、entry/key/value 上的 anchor 和值为 alias 的开关都会阻止删除。编辑 alias 值的开关会把该值改为请求的字面值，之后再次调用可删除这个已变成普通开关的条目。删除时保留周围独立注释，包括清空 sequence 的情况。原生实现通过源码拼接保留未改动文本，不采用上游 YAML 重新排版；附着在被删字段上的注释可能随之删除。
+
+继承比较使用既有 profile 输入快照和已解析路径的 patches。完整候选准入及冲突检查仍先于原子保存。拒绝时 patch 不变；保存后激活失败则保留请求的 patch，包括已完成的删除。base 文件不被重写。只接受文件的 `ProfileMaintenance.WriteEnabledAsync` 没有组合上下文，保留显式覆盖行为；继承清理由 profile 管理入口负责。
+
+`BundleConfigurationInfo.Removable` 现在也涵盖已选中、但不是 profile 依赖的名称。`RemovePackageAsync` 撤选并等待其贡献退出后直接返回，不调用 toolchain 卸载、不修改依赖、不将本地包标成已移除。仍存在的本地 bundle 可以再次选中；缺失的已选 bundle 也可撤选。安装层和管理必需 bundle 继续受保护；仍活跃的贡献继续要求先停机或返回 `bundle-in-use`。公开签名、DTO 形状、wire schema 和生成客户端均不变。既有移除结果分别描述 selection 与 installation。本片不增加热重装行为。
+
 ## DSH 0.2.1 候选准入分片，2026-10-22
 
-本分支仅实现候选 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`（0.2.1-rc.2）的插件 requirements 准入分片。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`（0.2.0-rc.2）。这是明确限定范围的升级例外，不代表已全面兼容 0.2.1。HMR、Remote 授权等候选分片仍是独立工作。
+第一片实现候选 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`（0.2.1-rc.2）的插件 requirements 准入分片。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`（0.2.0-rc.2）。这是明确限定范围的升级例外，不代表已全面兼容 0.2.1。HMR、Remote 授权等候选分片仍是独立工作。
 
 候选的[判定实现](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/app-boot/src/plugin-compatibility.ts)及[原始测试](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/app-boot/tests/plugin-compatibility.spec.ts)决定以下规则：
 

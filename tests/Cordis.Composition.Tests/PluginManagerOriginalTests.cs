@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Cordis.Composition.Tests;
 
-public sealed class PluginManagerOriginalTests
+public sealed partial class PluginManagerOriginalTests
 {
     [Fact]
     public async Task PatchPreservesCommentsExpressionsAndLastOverride()
@@ -109,7 +109,7 @@ public sealed class PluginManagerOriginalTests
         Assert.False((await f.Manager.ListPluginsAsync()).Single(p => p.PatchId == "managed").Enabled);
         AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", false), false, "applied");
         AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", true), true, "applied");
-        Assert.Single((await Profiles.ReadPatchesAsync(f.Patch)), row => row.Id == "managed");
+        Assert.Empty(await Profiles.ReadPatchesAsync(f.Patch));
         Assert.Equal(new[] { "plugin", "plugin", "plugin" }, notifications);
     }
 
@@ -144,8 +144,8 @@ public sealed class PluginManagerOriginalTests
                         }
                     ])
             ]);
-        AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", true), true, "overridden");
-        Assert.Equal(false, Assert.Single(await Profiles.ReadPatchesAsync(f.Patch)).Disabled);
+        AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", true), false, "overridden");
+        Assert.Empty(await Profiles.ReadPatchesAsync(f.Patch));
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public sealed class PluginManagerOriginalTests
         Assert.Equal("applied", (await first).Application);
         Assert.Equal("applied", (await second).Application);
         Assert.Equal(2, calls);
-        Assert.Equal(false, Assert.Single(await Profiles.ReadPatchesAsync(f.Patch)).Disabled);
+        Assert.Empty(await Profiles.ReadPatchesAsync(f.Patch));
     }
 
     [Fact]
@@ -457,7 +457,7 @@ public sealed class PluginManagerOriginalTests
         var enabled = (await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == mounted.EntryId);
         Assert.True(enabled.Enabled);
         Assert.Equal(FiberState.Active, enabled.State);
-        Assert.Equal(false, Assert.Single(await Profiles.ReadPatchesAsync(f.Patch), row => row.Id == "child").Disabled);
+        Assert.DoesNotContain(await Profiles.ReadPatchesAsync(f.Patch), row => row.Id == "child");
         Assert.Equal(baseSource, await File.ReadAllTextAsync(f.Include.Filename));
         await using (var reopenedContext = new Context())
         {
@@ -984,6 +984,12 @@ public sealed class PluginManagerOriginalTests
 
     private sealed class RetainingToolchain : IProfilePackageToolchain
     {
+        public int RemoveCalls
+        {
+            get;
+            private set;
+        }
+
         public IReadOnlyList<string> Sources => [];
 
         public Task<IReadOnlyList<string>> VersionsAsync(
@@ -1005,7 +1011,11 @@ public sealed class PluginManagerOriginalTests
         public Task PublishAsync(PreparedPackage package, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
-        public Task RemoveAsync(string name, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RemoveAsync(string name, CancellationToken cancellationToken = default)
+        {
+            RemoveCalls++;
+            return Task.CompletedTask;
+        }
     }
 
     private static void EqualRows(string expected, object actual) =>

@@ -366,7 +366,8 @@ public sealed partial class PluginConfigurationOperations
     }
 
     /// <summary>Deselect and settle the running tree before removing a profile-owned package.</summary>
-    /// <remarks>A failure after deselection leaves that selection saved. Retained contributions prevent removal.
+    /// <remarks>A selected bundle without a profile dependency is only deselected, without calling the toolchain.
+    /// A failure after deselection leaves that selection saved. Retained contributions prevent removal.
     /// Cancellation can leave a disabled package on disk; the result reports that residual instead of promising rollback.</remarks>
     public async Task<PackageChange> RemovePackageAsync(
         IProfilePackageToolchain toolchain,
@@ -413,6 +414,13 @@ public sealed partial class PluginConfigurationOperations
                     stage = "remove";
                     ReportPackageProgress("remove:" + name, stage);
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (!info.Installed)
+                    {
+                        result = new("", name, stage, false, false,
+                            RunExclusiveAsync is null ? "restart-required" : "applied");
+                        return;
+                    }
+
                     var removalInputs = await CaptureProfileAsync();
                     var raw = ParseManifest(await removalInputs.ReadAsync(ManifestPath)).Raw;
                     (raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.Remove(name);

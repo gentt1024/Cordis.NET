@@ -2,6 +2,26 @@
 
 [中文](validation.zh.md)
 
+## Candidate management persistence, 2026-10-22
+
+S2 follows the [documented candidate exception](compatibility.md#candidate-management-persistence-slice-2026-10-22) at `687f282e8625c6b8d11ff58211a90524be2e4317`. The formal lock and historical source inventory remain unchanged. Execution used macOS arm64, .NET SDK 10.0.111/runtime 10.0.11 and Node 24.13.0.
+
+Before implementation, regressions demonstrated a redundant `disabled: false` after restoring the bundle default and refusal to remove a selected local bundle without a dependency. Another counterexample demonstrated lost management protection after a bundle declaration disappeared. All now pass. The focused `PluginManagerOriginalTests` run passed **76 cases**, including **32 new cases** in `PluginManagerPersistenceTests.cs`. Coverage includes changing defaults, missing patches, comments and flow syntax, name assertions, settings, entry/key/value anchors, aliases, profile insertions, inherited expressions, home/launch overlays, base-owned groups, admission rejection, conflicting edits and activation failure after pruning. Removal checks verify no uninstall, reselection, missing bundles, retained contributions and management protection.
+
+The complete command returned **`requested-checks-passed`**, with **33 steps passed** and **`sourceUnchanged=true`**:
+
+```sh
+python3 scripts/verify.py --dsh <locked-source-checkout> \
+  --upstream-test packages/boot/app-boot/tests/user-patches.spec.ts \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts
+```
+
+- Native tests: **999 passed, zero failures**; Composition 591, Core 147, Extensions 118 and Platform 143. The single existing Windows Job-object host-exit case remains platform-excluded on macOS. No exclusion or skip was added.
+- Formal-baseline originals: **55 passed** across user-patches and profile. JIT repeatability, fixed DSH differential traces, client build/type/lifecycle/replacement/shared-module/watch/package checks, CLI, API snapshot, optional Typert consumption and whitespace all passed.
+- Candidate originals: patch **15**, package-reload **27**, complete manager **108**; **150 passed, zero failed or skipped**. Original source/tests were unmodified. The external Vitest 4.1.11 harness required candidate-pinned pnpm 11.28.5: four initial missing-pnpm failures disappeared after installation and a full manager-suite rerun. This is focused source evidence, not a full upstream workspace build.
+
+The first full run passed native tests but refused to overwrite earlier client-replacement evidence. That output was preserved and the complete command rerun against an empty evidence directory. The final bilingual update passed `scripts/check-docs.py` and `git diff --check`. Machine-specific logs and dependency installations are not committed. This run does not provide Linux/Windows, AOT, full package-consumer or original Core/Loader source-suite evidence, and does not promote the behavior lock.
+
 ## Candidate engines.dsh admission, 2026-10-22
 
 The first candidate slice is described in [compatibility](compatibility.md#candidate-dsh-021-admission-slice-2026-10-22). It uses candidate `687f282e8625c6b8d11ff58211a90524be2e4317`; `upstream.lock.json` and the historical source-test inventory remain at `639ed015397290b3745d163aafe02ffee4aa3f84`. Execution used macOS arm64, .NET SDK 10.0.111/runtime 10.0.11, Node 24.13.0 and locked npm development dependencies. Temporary directories used canonical filesystem paths to avoid macOS symlink aliases. Machine-specific logs are not committed.
