@@ -2,6 +2,24 @@
 
 [English](compatibility.md)
 
+## 候选 Profile 与包热重装分片，2026-10-22
+
+S4 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，包括 app-boot profile-resolution 与 HMR package-reload 套件。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`，历史原始测试清单不变。这是另一项限定范围的候选例外。
+
+原生 deployment 测试映射显式记录 S4 例外：历史用例 `U-dc7d7920be57ad34` 不再声明完整断言对应，因为 local 删除现在允许，Profile metadata 变化按 scope 判定。原始用例与源码清单保持完整，映射门禁仍执行其对应的原生后继测试。
+
+`DeploymentPackageResolver.ValidateReplacement` 检查完整 successor 而不发布。`Replace` 原子校验并发布，仅成功时清除解析缓存。Profile mapping、local name 和 linked root 可以删除；保留的 Profile mapping 可以在相同规范目录与 scope 内变更 version 或 declarer。Installation mapping 保持固定，不允许新的 local override 覆盖已发布 mapping。保留项的目录移动要求重启。删除后的 linked root 可以在另一目标重新加入，但保留链接的目标变化仍是原生重启边界。
+
+Profile 重组在旧解析代仍发布时停止已丢弃的最上层行和组，等待清理，再发布 successor 并重组新配置。发布失败时恢复原行结构与顺序，保留原始错误。清理未确认时不进行可能重叠的恢复。新选择 bundle 的行 ID 加入 required 集合，沿用既有审计规则忽略缺失和停用行；其他未改变的历史非活动条目仍作为 warning。依赖可用后，失败的 import 可以重试。
+
+标准 CLR 在线升级路径是先移除再安装。移除仅检查已加载导出，不导入非活动模块。直接 Fiber 或被移除 bundle 之外的条目会在持久化修改前以 `unmanaged-plugin` 拒绝。所属行停止后，工具链注销导出并解除包映射，session 发布删除；重新安装取得新的模块身份与依赖闭包。停用安装会发布映射而不激活条目。激活失败保留已保存的安装和选择，供修复、移除与重试。
+
+稳定制品保持不可变。同版本重装只有在 receipt 与身份校验通过，且准备结果中每个相对文件名与 hash 均一致时，才复用已有目录。有效但不同的文件树返回 `package-moved`；不完整或被篡改的 receipt 仍属于完整性失败。DLL、依赖、资源和生成的 scaffold 文件均不排除。新 SDK 准备关闭 scaffold 调试输出，使相同准备可以得到相同内容；历史产物存在差异时仍须换精确版本或显式离线删除。保留文件继续供已有 delegate、Worker 与其他进程使用。
+
+直接更新已安装身份仍保存独立版本等待重启，当前路由不变。这保留原生不可变代际适配；候选管理器也要求先移除再进行 HMR 重装。不移植 Node 原地写包、私有 ESM/CJS 缓存清除和文件系统 marker clock。宿主显式拥有的开发模块仍经 S3 replacement callback 和宿主依赖图处理。Profile refresh 不推断 CLR 反向依赖图，也不热替换 installation-owned 宿主程序集。Native AOT 代码变化仍需重新发布。
+
+公开 API 变化：`ProfileSession.RefreshAsync` 现在返回 `Task<ProfileReloadResult>`，包含非活动条目 warning、待处理模块身份和 Profile 级重启原因。`ConfigurationChange`、`PackageChange`、`PluginManagerChange` 增加可空 `RestartReason`，标准生成客户端从同一声明模型取得该字段。`DeploymentRestartRequiredException` 公开 `Reason`。CLR 与包工具链公开 `GetLoadedModulesAsync`；保留已加载模块的包装器必须转发。原因值为 `no-hmr`、`package-moved`、`host-module`、`unmanaged-plugin`、`module-comparison`，全局原因优先于待处理模块原因。当前原生 Profile 拒绝使用全局原因，不构造 Node 风格的待处理模块列表。`no-hmr` 表示没有协调生命周期的所有者，不表示关闭自动文件观测。调用者需为 refresh 返回类型及 wire schema 的变化重新编译。见[验证](validation.zh.md)和[制品所有权](clr-artifacts.zh.md)。
+
 ## 候选模块身份切片，2026-10-22
 
 S3 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，尤其是 [HMR dispatch 测试](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/hmr/tests/package-manifest-dispatch.spec.ts)，与 S1/S2 一起作为限定范围的例外。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`，历史原始测试清单不变。包热重装、resolver 发布与 typed restart result 属于 S4。
@@ -165,7 +183,7 @@ Host 夹具在受影响业务入口保持关闭时检查插件就绪，不持有
 patch 来源读取、字段编辑和 Settings 来源判定均将 falsey `insert`（包括 `null` 和 `false`）视为普通覆盖，遵循固定 Include 的应用规则。固定 ConfigEditor 使用 undefined 或字段存在性判断；此处恢复继承有意遵循 Include，确保 SET 回继承配置后移除有效覆盖，后续 base 更新可以继续继承。真实 insert、无关字段及源码注释沿用既有编辑合同。
 
 
-可选 NuGet 工具链将批准绑定到已检查的根归档，SDK 准备仅使用宿主选定的来源。批准覆盖整次 MSBuild 调用，包括依赖 targets；它不是逐依赖哈希批准系统，也不是沙箱。Windows 工具进程使用创建时绑定 Job（Windows 10 / Windows Server 2016 及以后），记录所有权后恢复执行，同时确认进程树及管道排空。Linux 使用独立进程组。取消会停止该组；宿主异常退出可能留下仍运行的进程组。后继操作拒绝未解决的运行记录，直到明确停止旧组并确认终止。保留或无法判定的记录需要明确恢复；诊断保留真实失败阶段和残留目录。更新已安装的 Profile 自有 NuGet 包时，工具链准备并准入新版本，将完整输出移动到独立版本目录，并保存下一次启动使用的版本及选择。操作返回 `restart-required`，当前 resolver 路由和插件 fiber 继续使用旧版本，与固定 DSH 的已安装包边界一致。同版本重装及安装目录自有包的替换仍被拒绝。已有目标目录绝不覆盖；准备、准入及保存前检测到的发布冲突保留原先保存的版本并报告残留输出。这不是文件系统事务，也不自动清理旧版本。已退休身份仍需新 resolver 才可重装；静态 AOT 应用通过重新发布改变代码。
+可选 NuGet 工具链将批准绑定到已检查的根归档，SDK 准备仅使用宿主选定的来源。批准覆盖整次 MSBuild 调用，包括依赖 targets；它不是逐依赖哈希批准系统，也不是沙箱。Windows 工具进程使用创建时绑定 Job（Windows 10 / Windows Server 2016 及以后），记录所有权后恢复执行，同时确认进程树及管道排空。Linux 使用独立进程组。取消会停止该组；宿主异常退出可能留下仍运行的进程组。后继操作拒绝未解决的运行记录，直到明确停止旧组并确认终止。保留或无法判定的记录需要明确恢复；诊断保留真实失败阶段和残留目录。更新已安装的 Profile 自有 NuGet 包时，工具链准备并准入新版本，将完整输出移动到独立版本目录，并保存下一次启动使用的版本及选择。操作返回 `restart-required`，当前 resolver 路由和插件 fiber 继续使用旧版本，与固定 DSH 的已安装包边界一致。已安装身份的同版本重复请求及安装目录自有包的替换仍被拒绝。已有目标目录绝不覆盖；准备、准入及保存前检测到的发布冲突保留原先保存的版本并报告残留输出。这不是文件系统事务，也不自动清理旧版本。已移除身份可通过上述 S4 工作流重装；静态 AOT 应用通过重新发布改变代码。
 
 安装检查已捕获的包声明在 SDK 准备前准入，停用安装也不例外。`PackageInspection.ManifestJson` 是与 archive hash 同源的不可变快照；无法提前检查声明的适配器可以省略它，保留准备后 manifest 准入。.NET 工具链始终捕获根包声明，在准备前及 restore 后检查根包 hash，并保留准备后 manifest 准入。构建批准不授予版本豁免。
 

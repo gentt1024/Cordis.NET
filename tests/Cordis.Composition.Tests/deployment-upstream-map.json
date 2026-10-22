@@ -2937,11 +2937,13 @@
       ],
       "dotnet": [
         "Cordis.Composition.Tests.DeploymentResolutionTests.ChangedMappingRequiresRestartWithoutPublishing",
-        "Cordis.Composition.Tests.DeploymentResolutionTests.NewLocalPackageCanBeAddedButNotRemoved",
-        "Cordis.Composition.Tests.DeploymentResolutionTests.CanonicalAliasDoesNotRequireRestart"
+        "Cordis.Composition.Tests.DeploymentResolutionTests.LocalPackageCanBeAddedRemovedAndReinstalledAtAnotherDirectory",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.CanonicalAliasDoesNotRequireRestart",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.RetainedProfileMappingRefreshesMetadataInTheSameDirectory",
+        "Cordis.Composition.Tests.DeploymentResolutionTests.RetainedProfileMappingRejectsMovesScopeChangesAndLocalOverrides"
       ],
-      "platform": ".NET explicit deployment routing; Windows x64 verified. Node ESM/CommonJS hooks, npm exports/imports/main, require stacks and worker environment data are not CLR contracts.",
-      "status": "adapted-assertions-verified",
+      "platform": "Explicit .NET deployment routing. Historical baseline routing has Windows x64 evidence; the S4 successor changes listed here were verified on macOS arm64 only. Node ESM/CommonJS hooks, npm exports/imports/main, require stacks and worker environment data are not CLR contracts.",
+      "status": "partial-platform-adaptation",
       "evidence": [
         "tests/Cordis.Composition.Tests/TestResults/deployment-resolution.trx"
       ],
@@ -2953,7 +2955,7 @@
         },
         {
           "assertion": "expect(() => {\n      registration.replace({\n        ...first,\n        entries: first.entries.map(entry => entry.name === 'resolution-lib'\n          ? { ...entry, version: '9.0.0' }\n          : entry),\n      })\n    }).toThrow(/requires a process restart/u)",
-          "status": "verified-portable-assertion"
+          "status": "scope-dependent-native-assertion"
         },
         {
           "assertion": "expect(() => {\n      registration.replace({ ...first, localPackageNames: ['resolution-lib'] })\n    }).toThrow(/requires a process restart/u)",
@@ -2961,7 +2963,7 @@
         },
         {
           "assertion": "expect(() => {\n      registration.replace({ ...first, entries: first.entries.filter(entry => entry.name !== 'resolution-lib') })\n    }).toThrow(/requires a process restart/u)",
-          "status": "verified-portable-assertion"
+          "status": "scope-dependent-native-assertion"
         },
         {
           "assertion": "expect(() => {\n      registration.replace({ ...first, profilesDir: join(f.root, 'other-profiles') })\n    }).toThrow(/cannot change its profile scope/u)",
@@ -2969,15 +2971,22 @@
         },
         {
           "assertion": "expect(() => { registration.replace(first) }).toThrow(/removing local package/u)",
-          "status": "verified-portable-assertion"
+          "status": "superseded-by-scoped-candidate"
         },
         {
           "assertion": "expect(registration.packageDir(\n      'resolution-lib', pathToFileURL(join(f.profile.dir, 'entry.mjs')).href,\n    )).toBe(f.installed)",
           "status": "verified-portable-assertion"
         }
       ],
-      "adaptation": "Dependency acquisition and lookup are explicit deployed maps. BFS preserves dependency+peer order and completes each earlier bundle before the next. Metadata and module selection use one immutable generation; additions replace caches, removals/remaps require restart. No filesystem Node fallback projection or Node loader hooks are installed.",
-      "remainingGap": null
+      "adaptation": "S4 explicitly follows candidate 687f282e8625c6b8d11ff58211a90524be2e4317 for profile/local mapping removal and same-directory profile version/declarer changes. Installation changes, retained directory moves and new local overrides remain restart boundaries. Validation rejects before atomic publication and leaves existing caches intact. The formal source inventory and behavior lock remain unchanged.",
+      "remainingGap": "This record no longer claims the complete historical assertion set: the old local-removal refusal is intentionally superseded. Profile version/removal rules are now scope-dependent. Candidate and native executions are recorded separately in docs/validation.md.",
+      "assertionReview": "scoped-candidate-override",
+      "candidateOverride": {
+        "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+        "source": "packages/boot/app-boot/tests/profile-resolution.spec.ts",
+        "scope": "S4 Profile successor publication",
+        "evidence": "docs/validation.md#candidate-profile-and-package-reinstall-2026-10-22"
+      }
     },
     {
       "id": "U-7ed8d45bcabd5f29",

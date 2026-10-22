@@ -2,6 +2,28 @@
 
 [English](validation.md)
 
+## 候选 Profile 与包热重装，2026-10-22
+
+S4 遵循[限定候选例外](compatibility.zh.md#候选-profile-与包热重装分片2026-10-22)，候选为 `687f282e8625c6b8d11ff58211a90524be2e4317`，正式锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。执行环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
+
+候选原始源码证据独立于正式清单：HMR 十个文件通过 236 项，profile-resolution 通过 233 项，patch、package-reload、profile-resolution-service 通过 52 项，manager.spec 通过 108 项。共 629 项通过，源码与断言未改，无失败、无跳过。外部测试配置使用固定 checkout 和候选 pnpm 11.28.5。
+
+原生证据覆盖 successor 删除与缓存发布、稳定目录 metadata 变化、保留目录与宿主拒绝、发布前停止、组顺序恢复、清理失败、历史 warning 与 import 修复后重试。真实 NuGet 测试覆盖新版本及完全一致的同版本重装、停用安装、激活失败后移除重试、直接和外部 Fiber 在持久化前拒绝，以及私有依赖程序集变化后保留 delegate 仍调用旧依赖。Receipt 测试比较完整准备文件树，拒绝 scaffold、依赖和资源变化。工具链解除映射后出现持久化冲突，可以重试且保留无关 manifest 编辑；小写请求保持原 NuGet 拼写。
+
+要求的完整门禁使用正式 checkout：
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+```
+
+同一 Release 包批次还使用独立 CLR deployment 消费者及既有仓库外 macOS multi-entry 适配脚本验证。适配提供分别编译的 Mach-O native library 和 macOS RID，保留原 C# 消费者断言。这是 macOS 适配证据，不是原 Windows/Linux 脚本的执行结果。本地分片不宣称 Windows/Linux runtime 或 Native AOT 验收。机器路径、原始日志与私有审计配置留在仓库外。
+
+执行结果：最终完整门禁通过全部 33 个请求步骤，`sourceUnchanged=true`。1,047 项原生测试通过，零失败，macOS 上仍只有既有的 Windows Job-object 宿主退出排除项。正式 profile/module 原始测试通过 54 项。生成的浏览器／.NET 客户端、API 快照、CLI、差分 trace 和全部映射测试实例均通过。实际管理声明包含可空 `restartReason`，HTTP 在无需重启时明确返回 null。本轮未请求或执行原始 Core/Loader 测试源码套件。
+
+同批包通过全部 12 个 deployment 步骤和 25 个 macOS 适配 multi-entry 步骤；7 个打包库 DLL 与本轮测试的 Release 输出逐字节一致。17 个变更 C# 文件的四个标准格式化阶段结果一致。初轮整库发现一项过时的不完整目录诊断断言，更新后要求 receipt 失败，保留所有旧代码、已保存版本和字节不变检查。下一轮原生测试全部通过，但映射仍引用旧的 local 删除测试名；现已引用实际执行的后继测试，并明确撤回与被替代历史断言完整对应的声明。两项均未通过跳过测试解决。最终门禁后仅补充本双语结果与映射的平台证据措辞，再次检查文档、重新生成的映射证据和空白；运行时、测试代码及公开 API 字节未变。
+
 ## 候选模块身份，2026-10-22
 
 S3 使用 `687f282e8625c6b8d11ff58211a90524be2e4317` 的[限定候选例外](compatibility.zh.md#候选模块身份切片2026-10-22)，正式行为锁和历史原始测试清单不变。

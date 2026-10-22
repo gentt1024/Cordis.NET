@@ -103,7 +103,9 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     [InlineData(false, false)]
     [InlineData(true, true)]
     [InlineData(false, true)]
-    public async Task Known_incompatible_requirements_are_refused_before_build_even_when_not_selected(bool enabled, bool engines)
+    public async Task Known_incompatible_requirements_are_refused_before_build_even_when_not_selected(
+        bool enabled,
+        bool engines)
     {
         var marker = await PackIncompatibleAsync(engines);
         await using var host = await StartAsync(runtime: new DshRuntimeIdentity("0.2.0-rc.2"));
@@ -131,7 +133,9 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     [InlineData("independentplugin", false)]
     [InlineData("IndependentPlugin", true)]
     [InlineData("independentplugin", true)]
-    public async Task Nuget_compatibility_grants_use_one_exact_identity_across_http_install_and_restart(string spelling, bool engines)
+    public async Task Nuget_compatibility_grants_use_one_exact_identity_across_http_install_and_restart(
+        string spelling,
+        bool engines)
     {
         var marker = await PackIncompatibleAsync(engines);
         var runtime = new DshRuntimeIdentity("0.2.0-rc.2");
@@ -256,7 +260,9 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             deployedManifest = Path.Combine(host.Toolchain.Bundles[request.Name], "package.json");
             manifestText = await File.ReadAllTextAsync(deployedManifest);
             if (engines)
-                Assert.Equal("^9.0.0", Assert.IsType<EntryOptions>(PackageManifest.Read(deployedManifest).Raw["engines"])["dsh"]);
+                Assert.Equal(
+                    "^9.0.0",
+                    Assert.IsType<EntryOptions>(PackageManifest.Read(deployedManifest).Raw["engines"])["dsh"]);
             Assert.Equal("IndependentPlugin", PackageManifest.Read(deployedManifest).Raw["name"]);
             // Grant aliases converge to one exact key through the real CLI as well.
             await RunAsync(
@@ -357,13 +363,20 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     [Theory]
     [InlineData("null", "engines must be an object")]
     [InlineData("{\"dsh\":null}", "engines.dsh must be a string")]
-    public async Task Malformed_engines_survive_inspection_and_are_refused_before_build(string enginesJson, string diagnostic)
+    public async Task Malformed_engines_survive_inspection_and_are_refused_before_build(
+        string enginesJson,
+        string diagnostic)
     {
-        var marker = await PackIncompatibleAsync(true,
+        var marker = await PackIncompatibleAsync(
+            true,
             "{\"assembly\":\"IndependentPlugin.dll\",\"entryType\":\"Entry\",\"engines\":" + enginesJson + "}");
         await using var host = await StartAsync(runtime: new("0.2.1-rc.2"));
         var result = await host.Session.ConfigurationOperations.InstallPackageAsync(
-            host.Toolchain, new("IndependentPlugin", "5.0.0", Feed), "malformed", buildApproved: true, enabled: false);
+            host.Toolchain,
+            new("IndependentPlugin", "5.0.0", Feed),
+            "malformed",
+            buildApproved: true,
+            enabled: false);
         Assert.False(result.Installed);
         Assert.Contains(diagnostic, result.Diagnostic);
         Assert.False(File.Exists(marker));
@@ -373,14 +386,18 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     [Fact]
     public async Task Compatible_engine_overrides_malformed_peers_through_install_and_restart()
     {
-        const string metadata = """{"assembly":"IndependentPlugin.dll","entryType":"Entry","engines":{"dsh":"^0.2.1-rc.1"},"peerDependencies":null}""";
+        const string metadata =
+            """{"assembly":"IndependentPlugin.dll","entryType":"Entry","engines":{"dsh":"^0.2.1-rc.1"},"peerDependencies":null}""";
         var marker = await PackIncompatibleAsync(true, metadata);
         string profile;
         await using (var host = await StartAsync(runtime: new("0.2.1-rc.2")))
         {
             profile = host.Profile;
             var result = await host.Session.ConfigurationOperations.InstallPackageAsync(
-                host.Toolchain, new("IndependentPlugin", "5.0.0", Feed), "compatible", buildApproved: true);
+                host.Toolchain,
+                new("IndependentPlugin", "5.0.0", Feed),
+                "compatible",
+                buildApproved: true);
             Assert.True(result.Installed, result.Diagnostic);
             Assert.Equal("applied", result.Application);
             Assert.True(File.Exists(marker));
@@ -509,6 +526,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.False(interrupted.Selected);
         Assert.True(Directory.Exists(host.Toolchain.Bundles[request.Name]));
         Assert.Equal("applied", (await operations.SetBundleEnabledAsync(request.Name, true)).Application);
+        var retainedDirectory = host.Toolchain.Bundles[request.Name];
         var removed = await operations.RemovePackageAsync(host.Toolchain, request.Name.ToLowerInvariant());
         Assert.False(removed.Installed, removed.Diagnostic);
         Assert.False(removed.Selected);
@@ -518,8 +536,9 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             Assert.Null(ctx.Get("installed-limit"));
             return Task.CompletedTask;
         });
-        Assert.True(Directory.Exists(host.Toolchain.Bundles[request.Name]));
-        Assert.Contains(host.Toolchain.Bundles[request.Name], removed.Residuals!);
+        Assert.False(host.Toolchain.Bundles.ContainsKey(request.Name));
+        Assert.True(Directory.Exists(retainedDirectory));
+        Assert.Contains(retainedDirectory, removed.Residuals!);
         Assert.DoesNotContain(await operations.ListBundlesAsync(), item => item.Name == request.Name);
         var removedManifest = await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json"));
         await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
@@ -544,13 +563,21 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.Equal(removedManifest, attemptedManifest);
         Assert.Equal(removedManifest, await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json")));
         Assert.DoesNotContain(activeEntries, entry => entry.ModuleName == "nuget:independentplugin");
-        var retired = await operations.InstallPackageAsync(host.Toolchain, request, "retired", true);
-        Assert.Equal("restart-required", retired.Application);
-        Assert.False(retired.Installed);
-        Assert.False(retired.Selected);
-        Assert.Contains(host.Toolchain.Bundles[request.Name], retired.Residuals!);
-        Assert.Contains("retired package identity", retired.Diagnostic);
         var unload = Assert.Single(host.Resolver.Unloads);
+        var reinstalled = await operations.InstallPackageAsync(host.Toolchain, request, "reinstall", true);
+        Assert.Null(reinstalled.Error);
+        Assert.Equal("applied", reinstalled.Application);
+        Assert.True(reinstalled.Installed);
+        Assert.True(reinstalled.Selected);
+        Assert.Null(reinstalled.RestartReason);
+        Assert.Equal(retainedDirectory, host.Toolchain.Bundles[request.Name]);
+        await host.Session.Context.RunAsync(ctx =>
+        {
+            Assert.Equal(3, ctx.Get<ConfigReference<int>>("installed-limit")!.Value);
+            return Task.CompletedTask;
+        });
+        Assert.Null((await operations.RemovePackageAsync(host.Toolchain, request.Name)).Error);
+        Assert.Equal(2, host.Resolver.Unloads.Count);
         Assert.True(unload.UnloadRequested);
         Assert.Null(await operations.WaitForInstallAsync("install"));
         Assert.Equal("not-running", await operations.CancelInstallAsync("install"));
@@ -702,6 +729,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.True(denied.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
         var result = denied.RootElement.GetProperty("result").GetProperty("value");
         Assert.Equal("build-not-approved", result.GetProperty("error").GetString());
+        Assert.Equal(JsonValueKind.Null, result.GetProperty("restartReason").ValueKind);
         Assert.Equal("inspect", result.GetProperty("stage").GetString());
         Assert.False(result.GetProperty("installed").GetBoolean());
         Assert.False(result.GetProperty("selected").GetBoolean());

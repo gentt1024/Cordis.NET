@@ -73,20 +73,32 @@ public sealed class DeploymentResolutionTests
         using var fixture = new Fixture();
         await using var context = new Context();
         var directory = fixture.Package("plugin", "plugin");
-        var packages = new DeploymentPackageResolver(new(fixture.Profiles, fixture.Active,
-            [new("plugin", directory, "1", fixture.Installation, DeploymentPackageScope.Installation)]));
+        var packages = new DeploymentPackageResolver(
+            new(
+                fixture.Profiles,
+                fixture.Active,
+                [new("plugin", directory, "1", fixture.Installation, DeploymentPackageScope.Installation)]));
         var started = new List<string>();
+
         Plugin<object?> Version(string value) => new()
         {
             Apply = (_, _) => started.Add(value)
         };
+
         var imports = new StaticModuleResolver().Register("old", Version("old")).Register("new", Version("new"));
         var resolver = new DeploymentModuleResolver(packages, imports).Register(directory, ".", "old");
         Loader? loader = null;
         await context.RunAsync(async ctx =>
         {
             loader = new Loader(ctx, resolver, new Uri(Path.Combine(fixture.Active, "entry.cs")));
-            await loader.Root.UpdateAsync([new() { Id = "row", Name = "plugin" }]);
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "row",
+                    Name = "plugin"
+                }
+            ]);
             await loader.WaitAsync();
         });
         var entry = loader!.Resolve("row");
@@ -100,16 +112,20 @@ public sealed class DeploymentResolutionTests
         await loader.ReplacePluginsAsync([new(original, replacement)]);
         Assert.Same(replacement, entry.Module);
         Assert.Equal(["old", "hmr"], started);
-        await loader.UpdateAsync("row", new()
-        {
-            Disabled = true
-        });
+        await loader.UpdateAsync(
+            "row",
+            new()
+            {
+                Disabled = true
+            });
         await loader.WaitAsync();
         Assert.Null(entry.Module);
-        await loader.UpdateAsync("row", new()
-        {
-            Disabled = false
-        });
+        await loader.UpdateAsync(
+            "row",
+            new()
+            {
+                Disabled = false
+            });
         await loader.WaitAsync();
         Assert.Same(next, entry.Module);
         Assert.Equal(["old", "hmr", "new"], started);
@@ -270,13 +286,14 @@ public sealed class DeploymentResolutionTests
                     { "lib", directory }
                 }
                 : null);
-        Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(next));
+        var rejected = Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(next));
+        Assert.Equal(change == "profile" ? "package-moved" : "host-module", rejected.Reason);
         Assert.Same(first, resolver.Generation);
         Assert.Equal(directory, resolver.PackageDirectory("lib", new Uri(Path.Combine(f.Active, "entry.cs"))));
     }
 
     [Fact]
-    public void NewLocalPackageCanBeAddedButNotRemoved()
+    public void LocalPackageCanBeAddedRemovedAndReinstalledAtAnotherDirectory()
     {
         using var f = new Fixture();
         var first = new DeploymentGeneration(f.Profiles, f.Active, []);
@@ -292,8 +309,22 @@ public sealed class DeploymentResolutionTests
             });
         resolver.Replace(next);
         resolver.Replace(next);
-        Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(first));
-        Assert.Same(next, resolver.Generation);
+        var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
+        Assert.Equal(local, resolver.PackageDirectory("new-local", parent));
+        resolver.Replace(first);
+        Assert.Same(first, resolver.Generation);
+        Assert.Null(resolver.PackageDirectory("new-local", parent));
+        var reinstalled = f.Package("reinstalled-local", "new-local", "2");
+        resolver.Replace(
+            new(
+                f.Profiles,
+                f.Active,
+                [],
+                new Dictionary<string, string>
+                {
+                    ["new-local"] = reinstalled
+                }));
+        Assert.Equal(reinstalled, resolver.PackageDirectory("new-local", parent));
     }
 
     [Fact]
@@ -328,7 +359,7 @@ public sealed class DeploymentResolutionTests
     }
 
     [Fact]
-    public async Task LinkedRootRemovalStopsRoutingButKeepsLoadedModuleAndHistoricalTarget()
+    public async Task LinkedRootRemovalStopsRoutingKeepsLoadedModuleAndPermitsAnotherTarget()
     {
         using var f = new Fixture();
         var shared = f.Package("shared", "peer");
@@ -371,12 +402,124 @@ public sealed class DeploymentResolutionTests
             entries,
             localPackages: null,
             linkedRoots: [new("linked", other), new("new-link", linked)]);
-        Assert.Throws<DeploymentRestartRequiredException>(() => packages.Replace(redirected));
-        Assert.Same(removed, packages.Generation);
-        Assert.Equal(native, packages.PackageDirectory("peer", parent));
+        packages.Replace(redirected);
+        Assert.Same(redirected, packages.Generation);
+        Assert.Equal(shared, packages.PackageDirectory("peer", new Uri(Path.Combine(other, "entry.cs"))));
+        Assert.Same(plugin, loaded.Plugin);
+        packages.Replace(removed);
         packages.Replace(
             new(f.Profiles, f.Active, entries, localPackages: null, linkedRoots: [new("new-link", other)]));
         Assert.Equal(shared, packages.PackageDirectory("peer", new Uri(Path.Combine(other, "entry.cs"))));
+    }
+
+    [Theory]
+    [InlineData("version")]
+    [InlineData("declarer")]
+    [InlineData("both")]
+    public void RetainedProfileMappingRefreshesMetadataInTheSameDirectory(string change)
+    {
+        using var f = new Fixture();
+        var directory = f.Package("shared", "lib");
+        var entry = new DeploymentEntry("lib", directory, "1", f.Installation, DeploymentPackageScope.Profile);
+        var first = new DeploymentGeneration(f.Profiles, f.Active, [entry]);
+        var resolver = new DeploymentPackageResolver(first);
+        var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
+        var metadata = resolver.PackageOf("lib", parent);
+        f.Package("shared", "lib", "2");
+        var next = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [
+                entry with
+                {
+                    Version = change is "version" or "both" ? "2" : entry.Version,
+                    Declarer = change is "declarer" or "both"
+                        ? Path.Combine(f.Root, "next", "package.json")
+                        : entry.Declarer
+                }
+            ]);
+        resolver.ValidateReplacement(next);
+        Assert.Same(first, resolver.Generation);
+        Assert.Same(metadata, resolver.PackageOf("lib", parent));
+        resolver.Replace(next);
+        Assert.Same(next, resolver.Generation);
+        Assert.Equal(directory, resolver.PackageDirectory("lib", parent));
+        Assert.Equal("2", resolver.PackageOf("lib", parent)!.Version);
+        Assert.NotSame(metadata, resolver.PackageOf("lib", parent));
+    }
+
+    [Theory]
+    [InlineData("directory")]
+    [InlineData("scope")]
+    [InlineData("local-override")]
+    public void RetainedProfileMappingRejectsMovesScopeChangesAndLocalOverrides(string change)
+    {
+        using var f = new Fixture();
+        var directory = f.Package("lib", "lib");
+        var moved = f.Package("moved", "lib", "2");
+        var entry = new DeploymentEntry("lib", directory, "1", f.Installation, DeploymentPackageScope.Profile);
+        var first = new DeploymentGeneration(f.Profiles, f.Active, [entry]);
+        var resolver = new DeploymentPackageResolver(first);
+        var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
+        var metadata = resolver.PackageOf("lib", parent);
+        var next = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [
+                entry with
+                {
+                    Directory = change == "directory" ? moved : directory,
+                    Scope = change == "scope" ? DeploymentPackageScope.Installation : entry.Scope
+                }
+            ],
+            change == "local-override"
+                ? new Dictionary<string, string>
+                {
+                    ["lib"] = moved
+                }
+                : null);
+        Assert.Equal(
+            "package-moved",
+            Assert.Throws<DeploymentRestartRequiredException>(() => resolver.ValidateReplacement(next)).Reason);
+        Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(next));
+        Assert.Same(first, resolver.Generation);
+        Assert.Same(metadata, resolver.PackageOf("lib", parent));
+        if (change == "directory")
+        {
+            resolver.Replace(new(f.Profiles, f.Active, []));
+            Assert.Null(resolver.PackageOf("lib", parent));
+            resolver.Replace(next);
+            Assert.Equal(moved, resolver.PackageDirectory("lib", parent));
+            Assert.Equal("2", resolver.PackageOf("lib", parent)!.Version);
+        }
+    }
+
+    [Fact]
+    public void RejectedSuccessorDoesNotRememberNewLinkedTargets()
+    {
+        using var f = new Fixture();
+        var original = f.Package("original", "linked");
+        var moved = f.Package("moved", "linked");
+        var added = f.Package("added", "added");
+        var first = new DeploymentGeneration(f.Profiles, f.Active, [], null, [new("linked", original)]);
+        var resolver = new DeploymentPackageResolver(first);
+        var rejected = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [],
+            null,
+            [new("added", added), new("linked", moved)]);
+        Assert.Throws<DeploymentRestartRequiredException>(() => resolver.ValidateReplacement(rejected));
+        Assert.Throws<DeploymentRestartRequiredException>(() => resolver.Replace(rejected));
+        Assert.Same(first, resolver.Generation);
+        var accepted = new DeploymentGeneration(
+            f.Profiles,
+            f.Active,
+            [],
+            null,
+            [new("added", moved), new("linked", original)]);
+        resolver.Replace(accepted);
+        Assert.Same(accepted, resolver.Generation);
     }
 
     [Fact]
@@ -503,7 +646,9 @@ public sealed class DeploymentResolutionTests
                     alias,
                     ".",
                     "mapped");
-            Assert.Same(plugin, (await resolver.ResolveAsync("plugin", new Uri(Path.Combine(f.Active, "entry.cs")))).Plugin);
+            Assert.Same(
+                plugin,
+                (await resolver.ResolveAsync("plugin", new Uri(Path.Combine(f.Active, "entry.cs")))).Plugin);
         }
         finally
         {

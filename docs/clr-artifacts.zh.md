@@ -14,8 +14,10 @@
 4. 发布将同一份完整输出移动到 `.cordis/packages/<name>/<version>`，在旁置 `.<version>.files.json` 中记录完整文件集合与 SHA256，再校验并注册。这份记录属于工具链元数据，位于已批准制品树之外，产品清单不需要排除项。既有版本目录和记录都不覆盖；Profile 准入与完整准备/发布文件树比较继续使用原安装流水线。
 5. 启动先验证安装制品的清单和身份，再注册代码。装载直接使用这个目录；后续 Resolve 复用 lease。新进程重新验证，不重新复制。缺失记录、不完整或被修改的部署明确失败，不会重写清单来接受变化。
 6. 升级已安装的 profile 自有包会准备并持久化新版本，然后报告 `restart-required`；本进程保留旧代码路由。Watcher 处理选择变化后可以在重启前启用或停用旧实现，普通配置编辑仍作用于旧实现。重启读取保存的版本。同版本重复请求和 installation-owned 替换仍拒绝。新版本启动失败不意味着自动回退旧版本。
-7. `RemovePackageAsync` 取消选择、等待所属 fibers 结束，并解除 profile 依赖与 resolver 引用。CLR 文件仍保留给旧引用、延迟依赖、Worker 和其他进程。`PackageChange.Residuals` 返回保留版本目录，包括仍运行的旧版本和等待重启的新版本；逻辑移除不等于物理删除。工具链包装器应转发 `GetRetainedDirectories`，以保留完整报告。工具链移除身份后，同一管理会话在写入选择前拒绝重新启用；保留文件和预留映射不构成启用资格。
+7. `RemovePackageAsync` 取消选择、等待所属 fibers 结束，并解除 profile 依赖与 resolver 引用。CLR 文件仍保留给旧引用、延迟依赖、Worker 和其他进程。`PackageChange.Residuals` 返回保留版本目录，包括仍运行的旧版本和等待重启的新版本；逻辑移除不等于物理删除。工具链包装器应转发 `GetRetainedDirectories`，以保留完整报告。同一管理会话拒绝重新启用已移除身份，直到安装再次注册该身份；仅保留文件不构成启用资格。
 8. 所有宿主、Worker 和其他消费者停止后，调用 `DotnetPluginToolchain.DeleteRetainedArtifactAsync(profileDirectory, name, version)`，或 `cordis delete-retained <profile> <name> <version>`。Profile 仍引用该精确版本时拒绝；CLI 还会拒绝正在运行的标准 CLI 宿主。删除 API 在检查引用和删除文件期间持有既有 `package.json.cordis-lock` 写锁，遇到配合该协议的写入者占锁时立即拒绝。Manifest 无法读取或格式无效时保留制品。部署方仍负责排除任意外部消费者及不遵守该锁协议的写入者。失败报告剩余路径；不自动扫描，不根据 GC 删除。
+
+S4 候选工作流支持在同一 session 内先移除再安装。移除先通过 `GetLoadedModulesAsync` 检查已加载模块的所有权，包装器必须转发此查询。直接或外部 Fiber 会在改变选择前返回 `restart-required`，且 `RestartReason = "unmanaged-plugin"`。成功移除解除路由而不删除文件；解除后持久化失败，可以重试移除以完成已保存依赖的变更。另一个版本的重装加载新依赖闭包；同版本复用要求 receipt 有效且准备文件完整一致。有效但不同的文件树返回 `package-moved`，receipt 损坏仍失败。新准备对生成的 scaffold 使用 `DebugType=none`，比较不忽略任何文件。不要通过修改保留制品强行匹配。见[候选兼容性记录](compatibility.zh.md)。
 
 信任边界是合作式部署，不是防御同权限代码的沙箱。校验记录在验证点发现内容变化；库自身之后不会覆盖或自动删除已发布制品。记录不替代发布者认证，也不阻止恶意并发写入。
 
@@ -29,7 +31,7 @@
 
 `ClrUnloadObservation.LoadDirectory` 表示退休实例实际使用的目录。稳定装载时 `ShadowDirectory` 为 null，`TryDeleteShadow` 从不删除稳定来源。显式开发副本仅在所有文件消费者，包括 Worker，结束后才能调用删除。托管 wrapper 回收是附加观察，不证明此前提成立；native 占用仍可能推迟删除。
 
-业务退休、候选激活、卸载请求、GC 和物理删除仍是独立结果。生产不强制 GC；此路线不增加完整包在线升级或通用 native 隔离能力。
+业务退休、候选激活、卸载请求、GC 和物理删除仍是独立结果。生产不强制 GC；此路线不提供保留制品的原地更新或通用 native 隔离能力。
 
 ## 检查已经准备的替换候选
 

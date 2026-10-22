@@ -44,6 +44,8 @@ NuGet 来源及 SDK preparation 是固定包工作流的 .NET 适配。构建批
 不安全覆写。此适配保留已记录的 .NET 启动与数据保护政策，并返回失败的授权结果；
 manifest 和 patch 仍要求成功读取其来源。
 
+S4 为标准 `PluginManagerChange` 与 `PackageChange` wire 结果增加可空 `restartReason`，生成的 .NET 和浏览器客户端从同一声明模型取得该字段。只有 application 要求重启时它才非 null。`no-hmr` 表示没有生命周期协调者，关闭自动观测的手动 session 仍有协调。`package-moved` 表示保留的不可变映射或制品发生变化，`host-module` 保护 installation 代码，`unmanaged-plugin` 保护操作所有权之外的插件实例。`module-comparison` 用于无法确定可安全替换的模块比较。直接更新保存后保留旧路由；在线路径是先移除再安装。激活失败时 `installed` 和 `selected` 可以为 true，而 application 为 `failed`，须分别处理。
+
 ## 生成客户端用法
 
 构建工具 `tools/Cordis.ClientAssets` 从实际运行贡献导出

@@ -287,6 +287,12 @@ public sealed partial class PluginConfigurationOperations
                     prepared);
                 await AdmitCandidateAsync(inputs, candidate);
                 await toolchain.PublishAsync(prepared);
+                foreach (var removed in removedPackages
+                             .Where(pair =>
+                                 pair.Key == prepared.Name || pair.Value(pair.Key) == prepared.Name)
+                             .Select(pair => pair.Key)
+                             .ToArray())
+                    removedPackages.Remove(removed);
                 await SaveCandidateAsync(inputs, candidate, published: true);
                 installed = true;
                 selected = enabled || manifest.Bundles.Contains(request.Name);
@@ -307,6 +313,8 @@ public sealed partial class PluginConfigurationOperations
                         .ToHashSet(StringComparer.Ordinal);
                     await ApplyCandidateAsync(candidate, required);
                 }
+                else
+                    await ApplyCandidateAsync(candidate, null);
             }
 
             if (RunExclusiveAsync is { } exclusive)
@@ -319,7 +327,10 @@ public sealed partial class PluginConfigurationOperations
                 stage,
                 installed,
                 selected,
-                updating || RunExclusiveAsync is null ? "restart-required" : "applied");
+                updating || RunExclusiveAsync is null ? "restart-required" : "applied")
+            {
+                RestartReason = RunExclusiveAsync is null ? "no-hmr" : updating ? "package-moved" : null
+            };
         }
         catch (Exception error)
         {
@@ -354,7 +365,8 @@ public sealed partial class PluginConfigurationOperations
                 error.Message + retentionDiagnostic,
                 residuals.AsReadOnly())
             {
-                ToolExitCode = (error as PackageToolException)?.ExitCode
+                ToolExitCode = (error as PackageToolException)?.ExitCode,
+                RestartReason = cancelled ? null : (error as DeploymentRestartRequiredException)?.Reason
             };
         }
         finally
@@ -396,6 +408,7 @@ public sealed partial class PluginConfigurationOperations
                     selected = info.Enabled;
                     if (RunExclusiveAsync is null && info.Rows.Any(row => row.EntryId is not null))
                         throw new Refusal("stop-profile");
+                    await CheckPackageOwnershipAsync(toolchain, name, info, cancellationToken);
                     var candidate = await WriteManifestAsync(
                         inputs,
                         manifest => WithBundles(manifest, manifest.Bundles.Where(bundle => bundle != name).ToArray()));
@@ -416,8 +429,16 @@ public sealed partial class PluginConfigurationOperations
                     cancellationToken.ThrowIfCancellationRequested();
                     if (!info.Installed)
                     {
-                        result = new("", name, stage, false, false,
-                            RunExclusiveAsync is null ? "restart-required" : "applied");
+                        result = new(
+                            "",
+                            name,
+                            stage,
+                            false,
+                            false,
+                            RunExclusiveAsync is null ? "restart-required" : "applied")
+                        {
+                            RestartReason = RunExclusiveAsync is null ? "no-hmr" : null
+                        };
                         return;
                     }
 
@@ -431,6 +452,7 @@ public sealed partial class PluginConfigurationOperations
                     removedPackages[name] = toolchain.ResolvePackageName;
                     await SaveCandidateAsync(removalInputs, removalCandidate);
                     installed = false;
+                    await ApplyCandidateAsync(removalCandidate, null);
                     if (launch.LocalBundles?.TryGetValue(name, out var retainedDirectory) == true &&
                         Directory.Exists(retainedDirectory))
                         residuals.Add(retainedDirectory);
@@ -446,7 +468,10 @@ public sealed partial class PluginConfigurationOperations
                             ? null
                             : "Removed from the profile. Deployment files are retained until all consumers stop and explicit physical removal completes." +
                             retentionDiagnostic,
-                        Residuals: residuals.AsReadOnly());
+                        Residuals: residuals.AsReadOnly())
+                    {
+                        RestartReason = RunExclusiveAsync is null ? "no-hmr" : null
+                    };
                 }
                 catch (Exception error)
                 {
@@ -460,10 +485,14 @@ public sealed partial class PluginConfigurationOperations
                         stage,
                         installed,
                         selected,
-                        error is OperationCanceledException ? "cancelled" : "failed",
+                        error is OperationCanceledException ? "cancelled" :
+                        error is DeploymentRestartRequiredException ? "restart-required" : "failed",
                         error is Refusal refusal ? refusal.Code : "operation-error",
                         error.Message + retentionDiagnostic,
-                        residuals.AsReadOnly());
+                        residuals.AsReadOnly())
+                    {
+                        RestartReason = (error as DeploymentRestartRequiredException)?.Reason
+                    };
                 }
                 finally
                 {
@@ -472,6 +501,45 @@ public sealed partial class PluginConfigurationOperations
             },
             cancellationToken);
         return result;
+    }
+
+    private async Task CheckPackageOwnershipAsync(
+        IProfilePackageToolchain toolchain,
+        string name,
+        BundleConfigurationInfo info,
+        CancellationToken cancellationToken)
+    {
+        var modules = await toolchain.GetLoadedModulesAsync(name, cancellationToken);
+        await include.Context.RunAsync(_ =>
+        {
+            var owners = include
+                .Loader.Entries()
+                .Where(entry =>
+                    info.Rows.Any(row => row.RowId == entry.Options.Id && row.ModuleName == entry.Options.Name))
+                .Select(entry => entry.Fiber)
+                .OfType<Fiber>()
+                .ToHashSet();
+
+            bool Owned(Fiber fiber)
+            {
+                while (true)
+                {
+                    if (owners.Contains(fiber))
+                        return true;
+                    var parent = fiber.Parent.Fiber;
+                    if (ReferenceEquals(parent, fiber))
+                        return false;
+                    fiber = parent;
+                }
+            }
+
+            foreach (var module in modules)
+                if (include.Context.Registry.Get(module.Plugin)?.Fibers.Any(fiber => !Owned(fiber)) == true)
+                    throw new DeploymentRestartRequiredException(
+                        $"Package '{name}' still has a running plugin outside the entries being removed.",
+                        "unmanaged-plugin");
+            return Task.CompletedTask;
+        });
     }
 
     private bool HasPackageDirectory(string name) =>

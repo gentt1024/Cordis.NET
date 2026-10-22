@@ -39,7 +39,15 @@ public sealed record PluginManagerChange(
     bool Enabled,
     string? Error,
     string? Diagnostic,
-    IReadOnlyList<PluginManagerDiagnostic> Warnings);
+    IReadOnlyList<PluginManagerDiagnostic> Warnings)
+{
+    /// <summary>Fixed restart code, present only when Application is restart-required.</summary>
+    public string? RestartReason
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>A text-only runtime diagnostic safe to retain after a plugin is withdrawn.</summary>
 /// <param name="Id">The entry address.</param>
@@ -304,7 +312,10 @@ public partial class PluginManager : Service
                     snapshot.Required,
                     snapshot.Phase);
             })
-            .ToArray() ?? []);
+            .ToArray() ?? [])
+    {
+        RestartReason = change.RestartReason
+    };
 
     private void Changed(string reason) => _ = PublishAsync("plugin-manager/changed", new PluginManagerChanged(reason));
 

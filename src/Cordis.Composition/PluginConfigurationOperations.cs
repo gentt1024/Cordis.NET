@@ -71,7 +71,15 @@ public sealed record ConfigurationChange(
     bool Enabled,
     string? Error = null,
     string? Diagnostic = null,
-    IReadOnlyList<EntryDiagnostic>? Warnings = null);
+    IReadOnlyList<EntryDiagnostic>? Warnings = null)
+{
+    /// <summary>Fixed restart code, present only when Application is restart-required.</summary>
+    public string? RestartReason
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>Profile configuration and package coordination. Platform toolchains and transports reuse this owner above Core.</summary>
 public sealed partial class PluginConfigurationOperations(
@@ -416,18 +424,25 @@ public sealed partial class PluginConfigurationOperations(
                     null,
                     manifest,
                     inputs.ReadAsync);
-                var bundlePatches = ProfileComposition.Flatten(profile.Bundles.SelectMany(bundle => bundle.PatchLayers));
+                var bundlePatches =
+                    ProfileComposition.Flatten(profile.Bundles.SelectMany(bundle => bundle.PatchLayers));
                 var userPatches = await Profiles.ReadPatchesAsync(PatchPath, true, inputs.ReadAsync);
                 var basis = ConfigurationFile.ParseEntries(
                     await inputs.ReadAsync(include.Filename),
                     Path.GetExtension(include.Filename) == ".json");
-                var patch = ProfileMaintenance.WithEnabled(previous, row.PatchId!, row.ModuleName, enabled, removedIndex =>
-                {
-                    var remaining = userPatches.Where((_, index) => index != removedIndex);
-                    var inherited = Flatten(EntryPatches.Apply(basis, [.. bundlePatches, .. remaining]))
-                        .LastOrDefault(entry => entry.Id == row.PatchId);
-                    return inherited is not null && (inherited.Disabled ?? false) is bool disabled && disabled == !enabled;
-                });
+                var patch = ProfileMaintenance.WithEnabled(
+                    previous,
+                    row.PatchId!,
+                    row.ModuleName,
+                    enabled,
+                    removedIndex =>
+                    {
+                        var remaining = userPatches.Where((_, index) => index != removedIndex);
+                        var inherited = Flatten(EntryPatches.Apply(basis, [.. bundlePatches, .. remaining]))
+                            .LastOrDefault(entry => entry.Id == row.PatchId);
+                        return inherited is not null && (inherited.Disabled ?? false) is bool disabled &&
+                            disabled == !enabled;
+                    });
                 var candidate = await CreateCandidateAsync(
                     inputs,
                     manifest,
@@ -539,6 +554,7 @@ public sealed partial class PluginConfigurationOperations(
             var before = await DiskStateAsync();
             var application = RunExclusiveAsync is null ? "restart-required" : "applied";
             string? code = null, diagnostic = null;
+            string? restartReason = RunExclusiveAsync is null ? "no-hmr" : null;
             IReadOnlyList<EntryDiagnostic> warnings = [];
             try
             {
@@ -557,14 +573,18 @@ public sealed partial class PluginConfigurationOperations(
             }
             catch (Exception error) when (error is not OperationCanceledException)
             {
-                application = "failed";
+                application = error is DeploymentRestartRequiredException ? "restart-required" : "failed";
+                restartReason = (error as DeploymentRestartRequiredException)?.Reason;
                 code = error is Refusal refusal ? refusal.Code : "operation-error";
                 diagnostic = error is Refusal ? null : error.Message;
             }
 
             var changed = before != await DiskStateAsync();
             NotifyConfigurationChanged(reason);
-            return new(changed, application, target, enabled, code, diagnostic, warnings);
+            return new(changed, application, target, enabled, code, diagnostic, warnings)
+            {
+                RestartReason = application == "restart-required" ? restartReason ?? "package-moved" : null
+            };
         }
         finally
         {

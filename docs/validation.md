@@ -2,6 +2,28 @@
 
 [中文](validation.zh.md)
 
+## Candidate Profile and package reinstall, 2026-10-22
+
+S4 follows the [scoped candidate exception](compatibility.md#candidate-profile-and-package-reinstall-slice-2026-10-22), with candidate `687f282e8625c6b8d11ff58211a90524be2e4317` and unchanged formal lock `639ed015397290b3745d163aafe02ffee4aa3f84`. Execution uses macOS arm64, .NET SDK 10.0.111/runtime 10.0.11 and Node 24.13.0.
+
+Original candidate source evidence is separate from the formal inventory: HMR's ten files passed 236 tests; profile-resolution passed 233; patch, package-reload and profile-resolution-service passed 52; manager.spec passed 108. These 629 cases passed without source or assertion changes, failures or skips. The external harness uses the fixed checkout and candidate pnpm 11.28.5.
+
+Native evidence covers successor removal and cache publication, stable-directory metadata changes, retained-directory/host rejection, pre-publication retirement, restoration of group order, cleanup failure, historical warnings and repaired-import retry. Real NuGet tests cover new-version and identical same-version reinstall, disabled installation, failed activation followed by removal/retry, direct and foreign Fiber refusal before persistence, and changed private dependency assemblies while a retained delegate still calls the old dependency. Receipt tests compare the entire prepared file tree and reject scaffold, dependency and resource changes. A persistence conflict after toolchain withdrawal can retry without losing unrelated manifest edits; lowercase requests preserve the original NuGet spelling.
+
+The required full gate uses the formal checkout:
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+```
+
+The same Release package batch is also checked with the standalone CLR deployment consumers and the existing repository-external macOS multi-entry adapter. That adapter supplies separately compiled Mach-O native libraries and the macOS RID; it retains the original C# consumer assertions. It is macOS-adapted evidence, not execution of the unmodified Windows/Linux script. No Windows/Linux runtime or Native AOT acceptance is claimed by this local slice. Machine paths, raw logs and private audit setup remain outside the repository.
+
+Executed result: the final full gate passed all 33 requested steps with `sourceUnchanged=true`: 1,047 native tests passed, zero failed, and the single pre-existing Windows Job-object host-exit exclusion remained on macOS. Formal profile/module source tests passed 54 cases. Generated browser/.NET clients, API snapshot, CLI, differential traces and all mapped test instances passed. The actual management declaration contains nullable `restartReason`, and its HTTP result explicitly returns null when no restart is required. The original Core/Loader test-source suite was not requested or run.
+
+The same package batch passed all 12 deployment steps and 25 macOS-adapted multi-entry steps. Seven packaged library DLLs matched the tested Release outputs byte for byte. All four canonical formatting stages agreed for the 17 changed C# files. The first full run exposed one stale incomplete-directory diagnostic assertion; its replacement requires the receipt failure while retaining all old-code, saved-version and byte-preservation checks. The next run passed every native test but found the old local-removal test name in the mapping. That record now names the executed successor tests and explicitly withdraws complete correspondence to the superseded historical assertion. No test was skipped to resolve either issue. After the final gate, only these bilingual results and the mapping's platform-evidence wording changed; documentation, regenerated mapping evidence and whitespace were checked again. Runtime, test code and public API bytes remained unchanged.
+
 ## Candidate module identity, 2026-10-22
 
 S3 uses the [scoped candidate exception](compatibility.md#candidate-module-identity-slice-2026-10-22) at `687f282e8625c6b8d11ff58211a90524be2e4317`; the formal lock and historical source inventory remain unchanged.
