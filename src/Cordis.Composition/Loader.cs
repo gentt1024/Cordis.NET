@@ -407,6 +407,12 @@ public sealed class Entry
         internal set;
     }
 
+    /// <summary>The actual import used by the current Fiber; later name resolution does not replace it.</summary>
+    public ResolvedModule? Module
+    {
+        get; internal set;
+    }
+
     /// <summary>
     /// Gets the subgroup value.
     /// </summary>
@@ -681,10 +687,10 @@ public sealed class Entry
 
     private async Task InitializeAsync()
     {
-        IPlugin plugin;
+        ResolvedModule module;
         try
         {
-            plugin = await Loader.ResolveAsync(Options.Name, Parent.Tree.BaseUri);
+            module = await Loader.ResolveAsync(Options.Name, Parent.Tree.BaseUri);
         }
         catch (Exception error)
         {
@@ -693,12 +699,14 @@ public sealed class Entry
             return;
         }
 
+        var plugin = module.Plugin;
         PatchContext([]);
         LastError = null;
         Removing = false;
         IsTreeCarrier = plugin is ITreeCarrierPlugin;
         if (ReferenceEquals(plugin, Loader.Builtins["group"]))
             Options.Config = Data.Entries(Options.Config);
+        Module = module;
         Fiber = Context.Plugin(plugin, Options.RawConfig);
         // A resolved import still crosses the JavaScript import/activation checkpoint.
         // Do not await the entire apply: a plugin may intentionally remain Loading.
@@ -712,6 +720,7 @@ public sealed class Entry
 public sealed class Loader : EntryTree
 {
     private readonly IModuleResolver resolver;
+    private readonly Dictionary<IPlugin, ResolvedModule> builtinModules = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<(string, string), object> realms = [];
     private readonly Dictionary<Fiber, Entry> roots = [];
 
@@ -815,6 +824,8 @@ public sealed class Loader : EntryTree
                     return null;
                 if (fiber.Uid is null)
                 {
+                    if (ReferenceEquals(entry.Fiber, fiber))
+                        entry.Module = null;
                     if (roots.Remove(fiber) && !entry.IsRemoving && !entry.Disabled &&
                         entry.Parent.Tree.Context.Fiber.State is not (FiberState.Unloading or FiberState.Disposed))
                     {
@@ -883,34 +894,68 @@ public sealed class Loader : EntryTree
     /// <summary>Replace a prepared module only after its owned cleanup completes without failure.</summary>
     /// <remarks>Original exceptions carry PluginReplacementFailure details. The caller owns admission,
     /// business-quiescence verification and failure closure; disposal cannot stop untracked plugin work.</remarks>
-    public Task ReplacePluginAsync(IPlugin previous, IPlugin replacement) =>
-        ReplacePluginsAsync(
-            new Dictionary<IPlugin, IPlugin>(ReferenceEqualityComparer.Instance)
-            {
-                [previous] = replacement
-            });
+    public Task ReplacePluginAsync(IPlugin previous, IPlugin replacement) => Context.RunAsync(async _ =>
+    {
+        ArgumentNullException.ThrowIfNull(previous);
+        ArgumentNullException.ThrowIfNull(replacement);
+        var modules = Entries().Select(entry => entry.Module)
+            .OfType<ResolvedModule>().Where(module => ReferenceEquals(module.Plugin.Identity, previous.Identity)).Distinct().ToArray();
+        if (modules.Length == 0)
+            modules = [new(previous)];
+        await ReplacePluginsAsync(modules.Select(module =>
+            new ModuleReplacement(module, new(replacement, module.Filename))).ToArray());
+    });
 
     /// <summary>Switch a prepared module group together, restoring all previous plugins if candidate activation fails.</summary>
     /// <remarks>Reuses each Fiber's parent and raw configuration. Cleanup and reactivation are cooperative;
     /// external plugin effects are not a product-wide transaction.</remarks>
-    public Task ReplacePluginsAsync(IReadOnlyDictionary<IPlugin, IPlugin> replacements)
+    public Task ReplacePluginsAsync(IReadOnlyList<ModuleReplacement> replacements)
     {
         ArgumentNullException.ThrowIfNull(replacements);
         var pairs = replacements.ToArray();
         foreach (var pair in pairs)
         {
-            ArgumentNullException.ThrowIfNull(pair.Key);
-            ArgumentNullException.ThrowIfNull(pair.Value);
+            ArgumentNullException.ThrowIfNull(pair);
+            ArgumentNullException.ThrowIfNull(pair.Previous);
+            ArgumentNullException.ThrowIfNull(pair.Replacement);
+        }
+
+        var imports = new Dictionary<ResolvedModule, ResolvedModule>();
+        foreach (var pair in pairs)
+        {
+            if (imports.TryGetValue(pair.Previous, out var existing) && !ReferenceEquals(existing, pair.Replacement))
+                throw new ArgumentException("One loaded import cannot have conflicting successors.", nameof(replacements));
+            imports[pair.Previous] = pair.Replacement;
         }
 
         return Context.RunAsync(async _ =>
         {
-            var rows = pairs
-                .SelectMany(pair =>
-                    (Context.Registry.Get(pair.Key)?.Fibers.ToArray() ?? []).Select(f =>
-                        (Fiber: f, Entry: roots.GetValueOrDefault(f), Parent: f.Parent,
-                            Raw: roots.TryGetValue(f, out var entry) ? entry.Options.RawConfig : f.RawConfig,
-                            Previous: pair.Key, Replacement: pair.Value)))
+            var rows = pairs.GroupBy(pair => pair.Previous.Plugin.Identity, ReferenceEqualityComparer.Instance)
+                .SelectMany(group =>
+                    (Context.Registry.Get(group.First().Previous.Plugin)?.Fibers.ToArray() ?? []).Select(f =>
+                    {
+                        var entry = roots.GetValueOrDefault(f);
+                        ResolvedModule replacement;
+                        if (entry is not null)
+                        {
+                            if (entry.Module is not { } module || !imports.TryGetValue(module, out replacement!))
+                                throw new InvalidOperationException("No replacement was supplied for a loaded Loader import.");
+                        }
+                        else
+                        {
+                            var candidates = group.Select(pair => pair.Replacement.Plugin.Identity)
+                                .Distinct(ReferenceEqualityComparer.Instance).ToArray();
+                            if (candidates.Length != 1)
+                                throw new InvalidOperationException(
+                                    "HMR replacement is ambiguous for a plugin instance without a Loader entry.");
+                            replacement = group.First().Replacement;
+                        }
+
+                        return (Fiber: f, Entry: entry, Parent: f.Parent,
+                            Raw: entry is not null ? entry.Options.RawConfig : f.RawConfig,
+                            Previous: entry?.Module?.Plugin ?? group.First().Previous.Plugin, Replacement: replacement.Plugin,
+                            PreviousModule: entry?.Module, ReplacementModule: replacement);
+                    }))
                 .ToArray();
             foreach (var row in rows)
                 if (row.Entry is not null)
@@ -936,6 +981,8 @@ public sealed class Loader : EntryTree
                     {
                         if (row.Parent.Fiber.Uid is null)
                             continue;
+                        if (row.Entry is not null)
+                            row.Entry.Module = row.ReplacementModule;
                         var fiber = row.Parent.Plugin(row.Replacement, row.Raw);
                         activated.Add((fiber, row.Entry));
                         if (row.Entry is not null)
@@ -970,6 +1017,8 @@ public sealed class Loader : EntryTree
 
                             try
                             {
+                                if (row.Entry is not null)
+                                    row.Entry.Module = row.PreviousModule;
                                 var fiber = row.Parent.Plugin(row.Previous, row.Raw);
                                 restored.Add(fiber);
                                 if (row.Entry is not null)
@@ -1092,11 +1141,15 @@ public sealed class Loader : EntryTree
         Diagnostic?.Invoke(error);
     }
 
-    internal ValueTask<IPlugin> ResolveAsync(string name, Uri baseUri) =>
-        name.StartsWith("cordis:", StringComparison.Ordinal)
-            ? ValueTask.FromResult(
-                Builtins.GetValueOrDefault(name[7..]) ?? throw new FileNotFoundException($"Unknown builtin {name}."))
-            : resolver.ResolveAsync(name, baseUri);
+    internal ValueTask<ResolvedModule> ResolveAsync(string name, Uri baseUri)
+    {
+        if (!name.StartsWith("cordis:", StringComparison.Ordinal))
+            return resolver.ResolveAsync(name, baseUri);
+        var plugin = Builtins.GetValueOrDefault(name[7..]) ?? throw new FileNotFoundException($"Unknown builtin {name}.");
+        if (!builtinModules.TryGetValue(plugin, out var module))
+            builtinModules[plugin] = module = new(plugin);
+        return ValueTask.FromResult(module);
+    }
 
     /// <summary>
     /// Locates the requested value.

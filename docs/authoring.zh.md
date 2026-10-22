@@ -180,6 +180,10 @@ Resolver 默认与宿主共享 Core、Clr、Composition 合同程序集。其他
 
 替换包含不同导出的 bundle 时，使用 `ClrModuleResolver.ReplaceAsync` 的字典重载，提供所有已登记请求，包括尚未加载的导出和别名。回调可以使用 `Loader.ReplacePluginsAsync` 转移既有 raw 配置并共同切换相关 Fiber。单入口重载继续支持一个导出及其别名。候选准备与路由发布保持单一 bundle 代际；回调副作用和产品状态不构成事务。激活失败沿用既有 Loader 恢复路径，已稳定的 Pending Fiber 仍合法。
 
+两个 CLR 替换重载的回调现在都接收 `IReadOnlyList<ModuleReplacement>`。每项包含 `ResolvedModule Previous` 和 `Replacement`；不要将列表压缩成以 `IPlugin` 为键的字典。不同导入可以共享旧插件，再分裂到不同后继。`IModuleResolver.ResolveAsync` 及 static、deployment、CLR 实现返回 `ResolvedModule`，直接运行插件的调用方使用 `module.Plugin`。自定义 resolver 必须为同一运行代的同一导入保留同一模块引用；deployment 适配器必须原样转发。
+
+`Entry.Module` 记录实际支撑该 Entry 的导入。名称映射改变不会重写它；禁用后重新启用才解析新映射。替换会将其更新为已准备的后继，激活失败则在候选清理完成后恢复旧身份。direct Fiber 没有 Entry 身份：同一旧插件对应多个不同后继时，在拆卸前拒绝；多个别名仍指向同一后继时没有歧义。通用 `Loader.ReplacePluginAsync(IPlugin, IPlugin)` 继续执行统一的一对一替换。HMR 跟踪优先使用 `Entry.Module.Filename`，缺失时才调用宿主 locator。模块引用会保留导出的插件，期待 collectible 卸载前需释放调用方持有的引用。
+
 ### 声明与生成原生 Remote 合同
 
 `Cordis.NET.Composition` 在 NuGet analyzer 目录内交付 Roslyn 分析器。消费该包的作者可以使用 `RemoteService` 和显式 `RemoteMethod` 属性，声明 public、顶层、非泛型 partial 类。边界类型需要显式的源生成 `JsonSerializerContext`。下面的精简声明对应[独立 Remote 作者](../tests/fixtures/TypertConsumer/Author.cs)：

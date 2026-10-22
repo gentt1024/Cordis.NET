@@ -264,7 +264,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
     /// <summary>
     /// Resolves async.
     /// </summary>
-    public async ValueTask<IPlugin> ResolveAsync(
+    public async ValueTask<ResolvedModule> ResolveAsync(
         string specifier,
         Uri baseUri,
         CancellationToken cancellationToken = default)
@@ -273,7 +273,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         try
         {
             ObjectDisposedException.ThrowIf(disposed, this);
-            return GetLease(specifier).Plugin!;
+            return GetLease(specifier).Module!;
         }
         finally
         {
@@ -335,7 +335,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
     public async ValueTask<ClrUnloadObservation> ReplaceAsync(
         string specifier,
         ClrModuleDefinition definition,
-        Func<IPlugin, IPlugin, ValueTask> switchFibers,
+        Func<IReadOnlyList<ModuleReplacement>, ValueTask> switchFibers,
         Func<ClrReplacementCandidate, ValueTask>? admitCandidate = null,
         CancellationToken cancellationToken = default)
     {
@@ -362,7 +362,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
 
         return await ReplaceAsync(
                 replacements,
-                pairs => switchFibers(pairs.First().Key, pairs.First().Value),
+                switchFibers,
                 admitCandidate,
                 cancellationToken)
             .ConfigureAwait(false);
@@ -376,7 +376,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
     /// the candidate. Suspend Typert imports only inside switchFibers, after admission has succeeded.</remarks>
     public async ValueTask<ClrUnloadObservation> ReplaceAsync(
         IReadOnlyDictionary<string, ClrModuleDefinition> replacements,
-        Func<IReadOnlyDictionary<IPlugin, IPlugin>, ValueTask> switchFibers,
+        Func<IReadOnlyList<ModuleReplacement>, ValueTask> switchFibers,
         Func<ClrReplacementCandidate, ValueTask>? admitCandidate = null,
         CancellationToken cancellationToken = default)
     {
@@ -391,7 +391,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         try
         {
             var candidates = new Dictionary<string, Lease>(StringComparer.Ordinal);
-            var pairs = new Dictionary<IPlugin, IPlugin>(ReferenceEqualityComparer.Instance);
+            var pairs = new List<ModuleReplacement>();
             Bundle previousBundle, candidateBundle;
             await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
@@ -426,11 +426,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
                         candidates.Add(specifier, candidate);
                         if (!loaded.TryGetValue(specifier, out var lease))
                             continue;
-                        if (pairs.TryGetValue(lease.Plugin!, out var duplicate) &&
-                            !ReferenceEquals(duplicate, candidate.Plugin))
-                            throw new InvalidOperationException(
-                                "Aliases of one CLR export must retain the same replacement export.");
-                        pairs[lease.Plugin!] = candidate.Plugin!;
+                        pairs.Add(new(lease.Module!, candidate.Module!));
                     }
                 }
                 catch
@@ -470,7 +466,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
                     }
 
                     cancellationToken.ThrowIfCancellationRequested();
-                    await switchFibers(new System.Collections.ObjectModel.ReadOnlyDictionary<IPlugin, IPlugin>(pairs))
+                    await switchFibers(pairs.AsReadOnly())
                         .ConfigureAwait(false);
                 }
                 catch
@@ -616,7 +612,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
             }
 
             bundle.References++;
-            return new Lease(bundle, plugin);
+            return new Lease(bundle, new(plugin, Path.GetFullPath(definition.AssemblyPath, bundle.Source)));
         }
         catch
         {
@@ -685,7 +681,7 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
 
     private ClrUnloadObservation? Retire(Lease lease)
     {
-        lease.Plugin = null;
+        lease.Module = null;
         var bundle = lease.Bundle;
         if (--bundle.References != 0)
             return null;
@@ -775,10 +771,10 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         public string? ShadowDirectory = shadowDirectory;
     }
 
-    private sealed class Lease(Bundle bundle, IPlugin plugin)
+    private sealed class Lease(Bundle bundle, ResolvedModule module)
     {
         public Bundle Bundle = bundle;
-        public IPlugin? Plugin = plugin;
+        public ResolvedModule? Module = module;
     }
 
     private sealed class BundleContext(IReadOnlyDictionary<string, Assembly> shared)

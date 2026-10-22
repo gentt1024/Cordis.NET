@@ -34,7 +34,7 @@ if (args[0] is "--load" or "--worker")
             await context.RunAsync(async ctx =>
             {
                 ctx.Provide("trace", new List<string>());
-                var owner = ctx.Plugin(plugin, 7);
+                var owner = ctx.Plugin(plugin.Plugin, 7);
                 await owner.WaitAsync();
                 if (owner.State != FiberState.Active || (int)ctx.Get("first.value")! != 7 ||
                     Path.GetDirectoryName(ctx.Get<Assembly>("first.assembly")!.Location) != bundle)
@@ -50,7 +50,7 @@ if (args[0] is "--load" or "--worker")
         }
 
         var native = await resolver.ResolveAsync(module + "/native", new Uri("file:///"));
-        if (native.Name != "native-a")
+        if (native.Plugin.Name != "native-a")
             throw new InvalidOperationException("A retained worker lost its private native library.");
         if (File.ReadAllText(Path.Combine(bundle, "retained-data.txt")) !=
             "published resource retained for worker" + Environment.NewLine)

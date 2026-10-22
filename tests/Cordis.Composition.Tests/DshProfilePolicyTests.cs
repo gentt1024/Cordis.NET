@@ -710,19 +710,19 @@ public sealed class DshProfilePolicyTests : IDisposable
             get;
         } = [];
 
-        public ValueTask<IPlugin> ResolveAsync(
+        public ValueTask<ResolvedModule> ResolveAsync(
             string specifier,
             Uri baseUri,
             CancellationToken cancellationToken = default)
         {
             Imports.Add(specifier);
-            return ValueTask.FromResult<IPlugin>(
+            return ValueTask.FromResult(new ResolvedModule(
                 new Plugin<object?>
                 {
                     Apply = (_, _) =>
                     {
                     }
-                });
+                }));
         }
     }
 

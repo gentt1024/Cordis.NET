@@ -106,7 +106,7 @@ public sealed class ReplacementHostTests
     {
         await using var host = await FixtureApplication.StartAsync(mode);
         var old = host.Probe.Contributions.Where(item => item.Id != "other").ToArray();
-        IPlugin? original = null;
+        ResolvedModule? original = null;
         await host.Context.RunAsync(async _ =>
             original = await host.Resolver.ResolveAsync("fixture", new Uri("file:///")));
         var verifiedAfterRollback = false;
@@ -170,7 +170,7 @@ public sealed class ReplacementHostTests
         {
             var original = await host.Resolver.ResolveAsync("fixture", new Uri("file:///"));
             if (expectedRecovery != PluginRecoveryState.Succeeded)
-                Assert.Null(host.Context.Registry.Get(original));
+                Assert.Null(host.Context.Registry.Get(original.Plugin));
         });
     }
 
@@ -182,7 +182,7 @@ public sealed class ReplacementHostTests
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var verified = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var commit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        IPlugin? original = null;
+        ResolvedModule? original = null;
         await host.Context.RunAsync(async _ =>
             original = await host.Resolver.ResolveAsync("fixture", new Uri("file:///")));
         host.BusinessVerification = async () =>
@@ -269,7 +269,7 @@ public sealed class ReplacementHostTests
         {
             await committed.Task.WaitAsync(TimeSpan.FromSeconds(5));
             await AssertClosedAsync(host);
-            IPlugin? firstCandidate = null;
+            ResolvedModule? firstCandidate = null;
             await host.Context.RunAsync(async _ =>
                 firstCandidate = await host.Resolver.ResolveAsync("fixture", new Uri("file:///")));
             var fibers = new[] { "a", "b", "other" }.Select(id => host.Loader.Resolve(id).Fiber).ToArray();
@@ -312,7 +312,7 @@ public sealed class ReplacementHostTests
     public async Task Business_failure_after_loader_success_requires_intervention_and_refuses_further_replacement()
     {
         await using var host = await FixtureApplication.StartAsync();
-        IPlugin? original = null;
+        ResolvedModule? original = null;
         await host.Context.RunAsync(async _ =>
             original = await host.Resolver.ResolveAsync("fixture", new Uri("file:///")));
         var businessFailure = new InvalidOperationException("V2 business verification failed");
@@ -332,7 +332,7 @@ public sealed class ReplacementHostTests
         await host.Context.RunAsync(async ctx =>
         {
             Assert.Same(original, await host.Resolver.ResolveAsync("fixture", new Uri("file:///")));
-            Assert.Null(ctx.Registry.Get(original!));
+            Assert.Null(ctx.Registry.Get(original!.Plugin));
             Assert.Equal(FiberState.Active, host.Loader.Resolve("a").Fiber!.State);
             Assert.Equal("v2", ctx.Get<IRetirementService>("retirement-a")!.VerifyReady());
         });
@@ -517,7 +517,7 @@ public sealed class ReplacementHostTests
                     await host.Loader.WaitAsync();
                     await ctx
                         .Plugin(
-                            await host.Resolver.ResolveAsync("fixture", new Uri("file:///"), cancellationToken),
+                            (await host.Resolver.ResolveAsync("fixture", new Uri("file:///"), cancellationToken)).Plugin,
                             "direct")
                         .WaitAsync();
                 }));
@@ -585,7 +585,7 @@ public sealed class ReplacementHostTests
                 await Resolver.ReplaceAsync(
                     "fixture",
                     Definition(version),
-                    async (previous, candidate) =>
+                    async pairs =>
                     {
                         // Recheck after the resolver's mutation gate for callers already queued.
                         if (RequiresIntervention)
@@ -596,7 +596,7 @@ public sealed class ReplacementHostTests
                         retirementStarted = true;
                         try
                         {
-                            await Loader.ReplacePluginAsync(previous, candidate);
+                            await Loader.ReplacePluginsAsync(pairs);
                         }
                         catch (Exception error)
                         {

@@ -670,7 +670,7 @@ public sealed class DeploymentModuleResolver(DeploymentPackageResolver packages,
     /// <summary>
     /// Resolves async.
     /// </summary>
-    public ValueTask<IPlugin> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
+    public ValueTask<ResolvedModule> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
     {
         var route = ResolveRoute(specifier, baseUri);
         return modules.ResolveAsync(route.Specifier, route.BaseUri, cancellationToken);

@@ -120,14 +120,14 @@ public sealed class ProbeDeploymentTests
             {
                 "view" => view,
                 // Bound config resolution retains Plugin<T>, its binder and generated collectible metadata.
-                "binder" => (Func<object?, object?>)plugin.ResolveConfig,
+                "binder" => (Func<object?, object?>)plugin.Plugin.ResolveConfig,
                 _ => (Func<string>)(() => view.Version),
             };
         });
         await resolver.ReplaceAsync(
             "probes",
             Definition("v2"),
-            async (old, next) => await loader!.ReplacePluginAsync(old, next));
+            async pairs => await loader!.ReplacePluginsAsync(pairs));
         await root.RunAsync(ctx =>
         {
             Assert.Equal("v2", ctx.Probes.Version);
@@ -142,7 +142,7 @@ public sealed class ProbeDeploymentTests
             {
                 EntryType = "Cordis.ProbeFixture.RejectedEntry"
             },
-            async (old, next) => await loader!.ReplacePluginAsync(old, next)));
+            async pairs => await loader!.ReplacePluginsAsync(pairs)));
         await root.RunAsync(ctx =>
         {
             Assert.Equal("v2", ctx.Probes.Version);
@@ -183,7 +183,7 @@ public sealed class ProbeDeploymentTests
         await resolver.ReplaceAsync(
             "probes",
             Definition("v1"),
-            async (old, next) => await loader.ReplacePluginAsync(old, next));
+            async pairs => await loader.ReplacePluginsAsync(pairs));
         await root.RunAsync(ctx =>
         {
             Assert.Equal("recovered:up", ctx.Probes.Snapshot()["connection"]);

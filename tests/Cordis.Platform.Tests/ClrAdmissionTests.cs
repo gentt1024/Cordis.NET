@@ -37,7 +37,7 @@ public sealed class ClrAdmissionTests
             Fiber? active = null;
             await root.RunAsync(async context =>
             {
-                active = context.Plugin(old);
+                active = context.Plugin(old.Plugin);
                 await active.WaitAsync();
             });
             var oldIdentity = root.Get<string>("candidate-identity");
@@ -60,7 +60,7 @@ public sealed class ClrAdmissionTests
                     await active!.DisposeAsync();
                     await root.RunAsync(async context =>
                     {
-                        active = context.Plugin(pairs[old]);
+                        active = context.Plugin(pairs.Single(pair => ReferenceEquals(pair.Previous, old)).Replacement.Plugin);
                         await active.WaitAsync();
                     });
                 },
@@ -77,7 +77,7 @@ public sealed class ClrAdmissionTests
                     await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.DisposeAsync().AsTask());
                     await Assert.ThrowsAsync<InvalidOperationException>(() =>
                         resolver
-                            .ReplaceAsync("one", Definition("v2", entry), (_, _) => ValueTask.CompletedTask)
+                            .ReplaceAsync("one", Definition("v2", entry), _ => ValueTask.CompletedTask)
                             .AsTask());
                     read = candidate.GetContribution("one");
                     Assert.Same(read, candidate.GetContribution("alias"));

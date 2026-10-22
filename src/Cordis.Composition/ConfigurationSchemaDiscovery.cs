@@ -119,7 +119,7 @@ public static class ConfigurationSchemaDiscovery
                         continue;
                     }
 
-                    var plugin = await resolver.ResolveAsync(name, baseUri, cancellationToken);
+                    var plugin = (await resolver.ResolveAsync(name, baseUri, cancellationToken)).Plugin;
                     var captured = (plugin as IConfigurationPlugin)?.CaptureConfiguration();
                     var diagnostic = plugin is ITreeCarrierPlugin
                         ? "Custom tree carrier has no native static traversal contract."

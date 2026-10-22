@@ -2,6 +2,22 @@
 
 [中文](validation.zh.md)
 
+## Candidate module identity, 2026-10-22
+
+S3 uses the [scoped candidate exception](compatibility.md#candidate-module-identity-slice-2026-10-22) at `687f282e8625c6b8d11ff58211a90524be2e4317`; the formal lock and historical source inventory remain unchanged.
+
+- The original candidate `packages/boot/hmr/tests/package-manifest-dispatch.spec.ts` passed all 32 tests without changing the upstream source. Candidate evidence is separate from the formal baseline.
+- The original implementation rejected the real CLR split fixture with “Aliases of one CLR export must retain the same replacement export.” The new `ClrIdentityTests` cover three loaded imports sharing an old callback, aliases splitting into distinct exports, repeated replacements, disabled entries, direct Fiber ambiguity, import failure, activation failure, complete identity restoration and retry.
+- Native module-identity tests also exercise distinct plugin wrappers sharing a callback, deployment remapping while an entry remains live, disable/enable resolution and HMR's loaded-filename preference. Existing CLR tests continue to cover collectible unload, retained references, stable files, raw configuration, direct Fibers and cleanup/recovery failures.
+- The final `python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> --upstream-test packages/boot/hmr/tests/modules.spec.ts` gate covers the Release build, native tests, API snapshot, generated clients, CLI/client contracts, conformance traces, fixed-baseline source tests and whitespace. The existing Windows Job Object host-exit test is platform-excluded on macOS; this slice adds no skip or exclusion.
+- Repository examples and standalone CLR consumer sources are migrated to the new resolver result and callback list. This local macOS run does not claim the Windows/Linux NuGet multi-entry native-library consumer, AOT or original Core/Loader test-source gates.
+
+Executed results: the final gate passed all 33 requested steps with 1,007 native tests passing and the one existing platform exclusion. The fixed formal HMR module source suite passed 20 tests, separately from the candidate dispatch suite's 32. No runtime, test, example or API snapshot bytes changed after that gate; this results paragraph was added afterward.
+
+The same Release package batch passed all 12 `verify-clr-deployment.py` steps on `osx-arm64`, including framework-dependent directories, self-contained single files and ASP.NET hosts. The three migrated standalone consumer sources also compiled with zero warnings and errors. A repository-external macOS adaptation of `verify-clr-multi-entry.py` passed all 25 steps, retaining all consumer assertions: shared/nested assemblies, native dependency conflicts, candidate recovery, actual HTTP calls through generated Remote clients, contract withdrawal, NuGet installation and the retained worker/resource publication check. The adaptation only supplies two separately compiled Mach-O native probe libraries and the macOS RID in place of the script's Windows/Linux system libraries; the C# fixtures, client program and library source are unchanged. This is macOS-adapted evidence, not execution of the unmodified Windows/Linux script.
+
+Machine paths, raw logs and audit setup remain local. The public API migration is documented in both authoring guides and the reviewed snapshot.
+
 ## Candidate management persistence, 2026-10-22
 
 S2 follows the [documented candidate exception](compatibility.md#candidate-management-persistence-slice-2026-10-22) at `687f282e8625c6b8d11ff58211a90524be2e4317`. The formal lock and historical source inventory remain unchanged. Execution used macOS arm64, .NET SDK 10.0.111/runtime 10.0.11 and Node 24.13.0.

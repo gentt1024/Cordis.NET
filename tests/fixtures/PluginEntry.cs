@@ -340,3 +340,53 @@ public sealed class RetirementEntry : IClrPluginModule
         }
     }
 }
+
+public sealed class IdentityOne : IClrPluginModule
+{
+    internal static readonly IPlugin Shared = Create("shared");
+    private static readonly IPlugin Own = Create("one");
+    public IPlugin CreatePlugin()
+    {
+#if VERSION_TWO || VERSION_BAD
+        return Own;
+#else
+        return Shared;
+#endif
+    }
+
+    internal static IPlugin Create(string export) => new Plugin<string>
+    {
+        Inject = ["trace"],
+        ApplyAsync = async (context, id) =>
+        {
+#if VERSION_BAD
+            const string version = "bad";
+#elif VERSION_TWO
+            const string version = "v2";
+#else
+            const string version = "v1";
+#endif
+            var trace = context.Get<List<string>>("trace")!;
+            trace.Add($"start:{version}:{export}:{id}");
+            context.Effect(() => (Action)(() => trace.Add($"stop:{version}:{export}:{id}")));
+            await Task.Yield();
+#if VERSION_BAD
+            if (id == "two")
+                throw new InvalidOperationException("split activation refused");
+#endif
+        }
+    };
+}
+
+public sealed class IdentityTwo : IClrPluginModule
+{
+    private static readonly IPlugin Own = IdentityOne.Create("two");
+    public IPlugin CreatePlugin()
+    {
+#if VERSION_TWO || VERSION_BAD
+        return Own;
+#else
+        return IdentityOne.Shared;
+#endif
+    }
+}

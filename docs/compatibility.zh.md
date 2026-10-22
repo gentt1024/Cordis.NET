@@ -2,6 +2,16 @@
 
 [English](compatibility.md)
 
+## 候选模块身份切片，2026-10-22
+
+S3 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，尤其是 [HMR dispatch 测试](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/hmr/tests/package-manifest-dispatch.spec.ts)，与 S1/S2 一起作为限定范围的例外。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`，历史原始测试清单不变。包热重装、resolver 发布与 typed restart result 属于 S4。
+
+Loader 在 `Entry.Module` 保留实际导入及其导出、运行代身份，不再从当前名称映射重建。即使别名共享插件导出，CLR 仍保留各导入身份；准备好的替换列表保留每个已加载请求。Loader 对每个旧 runtime 的 Fiber 只取一次快照，按 Entry 实际导入选择后继，使用最新 Entry raw 配置，并让禁用或未初始化的 Entry 保持不活跃。连续替换不会增加 Fiber。导入准备失败发生在拆卸前；激活失败沿用既有恢复规则，清理全部候选，再恢复全部旧导入和 Fiber。
+
+原生适配保持明确：direct Fiber 存在歧义时在预检阶段拒绝，整个旧组保持活跃，无需先拆卸再恢复。清理失败仍阻止不安全的重叠恢复，并保留既有失败诊断。稳定发布目录、receipt、collectible 所有权与不可变产物规则不变。HMR 显式依赖图仍由宿主管理；仅 Entry 诊断优先使用已加载文件名，避免受已改变或缺失的 locator 影响。没有文件身份的导入沿用 fallback。
+
+这是破坏性公开 API 迁移：`IModuleResolver.ResolveAsync` 及实现返回 `ResolvedModule`；`Entry.Module` 暴露该身份；`ModuleReplacement` 保存前后模块；`Loader.ReplacePluginsAsync` 和两个 CLR 替换回调接收 `IReadOnlyList<ModuleReplacement>`。直接调用方提取 `.Plugin`，自定义 resolver 按运行代缓存模块引用。通用一对一 `Loader.ReplacePluginAsync(IPlugin, IPlugin)` 保留，不保留旧字典回调。消费方需重新编译；管理 DTO、线协议和生成客户端不变。迁移见[作者指南](authoring.zh.md)，证据见[验证记录](validation.zh.md)。
+
 ## 候选管理持久化分片，2026-10-22
 
 S2 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 [patch 编辑器](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/plugin-manager/src/patch.ts)和 [bundle 移除](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/plugin-manager/src/index.ts)。它与下述 S1 同属限定范围的候选例外。正式行为锁及历史源码测试清单保持不变；HMR、resolver 替换和其余候选分片仍是独立工作。

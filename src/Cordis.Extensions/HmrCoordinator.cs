@@ -221,8 +221,9 @@ public sealed class HmrCoordinator : IAsyncDisposable
     }
 
     /// <summary>
-    /// Check current Loader entry resolution during reload. The host supplies a non-loading module
-    /// locator; returning null denotes an uncached/non-plugin module. Paths use the same explicit
+    /// Check Loader imports during reload, preferring each loaded module's source filename.
+    /// The host supplies a non-loading fallback locator; null denotes an uncached/non-plugin module.
+    /// Paths use the same explicit
     /// native graph as RegisterModule. Resolution errors warn without disturbing running fibers.
     /// </summary>
     public IDisposable TrackLoader(Loader loader, Func<string, Uri, ValueTask<string?>> locateModule)
@@ -256,23 +257,23 @@ public sealed class HmrCoordinator : IAsyncDisposable
             bindings = [.. _loaders];
         foreach (var binding in bindings)
         {
-            (string Name, Uri Base)[] entries = [];
+            (string Name, Uri Base, ResolvedModule? Module)[] entries = [];
             await binding.Loader.Context.RunAsync(_ =>
             {
                 entries = binding
                     .Loader.Entries()
-                    .Select(entry => (entry.Options.Name, entry.Parent.Tree.BaseUri))
+                    .Select(entry => (entry.Options.Name, entry.Parent.Tree.BaseUri, entry.Module))
                     .Distinct()
                     .ToArray();
                 return Task.CompletedTask;
             });
-            foreach (var (name, basis) in entries)
+            foreach (var (name, basis, module) in entries)
             {
-                if (name.StartsWith("cordis:", StringComparison.Ordinal))
+                if (module?.Filename is null && name.StartsWith("cordis:", StringComparison.Ordinal))
                     continue;
                 try
                 {
-                    var path = await binding.Locate(name, basis).ConfigureAwait(false);
+                    var path = module?.Filename ?? await binding.Locate(name, basis).ConfigureAwait(false);
                     if (path is null)
                         continue;
                     _ = CanonicalPath(path);

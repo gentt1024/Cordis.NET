@@ -80,14 +80,15 @@ public sealed class TreeCarrierPlugin(IPlugin plugin) : ITreeCarrierPlugin, ICon
 }
 
 /// <summary>
-/// Represents the i module resolver component.
+/// Resolves a request to its import identity in the current runtime generation.
 /// </summary>
 public interface IModuleResolver
 {
     /// <summary>
-    /// Resolves async.
+    /// Returns the same module reference for repeated imports in one generation.
+    /// Aliases may retain distinct module references while sharing an exported plugin.
     /// </summary>
-    ValueTask<IPlugin> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default);
+    ValueTask<ResolvedModule> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -95,21 +96,21 @@ public interface IModuleResolver
 /// </summary>
 public sealed class StaticModuleResolver : IModuleResolver
 {
-    private readonly Dictionary<string, IPlugin> modules = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ResolvedModule> modules = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Performs the register operation.
     /// </summary>
     public StaticModuleResolver Register(string specifier, IPlugin plugin)
     {
-        modules[specifier] = plugin;
+        modules[specifier] = new(plugin);
         return this;
     }
 
     /// <summary>
     /// Resolves async.
     /// </summary>
-    public ValueTask<IPlugin> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
+    public ValueTask<ResolvedModule> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (modules.TryGetValue(specifier, out var plugin) || modules.TryGetValue(
