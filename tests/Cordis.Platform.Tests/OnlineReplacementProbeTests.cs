@@ -210,7 +210,7 @@ public sealed class OnlineReplacementProbeTests
                         });
                 await host.Loader.WaitAsync();
                 await ctx
-                    .Plugin(await host.Resolver.ResolveAsync("fixture", new Uri("file:///")), "direct")
+                    .Plugin((await host.Resolver.ResolveAsync("fixture", new Uri("file:///"))).Plugin, "direct")
                     .WaitAsync();
             });
             return host;
@@ -236,7 +236,7 @@ public sealed class OnlineReplacementProbeTests
             return await Resolver.ReplaceAsync(
                 "fixture",
                 Definition(version),
-                async (previous, candidate) =>
+                async pairs =>
                 {
                     if (guard)
                     {
@@ -246,7 +246,7 @@ public sealed class OnlineReplacementProbeTests
                             service.CloseAdmission();
                     }
 
-                    await Loader.ReplacePluginAsync(previous, candidate);
+                    await Loader.ReplacePluginsAsync(pairs);
                 });
         }
 

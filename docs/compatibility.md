@@ -2,6 +2,16 @@
 
 [中文](compatibility.zh.md)
 
+## Candidate module identity slice, 2026-10-22
+
+S3 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, particularly the [HMR dispatch tests](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/hmr/tests/package-manifest-dispatch.spec.ts). It is a scoped exception alongside S1/S2. The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`; the historical source inventory is unchanged. Package hot reinstall, resolver publication and typed restart results belong to S4.
+
+Loader retains the actual resolved import in `Entry.Module`, including export and generation identity, instead of reconstructing it from a current name mapping. CLR retains separate import identities for aliases even when their exported plugin is shared. Prepared replacement pairs preserve every loaded request. Loader snapshots each old runtime's Fibers once, maps each entry through its actual import, carries the latest entry raw configuration, and leaves disabled/uninitialized entries inactive. Repeated replacements do not multiply Fibers. Import preparation fails before retirement; activation failure cleans all candidates and restores all old imports and Fibers using the existing recovery rules.
+
+Native adaptations remain explicit: an ambiguous direct Fiber is rejected during preflight, leaving the entire old group active, rather than tearing down and recovering it. Cleanup failures still prevent unsafe overlapping recovery and retain their existing failure diagnostics. Stable published directories, receipts, collectible ownership and immutable artifact rules remain unchanged. HMR's explicit dependency graph remains host-owned; only entry diagnostics prefer the loaded filename over a possibly changed or missing locator. Unlocated imports use the existing fallback.
+
+This is a breaking public API migration: `IModuleResolver.ResolveAsync` and its implementations return `ResolvedModule`; `Entry.Module` exposes that identity; `ModuleReplacement` carries previous/replacement modules; `Loader.ReplacePluginsAsync` and both CLR replacement callbacks accept `IReadOnlyList<ModuleReplacement>`. Direct callers unwrap `.Plugin`; custom resolvers cache module references per generation. The generic one-to-one `Loader.ReplacePluginAsync(IPlugin, IPlugin)` remains available. No compatibility dictionary callback is retained. Consumers must rebuild; management DTOs, wire schemas and generated clients are unchanged. See [authoring](authoring.md) for migration and [validation](validation.md) for evidence.
+
 ## Candidate management persistence slice, 2026-10-22
 
 S2 follows the fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317` [patch editor](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/plugin-manager/src/patch.ts) and [bundle removal](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/boot/plugin-manager/src/index.ts). Together with S1 below, it is a scoped candidate exception. The formal lock and historical source inventory remain unchanged; HMR, resolver replacement and the remaining candidate slices are separate work.

@@ -62,7 +62,7 @@ await root.RunAsync(async context =>
         throw new InvalidOperationException("Entries did not retain their separate configurations.");
     var plugin = await resolver.ResolveAsync("first-module", new Uri("file:///"));
     var alias = await resolver.ResolveAsync("first-alias", new Uri("file:///"));
-    if (!ReferenceEquals(plugin, alias))
+    if (!ReferenceEquals(plugin.Plugin, alias.Plugin))
         throw new InvalidOperationException("Aliases for the same CLR export did not preserve plugin identity.");
 });
 
@@ -78,7 +78,7 @@ await RejectAsync(
         .ReplaceAsync(
             "first-module",
             Candidate(args[1])["first-module"],
-            (_, _) => throw new InvalidOperationException("An incomplete bundle must not reach Fiber switching."))
+            _ => throw new InvalidOperationException("An incomplete bundle must not reach Fiber switching."))
         .AsTask(),
     "Replace every registered export");
 object? beforeFailure = null;
@@ -113,8 +113,8 @@ hmr.RegisterModule(
             Candidate(target),
             async pairs =>
             {
-                if (pairs.Count != 2)
-                    throw new InvalidOperationException("Aliases did not collapse to two distinct plugin exports.");
+                if (pairs.Count != 3)
+                    throw new InvalidOperationException("Loaded aliases were not retained as separate import identities.");
                 await loader!.ReplacePluginsAsync(pairs);
             })
         .AsTask());

@@ -27,9 +27,9 @@ async Task CheckLoads(
     foreach (var key in order)
     {
         var plugin = await resolver.ResolveAsync(key.ToString(), baseUri);
-        if (plugin.Name != names[key == 'A' ? 0 : 1])
-            throw new InvalidOperationException($"Unexpected plugin from {bundle}/{key}: {plugin.Name}");
-        var actual = AssemblyLoadContext.GetLoadContext(((Delegate)plugin.Identity).Method.Module.Assembly);
+        if (plugin.Plugin.Name != names[key == 'A' ? 0 : 1])
+            throw new InvalidOperationException($"Unexpected plugin from {bundle}/{key}: {plugin.Plugin.Name}");
+        var actual = AssemblyLoadContext.GetLoadContext(((Delegate)plugin.Plugin.Identity).Method.Module.Assembly);
         if (actual is null || !actual.IsCollectible || context is not null && !ReferenceEquals(context, actual))
             throw new InvalidOperationException("Entries did not share one collectible bundle context.");
         context = actual;
@@ -49,8 +49,8 @@ async Task CheckConflict<T>(
 {
     await using var resolver = Resolver(bundle, first, second, entry);
     var old = await resolver.ResolveAsync(order[0].ToString(), baseUri);
-    if (old.Name != names[order[0] == 'A' ? 0 : 1])
-        throw new InvalidOperationException($"Unexpected first plugin before the conflict: {old.Name}");
+    if (old.Plugin.Name != names[order[0] == 'A' ? 0 : 1])
+        throw new InvalidOperationException($"Unexpected first plugin before the conflict: {old.Plugin.Name}");
     try
     {
         await resolver.ResolveAsync(order[1].ToString(), baseUri);
@@ -75,7 +75,7 @@ async Task CheckContinuation<T>(
 {
     await using var resolver = Resolver(bundle, first, second, entry);
     var original = await resolver.ResolveAsync("A", baseUri);
-    if (original.Name != "delayed")
+    if (original.Plugin.Name != "delayed")
         throw new InvalidOperationException("The original factory eagerly called its dependency.");
     try
     {
@@ -89,7 +89,7 @@ async Task CheckContinuation<T>(
     Console.WriteLine($"PASS {bundle} rejected candidate; calling original entry for the first time");
     await using var context = new Context();
     string? observed = null;
-    await original.ApplyAsync(context, (Action<string>)(value => observed = value));
+    await original.Plugin.ApplyAsync(context, (Action<string>)(value => observed = value));
     if (observed != expected)
         throw new InvalidOperationException($"The original entry returned {observed} after the rejected candidate.");
     Console.WriteLine($"PASS {bundle} original first dependency call after rejection: {observed}");

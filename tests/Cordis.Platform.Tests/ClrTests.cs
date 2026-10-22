@@ -75,7 +75,7 @@ public sealed class ClrTests
         {
             var module = await resolver.ResolveAsync("fixture", new Uri("file:///"));
             var fiber = ctx.Plugin(
-                module,
+                module.Plugin,
                 entryType == "ConfigurationEntry"
                     ? "old-value"
                     : new Dictionary<string, object?>
@@ -138,7 +138,7 @@ public sealed class ClrTests
         {
             var module = await resolver.ResolveAsync("fixture", new Uri("file:///"));
             var fiber = ctx.Plugin(
-                module,
+                module.Plugin,
                 new Dictionary<string, object?>
                 {
                     ["value"] = 7
@@ -197,8 +197,9 @@ public sealed class ClrTests
                     {
                         EntryType = "VersionedPlugin.UnloadFailureEntry"
                     },
-                    (_, candidate) =>
+                    pairs =>
                     {
+                        var candidate = pairs[0].Replacement.Plugin;
                         candidateAssembly = Assert.IsType<Plugin<object?>>(candidate).Apply!.Method.Module.Assembly;
                         throw primary;
                     })
@@ -311,7 +312,7 @@ public sealed class ClrTests
             {
                 EntryType = "VersionedPlugin." + entryType
             },
-            async (previous, replacement) => await loader!.ReplacePluginAsync(previous, replacement));
+            async pairs => await loader!.ReplacePluginsAsync(pairs));
         await context.RunAsync(ctx =>
         {
             Assert.NotSame(retainedConfigReference, ctx.Get("configured-reference"));
@@ -336,8 +337,9 @@ public sealed class ClrTests
             .ReplaceAsync(
                 "fixture",
                 Definition("v2"),
-                (_, candidate) =>
+                pairs =>
                 {
+                    var candidate = pairs[0].Replacement.Plugin;
                     var assembly = Assert.IsType<Plugin<object?>>(candidate).Apply!.Method.Module.Assembly;
                     AssemblyLoadContext.GetLoadContext(assembly)!.Unloading += _ => throw secondary;
                     throw primary;
@@ -412,7 +414,7 @@ public sealed class ClrTests
         await context.RunAsync(async ctx =>
         {
             ctx.Provide("trace", new List<string>());
-            var fiber = ctx.Plugin(await resolver.ResolveAsync("fixture", new Uri("file:///")), "private");
+            var fiber = ctx.Plugin((await resolver.ResolveAsync("fixture", new Uri("file:///"))).Plugin, "private");
             await fiber.WaitAsync();
             var service = ctx.Get<IVersionedService>("versioned")!;
             if (sharedDependency is null)
@@ -457,18 +459,20 @@ public sealed class ClrTests
             .ReplaceAsync(
                 "fixture",
                 Definition("v2"),
-                async (old, candidate) =>
+                async pairs =>
                 {
+                    var old = pairs[0].Previous;
+                    var candidate = pairs[0].Replacement;
                     Assert.Same(previous, old);
                     Assert.NotSame(old, candidate);
                     Assert.Same(old, await resolver.ResolveAsync("fixture", new Uri("file:///")));
-                    Assert.Same(old, await resolver.ResolveAsync("dependency", new Uri("file:///")));
+                    Assert.Same(old.Plugin, (await resolver.ResolveAsync("dependency", new Uri("file:///"))).Plugin);
                     Assert.Throws<InvalidOperationException>(() => resolver.Register(
                         "candidate-alias",
                         Definition("v2")));
                     await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.DisposeAsync().AsTask());
                     await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                        resolver.ReplaceAsync("fixture", Definition("v1"), (_, _) => ValueTask.CompletedTask).AsTask());
+                        resolver.ReplaceAsync("fixture", Definition("v1"), _ => ValueTask.CompletedTask).AsTask());
                     entered.SetResult();
                     await release.Task;
                     Assert.Same(old, await resolver.ResolveAsync("fixture", new Uri("file:///")));
@@ -530,7 +534,7 @@ public sealed class ClrTests
             await loader.WaitAsync();
             isolated = ctx.Isolate("versioned");
             await isolated
-                .Plugin(await resolver.ResolveAsync("fixture", new Uri("file:///")), "direct-config")
+                .Plugin((await resolver.ResolveAsync("fixture", new Uri("file:///"))).Plugin, "direct-config")
                 .WaitAsync();
             // Entry options are public mutable configuration; HMR must use their latest value,
             // even before that value has reached the old fiber's raw/running configuration.
@@ -547,7 +551,7 @@ public sealed class ClrTests
             async () => await resolver.ReplaceAsync(
                 "fixture",
                 candidate,
-                async (previous, replacement) => await loader!.ReplacePluginAsync(previous, replacement)));
+                async pairs => await loader!.ReplacePluginsAsync(pairs)));
         var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => hmr.NotifyChangedAsync(modulePath));
         Assert.Equal(0, reloaded);
         Assert.Equal("bad candidate activation", failure.Message);
@@ -572,7 +576,7 @@ public sealed class ClrTests
             Assert.False(entry.Disabled);
             Assert.Equal(
                 2,
-                ctx.Registry.Get(await resolver.ResolveAsync("fixture", new Uri("file:///")))!.Fibers.Count);
+                ctx.Registry.Get((await resolver.ResolveAsync("fixture", new Uri("file:///"))).Plugin)!.Fibers.Count);
         });
         Assert.Equal(
             new[]
@@ -656,7 +660,7 @@ public sealed class ClrTests
             Assert.Equal("private-bundle-dependency", service.Dependency);
             isolated = ctx.Isolate("versioned");
             await isolated
-                .Plugin(await resolver.ResolveAsync("fixture", new Uri("file:///")), "direct-config")
+                .Plugin((await resolver.ResolveAsync("fixture", new Uri("file:///"))).Plugin, "direct-config")
                 .WaitAsync();
             Assert.Equal("v1", isolated.Get<IVersionedService>("versioned")!.Version);
         });
@@ -669,26 +673,26 @@ public sealed class ClrTests
             {
                 AssemblyPath = "missing.dll"
             },
-            (_, _) => throw new InvalidOperationException("must not switch")));
+            _ => throw new InvalidOperationException("must not switch")));
         await Assert.ThrowsAsync<TypeLoadException>(async () => await resolver.ReplaceAsync(
             "fixture",
             v2 with
             {
                 EntryType = "MissingEntry"
             },
-            (_, _) => throw new InvalidOperationException("must not switch")));
+            _ => throw new InvalidOperationException("must not switch")));
         var invalid = await Assert.ThrowsAsync<InvalidOperationException>(async () => await resolver.ReplaceAsync(
             "fixture",
             v2 with
             {
                 EntryType = "VersionedPlugin.InvalidEntry"
             },
-            (_, _) => throw new InvalidOperationException("must not switch")));
+            _ => throw new InvalidOperationException("must not switch")));
         Assert.Contains("no plugin", invalid.Message);
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await resolver.ReplaceAsync(
             "fixture",
             v2,
-            (_, _) => throw new InvalidOperationException("switch rejected before teardown")));
+            _ => throw new InvalidOperationException("switch rejected before teardown")));
         Assert.Equal(new[] { "start:v1:raw-config", "start:v1:direct-config" }, trace);
         Assert.Same(previousFiber, loader.Resolve("row").Fiber);
         Assert.Same(previousPlugin, await resolver.ResolveAsync("fixture", new Uri("file:///")));
@@ -700,10 +704,11 @@ public sealed class ClrTests
             await resolver.ReplaceAsync(
                 "fixture",
                 target,
-                async (previous, replacement) =>
+                async pairs =>
                 {
+                    var previous = pairs[0].Previous;
                     Assert.Same(previous, await resolver.ResolveAsync("fixture", new Uri("file:///")));
-                    await loader!.ReplacePluginAsync(previous, replacement);
+                    await loader!.ReplacePluginsAsync(pairs);
                     await context.RunAsync(async ctx =>
                     {
                         await loader.WaitAsync();
@@ -768,7 +773,7 @@ public sealed class ClrTests
             {
                 var plugin = await resolver.ResolveAsync("stable", new Uri("file:///"));
                 Assert.Same(plugin, await resolver.ResolveAsync("stable", new Uri("file:///")));
-                await ctx.Plugin(plugin, "configuration").WaitAsync();
+                await ctx.Plugin(plugin.Plugin, "configuration").WaitAsync();
                 Assert.Equal(source, ctx.Get<string>("bundle-path"));
                 Assert.Equal("shadow-copied-resource", ctx.Get<string>("bundle-resource"));
                 Assert.Equal("private-bundle-dependency", ctx.Get<string>("bundle-dependency"));

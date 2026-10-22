@@ -2,6 +2,22 @@
 
 [English](validation.md)
 
+## 候选模块身份，2026-10-22
+
+S3 使用 `687f282e8625c6b8d11ff58211a90524be2e4317` 的[限定候选例外](compatibility.zh.md#候选模块身份切片2026-10-22)，正式行为锁和历史原始测试清单不变。
+
+- 候选原始 `packages/boot/hmr/tests/package-manifest-dispatch.spec.ts` 的 32 项测试全部通过，未修改上游源码。候选证据与正式基线分开记录。
+- 旧实现已在真实 CLR 分裂夹具上复现 “Aliases of one CLR export must retain the same replacement export.” 拒绝。新增 `ClrIdentityTests` 覆盖三个已加载导入共享旧回调、别名分裂到不同导出、连续替换、禁用 Entry、direct Fiber 歧义、导入失败、激活失败、全部身份恢复和重试。
+- 原生身份测试还覆盖不同插件包装对象共享回调、Entry 活跃时 deployment 改映射、禁用后启用重新解析，以及 HMR 优先使用已加载文件名。既有 CLR 测试继续覆盖 collectible 卸载、持有引用、稳定文件、raw 配置、direct Fiber 和清理／恢复失败。
+- 最终 `python3 scripts/verify.py --dsh <固定-0.2.0-checkout> --upstream-test packages/boot/hmr/tests/modules.spec.ts` 门禁覆盖 Release 构建、原生测试、API 快照、生成客户端、CLI／客户端契约、conformance trace、固定基线原始测试和空白检查。既有 Windows Job Object 宿主退出测试在 macOS 按平台排除；本片没有增加 skip 或排除项。
+- 库内示例与独立 CLR 消费方源码已迁移到新的 resolver 返回值与回调列表。本次本机 macOS 执行不声称覆盖 Windows/Linux NuGet 多入口原生库消费、AOT 或原始 Core/Loader 测试源码门禁。
+
+执行结果：最终门禁 33 个请求步骤全部通过，原生测试 1,007 项通过，另有一项既有平台排除。固定正式基线的 HMR modules 原始测试 20 项通过，与候选 dispatch 的 32 项分开记录。门禁结束后 runtime、测试、示例和 API 快照字节未再改变；本段结果说明在门禁后补写。
+
+同批 Release NuGet 包在 `osx-arm64` 通过 `verify-clr-deployment.py` 的全部 12 步，包括 framework-dependent 目录、self-contained 单文件和 ASP.NET 宿主。三个已迁移独立消费方也均以零警告、零错误编译通过。仓库外 macOS 适配版 `verify-clr-multi-entry.py` 的 25 步全部通过，保留了全部消费方断言：共享／嵌套程序集、native 依赖冲突、候选恢复、生成 Remote 客户端的真实 HTTP 调用、契约撤销、NuGet 安装和保留 worker 时的资源／发布检查。适配仅用两个独立编译的 Mach-O native probe 库及 macOS RID 替代脚本中的 Windows/Linux 系统库；C# 夹具、客户端程序和库源码均未为本次运行修改。这是 macOS 适配证据，不是原样 Windows/Linux 脚本的执行结果。
+
+机器路径、原始日志和调查环境留在本机。公开 API 迁移已同步到双语作者指南和经审阅的快照。
+
 ## 候选管理持久化，2026-10-22
 
 S2 依据[兼容性说明中的候选例外](compatibility.zh.md#候选管理持久化分片2026-10-22)，固定源码为 `687f282e8625c6b8d11ff58211a90524be2e4317`。正式行为锁和历史源码测试清单保持不变。执行环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。

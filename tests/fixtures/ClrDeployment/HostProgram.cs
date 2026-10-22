@@ -48,7 +48,7 @@ static async Task<int> RunAsync(string[] args)
         {
             ctx.Provide("trace", trace);
             var plugin = await resolver.ResolveAsync("external", new Uri("file:///"));
-            var fiber = ctx.Plugin(plugin);
+            var fiber = ctx.Plugin(plugin.Plugin);
             await fiber.WaitAsync();
             if (fiber.State != FiberState.Active)
                 throw new InvalidOperationException("External plugin did not activate.");

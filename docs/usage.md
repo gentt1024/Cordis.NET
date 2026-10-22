@@ -52,7 +52,7 @@ code to another complete directory and retain old files while they have consumer
 
 ```csharp
 await resolver.ReplaceAsync("my-plugin", nextDefinition,
-    (oldPlugin, newPlugin) => new ValueTask(loader.ReplacePluginAsync(oldPlugin, newPlugin)));
+    pairs => new ValueTask(loader.ReplacePluginsAsync(pairs)));
 ```
 
 Stop the owning contexts before disposing the resolver. Inspect `ClrUnloadObservation` for
@@ -62,7 +62,8 @@ use the [standard CLR artifact workflow](clr-artifacts.md). Explicit `ShadowCopy
 for quiescent external development outputs that must later be rebuilt in place.
 Use HMR's serialized mutation queue to coordinate code and configuration changes.
 `hmr.TrackLoader(loader, resolver.LocateAsync)` connects entry-resolution diagnostics without
-loading extra assemblies; register replacement callbacks and dependency edges explicitly.
+loading extra assemblies. It prefers the loaded module's filename and uses the locator only
+when that identity has no filename. Register replacement callbacks and dependency edges explicitly.
 
 Without the `Cordis.NET.JavaScript` package, evaluating a raw `!!js` fails explicitly. Pass
 `new JintExpressionEvaluator()` to Loader, ApplicationBoot or ProfileSession for real JS.

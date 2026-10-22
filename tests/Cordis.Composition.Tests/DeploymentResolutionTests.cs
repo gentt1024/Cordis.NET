@@ -68,6 +68,54 @@ public sealed class DeploymentResolutionTests
     }
 
     [Fact]
+    public async Task Live_entry_keeps_import_identity_when_deployment_mapping_changes_until_it_restarts()
+    {
+        using var fixture = new Fixture();
+        await using var context = new Context();
+        var directory = fixture.Package("plugin", "plugin");
+        var packages = new DeploymentPackageResolver(new(fixture.Profiles, fixture.Active,
+            [new("plugin", directory, "1", fixture.Installation, DeploymentPackageScope.Installation)]));
+        var started = new List<string>();
+        Plugin<object?> Version(string value) => new()
+        {
+            Apply = (_, _) => started.Add(value)
+        };
+        var imports = new StaticModuleResolver().Register("old", Version("old")).Register("new", Version("new"));
+        var resolver = new DeploymentModuleResolver(packages, imports).Register(directory, ".", "old");
+        Loader? loader = null;
+        await context.RunAsync(async ctx =>
+        {
+            loader = new Loader(ctx, resolver, new Uri(Path.Combine(fixture.Active, "entry.cs")));
+            await loader.Root.UpdateAsync([new() { Id = "row", Name = "plugin" }]);
+            await loader.WaitAsync();
+        });
+        var entry = loader!.Resolve("row");
+        var original = entry.Module!;
+        resolver.Register(directory, ".", "new");
+        var next = await resolver.ResolveAsync("plugin", loader.BaseUri);
+        Assert.NotSame(original, next);
+        Assert.Same(original, entry.Module);
+        Assert.Equal(["old"], started);
+        var replacement = new ResolvedModule(Version("hmr"));
+        await loader.ReplacePluginsAsync([new(original, replacement)]);
+        Assert.Same(replacement, entry.Module);
+        Assert.Equal(["old", "hmr"], started);
+        await loader.UpdateAsync("row", new()
+        {
+            Disabled = true
+        });
+        await loader.WaitAsync();
+        Assert.Null(entry.Module);
+        await loader.UpdateAsync("row", new()
+        {
+            Disabled = false
+        });
+        await loader.WaitAsync();
+        Assert.Same(next, entry.Module);
+        Assert.Equal(["old", "hmr", "new"], started);
+    }
+
+    [Fact]
     public void ComputesImmutableGraphWithoutMaterialization()
     {
         using var f = new Fixture();
@@ -309,11 +357,11 @@ public sealed class DeploymentResolutionTests
                 .Register(shared, ".", "shared-plugin");
         var parent = new Uri(Path.Combine(linked, "entry.cs"));
         var loaded = await modules.ResolveAsync("peer", parent);
-        Assert.Same(plugin, loaded);
+        Assert.Same(plugin, loaded.Plugin);
         var removed = new DeploymentGeneration(f.Profiles, f.Active, entries);
         packages.Replace(removed);
         Assert.Equal(native, packages.PackageDirectory("peer", parent));
-        Assert.Same(plugin, loaded);
+        Assert.Same(plugin, loaded.Plugin);
         packages.Replace(first);
         Assert.Same(loaded, await modules.ResolveAsync("peer", parent));
         packages.Replace(removed);
@@ -455,7 +503,7 @@ public sealed class DeploymentResolutionTests
                     alias,
                     ".",
                     "mapped");
-            Assert.Same(plugin, await resolver.ResolveAsync("plugin", new Uri(Path.Combine(f.Active, "entry.cs"))));
+            Assert.Same(plugin, (await resolver.ResolveAsync("plugin", new Uri(Path.Combine(f.Active, "entry.cs")))).Plugin);
         }
         finally
         {
@@ -546,7 +594,7 @@ public sealed class DeploymentResolutionTests
         var modules = new StaticModuleResolver().Register("deployed:plugin", expected);
         var resolver = new DeploymentModuleResolver(packages, modules).Register(directory, ".", "deployed:plugin");
         var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
-        Assert.Same(expected, await resolver.ResolveAsync("plugin-package", parent));
+        Assert.Same(expected, (await resolver.ResolveAsync("plugin-package", parent)).Plugin);
         Assert.Equal(directory, packages.PackageOf("plugin-package/private", parent)!.Directory);
         await Assert.ThrowsAsync<FileNotFoundException>(async () =>
             await resolver.ResolveAsync("plugin-package/private", parent));

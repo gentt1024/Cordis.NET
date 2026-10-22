@@ -8,6 +8,49 @@ public sealed class HmrModuleTests
 {
     private sealed record LiveSettings(int Limit, string Tag);
 
+    private sealed class LocatedResolver(ResolvedModule module) : IModuleResolver
+    {
+        public ValueTask<ResolvedModule> ResolveAsync(string specifier, Uri baseUri,
+            CancellationToken cancellationToken = default) => ValueTask.FromResult(module);
+    }
+
+    [Fact]
+    public async Task Tracking_prefers_the_loaded_filename_over_a_changed_or_missing_locator()
+    {
+        await using var context = new Context();
+        await using var hmr = new HmrCoordinator();
+        var module = new ResolvedModule(new Plugin<object?> { Apply = (_, _) => { } }, "actual.dll");
+        Loader? loader = null;
+        await context.RunAsync(async ctx =>
+        {
+            loader = new Loader(ctx, new LocatedResolver(module));
+            await loader.Root.UpdateAsync([new() { Id = "row", Name = "plugin" }]);
+            await loader.WaitAsync();
+        });
+        var calls = 0;
+        var warnings = new List<object?>();
+        hmr.Warning += warnings.Add;
+        using var tracking = hmr.TrackLoader(loader!, (_, _) =>
+        {
+            calls++;
+            throw new FileNotFoundException("new mapping is missing");
+        });
+        await hmr.NotifyChangedAsync("actual.dll");
+        Assert.Equal(0, calls);
+        Assert.Empty(warnings);
+        Assert.Same(module, loader!.Resolve("row").Module);
+        await loader.UpdateAsync("row", new()
+        {
+            Disabled = true
+        });
+        await loader.WaitAsync();
+        Assert.Null(loader.Resolve("row").Module);
+        await hmr.NotifyChangedAsync("actual.dll");
+        Assert.Equal(1, calls);
+        Assert.IsType<FileNotFoundException>(Assert.Single(warnings));
+    }
+
+
     [Fact]
     public async Task Replacement_and_recovery_mint_fresh_config_references_and_freeze_retained_generations()
     {

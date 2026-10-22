@@ -68,7 +68,7 @@ static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string se
         await resolver.ReplaceAsync(
             "probes",
             Definition(secondBundle),
-            async (old, next) => await loader!.ReplacePluginAsync(old, next));
+            async pairs => await loader!.ReplacePluginsAsync(pairs));
         Console.WriteLine("v1 provider replaced; unload requested=" + resolver.Unloads[0].UnloadRequested);
         await root.RunAsync(async ctx =>
         {
