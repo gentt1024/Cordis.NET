@@ -54,6 +54,8 @@ Mutations require the current `If-Cordis-Generation`; reads can send it too. The
 authorization still controls the physical `/remote` carrier. Required nullable DTO fields are
 sent explicitly as null, so the generated .NET client validates the same contract the service emits.
 
+S4 adds nullable `restartReason` to the standard `PluginManagerChange` and `PackageChange` wire results. Generated .NET and browser clients use this field from the same declaration model. It is null unless application requires restart. `no-hmr` means no lifecycle coordinator; manual sessions with watching disabled still coordinate. `package-moved` covers a retained immutable mapping or artifact change, `host-module` protects installation code, and `unmanaged-plugin` protects plugin instances outside the operation's ownership. `module-comparison` is reserved for a module comparison that cannot establish safe replacement. Saved direct updates retain the old route; the supported online path is removal followed by installation. A failed activation may leave `installed` and `selected` true, with application `failed`; handle those fields independently.
+
 ## Generated client use
 
 The build tool `tools/Cordis.ClientAssets` exports the actual runtime contributions as

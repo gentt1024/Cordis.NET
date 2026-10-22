@@ -403,6 +403,22 @@ public sealed partial class PackageManagementTests
         Assert.False(result.Selected);
         Assert.Equal("failed", result.Application);
         Assert.Equal(edited, await File.ReadAllTextAsync(path));
+        var retry = await owner.RemovePackageAsync(host.Toolchain, "independentplugin");
+        Assert.Null(retry.Error);
+        Assert.Equal("applied", retry.Application);
+        Assert.False(retry.Installed);
+        Assert.Equal(
+            "saved while removing",
+            JsonNode.Parse(await File.ReadAllTextAsync(path))!["description"]!.GetValue<string>());
+        var reinstall = await owner.InstallPackageAsync(
+            host.Toolchain,
+            new("independentplugin", "1.0.0", Feed),
+            "after-removal-conflict",
+            true);
+        Assert.Null(reinstall.Error);
+        Assert.Equal("applied", reinstall.Application);
+        Assert.Equal("IndependentPlugin", reinstall.Target);
+        Assert.Null((await owner.SetBundleEnabledAsync("IndependentPlugin", false)).Error);
     }
 
     [Fact]
@@ -452,6 +468,11 @@ public sealed partial class PackageManagementTests
 
     private sealed class ObservedPackageToolchain(IProfilePackageToolchain inner) : IProfilePackageToolchain
     {
+        public Task<IReadOnlyList<ResolvedModule>> GetLoadedModulesAsync(
+            string name,
+            CancellationToken cancellationToken = default) =>
+            inner.GetLoadedModulesAsync(name, cancellationToken);
+
         public Func<PreparedPackage, Task>? AfterPrepare
         {
             get;

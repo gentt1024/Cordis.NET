@@ -19,6 +19,7 @@ public sealed class ProfileSession : IAsyncDisposable
     private readonly Func<Task<DeploymentGeneration>>? refreshDeployment;
     private readonly string[] profilePaths;
     private string? successfulProfileInputs;
+    private Exception? retirementFailure;
     private bool disposed;
 
     private static StringComparer PathComparer =>
@@ -236,19 +237,21 @@ public sealed class ProfileSession : IAsyncDisposable
                 RunExclusiveAsync = session.queue.RunExclusiveAsync,
                 ReconcileAsync = async requiredEntries =>
                 {
-                    await session.RefreshCoreAsync(requiredEntries);
-                    if (session.RequiresRestart)
+                    var result = await session.RefreshCoreAsync(requiredEntries);
+                    if (result.RequiresRestart)
                         throw new DeploymentRestartRequiredException(
-                            "The profile deployment requires a host restart before configuration can be reconciled.");
-                    return await ApplicationBoot.AuditAsync(session.Loader, session.required);
+                            "The profile deployment requires a host restart before configuration can be reconciled.",
+                            result.RestartReason ?? result.Pending[0].Reason);
+                    return result.Warnings;
                 },
                 ReconcileCandidateAsync = async (candidate, requiredEntries) =>
                 {
-                    await session.RefreshCoreAsync(requiredEntries, candidate);
-                    if (session.RequiresRestart)
+                    var result = await session.RefreshCoreAsync(requiredEntries, candidate);
+                    if (result.RequiresRestart)
                         throw new DeploymentRestartRequiredException(
-                            "The profile deployment requires a host restart before configuration can be reconciled.");
-                    return await ApplicationBoot.AuditAsync(session.Loader, session.required);
+                            "The profile deployment requires a host restart before configuration can be reconciled.",
+                            result.RestartReason ?? result.Pending[0].Reason);
+                    return result.Warnings;
                 },
             };
             await session.Context.RunAsync(ctx =>
@@ -275,52 +278,101 @@ public sealed class ProfileSession : IAsyncDisposable
         await boot.ConfigureAwait(false) && (application is null || await application.ConfigureAwait(false));
 
     /// <summary>Serialize an explicit refresh with automatic configuration and code reloads.</summary>
-    public Task RefreshAsync() => queue.RunExclusiveAsync(() => RefreshCoreAsync());
+    public async Task<ProfileReloadResult> RefreshAsync()
+    {
+        var result = new ProfileReloadResult([], []);
+        await queue.RunExclusiveAsync(async () => result = await RefreshCoreAsync());
+        return result;
+    }
 
-    private async Task RefreshCoreAsync(IReadOnlySet<string>? editedEntries = null, ProfileCandidate? candidate = null)
+    private async Task<ProfileReloadResult> RefreshCoreAsync(
+        IReadOnlySet<string>? editedEntries = null,
+        ProfileCandidate? candidate = null)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         try
         {
+            if (retirementFailure is not null)
+                throw new InvalidOperationException(
+                    "A previous profile retirement did not complete; a host restart is required before retrying.",
+                    retirementFailure);
+            var priorEntries = new Dictionary<string, EntrySnapshot>(StringComparer.Ordinal);
+            await Context.RunAsync(_ =>
+            {
+                foreach (var entry in Loader.Entries())
+                    priorEntries.Add(
+                        entry.Id,
+                        new(
+                            entry,
+                            entry.Fiber,
+                            entry.Fiber?.State,
+                            ConfigurationFile.Write(entry.Options, true),
+                            entry.LastError));
+                return Task.CompletedTask;
+            });
+            var priorFailures = await ApplicationBoot.AuditAsync(Loader);
             var inputs = await ProfileInputSnapshotAsync();
             var mappings = MappingSnapshot();
+            var refresh = candidate?.Composition ?? await ProfileComposition.RefreshAsync(launch);
+            var patches = ProfileComposition.Flatten(refresh.Layers);
             var configurationChanged = candidate is not null || inputs != successfulProfileInputs ||
-                mappings != successfulMappings;
-            if (configurationChanged)
+                mappings != successfulMappings ||
+                ConfigurationFile.Write(patches, true) != ConfigurationFile.Write(Include.Options.Patches ?? [], true);
+            var requiredEntries = new HashSet<string>(required ?? new HashSet<string>(), StringComparer.Ordinal);
+            if (editedEntries is not null)
+                requiredEntries.UnionWith(editedEntries);
+            requiredEntries.UnionWith(NewBundleRequiredIds(refresh));
+            DeploymentGeneration? successor = null;
+            try
             {
                 if (refreshDeployment is not null)
                 {
-                    try
-                    {
-                        packages!.Replace(await refreshDeployment());
-                    }
-                    catch (DeploymentRestartRequiredException)
-                    {
-                        await RequestRestartAsync();
-                        return;
-                    }
+                    successor = await refreshDeployment();
+                    packages!.ValidateReplacement(successor);
+                    configurationChanged |= !SameGeneration(packages.Generation, successor);
                 }
-                else if (MappingsRequireRestart())
+                else if (MappingRestartReason() is { } reason)
                 {
-                    await RequestRestartAsync();
-                    return;
+                    return await RequestRestartAsync(reason);
                 }
+            }
+            catch (DeploymentRestartRequiredException error)
+            {
+                return await RequestRestartAsync(error.Reason);
+            }
 
-                // Bundle selection only changes composition. An additive resolver generation
-                // can make its new code available without restarting the existing modules.
-                var refresh = candidate?.Composition ?? await ProfileComposition.RefreshAsync(launch);
-                var requiredEntries = editedEntries is null
-                    ? required
-                    : new HashSet<string>(
-                        (required ?? new HashSet<string>()).Concat(editedEntries),
-                        StringComparer.Ordinal);
-                await WarnInactiveAsync(
-                    candidate is null
-                        ? await ApplicationBoot.ReconcileAsync(
-                            Include,
-                            ProfileComposition.Flatten(refresh.Layers),
-                            requiredEntries)
-                        : await ApplicationBoot.ReconcileAsync(Include, candidate, requiredEntries));
+            if (successor is not null)
+            {
+                var basis = candidate is null
+                    ? ConfigurationFile.ParseEntries(
+                        await File.ReadAllTextAsync(Include.Filename),
+                        Path.GetExtension(Include.Filename) == ".json")
+                    : ConfigurationFile.ParseEntries(candidate.ConfigurationJson, true);
+                var rows = candidate is null ? EntryPatches.Apply(basis, patches) : basis;
+                var stopped = new List<StoppedRow>();
+                var cleanupFailed = false;
+                try
+                {
+                    await StopDroppedRowsAsync(rows, stopped, () => cleanupFailed = true);
+                    packages!.Replace(successor);
+                }
+                catch (Exception error)
+                {
+                    if (cleanupFailed)
+                        retirementFailure = error;
+                    else
+                        await RestoreRowsAsync(stopped);
+                    if (error is DeploymentRestartRequiredException restart)
+                        return await RequestRestartAsync(restart.Reason);
+                    throw;
+                }
+            }
+
+            if (configurationChanged)
+            {
+                _ = candidate is null
+                    ? await ApplicationBoot.ReconcileAsync(Include, patches, requiredEntries)
+                    : await ApplicationBoot.ReconcileAsync(Include, candidate, requiredEntries);
                 await AcceptBundlesAsync(refresh);
                 successfulProfileInputs = candidate is null ? inputs : null;
                 successfulMappings = mappings;
@@ -337,11 +389,13 @@ public sealed class ProfileSession : IAsyncDisposable
                 // never recorded as successful and callers can observe/retry that same input.
                 ConfigurationFile.ParseEntries(text, Path.GetExtension(include.Filename) == ".json");
                 await include.RefreshAsync();
-                await WarnInactiveAsync(await ApplicationBoot.AuditAsync(Loader, required));
                 successfulInputs[include.Filename] = text;
                 configurationChanged = true;
             }
 
+            var warnings = await RetryFailedImportsAsync(priorEntries, requiredEntries);
+            await JudgeRefreshAsync(priorEntries, priorFailures, warnings);
+            await WarnInactiveAsync(warnings);
             await SynchronizeWatchesAsync();
             RequiresRestart = false;
             LastError = null;
@@ -353,6 +407,7 @@ public sealed class ProfileSession : IAsyncDisposable
                     return Task.CompletedTask;
                 });
             Refreshed?.Invoke();
+            return new(warnings, []);
         }
         catch (Exception error)
         {
@@ -360,6 +415,195 @@ public sealed class ProfileSession : IAsyncDisposable
             LastError = error;
             throw;
         }
+    }
+
+    private sealed record StoppedRow(EntryGroup Group, EntryOptions Options, int Index);
+
+    private sealed record EntrySnapshot(Entry Entry, Fiber? Fiber, FiberState? State, string Options, Exception? Error);
+
+    private async Task StopDroppedRowsAsync(
+        IReadOnlyList<EntryOptions> rows,
+        List<StoppedRow> stopped,
+        Action cleanupFailed)
+    {
+        await Context.RunAsync(async _ =>
+        {
+            var listed = RowIds(rows);
+            var dropped = Include.Store.Values.Where(entry => !listed.Contains(entry.Options.Id)).ToHashSet();
+            var topmost = dropped
+                .Where(entry =>
+                {
+                    for (var owner = entry.Parent.Owner;owner is not null;owner = owner.Parent.Owner)
+                        if (dropped.Contains(owner))
+                            return false;
+                    return true;
+                })
+                .ToArray();
+            // Capture every original position before any removal shifts another row's index.
+            var snapshots = topmost
+                .Select(entry => (Entry: entry, Snapshot: new StoppedRow(
+                    entry.Parent,
+                    Data.Entries(Data.Clone(new[] { entry.Options }))[0],
+                    entry.Parent.Data.IndexOf(entry.Options))))
+                .ToArray();
+            var droppedFibers = dropped.Select(entry => entry.Fiber).OfType<Fiber>().ToHashSet();
+            var fibers = Loader
+                .Entries()
+                .Select(entry => entry.Fiber)
+                .OfType<Fiber>()
+                .Distinct()
+                .Select(fiber => (Fiber: fiber, Failed: fiber.State is FiberState.Failed or FiberState.Disposed,
+                    PriorErrors: droppedFibers.Contains(fiber) ? 0 : fiber.CleanupErrors.Count))
+                .ToArray();
+            try
+            {
+                foreach (var (entry, snapshot) in snapshots)
+                {
+                    stopped.Add(snapshot);
+                    await entry.Parent.RemoveAsync(entry.Options.Id);
+                }
+
+                foreach (var (fiber, failed, _) in fibers)
+                    try
+                    {
+                        await fiber.WaitAsync();
+                    }
+                    catch when (failed)
+                    {
+                    }
+
+                await Loader.WaitAsync();
+                var errors = fibers
+                    .SelectMany(item => item.Fiber.CleanupErrors.Skip(item.PriorErrors))
+                    .Distinct()
+                    .ToArray();
+                if (errors.Length != 0)
+                    throw new AggregateException("Profile row retirement did not complete.", errors);
+            }
+            catch
+            {
+                // A rejected disposer may still own effects. Recreating rows could overlap those effects.
+                cleanupFailed();
+                throw;
+            }
+        });
+    }
+
+    private async Task RestoreRowsAsync(IReadOnlyList<StoppedRow> stopped)
+    {
+        try
+        {
+            await Context.RunAsync(async _ =>
+            {
+                foreach (var row in stopped.OrderBy(row => row.Index))
+                {
+                    row.Group.Data.Insert(Math.Clamp(row.Index, 0, row.Group.Data.Count), row.Options);
+                    await row.Group.CreateAsync(row.Options);
+                }
+
+                await Loader.WaitAsync();
+                foreach (var warning in await ApplicationBoot.AuditAsync(Loader))
+                    Report(new StartupException([warning]));
+            });
+        }
+        catch (Exception recovery)
+        {
+            // Publication remains the primary failure even when old code cannot start again.
+            Report(recovery);
+        }
+    }
+
+    private static HashSet<string> RowIds(IEnumerable<EntryOptions> rows)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+
+        void Visit(IEnumerable<EntryOptions> entries)
+        {
+            foreach (var row in entries)
+            {
+                ids.Add(row.Id);
+                if (row.Name is "cordis:group" || row.Group)
+                    Visit(Data.Entries(row.Config));
+            }
+        }
+
+        Visit(rows);
+        return ids;
+    }
+
+    private static bool SameGeneration(DeploymentGeneration before, DeploymentGeneration after) =>
+        before.ProfilesDirectory == after.ProfilesDirectory && before.ProfileDirectory == after.ProfileDirectory &&
+        before.Entries.SequenceEqual(after.Entries) && before.LinkedRoots.SequenceEqual(after.LinkedRoots) &&
+        before.LocalPackages.Count == after.LocalPackages.Count && before.LocalPackages.All(pair =>
+            after.LocalPackages.TryGetValue(pair.Key, out var path) && pair.Value == path);
+
+    private HashSet<string> NewBundleRequiredIds(ProfileRefresh refresh)
+    {
+        var requiredIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var name in refresh.CurrentBundles.Except(SelectedBundles, StringComparer.Ordinal))
+        {
+            if (!launch.InstallationBundles.TryGetValue(name, out var directory) &&
+                !(launch.LocalBundles?.TryGetValue(name, out directory) ?? false))
+                continue;
+            var sources = PackageManifest
+                .Read(Path.Combine(directory!, "package.json"))
+                .BundlePatchFiles
+                .Select(path => Path.GetFullPath(Path.Combine(directory!, path)))
+                .ToHashSet(PathComparer);
+            foreach (var patch in refresh
+                         .Layers.Where(layer => sources.Contains(layer.Source))
+                         .SelectMany(layer => layer.Patches))
+                if (patch.TryGetValue("insert", out var inserted) && Data.Truthy(inserted))
+                    requiredIds.UnionWith(RowIds(Data.Entries(inserted)));
+        }
+
+        return requiredIds;
+    }
+
+    private async Task<IReadOnlyList<EntryDiagnostic>> RetryFailedImportsAsync(
+        IReadOnlyDictionary<string, EntrySnapshot> priorEntries,
+        IReadOnlySet<string>? requiredEntries)
+    {
+        await Context.RunAsync(async _ =>
+        {
+            foreach (var entry in Loader.Entries().Where(entry => entry.Fiber is null && entry.LastError is not null))
+                if (priorEntries.TryGetValue(entry.Id, out var prior) && prior.Fiber is null &&
+                    ReferenceEquals(prior.Entry, entry) && ReferenceEquals(prior.Error, entry.LastError))
+                    await entry.RefreshAsync();
+        });
+        return await ApplicationBoot.AuditAsync(Loader, requiredEntries);
+    }
+
+    private async Task JudgeRefreshAsync(
+        IReadOnlyDictionary<string, EntrySnapshot> priorEntries,
+        IReadOnlyList<EntryDiagnostic> priorFailures,
+        IReadOnlyList<EntryDiagnostic> failures)
+    {
+        EntryDiagnostic[] introduced = [];
+        await Context.RunAsync(_ =>
+        {
+            introduced = failures
+                .Where(failure =>
+                {
+                    if (!priorEntries.TryGetValue(failure.Id, out var snapshot) || snapshot.State == FiberState.Active)
+                        return true;
+                    var entry = Loader.Resolve(failure.Id);
+                    return !ReferenceEquals(snapshot.Entry, entry) || !ReferenceEquals(snapshot.Fiber, entry.Fiber) ||
+                        snapshot.State != entry.Fiber?.State ||
+                        snapshot.Options != ConfigurationFile.Write(entry.Options, true) ||
+                        !priorFailures.Any(old => old.Id == failure.Id && old.Module == failure.Module &&
+                            old.State == failure.State && old.Error?.Message == failure.Error?.Message &&
+                            old.Missing.SequenceEqual(failure.Missing));
+                })
+                .Select(failure => failure with
+                {
+                    Required = true
+                })
+                .ToArray();
+            return Task.CompletedTask;
+        });
+        if (introduced.Length != 0)
+            throw new StartupException(introduced);
     }
 
     private async Task<Include[]> IncludesAsync()
@@ -447,7 +691,7 @@ public sealed class ProfileSession : IAsyncDisposable
             },
             true);
 
-    private bool MappingsRequireRestart()
+    private string? MappingRestartReason()
     {
         static bool Changed(IReadOnlyDictionary<string, string> before, IReadOnlyDictionary<string, string>? after) =>
             before.Any(pair =>
@@ -455,15 +699,21 @@ public sealed class ProfileSession : IAsyncDisposable
                     Path.GetFullPath(pair.Value),
                     Path.GetFullPath(path)));
 
-        return Changed(acceptedInstallation, launch.InstallationBundles) || Changed(acceptedLocal, launch.LocalBundles);
+        if (Changed(acceptedInstallation, launch.InstallationBundles))
+            return "host-module";
+        return acceptedLocal.Any(pair => launch.LocalBundles?.TryGetValue(pair.Key, out var path) == true &&
+            !PathComparer.Equals(Path.GetFullPath(pair.Value), Path.GetFullPath(path)))
+            ? "package-moved"
+            : null;
     }
 
-    private async Task RequestRestartAsync()
+    private async Task<ProfileReloadResult> RequestRestartAsync(string reason)
     {
         RequiresRestart = true;
         RestartRequired?.Invoke();
         if (queue.RestartHost is { } restart)
             await restart();
+        return new([], [], reason);
     }
 
     private void Report(Exception error)

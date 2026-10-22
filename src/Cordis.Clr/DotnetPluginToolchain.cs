@@ -29,7 +29,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     };
 
     private readonly Dictionary<string, string> bundles = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> retired = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> withdrawn = new(StringComparer.OrdinalIgnoreCase);
     private readonly string[] sources;
 
     /// <summary>Initialize explicit routes for installed packages recorded in the profile, without loading their code.</summary>
@@ -64,7 +64,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             }
     }
 
-    /// <summary>Supply this live read-only map as ProfileLaunch.LocalBundles. Retired routes remain reserved until restart.</summary>
+    /// <summary>Supply this live read-only map as ProfileLaunch.LocalBundles. Removal releases the package route.</summary>
     public IReadOnlyDictionary<string, string> Bundles
     {
         get;
@@ -81,7 +81,8 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             PackageManifest.Read(Path.Combine(profileDirectory, "package.json")).Raw.GetValueOrDefault("dependencies")
                 as IDictionary<string, object?>;
         return bundles
-            .Keys.Concat(dependencies?.Keys ?? [])
+            .Keys.Concat(withdrawn)
+            .Concat(dependencies?.Keys ?? [])
             .FirstOrDefault(existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase)) ?? name;
     }
 
@@ -178,9 +179,6 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             throw new InvalidOperationException("Package SDK preparation requires host build-execution approval.");
         var request = inspection.Request;
         ValidateIdentity(request.Name, request.Version);
-        if (retired.Contains(request.Name))
-            throw new DeploymentRestartRequiredException(
-                "A retired package identity requires a fresh resolver before reinstalling.");
         var bytes = await AcquireAsync(request, cancellationToken);
         if (Convert.ToHexString(SHA256.HashData(bytes)) != inspection.ContentHash)
             throw new InvalidOperationException("Package contents changed after inspection.");
@@ -204,6 +202,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                         "PropertyGroup",
                         new XElement("TargetFramework", "net10.0"),
                         new XElement("CopyLocalLockFileAssemblies", "true"),
+                        new XElement("DebugType", "none"),
                         new XElement("ManagePackageVersionsCentrally", "false"),
                         new XElement("ImportDirectoryBuildProps", "false"),
                         new XElement("ImportDirectoryBuildTargets", "false"),
@@ -353,7 +352,30 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         var destination = PackageDirectory(package.Name, package.Version);
         var receipt = BundleFiles.ReceiptPath(destination);
         RequireOwned(destination, packagesDirectory);
-        if (Directory.Exists(destination) || File.Exists(destination))
+        RequireOwned(receipt, packagesDirectory);
+        if (Directory.Exists(destination))
+        {
+            BundleFiles.Verify(destination);
+            VerifyDeploymentIdentity(package.Name, destination);
+            if (!HasSameContents(package.Directory, destination))
+                throw new DeploymentRestartRequiredException(
+                    "The retained immutable deployment differs from the prepared package; use another exact version.",
+                    "package-moved");
+            try
+            {
+                if (!bundles.ContainsKey(package.Name))
+                    Register(package.Name, destination);
+                Directory.Delete(package.Directory, recursive: true);
+            }
+            catch (Exception error)
+            {
+                throw new PackageToolException(error.Message, destination, published: true);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        if (File.Exists(destination))
             throw new PackageToolException(
                 "A deployment directory already exists; inspect its residual state before retrying.",
                 destination);
@@ -391,9 +413,17 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     public async Task RemoveAsync(string name, CancellationToken cancellationToken = default)
     {
         if (!bundles.TryGetValue(name, out var directory))
-            throw new KeyNotFoundException("No profile-owned CLR deployment is registered.");
+        {
+            if (!withdrawn.Contains(name))
+                throw new KeyNotFoundException("No profile-owned CLR deployment is registered.");
+            cancellationToken.ThrowIfCancellationRequested();
+            return;
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         RequireOwned(directory, packagesDirectory);
+        BundleFiles.Verify(directory);
+        VerifyDeploymentIdentity(name, directory);
         var metadata = (EntryOptions)ConfigurationFile.Parse(
             File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
             true)!;
@@ -403,13 +433,58 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             await resolver.RemoveAsync(ModuleName(name, subpath), CancellationToken.None);
         }
 
-        retired.Add(name);
-        // Keep both artifact and route: other processes, lazy loads and Workers may still use the files.
+        var registeredName = bundles.Keys.First(existing => string.Equals(
+            existing,
+            name,
+            StringComparison.OrdinalIgnoreCase));
+        bundles.Remove(name);
+        withdrawn.Add(registeredName);
+        // Keep artifacts: other processes, lazy loads and Workers may still use the files.
     }
 
-    private void Register(string name, string directory)
+    /// <inheritdoc />
+    public Task<IReadOnlyList<ResolvedModule>> GetLoadedModulesAsync(
+        string name,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!bundles.TryGetValue(name, out var directory))
+            return Task.FromResult<IReadOnlyList<ResolvedModule>>([]);
+        RequireOwned(directory, packagesDirectory);
         BundleFiles.Verify(directory);
+        var metadata = (EntryOptions)ConfigurationFile.Parse(
+            File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
+            true)!;
+        return resolver.GetLoadedModulesAsync(
+            ReadExports(metadata).Select(export => ModuleName(name, export.Subpath)).ToArray(),
+            cancellationToken);
+    }
+
+    private static bool HasSameContents(string prepared, string retained)
+    {
+        BundleFiles.ValidateTree(prepared);
+        BundleFiles.ValidateTree(retained);
+        var expected = Directory
+            .GetFiles(retained, "*", SearchOption.AllDirectories)
+            .ToDictionary(file => Path.GetRelativePath(retained, file), StringComparer.Ordinal);
+        var actual = Directory.GetFiles(prepared, "*", SearchOption.AllDirectories);
+        if (expected.Count != actual.Length)
+            return false;
+        foreach (var file in actual)
+        {
+            if (!expected.TryGetValue(Path.GetRelativePath(prepared, file), out var previous))
+                return false;
+            using var first = File.OpenRead(file);
+            using var second = File.OpenRead(previous);
+            if (!SHA256.HashData(first).AsSpan().SequenceEqual(SHA256.HashData(second)))
+                return false;
+        }
+
+        return true;
+    }
+
+    private void VerifyDeploymentIdentity(string name, string directory)
+    {
         var identity = PackageManifest.Read(Path.Combine(directory, "package.json"));
         if (!string.Equals(
                 identity.Raw.GetValueOrDefault("name") as string,
@@ -421,6 +496,12 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                 PackageDirectory(name, version),
                 OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             throw new InvalidDataException("The deployed package identity differs from its version directory.");
+    }
+
+    private void Register(string name, string directory)
+    {
+        BundleFiles.Verify(directory);
+        VerifyDeploymentIdentity(name, directory);
         var metadata = (EntryOptions)ConfigurationFile.Parse(
             File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
             true)!;
@@ -429,6 +510,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                 ModuleName(name, subpath),
                 new(directory, RequiredString(metadata, "assembly"), entryType));
         bundles.Add(name, directory);
+        withdrawn.Remove(name);
     }
 
     /// <summary>Physically delete one unreferenced version after all hosts, Workers and other file consumers have stopped.</summary>

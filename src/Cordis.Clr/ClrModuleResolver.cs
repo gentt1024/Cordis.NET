@@ -281,6 +281,30 @@ public sealed class ClrModuleResolver : IModuleResolver, ITypertArtifactResolver
         }
     }
 
+    /// <summary>Snapshot loaded imports for the requested specifiers without loading inactive modules.</summary>
+    /// <remarks>The returned imports retain their plugin objects. Release the snapshot after checking runtime ownership.</remarks>
+    public async Task<IReadOnlyList<ResolvedModule>> GetLoadedModulesAsync(
+        IReadOnlyCollection<string> specifiers,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(specifiers);
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            return Array.AsReadOnly(
+                specifiers
+                    .Distinct(StringComparer.Ordinal)
+                    .Where(loaded.ContainsKey)
+                    .Select(specifier => loaded[specifier].Module!)
+                    .ToArray());
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
     async ValueTask<TypertContribution?> ITypertArtifactResolver.ResolveAsync(
         string specifier,
         Uri baseUri,

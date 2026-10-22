@@ -36,6 +36,7 @@ public sealed partial class PackageManagementTests
             Assert.True(update.Installed, update.Diagnostic);
             Assert.True(update.Selected);
             Assert.Equal("restart-required", update.Application);
+            Assert.Equal("package-moved", update.RestartReason);
             Assert.Equal("IndependentPlugin", update.Target);
             replacement = tools.Prepared!.PublicationDirectory!;
             Assert.True(File.Exists(Path.Combine(replacement, "IndependentPlugin.dll")));
@@ -166,7 +167,7 @@ public sealed partial class PackageManagementTests
                         Assert.Contains("replacement admission refused", result.Diagnostic);
                         break;
                     case "existing-destination":
-                        Assert.Contains("already exists", result.Diagnostic);
+                        Assert.Contains("no Cordis file receipt", result.Diagnostic);
                         Assert.Equal(
                             "interrupted earlier attempt",
                             await File.ReadAllTextAsync(Path.Combine(residual!, "partial.dll")));

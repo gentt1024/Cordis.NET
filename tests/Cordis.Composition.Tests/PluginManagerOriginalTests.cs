@@ -153,7 +153,9 @@ public sealed partial class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         await f.Start(live: false);
-        AssertChange(await f.Manager.SetPluginEnabledAsync("root:managed", false), true, "restart-required");
+        var change = await f.Manager.SetPluginEnabledAsync("root:managed", false);
+        AssertChange(change, true, "restart-required");
+        Assert.Equal("no-hmr", change.RestartReason);
         Assert.True((await f.Manager.ListPluginsAsync()).Single(row => row.EntryId == "root:managed").Enabled);
     }
 

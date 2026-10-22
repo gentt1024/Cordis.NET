@@ -125,6 +125,8 @@ node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/ap
 
 以下 API 已包含于 `0.2.0-alpha.5.2`。使用[发行批次](validation.zh.md#已发行版本证据)中相互匹配的包和工具；标准配置合同见 [Settings 指南](settings.zh.md)。
 
+未发布的 S4 分片将 `await session.RefreshAsync()` 改为返回 `ProfileReloadResult`。先检查 `RequiresRestart`，再读取 `RestartReason` 或首个待处理模块的 `Reason`；`Warnings` 提供非活动条目诊断。原有 `RequiresRestart` 与事件仍可使用。即使手动 refresh 与包操作共享 session 队列，自动文件观测仍可关闭。工具链包装器除了转发保留目录查询，还必须转发 `GetLoadedModulesAsync`，使包移除能够发现其所属行之外的 Fiber。[兼容性记录](compatibility.zh.md)列出重启原因与不可变重装边界。此 API 变化不属于已发布的 alpha.5.2 包。
+
 包与 bundle 选择的产品政策通过 `session.ConfigurationOperations.AdmitProfileAsync` 设置。回调接收 `ProfileCandidate.ManifestJson`（拟保存的确切文本）、`ConfigurationJson`（不执行表达式的有效原始根条目），以及包含来源层和跳过选择的独立 `Composition` 视图。安装时，`Package` 还提供准备目录及计划发布目录，政策可在 Publish 前读取产物；其他操作中它为 null。抛出异常即拒绝。应校验库提供的候选，不再在 `IProfilePackageToolchain.PublishAsync` 中重新读 Profile 并预测另一份候选。准入期间不要重入配置操作。产品自身政策输入须保持稳定直到操作结束；此回调不冻结外部 SDK 或应用状态。`ProfileSession` 自动提供候选应用路径。
 
 若定制 `ReconcileAsync`，应在其后设置 `ReconcileCandidateAsync`，明确提供与该定制对应的候选应用。只替换旧回调会在无准入时保持旧行为；启用准入时不会悄悄批准未绑定候选的应用。删除依赖的准入先于工具链解除运行时映射，拒绝时可以保留已单独批准的取消选择。CLR 制品保留到所有消费者停止后的显式离线删除。

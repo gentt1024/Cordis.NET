@@ -75,6 +75,13 @@ public sealed record PackageChange(
     string? Diagnostic = null,
     IReadOnlyList<string>? Residuals = null)
 {
+    /// <summary>Fixed restart code, present only when Application is restart-required.</summary>
+    public string? RestartReason
+    {
+        get;
+        init;
+    }
+
     /// <summary>The observed SDK exit status for a failed preparation, when a process was started and drained.</summary>
     public int? ToolExitCode
     {
@@ -166,6 +173,13 @@ public interface IProfilePackageToolchain
     /// <remarks>A toolchain may retain artifacts for other processes or Workers. Configuration removal reports
     /// retained directories separately; it must not infer physical deletion from fiber or ALC retirement.</remarks>
     Task RemoveAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>Snapshot loaded exports owned by this package without importing code.</summary>
+    /// <remarks>Adapters without a runtime cache return an empty list. Wrappers must forward this ownership query.</remarks>
+    Task<IReadOnlyList<ResolvedModule>> GetLoadedModulesAsync(
+        string name,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<ResolvedModule>>([]);
 
     /// <summary>Observe retained deployment directories for an identity, including earlier and pending versions.</summary>
     /// <remarks>This is neither a lease nor permission to delete. Adapters without retained files may return an empty list.</remarks>

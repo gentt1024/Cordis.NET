@@ -252,7 +252,16 @@ public sealed class DeploymentGeneration
 /// Represents the deployment restart required exception component.
 /// </summary>
 /// <param name="message">The message value.</param>
-public sealed class DeploymentRestartRequiredException(string message) : InvalidOperationException(message);
+/// <param name="reason">The machine-readable restart reason.</param>
+public sealed class DeploymentRestartRequiredException(string message, string reason = "package-moved")
+    : InvalidOperationException(message)
+{
+    /// <summary>Why the deployment cannot be published in the running process.</summary>
+    public string Reason
+    {
+        get;
+    } = reason;
+}
 
 /// <summary>
 /// Represents the deployment resolution mismatch exception component.
@@ -310,7 +319,6 @@ public sealed class DeploymentPackageResolver
     }
 
     private State current;
-    private readonly Dictionary<string, string> linkedTargets = new(StringComparer.Ordinal);
     private readonly object gate = new();
     private readonly Func<string, Uri, string?>? native;
     private readonly Func<string, Uri, string?>? local;
@@ -342,8 +350,6 @@ public sealed class DeploymentPackageResolver
     {
         (current, this.native, this.local, this.ancestor, this.behavior) =
             (new(generation), native, local, ancestor, behavior);
-        foreach (var root in generation.LinkedRoots)
-            linkedTargets.Add(root.Name, root.Directory);
     }
 
     private DeploymentPackageResolver(Func<string, Uri, string?> native) =>
@@ -355,48 +361,69 @@ public sealed class DeploymentPackageResolver
     public static DeploymentPackageResolver Native(Func<string, Uri, string?> resolve) => new(resolve);
 
     /// <summary>
-    /// Performs the replace operation.
+    /// Validate a complete successor without publishing it or invalidating metadata caches.
+    /// </summary>
+    public void ValidateReplacement(DeploymentGeneration generation)
+    {
+        var next = new State(generation);
+        lock (gate)
+            ValidateReplacement(generation, next);
+    }
+
+    /// <summary>
+    /// Publish a complete successor after profile-owned packages have stopped. Retained profile mappings may
+    /// change version or declarer in the same directory; installation mappings and retained directories stay fixed.
     /// </summary>
     public void Replace(DeploymentGeneration generation)
     {
         var next = new State(generation);
         lock (gate)
         {
-            var old = current.Generation ??
-                throw new InvalidOperationException("Runtime deployment resolution is not installed.");
-            if (old.ProfilesDirectory != generation.ProfilesDirectory ||
-                old.ProfileDirectory != generation.ProfileDirectory)
-                throw new DeploymentRestartRequiredException("A generation cannot change its profile scope.");
-            foreach (var entry in current.Entries.Values)
-            {
-                if (!next.Entries.TryGetValue(entry.Name, out var replacement) ||
-                    !SameCanonicalPath(current.Targets[entry.Name].Directory, next.Targets[entry.Name].Directory) ||
-                    !SameCanonicalPath(current.Targets[entry.Name].Declarer, next.Targets[entry.Name].Declarer) ||
-                    entry.Version != replacement.Version || entry.Scope != replacement.Scope)
-                    throw new DeploymentRestartRequiredException(
-                        $"Replacing package '{entry.Name}' requires a process restart.");
-            }
-
-            foreach (var name in old.LocalPackageNames)
-                if (!generation.LocalPackages.ContainsKey(name))
-                    throw new DeploymentRestartRequiredException(
-                        $"Removing local package '{name}' requires a process restart.");
-                else if (!SameCanonicalPath(current.LocalTargets[name], next.LocalTargets[name]))
-                    throw new DeploymentRestartRequiredException(
-                        $"Replacing local package '{name}' requires a process restart.");
-            foreach (var name in generation.LocalPackageNames)
-                if (!old.LocalPackages.ContainsKey(name) && current.Entries.ContainsKey(name))
-                    throw new DeploymentRestartRequiredException(
-                        $"Overriding package '{name}' locally requires a process restart.");
-            foreach (var root in generation.LinkedRoots)
-                if (linkedTargets.TryGetValue(root.Name, out var previous) &&
-                    !SameCanonicalPath(previous, root.Directory))
-                    throw new DeploymentRestartRequiredException(
-                        $"Relinking package '{root.Name}' requires a process restart.");
-            foreach (var root in generation.LinkedRoots)
-                linkedTargets.TryAdd(root.Name, root.Directory);
+            ValidateReplacement(generation, next);
             current = next;
         }
+    }
+
+    private void ValidateReplacement(DeploymentGeneration generation, State next)
+    {
+        var old = current.Generation ??
+            throw new InvalidOperationException("Runtime deployment resolution is not installed.");
+        if (old.ProfilesDirectory != generation.ProfilesDirectory ||
+            old.ProfileDirectory != generation.ProfileDirectory)
+            throw new DeploymentRestartRequiredException("A generation cannot change its profile scope.");
+        foreach (var entry in current.Entries.Values)
+        {
+            var replacement = next.Entries.GetValueOrDefault(entry.Name);
+            if (entry.Scope == DeploymentPackageScope.Profile && replacement is null)
+                continue;
+            if (replacement is { Scope: DeploymentPackageScope.Profile } &&
+                entry.Scope == DeploymentPackageScope.Profile &&
+                SameCanonicalPath(current.Targets[entry.Name].Directory, next.Targets[entry.Name].Directory))
+                continue;
+            if (replacement is null ||
+                !SameCanonicalPath(current.Targets[entry.Name].Directory, next.Targets[entry.Name].Directory) ||
+                !SameCanonicalPath(current.Targets[entry.Name].Declarer, next.Targets[entry.Name].Declarer) ||
+                entry.Version != replacement.Version || entry.Scope != replacement.Scope)
+                throw new DeploymentRestartRequiredException(
+                    $"Replacing package '{entry.Name}' requires a process restart.",
+                    entry.Scope == DeploymentPackageScope.Installation ? "host-module" : "package-moved");
+        }
+
+        foreach (var name in old.LocalPackageNames)
+            if (generation.LocalPackages.ContainsKey(name) &&
+                !SameCanonicalPath(current.LocalTargets[name], next.LocalTargets[name]))
+                throw new DeploymentRestartRequiredException(
+                    $"Replacing local package '{name}' requires a process restart.");
+        foreach (var name in generation.LocalPackageNames)
+            if (!old.LocalPackages.ContainsKey(name) && current.Entries.TryGetValue(name, out var entry))
+                throw new DeploymentRestartRequiredException(
+                    $"Overriding package '{name}' locally requires a process restart.",
+                    entry.Scope == DeploymentPackageScope.Installation ? "host-module" : "package-moved");
+        foreach (var root in generation.LinkedRoots)
+            if (old.LinkedRoots.FirstOrDefault(previous => previous.Name == root.Name) is { } previous &&
+                !SameCanonicalPath(previous.Directory, root.Directory))
+                throw new DeploymentRestartRequiredException(
+                    $"Relinking package '{root.Name}' requires a process restart.");
     }
 
     /// <summary>
@@ -670,7 +697,10 @@ public sealed class DeploymentModuleResolver(DeploymentPackageResolver packages,
     /// <summary>
     /// Resolves async.
     /// </summary>
-    public ValueTask<ResolvedModule> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
+    public ValueTask<ResolvedModule> ResolveAsync(
+        string specifier,
+        Uri baseUri,
+        CancellationToken cancellationToken = default)
     {
         var route = ResolveRoute(specifier, baseUri);
         return modules.ResolveAsync(route.Specifier, route.BaseUri, cancellationToken);
