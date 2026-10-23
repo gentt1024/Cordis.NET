@@ -22,6 +22,7 @@ MANIFEST = ROOT / "reference/candidate-manifest.json"
 COUNTS = ROOT / "reference/candidate-suite-counts.json"
 CONFIG = str(ROOT / "reference/vitest-candidate.config.mjs")
 VITEST = str(ROOT / "reference/candidate-tools/node_modules/vitest/vitest.mjs")
+COLLECTOR = str(ROOT / "reference/collect-candidate-tests.mjs")
 DSH = "687f282e8625c6b8d11ff58211a90524be2e4317"
 ORIGIN = "56b3d4f725681cf4556c1a8695a709cc3b6eed74"
 
@@ -83,6 +84,8 @@ def expected_files(dsh, origin):
 def environment(dsh, origin, output, suite):
     env = dict(os.environ, CI="true", CORDIS_DSH_REFERENCE=str(dsh), CORDIS_ORIGIN_REFERENCE=str(origin),
                CORDIS_CANDIDATE_SUITE=suite, CORDIS_CANDIDATE_REFERENCE=str(ROOT / "reference"), CORDIS_CANDIDATE_CACHE=str(output / "cache"))
+    tools_bin = ROOT / "reference/candidate-tools/node_modules/.bin"
+    env["PATH"] = str(tools_bin) + os.pathsep + env.get("PATH", "")
     for key in ("CORDIS_UPSTREAM_SELECTION", "CORDIS_UPSTREAM_REPORT"):
         env.pop(key, None)
     temp = output / "temp"
@@ -111,7 +114,7 @@ def collect(dsh, origin, output, steps):
         root = origin if spec["repository"] == "origin" else dsh
         discovery = output / (suite + "-discovery.json")
         execute(output, steps, "collect-" + suite,
-                ["node", VITEST, "list", "--config", CONFIG, "--json", str(discovery)],
+                ["node", COLLECTOR, CONFIG, str(discovery)],
                 environment(dsh, origin, output, suite), cwd=root)
         occurrences = Counter()
         observed = set()

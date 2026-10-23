@@ -109,6 +109,7 @@ jobs:
           npm ci --prefix reference --ignore-scripts
           npm ci --prefix clients/modules --ignore-scripts
           npm ci --prefix clients/tools --ignore-scripts
+          npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
       - run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
       - name: Full verification and exact package batch
         shell: bash
