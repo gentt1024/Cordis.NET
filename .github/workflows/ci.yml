@@ -110,6 +110,7 @@ jobs:
           npm ci --prefix reference --ignore-scripts
           npm ci --prefix clients/modules --ignore-scripts
           npm ci --prefix clients/tools --ignore-scripts
+          npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
       - name: Prepare fixed candidate trace inputs
         if: ${{ inputs.candidate == true }}
         shell: bash
@@ -118,7 +119,6 @@ jobs:
           git -C ../dsh-candidate remote add origin https://github.com/deepseek-ai/deepseek-harness.git
           git -C ../dsh-candidate fetch --depth=1 origin 687f282e8625c6b8d11ff58211a90524be2e4317
           git -C ../dsh-candidate checkout --detach FETCH_HEAD
-          npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
       - name: Verify package inspector regression
         run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
       - name: Verify

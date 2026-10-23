@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import subprocess
@@ -14,6 +15,68 @@ from verify_upstream import MATRIX, SKIPPABLE, validate_report
 
 
 class CandidateGateTests(unittest.TestCase):
+    def test_worker_path_prefers_fixed_tools_without_losing_the_node_path(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(os.environ, {'PATH': 'ambient-node-path'}):
+            root = Path(temporary)
+            env = candidate.environment(root, root, root, 'composition')
+            tools = str(candidate.ROOT / 'reference/candidate-tools/node_modules/.bin')
+            self.assertEqual(env['PATH'].split(os.pathsep), [tools, 'ambient-node-path'])
+
+    def collector_fixture(self, directory, source):
+        entry = candidate.ROOT / 'reference/candidate-tools/node_modules/vitest/dist/index.js'
+        fixture = directory / 'fixture.spec.mjs'
+        fixture.write_text('import { describe, it, expect } from ' + json.dumps(entry.as_uri()) + ';\n' + source,
+                           encoding='utf8')
+        config = directory / 'config.mjs'
+        config.write_text('export default ' + json.dumps({'root': directory.as_posix(), 'test': {
+            'include': ['fixture.spec.mjs'], 'watch': False, 'maxWorkers': 1, 'fileParallelism': False}}), encoding='utf8')
+        return config
+
+    def test_real_collector_retains_skipped_cases_without_executing_or_changing_runtime_skips(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            config = self.collector_fixture(root, '''
+import { writeFileSync } from 'node:fs';
+it('active', () => { writeFileSync(new URL('./executed', import.meta.url), 'ran'); expect(1).toBe(1) });
+describe.skip('excluded', () => {
+  it.each([1, 2])('same title', () => { throw new Error('Skipped body must not execute') });
+});
+describe.skipIf(true)('platform excluded', () => {
+  it('third skipped case', () => { throw new Error('Skipped body must not execute') });
+});
+''')
+            discovery = root / 'discovery.json'
+            subprocess.run(['node', candidate.COLLECTOR, str(config), str(discovery)],
+                           cwd=root, check=True, capture_output=True, text=True, timeout=60)
+            cases = json.loads(discovery.read_text(encoding='utf8'))
+            self.assertFalse((root / 'executed').exists(), 'Collection executed a test body')
+            self.assertEqual([(case['name'], case['collectionState']) for case in cases], [
+                ('active', 'pending'), ('excluded > same title', 'skipped'),
+                ('excluded > same title', 'skipped'), ('platform excluded > third skipped case', 'skipped')])
+            self.assertEqual({Path(case['file']).resolve() for case in cases}, {root / 'fixture.spec.mjs'})
+            report = root / 'runtime.json'
+            subprocess.run(['node', candidate.VITEST, 'run', '--config', str(config),
+                            '--reporter=json', '--outputFile', str(report)],
+                           cwd=root, check=True, capture_output=True, text=True, timeout=60)
+            runtime = json.loads(report.read_text(encoding='utf8'))
+            self.assertEqual((runtime['numTotalTests'], runtime['numPassedTests'],
+                              runtime['numPendingTests'], runtime['numFailedTests']), (4, 1, 3, 0))
+            self.assertEqual((root / 'executed').read_text(), 'ran')
+            outcomes = runtime['testResults'][0]['assertionResults']
+            self.assertEqual([case['status'] for case in outcomes], ['passed', 'skipped', 'skipped', 'skipped'])
+
+    def test_real_collector_rejects_collection_errors_and_empty_discovery(self):
+        for source in ("it('declared before failure', () => {}); throw new Error('collection explosion');",
+                       "describe('empty', () => {});"):
+            with self.subTest(source=source), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary).resolve()
+                config = self.collector_fixture(root, source)
+                discovery = root / 'discovery.json'
+                result = subprocess.run(['node', candidate.COLLECTOR, str(config), str(discovery)],
+                                        cwd=root, capture_output=True, text=True, timeout=60)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(discovery.exists(), 'Failed collection published an accepted inventory')
+
     def fixtures(self, target_platform="Windows", process_cases=False):
         # Literal expected modulo partition of 4800 independent source cases.
         matrix = [["composition", MATRIX, f"matrix > case {index:04d}", 0] for index in range(4800)]

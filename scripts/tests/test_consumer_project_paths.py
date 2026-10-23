@@ -26,7 +26,7 @@ class ConsumerProjectPathsTests(unittest.TestCase):
     def test_remote_project_preserves_xml_metacharacters_in_its_private_cache_path(self):
         consumer = load_consumer("verify-typert")
         with tempfile.TemporaryDirectory() as temporary:
-            directory = Path(temporary)
+            directory = Path(temporary).resolve()
             source = directory / "remote & candidate"
             source.mkdir()
             runtime = directory / "runtime"
@@ -50,7 +50,7 @@ class ConsumerProjectPathsTests(unittest.TestCase):
     def test_multi_entry_projects_preserve_cache_and_dependency_paths_with_xml_metacharacters(self):
         consumer = load_consumer("verify-clr-multi-entry")
         with tempfile.TemporaryDirectory() as temporary:
-            directory = Path(temporary)
+            directory = Path(temporary).resolve()
             source = directory / "multi-entry & candidate"
             source.mkdir()
             native = directory / "libm.so.6"
