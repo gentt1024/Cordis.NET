@@ -1,12 +1,14 @@
-name: S10 Windows manifest diagnostic
+name: S10 Windows manager Git diagnostic
 on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: '1'
 jobs:
-  manifest:
+  manager:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -14,53 +16,36 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.12.0
-      - name: Fetch fixed original source and locked tools
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Fetch fixed original sources and locked candidate tools
         shell: bash
         run: |
           git init ../dsh-candidate
           git -C ../dsh-candidate remote add origin https://github.com/deepseek-ai/deepseek-harness.git
           git -C ../dsh-candidate fetch --depth=1 origin 687f282e8625c6b8d11ff58211a90524be2e4317
           git -C ../dsh-candidate checkout --detach FETCH_HEAD
+          git init ../origin-candidate
+          git -C ../origin-candidate remote add origin https://github.com/cordiverse/cordis.git
+          git -C ../origin-candidate fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
+          git -C ../origin-candidate checkout --detach FETCH_HEAD
           npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
           node reference/candidate-bind-tools.mjs ../dsh-candidate
-      - name: Prepare isolated patched source
-        shell: bash
-        run: |
-          git clone --no-hardlinks ../dsh-candidate ../dsh-manifest-patched
-          git -C ../dsh-manifest-patched checkout --detach 687f282e8625c6b8d11ff58211a90524be2e4317
-          node reference/candidate-bind-tools.mjs ../dsh-manifest-patched
-          git -C ../dsh-manifest-patched apply "$GITHUB_WORKSPACE/upstream-manifest-scope.patch"
-      - name: Execute unchanged original test file before and after the isolated patch
+      - name: Observe unchanged entire manager file in three independent processes
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path artifacts/original,artifacts/patched -Force | Out-Null
-          $env:CORDIS_MANIFEST_DIAGNOSTIC_SOURCE = (Resolve-Path ../dsh-candidate).Path
-          $env:CORDIS_MANIFEST_DIAGNOSTIC_OUTPUT = (Resolve-Path artifacts/original).Path
-          node reference/candidate-tools/node_modules/vitest/vitest.mjs run --config reference/vitest-manifest-diagnostic.config.mjs
-          $originalExit = $LASTEXITCODE
-          $env:CORDIS_MANIFEST_DIAGNOSTIC_SOURCE = (Resolve-Path ../dsh-manifest-patched).Path
-          $env:CORDIS_MANIFEST_DIAGNOSTIC_OUTPUT = (Resolve-Path artifacts/patched).Path
-          node reference/candidate-tools/node_modules/vitest/vitest.mjs run --config reference/vitest-manifest-diagnostic.config.mjs
-          $patchedExit = $LASTEXITCODE
-          @{originalExit=$originalExit;patchedExit=$patchedExit;commit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;patchSha256=(Get-FileHash upstream-manifest-scope.patch -Algorithm SHA256).Hash} | ConvertTo-Json | Set-Content artifacts/exits.json
-          if ($originalExit -ne 0 -or $patchedExit -ne 0) { throw 'Original or patched assertions failed; this diagnostic is not candidate acceptance.' }
-      - name: Record diagnostic source identities
+          python reference/run-manager-git-diagnostic.py --repository . --dsh ../dsh-candidate --origin ../origin-candidate --output artifacts/manager-git-diagnostic --repeat 3
+          exit $LASTEXITCODE
+      - name: Summarize Git precheck timings without changing their outcomes
         if: always()
         shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
-          Copy-Item upstream-manifest-scope.patch artifacts/
-          $source = 'packages/boot/hmr/src/package-manifest.ts'
-          $test = 'packages/boot/hmr/tests/package-manifest.spec.ts'
-          @{originalSourceSha256=(Get-FileHash "../dsh-candidate/$source" -Algorithm SHA256).Hash;patchedSourceSha256=(Get-FileHash "../dsh-manifest-patched/$source" -Algorithm SHA256).Hash;originalTestSha256=(Get-FileHash "../dsh-candidate/$test" -Algorithm SHA256).Hash;patchedTestSha256=(Get-FileHash "../dsh-manifest-patched/$test" -Algorithm SHA256).Hash} | ConvertTo-Json | Set-Content artifacts/source-identities.json
-          git -C ../dsh-manifest-patched diff --no-ext-diff -- $source | Set-Content artifacts/applied.patch
-      - name: Preserve diagnostic observations
+        run: python reference/analyze-manager-git-trace.py artifacts/manager-git-diagnostic
+      - name: Preserve all diagnostic outcomes including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: manifest-diagnostic
-          path: artifacts
+          name: manager-git-diagnostic
+          path: artifacts/manager-git-diagnostic
           if-no-files-found: error
           retention-days: 14
