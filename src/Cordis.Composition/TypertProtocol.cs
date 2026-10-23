@@ -614,8 +614,15 @@ public abstract partial class TypertCodec
 }
 
 /// <summary>One ordered Remote parameter, represented by JSON or a lookup identity.</summary>
-public sealed record TypertInvocationParameter(string Name, string Wire, TypertCodec Codec)
+public sealed partial record TypertInvocationParameter(string Name, string Wire, TypertCodec Codec)
 {
+    /// <summary>Gets the authored parameter documentation.</summary>
+    public string? Description
+    {
+        get;
+        init;
+    }
+
     /// <summary>Gets the provider key for an object lookup; null denotes an ordinary JSON parameter.</summary>
     public string? Lookup
     {
@@ -638,7 +645,7 @@ public sealed record TypertContextInvocation(string Context, string Wire, Typert
 public sealed record TypertScopeProjection(string Context, string Wire);
 
 /// <summary>Carrier-independent generated identity, receiver and codec contract of one Remote method.</summary>
-public sealed record TypertInvocationDescriptor(
+public sealed partial record TypertInvocationDescriptor(
     string Id,
     string Service,
     string Namespace,

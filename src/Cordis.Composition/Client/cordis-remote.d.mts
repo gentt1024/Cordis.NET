@@ -49,3 +49,89 @@ export interface RemoteEventsClient<Events> {
   run(signal: AbortSignal, ready: (host: {readonly home: string}) => void | Promise<void>): Promise<void>;
   dispose(): Promise<void>;
 }
+
+
+/** A generated parser validates values without loading the owning Service. */
+export interface RemoteSchema<T = unknown> { parse(value: unknown): T; }
+export interface RemoteValue<T = unknown> {
+  readonly create: () => RemoteSchema<T>;
+  readonly description?: string;
+  readonly jsonSchema?: Readonly<Record<string, unknown>>;
+  readonly jsonSchemaError?: string;
+}
+export interface RemoteCodec<T = unknown> extends RemoteValue<T> {
+  readonly mode: 'strict';
+  readonly typeSymbol: string;
+}
+export interface RemoteParameter {
+  readonly name: string;
+  readonly wire: string;
+  readonly source: 'json' | 'lookup';
+  readonly lookup?: string;
+  readonly acceptsUndefined?: true;
+  readonly description?: string;
+  readonly codec: RemoteCodec;
+  readonly strictCodec: RemoteCodec;
+}
+export interface RemoteDescriptor {
+  readonly id: string;
+  readonly service: string;
+  readonly namespace: string;
+  readonly method: string;
+  readonly implementation?: string;
+  readonly mode?: 'stream';
+  readonly invocation: { readonly kind: 'direct' } | {
+    readonly kind: 'context'; readonly context: string; readonly wire: string; readonly codec: RemoteCodec;
+  };
+  readonly scope?: { readonly context: string; readonly wire: string };
+  readonly parameters: readonly RemoteParameter[];
+  readonly result: RemoteCodec;
+  readonly uplink?: { readonly codec: RemoteCodec };
+  readonly cancellation?: { readonly parameter: 'signal' };
+  readonly description?: string;
+}
+export interface RemoteInputOptions { readonly strict?: boolean; }
+/** Named invocation borrows the mounted namespace and retains its original return value. */
+export type RemoteMethod<Input extends object, Output, Return, Services extends object> =
+  Omit<RemoteDescriptor, 'invocation' | 'result' | 'mode'> &
+  (Return extends RemoteStreamHandle<unknown> ? { readonly mode: 'stream' } : { readonly mode?: never }) & {
+    readonly invocation: { readonly kind: 'direct' };
+    readonly result: RemoteCodec<Output>;
+    input(options?: RemoteInputOptions): RemoteValue<Input>;
+    invoke(remote: Services | RemoteCaller, input: Input, signal?: AbortSignal): Return;
+  };
+export interface RemoteInfo<Methods extends object = Readonly<Record<string, RemoteDescriptor>>> {
+  readonly package: string;
+  readonly descriptors: readonly RemoteDescriptor[];
+  readonly methods: Methods;
+}
+/** Compiler facts consumed by the shared lazy metadata runtime. */
+export interface RemoteCodecSpec {
+  readonly typeSymbol: string;
+  readonly description?: string;
+  readonly create: () => RemoteSchema;
+  readonly project: () => { readonly jsonSchema?: Readonly<Record<string, unknown>>; readonly jsonSchemaError?: string };
+}
+export interface RemoteMethodSpec {
+  readonly id?: string;
+  readonly service: string;
+  readonly implementation?: string;
+  readonly mode?: 'stream';
+  readonly invocation: { readonly kind: 'direct' } | {
+    readonly kind: 'context'; readonly context: string; readonly wire: string; readonly codec: RemoteCodecSpec;
+  };
+  readonly scope?: { readonly context: string; readonly wire: string };
+  readonly parameters: readonly {
+    readonly name: string; readonly wire?: string; readonly source: 'json' | 'lookup'; readonly lookup?: string;
+    readonly acceptsUndefined?: true; readonly description?: string;
+    readonly codec: RemoteCodecSpec; readonly strictCodec: RemoteCodecSpec;
+  }[];
+  readonly result: RemoteCodecSpec;
+  readonly uplink?: { readonly codec: RemoteCodecSpec };
+  readonly cancellation?: { readonly parameter: 'signal' };
+  readonly description?: string;
+}
+export declare function createRemoteInfo(spec: {
+  readonly package: string;
+  readonly methods: Readonly<Record<string, RemoteMethodSpec>>;
+}): RemoteInfo;

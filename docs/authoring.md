@@ -4,6 +4,15 @@
 
 These optional .NET authoring helpers use the existing Cordis runtime. A package makes code available; module registration maps names to code; patch/profile entries select instances; `Inject` determines when a plugin can activate. Service identity remains its name and realm. None of these helpers adds a second registry or lifecycle.
 
+## Candidate Remote metadata, 2026-10-23
+
+Use the generated Host `Info(package)` factory or the independent .NET caller's static `Info` to inspect Remote methods without opening a connection. `CreateInfo(package)` on an independent caller selects an explicit deployment package identity; its default Info uses the saved model's assembly identity. `Methods` contains direct endpoints; `Descriptors` also contains Context receivers. For registered facts, use `TypertRegistry.GetLocalInfo(package)` or `GetRemoteInfo(package)`.
+
+For a selected descriptor, call `Input()` or `Input(strict: true)` and parse named wire arguments with `Parse(JsonElement)`. Read `JsonSchema` only when a tool consumer needs a projection, and handle `JsonSchemaError` when it is unavailable. An unavailable projection does not imply an unusable parser. `ResultValue` exposes result metadata separately from the input view. Individual parameters also expose `Input(strict)`; `UplinkValue` exposes stream-item input metadata, including on Context-only descriptors. `Create()` returns a cached parser delegate independently of tool projection. Keep optional absence distinct from explicit null.
+
+Pass parsed arguments to the descriptor's `Invoke(client, arguments, cancellationToken)`. Its `object` result is the existing generated method's task, including the task returning a duplex handle. The generated client implements `ITypertNamedRemote`; this metadata route preserves its connection and lifetime checks. Continue using ordinary typed methods when compile-time argument/result types are known. Browser generated modules expose `info`, named `methods`, `input({ strict: true })` and `invoke(remote, arguments, signal)`.
+
+
 ## Candidate event access and permission clients, 2026-10-23
 
 Register the standard follow contribution alongside the Host service:

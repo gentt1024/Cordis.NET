@@ -1,4 +1,4 @@
-import { createRemote, resultCodecs, TypertConnection, type RemoteClient } from './remote.mjs'
+import { createRemote, resultCodecs, info, TypertConnection, type RemoteClient } from './remote.mjs'
 
 type Revision = Parameters<RemoteClient['webContract/revision']>[0]
 const omitted: Revision = {}
@@ -17,6 +17,8 @@ const valid: Direction = { value: { Count: 1, GlobalCount: 1, Value: 'input', Ou
 const invalidInput: Direction = { value: { Count: 1, GlobalCount: 1, Value: null, OutputNullable: 'input' } }
 function checkOutput(result: Awaited<ReturnType<RemoteClient['webContract/direction']>>) {
   if (!result.ok) throw result.error
+  if (info.methods['webContract/direction'].result.create().parse(result.value) !== result.value)
+    throw new Error('Metadata parser changed the directional output')
   if (resultCodecs['webContract/direction'].parse(result.value) !== result.value)
     throw new Error('Saved-model codec changed the directional output')
   let rejected = false
@@ -42,8 +44,21 @@ export async function run(origin: string) {
   const connection = new TypertConnection(origin + '/remote')
   const client = createRemote(connection)
   try {
+    const revision = info.methods['webContract/revision']
+    if (!info.descriptors.includes(revision) || revision.input() !== revision.input({ strict: false }) ||
+        revision.input() === revision.input({ strict: true })) throw new Error('Metadata identity changed')
+    if (info.methods['webContract/direction'].input().create().parse(valid) !== valid)
+      throw new Error('Metadata input did not retain its JSON wire value')
+    let missingRejected = false
+    try { info.methods['webContract/required'].input().create().parse({ value: {} }) }
+    catch (error) { missingRejected = error instanceof TypeError }
+    if (!missingRejected) throw new Error('Metadata parser lost constructor requiredness')
+    if (info.methods['webContract/direction'].input().jsonSchema !== undefined)
+      throw new Error('Metadata tool projection weakened integer constraints')
     for (const [input, expected] of [[omitted, 'omitted'], [supplied, 'supplied']] as const) {
-      const result = await client['webContract/revision'](input)
+      const parsed = revision.input().create().parse(input)
+      if (parsed !== input) throw new Error('Metadata optional input changed object identity')
+      const result = await client['webContract/revision'](parsed)
       if (!result.ok || result.value !== expected) throw new Error('Revision admission changed')
     }
     const required = await client['webContract/required']({ value: { Name: 'provided' } })

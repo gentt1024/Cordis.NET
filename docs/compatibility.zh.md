@@ -2,6 +2,19 @@
 
 [English](compatibility.md)
 
+## 候选元数据投影，2026-10-23
+
+S8 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，涵盖 RemoteInfo、命名输入视图及可选工具 Schema 投影。正式行为锁与历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。S8 不选择新的发布基线。
+
+`TypertRemoteInfo` 提供懒加载的描述符与直接方法索引。命名方法与该 Info 中对应的描述符是同一个对象。仅支持 Context 接收者的方法仍保留为描述符，不进入命名方法索引。原生注册保留既有的防御性快照边界；registry Info 使用实际存储的快照。与候选 registry 不同，原生不承诺跨注册边界的对象身份。通过 `with` 复制的描述符拥有独立的输入和结果元数据缓存。
+
+normal 与 strict 输入视图分别缓存 parser 和投影。两者均拒绝未知的命名实参字段。元数据值 parser 拒绝非有限 JSON 数值，包括嵌套在未声明字段中的值。普通可选参数允许缺省，lookup 身份仍是必填。normal 使用既有 STJ codec，包括作者默认值与 setter；strict 额外关闭嵌套声明对象，同时保留显式字典与 JSON 的开放性。这是对候选 Zod 策略的原生适配：normal STJ 行为不承诺剥离未知属性。独立生成的载体 DTO 不会重放作者构造器或访问器的方法体。TypeScript 输入 parser 验证 JSON wire 值并保留其对象身份，不执行 CLR 转换、默认值或 setter。例如，字节数组输入在 Host 解码前仍为 base64 JSON 字符串。
+
+工具 `JsonSchema` 与继续负责原生准入和输出的 `TypertCodec.Schema`、`ResultSchema` 分开。无法保留约束的工具投影不提供 Schema，并给出 `JsonSchemaError`；parser、文档及调用仍可用。投影展开无环本地引用，接受可表达的标量、数组、声明对象和互斥联合。递归类型、元组、受约束字典、重叠联合及不支持的约束会被拒绝。原生整数、范围和 format 约束不会被悄悄弱化到候选较小的工具子集。解码后的二进制结果和可能缺省的独立值也不提供工具投影，但其既有 parser 仍可用。普通可选参数通过命名外层对象中省略字段表达缺省，因此其内部 JSON 值仍可投影。非预期的 Schema 工厂异常向上传递，并允许后续重试。
+
+生成的 Host 元数据与独立 .NET／TypeScript 客户端使用既有声明事实和序列化契约。原生命名调用接口直接转发到生成的类型化方法，不重复解析或另建传输层，返回原方法的任务；双向流调用者使用返回句柄既有的 send/end 操作。TypeScript 命名调用同样解析传入客户端当前的命名空间，并保留其返回值。消费者选择 strict 不会改变 Host dispatch 或结果解析。
+
+
 ## 候选事件与访问客户端，2026-10-23
 
 S7 对照固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 Gateway 事件、RemoteAccess snapshot/follow 和客户端状态。正式行为锁及历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本节替代 S5/S6 的临时事件拒绝与快照延期说明；S8 元数据投影另行推进。

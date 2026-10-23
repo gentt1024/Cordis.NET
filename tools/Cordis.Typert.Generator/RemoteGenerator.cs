@@ -265,14 +265,23 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                     .Append(", ")
                     .Append(Codec(wireType, parameter.DisallowNull))
                     .Append(")");
-                if (lookup is not null || parameter.Facts.Default is not null)
+                if (lookup is not null || parameter.Facts.Default is not null ||
+                    RemoteDocumentation.Parameter(invocation.Facts.Documentation, parameter.Facts.Name) is not null)
                 {
                     definitions
                         .Append(" { ");
                     if (lookup is not null)
                         definitions.Append("Lookup = ").Append(Literal(lookup));
-                    else
+                    else if (parameter.Facts.Default is not null)
                         definitions.Append("AcceptsUndefined = true");
+                    if (RemoteDocumentation.Parameter(invocation.Facts.Documentation, parameter.Facts.Name) is
+                        { } parameterDescription)
+                    {
+                        if (lookup is not null || parameter.Facts.Default is not null)
+                            definitions.Append(", ");
+                        definitions.Append("Description = ").Append(Literal(parameterDescription));
+                    }
+
                     definitions.Append(" }");
                 }
 
@@ -286,6 +295,10 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                 .Append(cancellation ? "true" : "false")
                 .Append(", IsStream = ")
                 .Append(stream ? "true" : "false");
+            if (RemoteDocumentation.Summary(invocation.Facts.Documentation) is { } description)
+                definitions.Append(", Description = ").Append(Literal(description));
+            if (RemoteDocumentation.Returns(invocation.Facts.Documentation) is { } resultDescription)
+                definitions.Append(", ResultDescription = ").Append(Literal(resultDescription));
             if (invocation.Uplink is { } uplink)
             {
                 var codec = UplinkCodec(uplink.Type);
@@ -387,7 +400,10 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                        public static class {{type.Name}}Typert
                        {
                            /// <summary>Creates the package-owned Remote contribution.</summary>
-                           public static global::Cordis.Composition.TypertContribution Contribution(string package) => global::Cordis.Composition.TypertArtifacts.Contribution(package, {{Literal(type.ToDisplayString())}}, [{{definitions}}]);
+                           public static global::Cordis.Composition.TypertContribution Contribution(string package) => global::Cordis.Composition.TypertArtifacts.Contribution(package, {{Literal(type.ToDisplayString())}}, Descriptors(package));
+                           /// <summary>Creates reusable metadata without materializing schemas.</summary>
+                           public static global::Cordis.Composition.TypertRemoteInfo Info(string package) => new(package, Descriptors(package));
+                           private static global::System.Collections.Generic.IReadOnlyList<global::Cordis.Composition.TypertInvocationDescriptor> Descriptors(string package) => [{{definitions}}];
                            internal static readonly global::Cordis.Composition.TypertRemoteBinding Binding = new({{Literal(service)}}, {{Literal(space)}},
                                new global::System.Collections.Generic.Dictionary<string, global::Cordis.Composition.TypertUnaryInvoker> { {{unary}} },
                                new global::System.Collections.Generic.Dictionary<string, global::Cordis.Composition.TypertStreamInvoker> { {{streams}} });

@@ -56,7 +56,8 @@ public static partial class TypertArtifacts
             output ? codec.ResultSchema : codec.Schema,
             ReferenceEquals(codec, TypertCodec.Void),
             codec.AcceptsUndefined,
-            codec.ResultMetadata);
+            codec.ResultMetadata,
+            codec.TypeSymbol);
 
         var artifact = ClientEmitter.Generate(
             contribution
@@ -69,16 +70,27 @@ public static partial class TypertArtifacts
                             parameter.Wire,
                             Codec(parameter.Codec),
                             parameter.AcceptsUndefined,
-                            parameter.Lookup))
+                            parameter.Lookup,
+                            parameter.Name,
+                            parameter.Description))
                         .ToArray(),
-                    Codec(descriptor.Result, output: true),
+                    Codec(descriptor.Result, output: true) with
+                    {
+                        Description = descriptor.ResultDescription
+                    },
                     descriptor.IsStream,
                     descriptor.Invocation is { } receiver
                         ? new(receiver.Context, receiver.Wire, Codec(receiver.Codec))
                         : null,
                     descriptor.Scope is { } scope ? new(scope.Context, scope.Wire) : null,
-                    descriptor.Uplink is { } uplink ? Codec(uplink) : null))
-                .ToArray());
+                    descriptor.Uplink is { } uplink ? Codec(uplink) : null,
+                    descriptor.Service,
+                    descriptor.Id,
+                    descriptor.Implementation,
+                    descriptor.Description,
+                    descriptor.Cancellation))
+                .ToArray(),
+            contribution.Package);
         return new(artifact.Module, artifact.Declaration);
     }
 

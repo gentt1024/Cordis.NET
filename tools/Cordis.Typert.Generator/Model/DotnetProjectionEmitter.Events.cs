@@ -18,7 +18,7 @@ internal sealed partial class DotnetProjectionEmitter
         var context = client + "Json";
         var source = EmitData(data.Types, roots, model.ContractIdentity, targetNamespace, context, data.Serializer);
 
-        string Codec(NativeTypeReference type) => emitter.UplinkCodec(type);
+        string Codec(NativeTypeReference type) => emitter.Codec(type);
 
         var output = new System.Text.StringBuilder(source)
             .Append("\n#pragma warning disable CS1591\npublic static class ")

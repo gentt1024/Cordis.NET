@@ -4,6 +4,15 @@
 
 这些可选的 .NET 作者辅助接口复用现有 Cordis 运行时。包使代码可用；模块注册把名称映射到代码；patch/profile 条目选择实例；`Inject` 决定插件何时能够激活。服务身份仍由名称与 realm 决定。这些辅助接口不增加第二套注册表或生命周期。
 
+## 候选 Remote 元数据，2026-10-23
+
+使用生成 Host 的 `Info(package)` 工厂或独立 .NET 调用者的静态 `Info`，无需建立连接即可检查 Remote 方法。独立调用者的 `CreateInfo(package)` 可指定部署包身份；默认 Info 使用保存模型的程序集身份。`Methods` 包含直接端点，`Descriptors` 还包含 Context 接收者。读取已注册事实时，使用 `TypertRegistry.GetLocalInfo(package)` 或 `GetRemoteInfo(package)`。
+
+对选中的描述符调用 `Input()` 或 `Input(strict: true)`，再通过 `Parse(JsonElement)` 解析命名 wire 实参。仅在工具消费者需要投影时读取 `JsonSchema`，并在不可用时处理 `JsonSchemaError`。投影不可用不代表 parser 不可用。`ResultValue` 单独提供结果元数据。单个参数也提供 `Input(strict)`；`UplinkValue` 提供流条目的输入元数据，这些接口同样可用于 Context-only 描述符。`Create()` 返回独立于工具投影缓存的 parser 委托。保留可选缺省与显式 null 的区别。
+
+将解析后的实参传入描述符的 `Invoke(client, arguments, cancellationToken)`。其 `object` 结果是既有生成方法的任务，包括返回双向流句柄的任务。生成客户端实现 `ITypertNamedRemote`，元数据调用路径保留其连接与生命周期检查。编译时已知实参和结果类型时，可继续使用普通类型化方法。浏览器生成模块导出 `info`、命名 `methods`、`input({ strict: true })` 和 `invoke(remote, arguments, signal)`。
+
+
 ## 候选事件访问与权限客户端，2026-10-23
 
 在 Host 服务旁登记标准 follow 贡献：

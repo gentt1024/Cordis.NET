@@ -180,6 +180,10 @@ internal sealed partial class DotnetProjectionEmitter
 
     private void ValidateTypeNames(NativeService service)
     {
+        var callerName = client.TrimStart('@');
+        if (callerName is "Info" or "CreateInfo")
+            throw new InvalidDataException(
+                $"Caller type name '{callerName}' conflicts with the generated Remote metadata member '{callerName}'. Choose another caller name.");
         var names = DataTypeNames();
         ReserveName(names, client, "generated client");
         ReserveName(names, client + "Json", "generated data JSON context");
@@ -503,11 +507,12 @@ internal sealed partial class DotnetProjectionEmitter
         output.AppendLine(
             $$"""
               /// <summary>A generated Remote contribution borrowing a shared Connection.</summary>
-              public sealed class {{client}} : global::Cordis.Composition.TypertClient
+              public sealed class {{client}} : global::Cordis.Composition.TypertClient, global::Cordis.Composition.ITypertNamedRemote
               {
                   /// <summary>Create a client without transferring Connection ownership.</summary>
                   public {{client}}(global::Cordis.Composition.TypertConnection connection) : base(connection) { }
               """);
+        EmitInfo(service);
         foreach (var method in service.Methods.Where(method => method.Context is null))
             EmitCall(service, method, scoped: false);
         if (service.Methods.Any(method => method.Context is not null || method.Scope is not null))
@@ -597,7 +602,7 @@ internal sealed partial class DotnetProjectionEmitter
                     ",");
         if (method.Uplink is { } uplink)
         {
-            var codec = UplinkCodec(uplink.Type);
+            var codec = Codec(uplink.Type);
             if (uplink.Optional)
                 codec = "global::Cordis.Composition.TypertCodec.CreateOptional<" + TypeName(uplink.Type) + ">(" +
                     codec + ")";
@@ -609,8 +614,17 @@ internal sealed partial class DotnetProjectionEmitter
             .AppendLine("    }");
     }
 
-    private string UplinkCodec(NativeTypeReference type)
+    private string Codec(NativeTypeReference type, bool disallowNull = false)
     {
+        if (type.Name == "System_Void")
+            return "global::Cordis.Composition.TypertCodec.Void";
+        if (disallowNull)
+            type = type.Kind == "nullable"
+                ? type.Arguments[0]
+                : type with
+                {
+                    Nullability = "NotAnnotated"
+                };
         var name = TypeName(type);
         var runtime = type.Kind == "nullable" ? name : name.TrimEnd('?');
         var metadata = "(JsonTypeInfo<" + runtime + ">)" + client + "Json.Default.GetTypeInfo(typeof(" + runtime +
@@ -620,7 +634,7 @@ internal sealed partial class DotnetProjectionEmitter
         {
             var dictionary = type.Kind == "collection" && type.Arguments.Length == 2;
             return "global::Cordis.Composition.TypertCodec." + (dictionary ? "CreateDictionary" : "CreateSequence") +
-                "(" + metadata + ", " + UplinkCodec(type.Arguments[dictionary ? 1 : 0]) +
+                "(" + metadata + ", " + Codec(type.Arguments[dictionary ? 1 : 0]) +
                 ", nullable: " + (Nullable(type) ? "true" : "false") + ")";
         }
 

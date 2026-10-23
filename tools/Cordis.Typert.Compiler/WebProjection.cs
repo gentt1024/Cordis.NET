@@ -29,11 +29,17 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                         parameter.Wire,
                         projection.Codec(ParameterType(parameter)),
                         parameter.Optional && parameter.Lookup is null,
-                        parameter.Lookup))
+                        parameter.Lookup,
+                        parameter.Name,
+                        RemoteDocumentation.Parameter(method.Documentation, parameter.Name)))
                     .ToArray();
                 var result = method.Result.Name == "System_Void"
-                    ? new ClientCodec(JsonSerializer.SerializeToElement(false), IsVoid: true)
+                    ? new ClientCodec(JsonSerializer.SerializeToElement(false), IsVoid: true, TypeSymbol: "void")
                     : projection.Codec(method.Result, output: true);
+                result = result with
+                {
+                    Description = RemoteDocumentation.Returns(method.Documentation)
+                };
                 var receiver = method.Context is { } context
                     ? new ClientInvocation(context, method.ContextWire, projection.Codec(method.ContextWireType!))
                     : null;
@@ -57,7 +63,11 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                         method.Stream,
                         receiver,
                         scope,
-                        uplink));
+                        uplink,
+                        service.Key,
+                        Implementation: method.Implementation,
+                        Description: RemoteDocumentation.Summary(method.Documentation),
+                        Cancellation: method.Cancellation));
                 var arguments = new JsonObject();
                 var required = new JsonArray();
                 foreach (var parameter in parameters)
@@ -107,7 +117,7 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
             ["$schema"] = "https://json-schema.org/draft/2020-12/schema",
             ["$defs"] = schemas
         };
-        return (ClientEmitter.Generate(methods), catalog.ToJsonString(
+        return (ClientEmitter.Generate(methods, model.Compilation.AssemblyName), catalog.ToJsonString(
             new JsonSerializerOptions
             {
                 WriteIndented = true
@@ -231,7 +241,7 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
         if (definitions.Count > 0)
             schema["$defs"] = definitions;
         using var document = JsonDocument.Parse(schema.ToJsonString());
-        return new(document.RootElement.Clone());
+        return new(document.RootElement.Clone(), TypeSymbol: TypeSymbol(root));
 
         JsonObject Read(NativeTypeReference reference)
         {
@@ -382,6 +392,8 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                         (output ? "NotNullAttribute" : "DisallowNullAttribute")))
                     reference = NonNullable(reference);
                 var property = Read(reference);
+                if (RemoteDocumentation.Summary(member.Documentation) is { } description)
+                    property["description"] = description;
                 properties.Add(member.WireName, property);
                 var condition = ignore is null ? Option("DefaultIgnoreCondition", "0") : Named(ignore, "Condition");
                 var canOmit = condition == "2" || condition == "3" &&
@@ -418,6 +430,9 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                 ["type"] = "null"
             })
     };
+
+    private static string TypeSymbol(NativeTypeReference type) => type.Name +
+        (type.Arguments.Length == 0 ? "" : "<" + string.Join(", ", type.Arguments.Select(TypeSymbol)) + ">");
 
     private static NativeAttribute? Attribute(NativeAttribute[] attributes, string name) =>
         attributes.SingleOrDefault(attribute => attribute.Name == JsonPrefix + name);

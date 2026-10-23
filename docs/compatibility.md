@@ -2,6 +2,19 @@
 
 [中文](compatibility.zh.md)
 
+## Candidate metadata projection, 2026-10-23
+
+S8 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`: RemoteInfo, named input views and optional tool-schema projection. The formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. S8 does not select a new release baseline.
+
+`TypertRemoteInfo` provides a lazy descriptor and direct-method index. Each named method is the same object as its descriptor in that Info. Context-only receivers remain descriptors and are absent from the named index. Native registry registration retains its existing defensive snapshot boundary; registry Info uses the exact stored snapshots. Identity across the registration boundary is not promised, unlike the candidate registry. Descriptor copies made with `with` acquire their own input/result metadata caches.
+
+Normal and strict input views have independent parser and projection caches. Both reject unknown named argument fields. Metadata value parsers reject nonfinite JSON numbers, including values nested in otherwise undeclared fields. Ordinary optional parameters may be absent; lookup identities remain required. Normal input uses the existing STJ codec, including authored defaults and setters. Strict input additionally closes declared nested objects, while preserving explicit dictionary and JSON openness. This is a native adaptation of the candidate's Zod policies: normal STJ behavior is not a promise to strip unknown properties. Standalone generated carrier DTOs do not replay authored constructor or accessor bodies. TypeScript input parsers validate JSON wire values and preserve their object identity; they do not execute CLR conversion, defaults or setters. For example, byte-array input remains a base64 JSON string until Host decoding.
+
+Tool `JsonSchema` is separate from `TypertCodec.Schema` and `ResultSchema`, which continue to govern native admission and output. A tool projection that cannot preserve constraints returns no schema and supplies `JsonSchemaError`; parsers, documentation and calls remain available. The projection expands acyclic local references and accepts representable scalars, arrays, declared objects and disjoint unions. Recursive types, tuples, typed dictionaries, overlapping unions and unsupported constraints are refused. Native integer, range and format constraints are not silently weakened to the candidate's smaller tool subset. Decoded binary results and possibly absent standalone values also refuse tool projection; their existing parsers remain usable. An optional ordinary parameter is represented by omission from the named envelope, so its inner JSON value can still be projected. Unexpected schema-factory failures propagate and may be retried.
+
+Generated Host metadata and independent .NET/TypeScript clients consume the existing declaration facts and serializer contracts. The native named invocation interface forwards to generated typed methods without parsing again or introducing another transport. It returns their original task; duplex callers use the returned handle's existing send/end operations. TypeScript named invocation likewise resolves the supplied client's current namespace and preserves its return value. Consumer-selected strictness never changes Host dispatch or result parsing.
+
+
 ## Candidate events and access clients, 2026-10-23
 
 S7 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, specifically Gateway events, RemoteAccess snapshot/follow and client state. The formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. This section supersedes the temporary event refusal and deferred snapshot statements in S5/S6. S8 metadata projection remains separate.

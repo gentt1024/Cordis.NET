@@ -395,6 +395,8 @@ def main():
                 "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="clr-multi-entry-", dir=OUT)])
             run("typert-package-consumer", [sys.executable, "scripts/verify-typert.py", "--dotnet", shutil.which("dotnet"),
                 "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="typert-consumer-", dir=OUT), *(["--aot"] if options.aot else [])])
+            run("remote-metadata-package-consumer", [sys.executable, "scripts/verify-remote-metadata.py", "--dotnet", shutil.which("dotnet"),
+                "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="remote-metadata-", dir=OUT)])
             run("typert-dotnet-settings", [sys.executable, "scripts/verify-typert-dotnet.py", "--dotnet", shutil.which("dotnet"),
                 "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="typert-dotnet-settings-", dir=OUT), *(["--aot"] if options.aot else [])])
         if git_checkout():
