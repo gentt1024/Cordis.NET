@@ -5,6 +5,8 @@ import { resolve, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { checkout, manifest } from './candidate-support.mjs';
+import { historicalDisposition } from './candidate-inventory-scope.mjs';
+import { validateCandidateReview } from './candidate-review.mjs';
 const options = Object.fromEntries(process.argv.slice(2).map(arg => {
   const separator = arg.indexOf('=');
   if (!arg.startsWith('--') || separator < 0) throw new Error('Use --inventory= --dsh= --origin= --output=');
@@ -49,13 +51,23 @@ const history = historical.tests.map(record => {
   const pin = repository === 'origin' ? manifest.origin : manifest.dsh;
   const blob = gitBlob(root, pin, record.file);
   const oldBlob = gitBlob(root, record.sourceCommit, record.file);
+  const disposition = historicalDisposition(repository, record.file, runtimeFiles.has(repository + ':' + record.file), manifest.excludedSourceTests);
   return { ...record, historicalTargetCommit: record.targetCommit,
     candidateSourceCommit: pin, candidateSourceBlob: blob,
     sourceUnchanged: Boolean(blob && oldBlob && blob === oldBlob),
-    candidateExecution: runtimeFiles.has(repository + ':' + record.file) ? 'file-in-runtime-matrix-case-correspondence-unreviewed' : 'not-executed-outside-native-runtime-scope',
+    ...disposition,
     candidateMappingStatus: 'requires-candidate-assertion-review',
     historicalMappings: legacyMappings.get(record.id) || [],
     meaning: 'Historical record retained verbatim. Its native disposition is historical; file inclusion does not prove this candidate assertion instance passed or was ported.' };
+});
+const reviewBytes = readFileSync(new URL('../docs/candidate-delta-review.json', import.meta.url));
+const review = JSON.parse(reviewBytes);
+const formal = JSON.parse(readFileSync(new URL('../upstream.lock.json', import.meta.url), 'utf8'));
+if (review.formal !== formal.harness.commit) throw new Error('Candidate review has a different formal baseline');
+const nativeDeltaReview = validateCandidateReview(review, frozen, {
+  blobFor: file => gitBlob(dsh, manifest.dsh, file),
+  readNative: file => { const bytes = readFileSync(new URL('../' + file, import.meta.url));
+    return { sha256: sha256(bytes), text: bytes.toString('utf8') }; },
 });
 const fileHashes = new Map();
 const sourceHash = path => { if (!fileHashes.has(path)) fileHashes.set(path, sha256(readFileSync(path))); return fileHashes.get(path); };
@@ -78,7 +90,10 @@ writeFileSync(target, JSON.stringify({ format: 'cordis-candidate-inventory/v1', 
   formalBaselineUnchanged: true, discoverySha256: sha256(readFileSync(options.inventory)), runId: frozen.runId,
   meaning: 'Runtime instance discovery and retained historical scope. Execution receipts and native assertion correspondence remain separate.',
   tests, historicalTests: history, excludedSourceTests: manifest.excludedSourceTests,
+  nativeDeltaReview: { sha256: sha256(reviewBytes), ...nativeDeltaReview },
   counts: { runtimeInstances: tests.length, retainedHistoricalInstances: history.length,
-    historicalOutsideRuntime: history.filter(record => record.candidateExecution.startsWith('not-executed')).length,
+    historicalOutsideRuntime: history.filter(record => record.candidateExecution === 'not-executed-outside-native-runtime-scope').length,
+    historicalScopeUnreviewed: history.filter(record => record.candidateExecution === 'not-executed-scope-unreviewed').length,
+    historicalSourceSkipped: history.filter(record => record.candidateExecution === 'not-executed-source-skipped').length,
     nativeAssertionSetsReviewed: 0 } }, null, 2) + '\n');
 console.log(`${tests.length} candidate runtime instances; ${history.length} historical records retained. No pass status inferred.`);

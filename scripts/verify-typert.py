@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import threading
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape
 
 from package_inspection import inspect_restored_packages
 
@@ -77,7 +78,7 @@ def main():
         path = directory / (name + ".csproj")
         path.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework>'
                         '<ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors>' +
-                        '<RestorePackagesPath>' + str(source / 'cache') + '</RestorePackagesPath>' +
+                        '<RestorePackagesPath>' + escape(str(source / 'cache')) + '</RestorePackagesPath>' +
                         properties + '</PropertyGroup><ItemGroup>' + references + '</ItemGroup></Project>', encoding="utf-8")
         return directory, path
 

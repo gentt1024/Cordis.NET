@@ -14,6 +14,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONUTF8: '1'
+
 concurrency:
   group: verify-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

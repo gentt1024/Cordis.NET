@@ -11,30 +11,9 @@
     "composition": {
       "repository": "dsh",
       "include": [
-        "packages/boot/app-boot/tests/app-boot.spec.ts",
-        "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
-        "packages/boot/app-boot/tests/config-reload.spec.ts",
-        "packages/boot/app-boot/tests/linked-resolution-matrix.spec.ts",
-        "packages/boot/app-boot/tests/loader-shape.compat.spec.ts",
-        "packages/boot/app-boot/tests/package-meta.spec.ts",
-        "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
-        "packages/boot/app-boot/tests/profile-compatibility.spec.ts",
-        "packages/boot/app-boot/tests/profile-plugins.spec.ts",
-        "packages/boot/app-boot/tests/profile-resolution-service.spec.ts",
-        "packages/boot/app-boot/tests/profile-resolution-worker-bootstrap.spec.ts",
-        "packages/boot/app-boot/tests/profile-resolution.spec.ts",
-        "packages/boot/app-boot/tests/profile-sanitize.spec.ts",
-        "packages/boot/app-boot/tests/profile.spec.ts",
-        "packages/boot/app-boot/tests/user-patches.spec.ts",
+        "packages/boot/app-boot/tests/*.spec.ts",
+        "packages/boot/plugin-manager/tests/*.spec.ts",
         "packages/boot/hmr/tests/*.spec.ts",
-        "packages/boot/hmr/tests/coordination.spec.ts",
-        "packages/boot/hmr/tests/error.spec.ts",
-        "packages/boot/hmr/tests/modules.spec.ts",
-        "packages/boot/hmr/tests/profile.spec.ts",
-        "packages/boot/hmr/tests/reconciliation.spec.ts",
-        "packages/boot/hmr/tests/watch-config.spec.ts",
-        "packages/boot/plugin-manager/tests/package-reload.spec.ts",
-        "packages/boot/plugin-manager/tests/patch.spec.ts",
         "scripts/loader-config-diff.spec.ts",
         "scripts/loader-volatile-update.spec.ts",
         "scripts/volatile-config.spec.ts"
@@ -81,8 +60,8 @@
     }
   },
   "historicalInventory": "docs/upstream-tests.json",
-  "historicalScopePolicy": "Retain every historical source record. Files outside these execution suites remain explicitly not executed by this candidate matrix; source presence and native mapping are not a pass.",
-  "candidateScopePolicy": "Complete execution means the frozen runtime suite union above, including all linked-resolution instances. DSH application builds and product-specific historical entries are outside the native contract. The candidate node-half and generator suites are retained as source reference even where their feature is not promised by Cordis.NET.",
+  "historicalScopePolicy": "Retain every historical source record. Runtime file inclusion is not assertion correspondence. Only manifest-declared exclusions have an outside-scope disposition; other undiscovered historical records remain not-executed-scope-unreviewed.",
+  "candidateScopePolicy": "Execute all app-boot and plugin-manager test files except the explicit official-product exclusions, together with the declared HMR/Remote/metadata/browser/Core suites and all linked-resolution instances. Source execution, including GitHub connection and Node-half reference cases, does not imply native implementation or interoperability. The upstream describe.skip catalog-contract file remains explicitly source-skipped.",
   "knownCapabilitySkip": {
     "suite": "composition",
     "file": "packages/boot/app-boot/tests/package-meta.spec.ts",
@@ -97,6 +76,57 @@
       "status": "source-skipped",
       "scopeDecision": "outside-native-runtime-contract",
       "reason": "The fixed upstream file uses describe.skip. It tests DSH product documentation catalog extraction, outside the S8 Remote metadata contract. Retained as source evidence; never counted as passed."
+    },
+    {
+      "repository": "dsh",
+      "file": "packages/boot/app-boot/tests/official-bundles.spec.ts",
+      "sourceBlob": "37ab1f4a705b923184275690e8155eda2e71d4ea",
+      "status": "excluded",
+      "scopeDecision": "outside-native-runtime-contract",
+      "reason": "Tests the exact official Claude Code and Codex subagent bundle catalog and shipped product translations, outside the native runtime/application-infrastructure contract."
+    },
+    {
+      "repository": "dsh",
+      "file": "packages/boot/plugin-manager/tests/official-install-target.spec.ts",
+      "sourceBlob": "96101fa59fcee80da33ef397cf82a234d1a4c009",
+      "status": "excluded",
+      "scopeDecision": "outside-native-runtime-contract",
+      "reason": "Tests official DSH CLI/Desktop installation layout and workspace-to-official-subagent package targeting, outside the native NuGet installation contract."
+    }
+  ],
+  "platformSkips": [
+    {
+      "platform": "Windows",
+      "case": [
+        "composition",
+        "packages/boot/plugin-manager/tests/operations-process.spec.ts",
+        "a run with descendants > settles a run whose pipes a descendant keeps open",
+        0
+      ],
+      "sourceBlob": "e040b235581e7ba2755f621514123d37c40f0788",
+      "reason": "The unchanged upstream describe.skipIf(process.platform === win32) excludes this POSIX descendant fixture: Windows descendants neither retain inherited pipes past leader exit nor lead a stoppable process group; mocked-child drain cases still execute."
+    },
+    {
+      "platform": "Windows",
+      "case": [
+        "composition",
+        "packages/boot/plugin-manager/tests/operations-process.spec.ts",
+        "a run with descendants > surfaces an output consumer failure that the bounded drain cuts short",
+        0
+      ],
+      "sourceBlob": "e040b235581e7ba2755f621514123d37c40f0788",
+      "reason": "The unchanged upstream describe.skipIf(process.platform === win32) excludes this POSIX descendant fixture: Windows descendants neither retain inherited pipes past leader exit nor lead a stoppable process group; mocked-child drain cases still execute."
+    },
+    {
+      "platform": "Windows",
+      "case": [
+        "composition",
+        "packages/boot/plugin-manager/tests/operations-process.spec.ts",
+        "a run with descendants > stops the whole tree of a stalled run before returning",
+        0
+      ],
+      "sourceBlob": "e040b235581e7ba2755f621514123d37c40f0788",
+      "reason": "The unchanged upstream describe.skipIf(process.platform === win32) excludes this POSIX descendant fixture: Windows descendants neither retain inherited pipes past leader exit nor lead a stoppable process group; mocked-child drain cases still execute."
     }
   ]
 }

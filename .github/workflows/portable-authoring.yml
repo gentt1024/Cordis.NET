@@ -13,6 +13,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONUTF8: '1'
+
 jobs:
   consume:
     name: same-batch authoring (${{ matrix.os }})

@@ -11,12 +11,11 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
 import subprocess
 import time
 
 from verify import ROOT, source_hashes
-from verify_upstream import (SHARDS, MATRIX, aggregate_reports, plan, read, require,
+from verify_upstream import (SHARDS, MATRIX, aggregate_reports, matrix_selection, plan, read, require, run_identity,
                              validate_inventory, validate_report, write)
 
 MANIFEST = ROOT / "reference/candidate-manifest.json"
@@ -50,7 +49,10 @@ def fixed_sources(dsh, origin):
         require(git(root, "rev-parse", "HEAD") == pin, "Unpinned candidate checkout")
         require(not git(root, "status", "--porcelain", "--untracked-files=no"), "Modified candidate source")
     for excluded in value["excludedSourceTests"]:
-        require(git(dsh, "rev-parse", DSH + ":" + excluded["file"]) == excluded["sourceBlob"], "Excluded original source changed")
+        root, pin = (origin, ORIGIN) if excluded.get("repository") == "origin" else (dsh, DSH)
+        require(git(root, "rev-parse", pin + ":" + excluded["file"]) == excluded["sourceBlob"], "Excluded original source changed")
+    for rule in value.get("platformSkips", []):
+        require(git(dsh, "rev-parse", DSH + ":" + rule["case"][1]) == rule["sourceBlob"], "Platform-skip original source changed")
     require(git(dsh, "rev-parse", DSH + ":" + MATRIX) == value["matrixBlob"], "Candidate matrix source changed")
     return {"dsh": git(dsh, "rev-parse", "HEAD^{tree}"), "origin": git(origin, "rev-parse", "HEAD^{tree}")}
 
@@ -61,22 +63,16 @@ def tool_identity():
             "manifestSha256": digest(MANIFEST)}
 
 
-def run_identity(explicit=None):
-    hosted = os.environ.get("GITHUB_RUN_ID")
-    if hosted:
-        value = hosted + ":" + os.environ.get("GITHUB_RUN_ATTEMPT", "1")
-        require(explicit is None or explicit == value, "Run identity differs from this workflow")
-        return value
-    require(bool(explicit), "Supply --run-id for a local candidate batch")
-    return explicit
-
 
 def expected_files(dsh, origin):
     files = {}
     for suite, spec in manifest()["suites"].items():
         root = origin if spec["repository"] == "origin" else dsh
         tracked = git(root, "ls-files").splitlines()
-        selected = sorted(path for path in tracked if any(fnmatch.fnmatchcase(path, glob) for glob in spec["include"]))
+        excluded = {item["file"] for item in manifest()["excludedSourceTests"]
+                    if item.get("repository", "dsh") == spec["repository"]}
+        selected = sorted(path for path in tracked if path not in excluded and
+                          any(fnmatch.fnmatchcase(path, glob) for glob in spec["include"]))
         require(selected, "Empty candidate source scope: " + suite)
         for pattern in spec["include"]:
             require(any(fnmatch.fnmatchcase(path, pattern) for path in selected), "Missing candidate scope: " + pattern)
@@ -173,6 +169,28 @@ def discover(dsh, origin, output, batch):
     print(f"PASS candidate discovery: {len(inventory)} original instances", flush=True)
 
 
+
+def skip_rules(target_platform):
+    value = manifest()
+    capability = value["knownCapabilitySkip"]
+    rules = {(capability["suite"], capability["file"], capability["name"], capability["ordinal"]): capability["reason"]}
+    for rule in value.get("platformSkips", []):
+        if rule["platform"] == target_platform:
+            key = tuple(rule["case"])
+            require(key not in rules and bool(rule["reason"]), "Duplicate or unexplained candidate skip")
+            rules[key] = rule["reason"]
+    return rules
+
+
+def candidate_report(report, suite, root, expected, selected):
+    rules = skip_rules(platform.system())
+    outcomes = validate_report(report, suite, root, expected, selected, skippable=rules)
+    for row in outcomes:
+        if row["status"] == "skipped":
+            row["skipReason"] = rules[tuple(row["case"])]
+    return outcomes
+
+
 def run_shard(dsh, origin, frozen_path, output, shard, batch):
     frozen = read(frozen_path)
     validate_frozen(frozen)
@@ -195,17 +213,14 @@ def run_shard(dsh, origin, frozen_path, output, shard, batch):
         inventory, files = collect(dsh, origin, output, steps)
         require(inventory == frozen["inventory"] and files == frozen["sourceFiles"], "Worker discovery differs from frozen candidate")
         assignments = plan(inventory)
-        matrix = {key for key in assignments if key[:2] == ("composition", MATRIX)}
-        selected = {key for key in matrix if assignments[key] == shard}
-        require(all(key[2].count(" > ") == 1 and key[3] == 0 for key in matrix), "Candidate matrix identities changed")
+        matrix, selected, matrix_filter = matrix_selection(assignments, shard)
         selection = output / "matrix-selection.json"
-        write(selection, {"include": [MATRIX], "testNamePattern": "(?:^| )(?:(?:" + "|".join(
-            re.escape(key[2].replace(" > ", " ")) for key in sorted(selected)) + "))$"})
+        write(selection, matrix_filter)
         report = output / "matrix.json"
         env = environment(dsh, origin, output, "composition")
         execute(output, steps, "linked-resolution-matrix", ["node", VITEST, "run", "--config", CONFIG],
                 dict(env, CORDIS_UPSTREAM_SELECTION=str(selection), CORDIS_UPSTREAM_REPORT=str(report)), cwd=dsh)
-        outcomes.extend(validate_report(read(report), "composition", dsh, matrix, selected))
+        outcomes.extend(candidate_report(read(report), "composition", dsh, matrix, selected))
         if shard == 1:
             for suite, spec in manifest()["suites"].items():
                 expected = {key for key in assignments if key[0] == suite and key[1] != MATRIX}
@@ -218,7 +233,7 @@ def run_shard(dsh, origin, frozen_path, output, shard, batch):
                 execute(output, steps, "original-" + suite, ["node", VITEST, "run", "--config", CONFIG],
                         dict(environment(dsh, origin, output, suite), CORDIS_UPSTREAM_SELECTION=str(selection),
                              CORDIS_UPSTREAM_REPORT=str(report)), cwd=root)
-                outcomes.extend(validate_report(read(report), suite, root, expected, expected))
+                outcomes.extend(candidate_report(read(report), suite, root, expected, expected))
         require(trees == fixed_sources(dsh, origin) and before == source_hashes(), "Source changed during candidate run")
         result["status"] = "passed"
     finally:
@@ -240,7 +255,13 @@ def aggregate(directory, frozen_path, expected_commit, expected_platform, batch)
         require(identity["tools"] == frozen["tools"], "Candidate tools or scope changed")
         require(identity["sourceTrees"] == frozen["sourceTrees"], "Candidate source identity differs")
         require(identity["sourceSha256"] == source_hashes(), "Shard source differs from current frozen checkpoint")
-    result = aggregate_reports(reports, expected_commit, expected_platform, dsh=DSH, origin=ORIGIN, counts=approved_counts())
+    rules = skip_rules(expected_platform)
+    for report in reports:
+        for row in report["outcomes"]:
+            if row["status"] == "skipped":
+                require(row.get("skipReason") == rules.get(tuple(row["case"])), "Candidate skip reason or platform differs")
+    result = aggregate_reports(reports, expected_commit, expected_platform, dsh=DSH, origin=ORIGIN,
+                               counts=approved_counts(), skippable=rules)
     result["meaning"] = "Complete frozen candidate original-suite union for this batch and platform. Does not promote the formal baseline or prove native assertion equivalence."
     return result
 

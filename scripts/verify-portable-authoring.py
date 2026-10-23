@@ -9,12 +9,7 @@ import shutil
 import subprocess
 import sys
 
-from verify import source_hashes
-
-
-def hashes(directory):
-    return {path.relative_to(directory).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in sorted(directory.rglob('*')) if path.is_file()}
+from verify import artifact_hashes as hashes, source_hashes
 
 
 def verify_producer(producer, batch, commit, sources, run_id, run_attempt):
@@ -29,16 +24,19 @@ def verify_producer(producer, batch, commit, sources, run_id, run_attempt):
             raise RuntimeError(f'Downloaded {key} bytes differ from producer receipt')
 
 
-def verified_packages(verification, commit, sources, packages, run_id=None, run_attempt=None):
+def verified_inputs(verification, commit, sources, batch, run_id=None, run_attempt=None):
     if verification.get('status') != 'requested-checks-passed' or verification.get('sourceUnchanged') is not True:
         raise RuntimeError('Producer verification did not pass without source changes')
     if verification.get('commit') != commit or verification.get('sourceSha256') != sources:
         raise RuntimeError('Producer verification belongs to another source checkpoint')
     if verification.get('runId') != run_id or verification.get('runAttempt') != run_attempt:
         raise RuntimeError('Producer verification belongs to another workflow run or attempt')
-    seals = [step for step in verification['steps'] if step['name'] == 'package-batch-unchanged']
-    if len(seals) != 1 or seals[0].get('exitCode') != 0 or seals[0].get('sha256') != packages:
-        raise RuntimeError('Packages differ from the exact batch consumed by verification')
+    for category, name, field in (('packages', 'package-batch-unchanged', 'sha256'),
+                                  ('runtime', 'client-runtime-unchanged', 'sha256'),
+                                  ('tool', 'client-author-tool-unchanged', 'tool')):
+        seals = [step for step in verification['steps'] if step['name'] == name]
+        if len(seals) != 1 or seals[0].get('exitCode') != 0 or seals[0].get(field) != batch[category]:
+            raise RuntimeError(f'{category} differ from the exact batch consumed by verification')
 
 
 def main():
@@ -67,7 +65,7 @@ def main():
              'verificationSha256': hashlib.sha256(verification.read_bytes()).hexdigest()}
     if not batch['packages'] or not batch['runtime']:
         raise RuntimeError('Package batch and browser runtime must be present')
-    verified_packages(json.loads(verification.read_text(encoding='utf-8')), commit, sources, batch['packages'], run_id, run_attempt)
+    verified_inputs(json.loads(verification.read_text(encoding='utf-8')), commit, sources, batch, run_id, run_attempt)
     if options.record:
         if platform.system() != 'Linux':
             raise RuntimeError('The portable package producer must run on Linux')

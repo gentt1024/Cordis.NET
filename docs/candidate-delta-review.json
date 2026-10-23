@@ -1,0 +1,3137 @@
+{
+  "format": "cordis-candidate-delta-review/v1",
+  "formal": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "candidate": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "boundary": "Reviews named S1-S9 assertion clusters only. Neither whole-source-case equivalence nor historical mapping completion is inferred. Execution is recorded separately by the frozen workflow receipts.",
+  "sourceFiles": {
+    "packages/api/gateway/src/access.ts": {
+      "candidateBlob": "d85ebb3e65b84ac48f79e8b77a6185c5bb462fca",
+      "formalBlob": null
+    },
+    "packages/api/gateway/src/index.ts": {
+      "candidateBlob": "54dbf73f6fdb3e947c6af7d1365bfaa74a90665f",
+      "formalBlob": "e97a06507652e86fb629da3e921e36f6b50117d3"
+    },
+    "packages/api/gateway/src/stream-server.ts": {
+      "candidateBlob": "ad44e0907fba3295f5a3cf69c75a2bca0d9f9a23",
+      "formalBlob": "9454f03f2db1af94a2ed533eb558d58d0de8c05f"
+    },
+    "packages/api/gateway/tests/browser-credentials.ts": {
+      "candidateBlob": "9bced52acc03f6e509faa3804d75dfbfd37ecf04",
+      "formalBlob": "9bced52acc03f6e509faa3804d75dfbfd37ecf04"
+    },
+    "packages/api/gateway/tests/gateway-access.host.spec.ts": {
+      "candidateBlob": "960405939f26aab7ed8b1a93ee0f977793929027",
+      "formalBlob": null
+    },
+    "packages/api/gateway/tests/gateway.host.spec.ts": {
+      "candidateBlob": "6ec0e64bbb2666c118a07a4364d16aaf6c8204f9",
+      "formalBlob": "24522ce846102c0ced7af0bd797dd82e311ec865"
+    },
+    "packages/api/gateway/tests/operator-connect-fixture.ts": {
+      "candidateBlob": "33a2086523bc18fb03fb38fc33636a450b729d71",
+      "formalBlob": null
+    },
+    "packages/api/gateway/tests/operator-connect.host.spec.ts": {
+      "candidateBlob": "1868f33bf6415830e055508260a2f90bc3d39d86",
+      "formalBlob": null
+    },
+    "packages/api/gateway/tests/peer.ts": {
+      "candidateBlob": "2571e791d55f1af76ce8d22d835c53d4079dc8c7",
+      "formalBlob": null
+    },
+    "packages/api/remote-access/src/client/mount.ts": {
+      "candidateBlob": "257aa396c2f1862936e61c343ac32b9003a1aa32",
+      "formalBlob": null
+    },
+    "packages/api/remote-access/src/client/state.ts": {
+      "candidateBlob": "b0ee02b40058b9579da0b26d69ea5214be89e09a",
+      "formalBlob": null
+    },
+    "packages/api/remote-access/src/index.ts": {
+      "candidateBlob": "5b3cf41e0ffe3fdf64ffd7645c9677edc773b1a0",
+      "formalBlob": null
+    },
+    "packages/api/remote-access/src/snapshot.ts": {
+      "candidateBlob": "ad3a490205a2294afbd0083a76d68b67fcfbc99c",
+      "formalBlob": null
+    },
+    "packages/api/remote-access/tests/client-access.client.spec.ts": {
+      "candidateBlob": "b73944ec58699e1a63156fc74ee06598c0ba0a31",
+      "formalBlob": null
+    },
+    "packages/api/remote-access/tests/remote-access.host.spec.ts": {
+      "candidateBlob": "f29d4d1744edbc96f8b76cab5cd9924674f15ace",
+      "formalBlob": null
+    },
+    "packages/boot/app-boot/src/index.ts": {
+      "candidateBlob": "fded02c9c8273207d342a96fe0587c9d23c03512",
+      "formalBlob": "188cb33460f659393f28bbc5569c86b59ae135e0"
+    },
+    "packages/boot/app-boot/src/plugin-compatibility.ts": {
+      "candidateBlob": "2e4ca5736a775aceadb0a2a10140af61f94ed2ac",
+      "formalBlob": "047fe1f96e2c95a28944f9235a37f7245471e515"
+    },
+    "packages/boot/app-boot/src/profile-resolution/service.ts": {
+      "candidateBlob": "6e73c16c1a4addf15eebdccb76ce0b8786043a02",
+      "formalBlob": "5523b51eaffa5591b0288f89bacc4cc6a19ca404"
+    },
+    "packages/boot/app-boot/tests/compatibility-preflight.spec.ts": {
+      "candidateBlob": "e753fa5b4d89663caf41fc9fd8b997691ef5ccbc",
+      "formalBlob": "e753fa5b4d89663caf41fc9fd8b997691ef5ccbc"
+    },
+    "packages/boot/app-boot/tests/plugin-compatibility.spec.ts": {
+      "candidateBlob": "591fa0bf837a46eec04a68753626ddc55d630189",
+      "formalBlob": "951bbf6a3117301ed8fa93cac5241e0458445e6d"
+    },
+    "packages/boot/app-boot/tests/profile-resolution-service.spec.ts": {
+      "candidateBlob": "9ca8a7e0d62c7c30ae38eeb31ab33d4ef1958f60",
+      "formalBlob": "d066329d36e452661fcd2c71a70e6812464ead90"
+    },
+    "packages/boot/app-boot/tests/profile-resolution.spec.ts": {
+      "candidateBlob": "b56d1a17748ec7706538d29d717cb0552999ebe4",
+      "formalBlob": "a36347661d1ac15f6860cbf97091c9162f1f21e8"
+    },
+    "packages/boot/hmr/src/index.ts": {
+      "candidateBlob": "47d71d9109228785d99e2b7aef46aa80aaca3c19",
+      "formalBlob": "045890f022c6b3697834c0b8fe381937749ddf17"
+    },
+    "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts": {
+      "candidateBlob": "3a4f518bf89059372cef2d47ac0d0e539bf66cef",
+      "formalBlob": null
+    },
+    "packages/boot/hmr/tests/package-reload.spec.ts": {
+      "candidateBlob": "5b3dc2757152632990052e167e802c9d0e391a67",
+      "formalBlob": null
+    },
+    "packages/boot/plugin-manager/src/index.ts": {
+      "candidateBlob": "6734d2872b099b31777ef7fa90f242a1f7a4086c",
+      "formalBlob": "ea8a94f5482112639d6e2f7976401cb4db3f8ed6"
+    },
+    "packages/boot/plugin-manager/src/patch.ts": {
+      "candidateBlob": "0dfacb2de6a2faf9d47aa394a321462db71c346d",
+      "formalBlob": "5776b586fa3def1a6eca49f31005a41d727524c7"
+    },
+    "packages/boot/plugin-manager/tests/manager.spec.ts": {
+      "candidateBlob": "da58379bef93b6ef29d00e4a888db61ff1defed8",
+      "formalBlob": "81acd6ddf82f9eef195c946a0f20eff2edbd0f3e"
+    },
+    "packages/boot/plugin-manager/tests/package-reload.spec.ts": {
+      "candidateBlob": "b5569a6229951db9ba8c1c0d01e7f7f72cfe1913",
+      "formalBlob": null
+    },
+    "packages/boot/plugin-manager/tests/patch.spec.ts": {
+      "candidateBlob": "9580da1e5203b04d325f3325c475cb7d5a43547f",
+      "formalBlob": "30bb947c8416de017a908771915a6828d01adc78"
+    },
+    "packages/client/connection/src/peer.ts": {
+      "candidateBlob": "397839980e0c8086465176babb65958a061c7a0f",
+      "formalBlob": null
+    },
+    "packages/client/modules/src/client/entries.ts": {
+      "candidateBlob": "587d3ffdd0bd0a34572c89f8195412f084d060ef",
+      "formalBlob": "b3c096dbaaf481fb9e8ea8796b497403732a5a0b"
+    },
+    "packages/client/modules/src/client/manifest.ts": {
+      "candidateBlob": "1926d812a19f26f122d604559f7412222672766f",
+      "formalBlob": "79d960c9130ade084dafce658b71962539c9ba0a"
+    },
+    "packages/client/modules/src/client/notify.ts": {
+      "candidateBlob": "1e658872b6ca7e5b75860f6292370e644645cb71",
+      "formalBlob": null
+    },
+    "packages/client/modules/src/client/release-change.ts": {
+      "candidateBlob": "acf6ba4432ba2b038c864ca0718d513cd512cf06",
+      "formalBlob": null
+    },
+    "packages/client/modules/src/client/system.ts": {
+      "candidateBlob": "6597f54afca908f34bf93a8140c2ce628ed2945f",
+      "formalBlob": "29da7c416335a133b2dcb0ad1c073d1ff3ed697a"
+    },
+    "packages/client/modules/src/index.ts": {
+      "candidateBlob": "18bbc1208b64cc215ebf906a2146e01c909202ba",
+      "formalBlob": "9734685e708ca17c21d3d493a15ef3bfdace5fae"
+    },
+    "packages/client/modules/tests/entries.client.spec.ts": {
+      "candidateBlob": "dc908bea3321496ab8ee9545ab5204a46bef7b82",
+      "formalBlob": "0999c2b16a17a1f28462010232de3156c1beab08"
+    },
+    "packages/client/modules/tests/loader.client.spec.ts": {
+      "candidateBlob": "ffa3fe10e94ece1ee49fe9a6b27cb58ed6a46895",
+      "formalBlob": "5f06f62aa666e2a1d1be7123fbc57b9aa338463e"
+    },
+    "packages/client/tsdown.client.ts": {
+      "candidateBlob": "90b26c196e6fc69acef39ccc4fad16fcaf1a0b5f",
+      "formalBlob": "215001dbb982288ae85bcf1aa875043fdd0c195d"
+    },
+    "packages/client/ui-renderer/tests/inline-slots.client.spec.tsx": {
+      "candidateBlob": "15fc5056bd49e459724247a088371fadeec91000",
+      "formalBlob": null
+    },
+    "packages/client/ui-slots/src/index.ts": {
+      "candidateBlob": "85c7d676cccc53c0958182eea8f98dd2bae9042a",
+      "formalBlob": "6e94643107f12028c4322e5af5873004a7283f23"
+    },
+    "packages/client/ui-slots/src/renderer.ts": {
+      "candidateBlob": "e6ed27a9ef037381cee4811f2e9b0cfb1a7043ec",
+      "formalBlob": "2ea326cea4780151540381870db17d4401fd4535"
+    },
+    "packages/typert/generator/src/emitter.ts": {
+      "candidateBlob": "fea5ebb062b15d6a0b8a35d57ab4217c1afab60d",
+      "formalBlob": "78907abd5f45b2c8dabb99332c25703bbd3ffaa4"
+    },
+    "packages/typert/generator/src/tool-schema.ts": {
+      "candidateBlob": "d955da7ed4eca9e3cea19fcecfd06b5ab79af35f",
+      "formalBlob": null
+    },
+    "packages/typert/generator/src/workspace.ts": {
+      "candidateBlob": "a12b7475c13398253195f1a6d0db8e321a4194a8",
+      "formalBlob": "50866dc8b1e1c087d6785170778aca47a1fd11b6"
+    },
+    "packages/typert/generator/tests/remote-metadata.spec.ts": {
+      "candidateBlob": "60a979ac5eeb519c44235adab2eeba395f71adc3",
+      "formalBlob": null
+    },
+    "packages/typert/generator/tests/remote-module.ts": {
+      "candidateBlob": "c04138f6f5cdb0ea78ebb03ddf081c6a6c67d681",
+      "formalBlob": null
+    },
+    "packages/typert/loader/src/index.ts": {
+      "candidateBlob": "cd4e582c737d4feb4bc83aba05044ebee6704b28",
+      "formalBlob": "50ec19165deba68ca4fa42cf405d31daad62430d"
+    },
+    "packages/typert/loader/tests/lazy-info.spec.ts": {
+      "candidateBlob": "7d09ff9e991f96475444972fe71ea71ab802b655",
+      "formalBlob": null
+    },
+    "packages/typert/protocol/src/principal.ts": {
+      "candidateBlob": "0c3abf1688bd5a78f2bdc3803c838d9423f9aa32",
+      "formalBlob": null
+    },
+    "packages/typert/protocol/src/remote-info.ts": {
+      "candidateBlob": "f646c263d6433ce9f01b8993bb980eaad1463faa",
+      "formalBlob": null
+    },
+    "packages/typert/protocol/src/types.ts": {
+      "candidateBlob": "650b2b35563c897fc7288480c83ddd258f2dae64",
+      "formalBlob": "ec2a88c4f98235303650fe185d006c174d0d35a0"
+    },
+    "packages/typert/protocol/tests/remote-access.spec.ts": {
+      "candidateBlob": "15f9f47d6d043bfd35182cb9e7d6049cda6d3d29",
+      "formalBlob": null
+    },
+    "packages/typert/protocol/tests/remote-info.spec.ts": {
+      "candidateBlob": "992d121aaf0aa74f084f391e9894370feeaec29d",
+      "formalBlob": null
+    },
+    "packages/typert/registry/src/service.ts": {
+      "candidateBlob": "c64817c819219c53edde02ad86c231aa4313244e",
+      "formalBlob": "93a370e34f4bc2748e76a6dbabf60f10b46792c1"
+    },
+    "packages/typert/registry/tests/typert.spec.ts": {
+      "candidateBlob": "38a2c06f12f31285748c8f928494ad31727f7c40",
+      "formalBlob": "9df0c730e8963989d47c278f5bcd7e78f43834a8"
+    },
+    "scripts/client-bundle-css.spec.ts": {
+      "candidateBlob": "29037d9f4a8f2f9e5abb317fb257f95fba5a5a1f",
+      "formalBlob": "b426e541ea9bccf52e8570bcae836ec4f6e583f2"
+    },
+    "scripts/test-dom-environment.ts": {
+      "candidateBlob": "12c8895735130bde511dc69c83ac2a5d2e96ce4e",
+      "formalBlob": "12c8895735130bde511dc69c83ac2a5d2e96ce4e"
+    },
+    "scripts/test-proxy-environment.ts": {
+      "candidateBlob": "f8111ae6899c8582a53b18a6128dee399cfb0270",
+      "formalBlob": "f8111ae6899c8582a53b18a6128dee399cfb0270"
+    },
+    "tsconfig.base.json": {
+      "candidateBlob": "2b3e9aad3777353f2115eb3bd9076302d6f31f23",
+      "formalBlob": "b2f42eeb5a4d3027ab2a819bc6421f316c2f217d"
+    },
+    "vitest.config.ts": {
+      "candidateBlob": "9c717c0ced011cd242d105aedbf6d2bb5c71b3cc",
+      "formalBlob": "d0fd3c31f818d0ad9fc5dff64c0647f7d533f513"
+    },
+    "vitest.shared.ts": {
+      "candidateBlob": "7c6ca2bee8de227e110cc58d245dfb1a3d99dfae",
+      "formalBlob": "7c6ca2bee8de227e110cc58d245dfb1a3d99dfae"
+    }
+  },
+  "nativeFiles": {
+    "clients/modules/src/access.ts": "9ec6435eb07a6ba0d3b8f99f2de520b59acadf3b9310f73292b0f4ca27e612df",
+    "clients/modules/src/index.ts": "8dcd5cf8ac0dbfe262395623af2a17a2f7d9fffef666bd2bcc2aa0226486687b",
+    "clients/modules/vendor/modules/release-change.ts": "3327808c3ca5c8ada4d22ff81572f91e54be32e908c05d3890253ec5992f85fa",
+    "clients/modules/vendor/modules/system.ts": "0953d346d3a642c3cde2b72b19a23f96d4285c8394a3774d5b64cc24c4d2de84",
+    "clients/modules/vendor/slots/index.ts": "273e5148f5e66220edaefa2ccd3302625372802123802400f93af008074473e0",
+    "clients/modules/vendor/slots/renderer.ts": "9b518a8dccdd5955e54a419fec3a8cce9de6b8ba824b0d199bb958a47411d9d9",
+    "clients/tools/build.mjs": "a2f4d49bc41b7e78dfe09f582d992f8d9a2ee21fd4eddce6cc010b8effefdc0a",
+    "scripts/typert_declaration_consumer.py": "a40ce92d8e696cdc3aaa5414e98b6442f2dc66b1a65a309dc9ad967de067e488",
+    "scripts/verify-access-client.py": "58e9f4752309976527702628b16efb5c6b08e7257edb7f2219ee8396bd0ade11",
+    "scripts/verify-client-access.mjs": "f036c6ea2d711870f249e61cbc337bc173d6b59d759882b00e954e5182fed2e2",
+    "scripts/verify-client-author-package.mjs": "61cd865b502b6046f07d4bdc0799642c973317beb495c9c679d1c1625944ad6d",
+    "scripts/verify-client-author-watch.mjs": "b4e0f17a05f55fc1b89cb81708551fd58c3e3b8b8e5a21ae7fe56800e91882fd",
+    "scripts/verify-client-module-types.mjs": "b5e4f47f98ddcd31483a431d5fa5005a6a5b1146f4b4ad33d52113a4d17ef38f",
+    "scripts/verify-client-release-browser.py": "64538ec45fd34f3cf3d3d0175b379cbbe2b7abac6f3c419d6827cc9900e164e1",
+    "scripts/verify-client-release.mjs": "eee0447eec29c580cb624c1d3f3478e15c7e34c3300f58a6da8a9017aa3a8030",
+    "scripts/verify-client-safety.mjs": "dda5a29f19e878f50dd925e0c0b984b425defe9afa04cd3d3c159d450da99d54",
+    "scripts/verify-remote-access.py": "c6e014c74fed7a8538563d7c5e26a895b2779762555b5ccbb56f70a30c1b133a",
+    "scripts/verify-remote-identity.py": "c37fe73f626cf71e8a722f6f738820e9235b8d07a02cf977270d9bb02a172773",
+    "scripts/verify-remote-metadata.mjs": "2f69060c52f9ec9f9b63bf313c27cd1c0bf912b14ef2e2a41fbb3e55c796b3d3",
+    "src/Cordis.Composition/ClientModuleCatalog.cs": "66319c841dafefde85ca34ebfaed39f4494355f6a21428b9f22123429fba00c1",
+    "src/Cordis.Composition/TypertAccessState.cs": "5da4697e526d5b0f8a803cc15d2a887eca622a232e527bb736db738970a348b5",
+    "src/Cordis.Composition/TypertCodec.Resources.cs": "6cdc2c7f1ee2ae8f3f4deaa0f5d739de48a4714d9b05bd35b018cdb106c9cb49",
+    "src/Cordis.Composition/TypertCodec.StrictInput.cs": "deb68b98350a036a1faba6395dcb835f363a1215941cf4e0b18c7b4266d5a1d2",
+    "src/Cordis.Composition/TypertGateway.Access.cs": "15053c94e1442524107f735e98554df79f594ccbbe119b8c327f2ac423b3fb81",
+    "src/Cordis.Composition/TypertGateway.Events.cs": "ecec027a805684083039e24155c9207a41daa70b856bf45c49fc9573fd6934dc",
+    "src/Cordis.Composition/TypertGateway.cs": "f916d0f92f106a0657d1254e7198b66f5a3634f84ee80d5c731aaffeb1e3d6ad",
+    "src/Cordis.Composition/TypertJsonMetadata.cs": "92902f1a7c2f83e6a102b1cc2cd9c26efb662c196fa0976ee59ae355e1510e83",
+    "src/Cordis.Composition/TypertPrincipal.cs": "c918685e9ea8a68c4da750ae7776ecbb05df25eb2a9c028ca114ac6c344c316e",
+    "src/Cordis.Composition/TypertRegistry.cs": "eb2b93ddc76d20f21536b75519ef10b75de2ac6b7afbe0bc4c51f157a3ff9e0a",
+    "src/Cordis.Composition/TypertRemoteAccess.Snapshots.cs": "7ca45e3292c821f7f9d5e03f494d3c06909189eb7e965b86bfe6d8c8b23fc890",
+    "src/Cordis.Composition/TypertRemoteAccess.cs": "76aba496e6b8d8231001d53cbc76061068e58ac507453612303555bf5b3018c5",
+    "src/Cordis.Composition/TypertRemoteAccessClient.cs": "11ebe4884555b371f06d9306acca0d8274a83543bc60d02389e4e7ae3d3970d0",
+    "src/Cordis.Composition/TypertRemoteInfo.cs": "f5bddcb7649e229fd5ea4c9950bf102487356b5ffe92a081877b76bad0ad3185",
+    "tests/Cordis.Composition.Tests/ClientModuleCatalogTests.cs": "2a33c5e73af9af82e1d1ec94951ab88e9b4add219307d141ddc31ccf21ef70b9",
+    "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs": "e176d79a5808f5a69a55dd2eb5ca34421b2cf2ceb62418b2083a876c8baa220b",
+    "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs": "d22437a8c128d7d176735014be037422db8239d6337d5cdb1e421ebb326cb895",
+    "tests/Cordis.Composition.Tests/ModuleIdentityTests.cs": "71e62f514581953a5ff7ac6164d72afb4b101b148aed9fa24e570c812640a2c9",
+    "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs": "15321cdd5b0cdce8bb97ac627bbed1bcfa892e22d1b7d4e80a78731226bd39fe",
+    "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs": "0a53eb6bbb85112b53fc9038770fd0e204f87447bba05306761666c5ad68bdb7",
+    "tests/Cordis.Composition.Tests/TypertAccessSnapshotTests.cs": "fbb85a2b8af05b57c69f823c013c5aedbc77430ab5f8959bd76a0b4ed1e70000",
+    "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs": "221f746fe17a54f636dafc4fe0526a90b67bb36b61915e243c6e288426b84bad",
+    "tests/Cordis.Composition.Tests/TypertIdentityTests.cs": "be3619bc23a305db1278c789ae06d43ceb5230f448f43a4d212adfff202cc531",
+    "tests/Cordis.Composition.Tests/TypertRemoteAccessTests.cs": "7dfb7e7ed799d020353ad8117be23b0575f9d343206b06cc6fa948711a60ff34",
+    "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs": "7b317ed3034f0f64d89943824bbbb82822d6d37f88fb6476a5be0a3e25aad83a",
+    "tests/Cordis.Composition.Tests/TypertResourceRegistryTests.cs": "bd6cfb90deb0c0065734b1b110ab274c81ab901d0c9708d19561e45e5f2cd941",
+    "tests/Cordis.Extensions.Tests/HmrModuleTests.cs": "be5eadd6180dd6238d30577420020da298d3ba3c772010e543cf76763be747a4",
+    "tests/Cordis.Extensions.Tests/ProfileSessionDeploymentTests.cs": "6221a0f491183833674b3e3eb8e4b9a5459201e740b3be330f29de1f2f57dd38",
+    "tests/Cordis.Platform.Tests/ClrIdentityTests.cs": "fa57b4fb7bfefcf40f7f76f99758fd4804109a3110f09ee2695bcd99191421fa",
+    "tests/Cordis.Platform.Tests/ClrPackageReinstallTests.cs": "8cddb96f1514c5920c601624f0101463cb3dfd1e6e3f0bfa7b889053946fb996",
+    "tests/Cordis.Platform.Tests/ManagementTransportTests.cs": "794d62060ab69b52ba364b56f67398cabaee3ef5466002822713b6dc85001a8e",
+    "tests/Cordis.Platform.Tests/PackageHotReinstallTests.cs": "076e827c2e2398bf274dbc85693a780eefb0e1e95418af64bf7bd70130685b92",
+    "tests/Cordis.Platform.Tests/PackageManagementTests.cs": "3a705783ccb9fb1d51b3d99241ce9f647cbe578074edc02cd70792af2e430e77",
+    "tests/Cordis.Platform.Tests/PackageUpdateTests.cs": "38475af481b5d3a618477609405b317177ebe36eb35db62cc5a06964fa29783a",
+    "tests/Cordis.Platform.Tests/RemoteCarrierTests.cs": "a34bb9352771382ae47fa785e0063dbcb0189321473937938ca6ce2f17531786",
+    "tests/Cordis.Platform.Tests/TypertGeneratedInfoTests.cs": "13772b688d093ccb3674c9f3557e05909bd683a61392caa815a567735858cded",
+    "tests/fixtures/ClientReleaseBrowser/index.html": "640ef749b3771eb4fb2401d1532d63d41f86ce713ecc7919d666f289fb0e8971",
+    "tests/fixtures/DeclarationModel/SharedConsumer.cs": "d1e227117bc4512d5643fdadfe8a0198d0e2e937bb45af9f03fac71e809bc60f",
+    "tools/Cordis.Typert.Compiler/WebProjection.cs": "648113f468774f72ea65c977e46cd3a5ab26b36074c8e69ce61ae96449c3a0e5",
+    "tools/Cordis.Typert.Generator/Model/DotnetProjectionEmitter.Info.cs": "a36e992fbb3a257488651314b09bca69880dba4b47a8e7da7115e0d86126fa1d"
+  },
+  "sourceSetup": {
+    "helpers": [
+      {
+        "file": "packages/typert/generator/tests/remote-module.ts",
+        "review": "Read actual helper implementation; metadata evaluator transpiles candidate remote-info and rewrites only Zod/protocol imports; operator fixture stores invocation token/holds and owned effects. No provider-independent or native transport inference comes from source helper execution."
+      },
+      {
+        "file": "packages/api/gateway/tests/operator-connect-fixture.ts",
+        "review": "Read actual helper implementation; metadata evaluator transpiles candidate remote-info and rewrites only Zod/protocol imports; operator fixture stores invocation token/holds and owned effects. No provider-independent or native transport inference comes from source helper execution."
+      },
+      {
+        "file": "packages/api/gateway/tests/peer.ts",
+        "review": "Read actual implementation: ownerPeer caches one explicit owner Peer per Context root; peerFor creates an independent trusted Peer; browser credentials use an in-memory modifyRecord and cached Host cookie solely for original source fixture admission. Native does not inherit cookie semantics."
+      },
+      {
+        "file": "packages/api/gateway/tests/browser-credentials.ts",
+        "review": "Read actual implementation: ownerPeer caches one explicit owner Peer per Context root; peerFor creates an independent trusted Peer; browser credentials use an in-memory modifyRecord and cached Host cookie solely for original source fixture admission. Native does not inherit cookie semantics."
+      }
+    ],
+    "configurationFiles": [
+      "vitest.config.ts",
+      "vitest.shared.ts",
+      "tsconfig.base.json",
+      "scripts/test-dom-environment.ts",
+      "scripts/test-proxy-environment.ts"
+    ],
+    "review": [
+      "Candidate adds exact remote-access and remote-info source aliases; source-mode path routing avoids built-library singleton duplication.",
+      "Source config removes test-invariants setup, retains DOM/proxy setup, adds local worker budgeting and unrelated application aliases/platform coverage exclusions. These alter harness/environment, not a new native behavior contract.",
+      "Standard decorator transform and Web Storage suppression were read; candidate harness preserves standard decorator semantics and jsdom environment selection. Coverage instrumentation/whole-workspace product selection is not inherited as native evidence."
+    ]
+  },
+  "clusters": [
+    {
+      "id": "S1-C07-engine-priority",
+      "slice": "S1",
+      "contract": "Own engines.dsh has exclusive precedence, malformed/blank/workspace engine ranges fail closed, absent own dsh falls back to peers.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "All four satisfied engine parameter instances ignore incompatible peers. Unsatisfied engine returns only engines.dsh even with passing peers.",
+        "Six malformed engine shapes and six non-string values are refused. Blank/broken/workspace engine strings are unmet; unlike peer workspace ranges they are not rewritten to runtime.",
+        "Absent own engine member falls back to peers; inherited own-property behavior is separately a JavaScript object-model boundary. Engine mismatch still accepts exact identity grant."
+      ],
+      "setup": [
+        "Source plugin-compatibility fixtures use runtime 0.1.7-alpha.1 and @example/plugin@2.0.0; engines helper installs an own engines.dsh field and chosen passing/failing peers; afterEach restores spies.",
+        "Native EngineManifest creates explicit EntryOptions fields, by default malformed peers, and uses an explicit DshRuntimeIdentity. No installed Cordis library version is inferred."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > applies exact-version exemptions to an engines mismatch",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > decides alone when satisfied by 0.1.7-alpha.1, ignoring failing peers",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > decides alone when satisfied by 0.1.x, ignoring failing peers",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > decides alone when satisfied by >=0.1.7-alpha.0, ignoring failing peers",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > decides alone when satisfied by ^0.1.0, ignoring failing peers",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > decides alone when unsatisfied, ignoring passing peers",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > falls back to peers when engines has no own dsh member",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects a non-string engines.dsh: 1",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects a non-string engines.dsh: false",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects a non-string engines.dsh: null",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects a non-string engines.dsh: undefined",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects a non-string engines.dsh: undefined",
+          1
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects a non-string engines.dsh: {}",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects malformed engines: \"bad\"",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects malformed engines: 1",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects malformed engines: false",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects malformed engines: null",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects malformed engines: undefined",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > rejects malformed engines: undefined",
+          1
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > treats \" \" as an unmet range",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > treats \"\" as an unmet range",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > treats \"broken\" as an unmet range",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > treats \"workspace:*\" as an unmet range",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > treats \"workspace:^\" as an unmet range",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > treats \"workspace:~\" as an unmet range",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/plugin-compatibility.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "EngineRequirementTakesPrecedenceEvenOverMalformedPeers",
+          "assertions": [
+            "accepted iff expected; single unmet key engines.dsh retains exact input range."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "MalformedEnginesAreRejectedEvenWithCompatiblePeers",
+          "assertions": [
+            "FormatException for null, integer, false and string engine object while peer * is compatible."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "EnginesWithoutDshFallBackToPeersAndIgnoreOtherEngineValues",
+          "assertions": [
+            "Unrelated numeric node engine ignored; mismatch peer key survives; invalid dsh field and array engine shapes throw."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "EngineOnlyAndConflictingPeersUseTheSameRequirementAndExactGrant",
+          "assertions": [
+            "Engine-only mismatch and exact build-metadata grant; different runtime/plugin builds are not exempt; passing engine overrides failing peers."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "NpmRangesUseExplicitDshRuntimeAndIncludePrereleases",
+          "assertions": [
+            "Explicit-runtime semver table covers prerelease inclusion, disjunction, tilde/caret/workspace peer distinctions and malformed ranges."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native JSON/EntryOptions have no JavaScript prototype chain or representable undefined property; own/inherited cases project to explicit key absence versus present invalid JSON/native shape.",
+        "Requirement DTO public property is Requirements; DSH runtime identity is host supplied. Native malformed-input errors are FormatException rather than JS Error."
+      ],
+      "limits": [
+        "Exact English warning prose and executable virtual filesystem getDshRuntimeVersion cases are outside this cluster.",
+        "Source JavaScript undefined/array title collision occurrences are retained distinctly in sourceCases; they are not claimed as separate CLR prototype/undefined features."
+      ]
+    },
+    {
+      "id": "S1-C07-exact-grants",
+      "slice": "S1",
+      "contract": "Compatibility grants name an exact plugin version and exact running runtime, without implicitly authorizing builds or changing selection.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Exact scoped name@version/runtime permits import and apply; another plugin version or runtime still produces no effects.",
+        "Grant is exact string matching, not a range; engine mismatch is exempted without erasing unmet requirement facts."
+      ],
+      "setup": [
+        "Source plugin-compatibility fixtures use runtime 0.1.7-alpha.1 and @example/plugin@2.0.0; engines helper installs an own engines.dsh field and chosen passing/failing peers; afterEach restores spies.",
+        "Native EngineManifest creates explicit EntryOptions fields, by default malformed peers, and uses an explicit DshRuntimeIdentity. No installed Cordis library version is inferred.",
+        "Preflight fixture writes a real node_modules package whose top-level import and apply append to an effects file, then boots real Loader/profile and exact grant file. Alternate plugin/runtime versions use separate fixtures.",
+        "Native grant fixture writes only compatibility data; real NuGet integration uses one normalized compatibility package identity across HTTP grant/install and restart."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "engines.dsh > applies exact-version exemptions to an engines mismatch",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+          "exact-version exemptions > exempts only the exact scoped plugin and runtime versions",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
+          "admits the same plugin only for its exact version and the running runtime",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/plugin-compatibility.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "EngineOnlyAndConflictingPeersUseTheSameRequirementAndExactGrant",
+          "assertions": [
+            "Exact plugin/runtime build strings are required and engine mismatch facts remain."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "GrantsAreExactIncludingBuildMetadataAndDoNotWriteManifestOrPatch",
+          "assertions": [
+            "Acknowledgement/current-runtime conditions required; exact matching grants/revocation; package.json and patch never created."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageManagementTests.cs",
+          "method": "Nuget_compatibility_grants_use_one_exact_identity_across_http_install_and_restart",
+          "assertions": [
+            "Reads/writes compatibility through native HTTP and exact normalized NuGet identity; rejected alternate identities/builds and restart admission are asserted."
+          ]
+        }
+      ],
+      "adaptation": [
+        "NuGet package ID casing is normalized only at the named native NuGet boundary; compatibility plugin@version/runtime strings retain exact build metadata.",
+        "Preflight JS imports map to CLR manifest inspection and loader admission; native build approval is independently required."
+      ],
+      "limits": [
+        "No generic Node package resolution/prototype behavior is inferred from grant tests."
+      ]
+    },
+    {
+      "id": "S1-C07-preimport",
+      "slice": "S1",
+      "contract": "Profile admission prevents denied imports and clears denied group carriers before native activation, while keeping allowed siblings and literal Include input files intact.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Denied import/apply effects absent and compatible sibling effects present.",
+        "Denied group flag is cleared rather than leaving an executable carrier subtree.",
+        "Literal recursive Include terminates, uses including-file base, and denied imported child cannot execute; unresolved manifest is left for Loader error path."
+      ],
+      "setup": [
+        "Read fixture() and plugin()/run()/insert helpers: real temp package exports write import/apply effects; boot mounts profileContext, optional PluginPackages, real Loader; stderr/logger warning spies are restored and root disposed before temp deletion.",
+        "Native HostManifestLocator uses a RecordingResolver that records actual imports, not just flags. DeniedGroups uses detached EntryOptions children; LiteralIncludes reads two file-relative Include files and a missing Include with initial rows."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
+          "blocks an incompatible descendant of a native group while its compatible sibling loads",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
+          "blocks an incompatible plugin before its module is imported while a compatible sibling loads",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
+          "leaves an unresolvable row to the Loader instead of denying it",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
+          "manifest resolution > denies a group-shaped row and clears its group flag",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
+          "manifest resolution > stops at a recursive Include instead of recursing forever",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
+          "omits a native Include that reaches an incompatible plugin and keeps an unrelated Include",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/plugin-compatibility.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "HostManifestLocatorDeniesBareRegisteredNamesBeforeExecutingResolver",
+          "assertions": [
+            "Denied row is disabled; actual resolver imports only registered-static."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "DeniedGroupsClearCarrierFlagAndNestedRowsRemainDetached",
+          "assertions": [
+            "Denied group disabled and Group=false; native group child disabled; original source rows remain unchanged."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "LiteralIncludesUseFileRelativeBasesStopCyclesAndNeverWriteFiles",
+          "assertions": [
+            "Cycle terminates; bad child denied with second-file base; both file bytes unchanged; missing initial path not created."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "LocatedMalformedManifestIsDeniedButUnresolvedModuleIsLeftForLoader",
+          "assertions": [
+            "Malformed located manifest refuses; unresolved module is not silently denied."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs",
+          "method": "ReconcileDenialClearsPreviouslyMountedGroupSubtree",
+          "assertions": [
+            "Previously mounted group is disabled, carrier flag false and child removed on reconcile."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native Host supplies a manifest locator for CLR/static modules; this replaces Node bare/relative/URL/package-imports lookup machinery.",
+        "Preflight file body is unchanged from formal baseline; candidate engine evaluator change is exercised through both native engine and peer branches."
+      ],
+      "limits": [
+        "Exact diagnostics formatting and all four JavaScript path-specifier parameter cases are not individually certified here; native locator semantics are explicitly different."
+      ]
+    },
+    {
+      "id": "S1-C07-disabled-install",
+      "slice": "S1",
+      "contract": "A package not selected for activation still requires compatibility admission; inspected known incompatibility cannot execute SDK preparation.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Disabled install rechecks compatibility; unexempted source restores original manifest and returns incompatible-version; exempted source applies installation while selected bundle list remains unchanged."
+      ],
+      "setup": [
+        "Read manager.fixture boot/profile/bundle helper: real Include/Loader and live HMR; pnpm operation is mocked to create an incompatible installed package and mutate manifest; exact grant optionally prewritten; source asserts rollback/no bundle selection.",
+        "Native PackageManagementTests.InitializeAsync packs a real IndependentPlugin; PackIncompatibleAsync places peer/engine metadata in cordis.plugin.json and a buildTransitive target that writes an on-disk marker. StartAsync uses real DotnetPluginToolchain/ClrModuleResolver/ProfileSession with explicit runtime and manifest locator."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/manager.spec.ts",
+          "rechecks installed bundle peers before accepting a disabled installation (exempted=false)",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/manager.spec.ts",
+          "rechecks installed bundle peers before accepting a disabled installation (exempted=true)",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/plugin-compatibility.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageManagementTests.cs",
+          "method": "Known_incompatible_requirements_are_refused_before_build_even_when_not_selected",
+          "assertions": [
+            "Installed=false, incompatibility diagnostic includes selected requirement, build marker absent, no prepare progress/work directory, manifest byte-identical and selected bundle set empty."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageManagementTests.cs",
+          "method": "Compatible_engine_overrides_malformed_peers_through_install_and_restart",
+          "assertions": [
+            "Compatible engine with malformed peers installs, build marker appears, no automatic grant, restarted host loads package and business config value."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native package metadata is inspected before SDK execution, so known incompatibility is refused earlier than pnpm post-install recheck. This is the documented NuGet preparation adaptation, with stronger no-build side-effect assertions."
+      ],
+      "limits": [
+        "The JS pnpm rollback of files already mutated by installation is not a native MSBuild contract. Exact public grant cases are mapped separately in S1-C07-exact-grants."
+      ]
+    },
+    {
+      "id": "S2-C08-pruning",
+      "slice": "S2",
+      "contract": "Return to inherited bundle enablement removes only a redundant plain switch, retains comments, and observes later bundle defaults.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "A redundant switch is removed, a repeated same request is unchanged, and a later opposite request appends a switch.",
+        "Comment headers/tails survive deletion, including sole-item and surrounding item cases.",
+        "Profile insertions participate in inherited composition rather than always appending disabled:false."
+      ],
+      "setup": [
+        "Read entire changed patch fixture: initProfile selects one bundle, writes independent installation manifest and bundle patch inserting TOOL, removes profile patch when absent. Inheritance is bundle patches plus profile patches excluding the candidate switch; home/launch overlays are intentionally excluded.",
+        "Native partial PluginManagerOriginalTests fixture builds core manager+extra managed bundle, native ProfileLaunch+Include, real YAML files, StaticModuleResolver and manager exclusive action. Read Fixture.Start/Mount/Bundle plus pruning methods."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/patch.spec.ts",
+          "keeps the comment above a removed switch and prunes a switch the composition already implies",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/patch.spec.ts",
+          "removes or omits a plain switch that restates the bundle layers",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/patch.spec.ts",
+          "treats insertions in the profile patch as part of the inherited composition",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/plugin-manager/src/patch.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "PruningPreservesSurroundingCommentsAndSequenceSyntax",
+          "assertions": [
+            "Nine literal golden YAML outputs cover sole/first/last/middle/flow switches and comments; second toggle Changed=false."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "ProfileInsertionAndEarlierOverridesContributeToInheritance",
+          "assertions": [
+            "Earlier name-asserting override remains; redundant later plain switch removed; bare profile insertion not duplicated."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "ReturningToBundleDefaultRemovesSwitchAndInheritsLaterChanges",
+          "assertions": [
+            "Disable writes switch, enable empties patch, repeated enable byte-idempotent; later bundle disabled default appears in Preview."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "MissingPatchAndHomeOverlayDoNotCreateRedundantSwitch",
+          "assertions": [
+            "Missing profile patch not created just to restate inherited default; overlay outcome remains overridden."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native base groups also participate in inheritance because native composition already includes base-owned rows. YAML golden whitespace uses native document editor, not the JavaScript yaml serializer."
+      ],
+      "limits": [
+        "Exact upstream blank-line placement is not a byte-equivalence claim; header/tail preservation and each native golden output are reviewed."
+      ]
+    },
+    {
+      "id": "S2-C08-preserve-nonplain",
+      "slice": "S2",
+      "contract": "Pruning preserves name assertions, settings/expressions and YAML anchor/alias referents; only literal inherited equality permits pruning.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Settings-bearing switches and defaults that differ must remain as literal override.",
+        "Removing anchor definitions must not break later aliases; alias value can be replaced, then a later operation may prune the now-plain override."
+      ],
+      "setup": [
+        "Same source patch fixture/TOOL as pruning; anchor matrix distinguishes anchored id value, anchored entire mapping, anchored key, and alias-valued disabled field. Source uses loadOptionalPatches to assert resolved alias values after change.",
+        "Native tests use seven exact YAML strings carrying name/config/key/entry/value anchors or aliases; compare full rewritten text and parsed rows; nonliteral inheritance uses true, !!js true and quoted false."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/patch.spec.ts",
+          "keeps a switch that carries other settings or differs from the bundle layers",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/patch.spec.ts",
+          "keeps a switch whose anchor on a key other entries reference",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/patch.spec.ts",
+          "keeps a switch whose anchor on a value other entries reference",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/patch.spec.ts",
+          "keeps a switch whose anchor on the entry other entries reference",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/patch.spec.ts",
+          "keeps a switch whose value is an alias",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/plugin-manager/src/patch.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "EnablementPreservesAssertionsSettingsAnchorsAndAliases",
+          "assertions": [
+            "Exact text and parsed rows preserved with only intended disabled change; alias branch second operation removes newly plain redundant switch; other branches repeated Changed=false."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "NonmatchingOrExpressionInheritanceKeepsLiteralOverride",
+          "assertions": [
+            "Literal true, expression true and string false do not count as matching enabled inherited default; explicit disabled:false override remains."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native YAML uses its existing document editor and JavaScript expression wrapper representation; it preserves authored expressions without evaluating them during inheritance comparison."
+      ],
+      "limits": [
+        "This cluster does not re-review every malformed document/read-failure legacy patch assertion."
+      ]
+    },
+    {
+      "id": "S2-C08-persistence-boundaries",
+      "slice": "S2",
+      "contract": "Admission rejection preserves unsaved inputs, but post-save activation failure retains the desired enablement for correction and retry.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Failed activation is not permission to undo saved desired state; corrected configuration can retry."
+      ],
+      "setup": [
+        "Source manager.fixture plugin apply throws only when config.fail=true; test writes disabled:true/fail:true, enables, checks saved disabled:false, then writes corrected fail:false and enables successfully.",
+        "Native pruning tests inject AdmitProfileAsync rejection or conflicting external patch edit before save; separate plugin throws only after fail flag is set."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/manager.spec.ts",
+          "keeps saved changes after activation failure and allows a corrected configuration to retry",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/plugin-manager/src/patch.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "PruningAdmissionFailureLeavesPatchAndBaseUntouched",
+          "assertions": [
+            "Application failed, Changed=false, original patch/base bytes preserved and Preview still disabled."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "PrunedPatchStaysSavedWhenActivationFails",
+          "assertions": [
+            "Application failed, Changed=true, redundant switch remains pruned in saved patch."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "PruningDoesNotOverwriteAnInputChangedDuringAdmission",
+          "assertions": [
+            "profile-conflict returned and external patch text preserved."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native transactional admission/conflict checks strengthen existing persistence boundary; errors use native result fields."
+      ],
+      "limits": [
+        "The selected source case retry with corrected config is additionally exercised by existing PluginManagerOriginalTests, but this cluster certifies the reviewed saved-state and before-save refusal assertions, not every legacy manager lifecycle branch."
+      ]
+    },
+    {
+      "id": "S2-C08-deselection",
+      "slice": "S2",
+      "contract": "A selected bundle with no dependency can be deselected without invoking package removal; missing selection disappears and valid local code can be reselected.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Removal changes selection and inventory; package manager subprocess is never invoked."
+      ],
+      "setup": [
+        "Source manager fixture appends retired to dsh.profile.bundles without creating a dependency/package, checks missing+enabled+uninstalled+removable inventory, spies runProfilePnpm, removes and rereads selection/inventory.",
+        "Native fixture includes RetainingToolchain RemoveCalls counter; one test creates local bundle without dependency, another appends missing retired selection, and rejection test injects admission failure."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/manager.spec.ts",
+          "removes a selected bundle no dependency holds by deselecting it without pnpm",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/plugin-manager/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "SelectedLocalBundleCanBeRemovedWithoutUninstallingAndSelectedAgain",
+          "assertions": [
+            "Installed=false and removable; removal applied, Selected=false, RemoveCalls=0, directory retained; later enable succeeds."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "MissingSelectedBundleCanBeDeselectedWithoutToolchainRemoval",
+          "assertions": [
+            "Missing selected row has error and is removable; removal applied, RemoveCalls=0, selection+inventory no retired row."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "LocalDeselectionRejectionPreservesSelectionAndNeverCallsToolchain",
+          "assertions": [
+            "Admission failure keeps original manifest and selected=true with RemoveCalls=0."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs",
+          "method": "UninstalledBundleCannotBeRemovedWhileContributionsRemain",
+          "assertions": [
+            "No toolchain call while startup-only or live overlay contributions remain; respective stop-profile/bundle-in-use result."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native deselection does not uninstall or physically delete local artifacts; management-required bundles remain protected independently."
+      ],
+      "limits": [
+        "Source UI availability/official metadata fields have no automatic native equivalence claim."
+      ]
+    },
+    {
+      "id": "S3-C02-loaded-identity",
+      "slice": "S3",
+      "contract": "Live Loader entries retain their actual imported module identity even when name-based resolution moves; HMR targets loaded filename and restart adopts new resolution.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Manifest-only move does not reload active old namespace; source edits reload the old loaded entry, not the newly name-resolved entry; explicit disable/enable chooses new target.",
+        "Repeated reloads retain each fresh actual namespace even when another target is already cached."
+      ],
+      "setup": [
+        "Source dispatch fixture creates real ESM package addon, app/node_modules link, manifests with exports/imports, and trace-recording apply/cleanup. Only chokidar notifications are controlled; emit waits exactly one hmr.runExclusive dispatch.",
+        "Read sharedEntryFixture/addConfiguredEntry/cachedNamespace/liveFibers: source differentiates namespace identity from unwrapped plugin/callback/runtime, asserts cached jobs and counts only live UID fibers.",
+        "Native ClrIdentity fixture registers one/alias/two loaded requests from v1 fixture assembly; two exports initially share Plugin callback identity; cold disabled invalid export must stay unimported. Native ModuleIdentity uses distinct Plugin wrappers sharing one Apply delegate."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "keeps reloading the loaded entry after exports moves and selects the new entry on restart",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "keeps reloading the loaded entry after main moves and selects the new entry on restart",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "retains the loaded entry through repeated reloads when the new entry is already cached",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs",
+          "method": "Live_entry_keeps_import_identity_when_deployment_mapping_changes_until_it_restarts",
+          "assertions": [
+            "Changing mapping resolves next but live entry.Module remains original; replacing original sets hmr identity; disabling clears Module; reenable uses next and exact start trace old/hmr/new."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/HmrModuleTests.cs",
+          "method": "Tracking_prefers_the_loaded_filename_over_a_changed_or_missing_locator",
+          "assertions": [
+            "actual.dll event never consults throwing changed locator while Module exists and emits no warnings; once disabled clears Module, locator is called and warning preserved."
+          ]
+        }
+      ],
+      "adaptation": [
+        "CLR ResolvedModule reference+Filename+resolver generation replace Node namespace/jobs/exports/main caches. Public native lifecycle clears Module on withdrawal and retains actual import until then."
+      ],
+      "limits": [
+        "No claim to Node manifest JSON import, CommonJS require cache or package imports invalidation; those are source-only execution/explicit CLR adaptation.",
+        "The source exact repeated HMR namespace cache assertions are represented by native identity progression, not a native JS cache API."
+      ]
+    },
+    {
+      "id": "S3-C03-shared-split",
+      "slice": "S3",
+      "contract": "Shared callbacks keep per-loaded-request successor identities and replace every actual runtime fiber exactly once.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Distinct source namespaces may unwrap to same plugin or wrappers with same callback/runtime. Replacement updates each recorded namespace, disposes old live fibers, and retains exactly two live instances.",
+        "When replacements split into different callbacks, each entry follows its own prior import rather than one callback-wide successor."
+      ],
+      "setup": [
+        "Source dispatch fixture creates real ESM package addon, app/node_modules link, manifests with exports/imports, and trace-recording apply/cleanup. Only chokidar notifications are controlled; emit waits exactly one hmr.runExclusive dispatch.",
+        "Read sharedEntryFixture/addConfiguredEntry/cachedNamespace/liveFibers: source differentiates namespace identity from unwrapped plugin/callback/runtime, asserts cached jobs and counts only live UID fibers.",
+        "Native ClrIdentity fixture registers one/alias/two loaded requests from v1 fixture assembly; two exports initially share Plugin callback identity; cold disabled invalid export must stay unimported. Native ModuleIdentity uses distinct Plugin wrappers sharing one Apply delegate."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "assigns each entry its own replacement when a shared runtime splits into distinct callbacks",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "refreshes both default re-export namespaces sharing one plugin without multiplying instances",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "refreshes named re-export and implementation namespaces sharing a callback without multiplying instances",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/ModuleIdentityTests.cs",
+          "method": "Shared_callback_wrappers_replace_each_runtime_fiber_once_and_restore_the_actual_import",
+          "assertions": [
+            "Distinct Plugin wrappers share Identity; explicit previous→successor pair per entry; stop:one/stop:two/first:one/second:two exactly once; active fibers and Module pointers checked."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/ClrIdentityTests.cs",
+          "method": "Shared_export_splits_by_loaded_request_and_repeated_replacements_do_not_multiply_fibers",
+          "assertions": [
+            "One/alias/two are distinct imports sharing original Plugin; v2/v1/v2 replacements stop exactly three; exact starts per request; Module equals resolver import; runtime fibers3 or2 and cold stays unimported."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Source default versus named re-export namespace shapes project to distinct CLR import wrappers sharing Plugin.Identity; CLR export symbols/collectible ALC replace JavaScript binding/cache distinctions."
+      ],
+      "limits": [
+        "Does not certify every namespace-index source test; especially concurrent same bare package name across two old/new namespaces remains outside this selected assertion subset."
+      ]
+    },
+    {
+      "id": "S3-C04-failure-recovery",
+      "slice": "S3",
+      "contract": "Import or activation failure restores every previously loaded identity and permits later successful replacement without duplicate fibers or false success notification.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source import failure throws at top-level, activation failure throws in apply; after failure old namespaces/cache jobs/runtime shared live count2 and net active traces remain; corrected c.mjs later splits successfully."
+      ],
+      "setup": [
+        "Source dispatch fixture creates real ESM package addon, app/node_modules link, manifests with exports/imports, and trace-recording apply/cleanup. Only chokidar notifications are controlled; emit waits exactly one hmr.runExclusive dispatch.",
+        "Read sharedEntryFixture/addConfiguredEntry/cachedNamespace/liveFibers: source differentiates namespace identity from unwrapped plugin/callback/runtime, asserts cached jobs and counts only live UID fibers.",
+        "Native ClrIdentity fixture registers one/alias/two loaded requests from v1 fixture assembly; two exports initially share Plugin callback identity; cold disabled invalid export must stay unimported. Native ModuleIdentity uses distinct Plugin wrappers sharing one Apply delegate."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "restores every shared entry when one replacement activation fails and can reload again",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "restores every shared entry when one replacement import fails and can reload again",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/ClrIdentityTests.cs",
+          "method": "Failed_split_restores_every_loaded_identity_and_can_retry",
+          "assertions": [
+            "Import failure uses invalid entry type and has empty trace; activation failure disposes three bad and restores three v1 starts; every original Module and resolver result restored and active; retry v2 changes Plugin."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/HmrModuleTests.cs",
+          "method": "Replacement_failure_restores_old_plugin_and_does_not_emit_success",
+          "assertions": [
+            "Primary activation error preserved, old plugin mounts again, Reloaded notifications=0 and registry fiber equals restored Loader fiber."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/HmrModuleTests.cs",
+          "method": "Import_failure_preserves_the_graph_but_retirement_failure_refuses_replacement",
+          "assertions": [
+            "Import failure retains prior Fiber without notifications; cleanup failure refuses candidate and reports retirement phase/NotAttempted recovery rather than overlapping effects."
+          ]
+        }
+      ],
+      "adaptation": [
+        "CLR preparation can reject invalid export before any old fiber teardown; native cleanup failure deliberately refuses restoration if effects may remain, preserving existing serialized lifetime contract."
+      ],
+      "limits": [
+        "No blanket source cache rollback API promise; preservation is expressed through resolver generations and actual retained CLR module references."
+      ]
+    },
+    {
+      "id": "S3-C04-ambiguous-programmatic",
+      "slice": "S3",
+      "contract": "A programmatic fiber with no Loader import cannot choose between split successors; refuse before teardown and preserve all live instances.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source adds a direct ctx.plugin(f.firstPlugin) without entry, making shared runtime live count3; two distinct replacement callbacks make source selection ambiguous. Old namespaces, cache and three live fibers remain, net candidate activation count0."
+      ],
+      "setup": [
+        "Source dispatch fixture creates real ESM package addon, app/node_modules link, manifests with exports/imports, and trace-recording apply/cleanup. Only chokidar notifications are controlled; emit waits exactly one hmr.runExclusive dispatch.",
+        "Read sharedEntryFixture/addConfiguredEntry/cachedNamespace/liveFibers: source differentiates namespace identity from unwrapped plugin/callback/runtime, asserts cached jobs and counts only live UID fibers.",
+        "Native ClrIdentity fixture registers one/alias/two loaded requests from v1 fixture assembly; two exports initially share Plugin callback identity; cold disabled invalid export must stay unimported. Native ModuleIdentity uses distinct Plugin wrappers sharing one Apply delegate."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-manifest-dispatch.spec.ts",
+          "restores shared entries and a programmatic instance when split replacements are ambiguous",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/ClrIdentityTests.cs",
+          "method": "Ambiguous_direct_fiber_refuses_split_before_teardown_and_preserves_all_entries",
+          "assertions": [
+            "Direct fiber+one/alias/two live; split replacement throws ambiguous; trace empty, direct active, original module and all entries active; disposing direct permits retry."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native validates ambiguous Plugin.Identity group before retirement, stronger than recovering after partial teardown; direct fibers still have no invented loaded-request identity."
+      ],
+      "limits": [
+        "The numeric source count3 projects to native direct+three configured alias requests, so expected native fiber count differs intentionally; preservation/no candidate execution is the invariant."
+      ]
+    },
+    {
+      "id": "S4-C05-successor-metadata",
+      "slice": "S4",
+      "contract": "Accepted same-directory profile successors update version/declarer and invalidate metadata cache atomically; moves/scope changes refuse without publication until removal.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source retained profile mapping can change version/declarer in place but cannot change directory/scope; invalid replacement keeps old packageDir. Removing first permits another target.",
+        "Native review projects current-target metadata/atomic validation facts, without claiming arbitrary Node resolver link cache relocation."
+      ],
+      "setup": [
+        "Source resolution fixture writes package.json/exports, profile/installation dependency graph and real symlink/junction targets; afterEach disposes runtime interception and contexts before deleting files. Package service pkg helper writes package metadata and module exports without evaluating plugins.",
+        "Native DeploymentResolutionTests.Fixture writes real JSON package manifests and explicit (anchor,name) edges; resolver metadata object identity is checked before and after ValidateReplacement/Replace, not only selected strings. ProfileSession fixture provides a deterministic recomputable successor while genuine Loader lifecycle/cleanup runs."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/app-boot/tests/profile-resolution.spec.ts",
+          "runtime resolution > accepts a retained profile mapping upgraded in place",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/profile-resolution.spec.ts",
+          "runtime resolution > rejects a retained profile mapping with a different directory",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/profile-resolution.spec.ts",
+          "runtime resolution > rejects a retained profile mapping with a different scope",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/profile-resolution.spec.ts",
+          "runtime resolution > rejects a retained profile package moved to another directory, and maps it there once it was removed",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/profile-resolution/service.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs",
+          "method": "RetainedProfileMappingRefreshesMetadataInTheSameDirectory",
+          "assertions": [
+            "Validate leaves old Generation+metadata reference; Replace sets next, same directory, new version2 and fresh metadata object."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs",
+          "method": "RetainedProfileMappingRejectsMovesScopeChangesAndLocalOverrides",
+          "assertions": [
+            "package-moved on validation and publication; old Generation/metadata reference remain; removal followed by moved successor succeeds."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs",
+          "method": "MalformedSuccessorLeavesPublishedGenerationAndWritesNothing",
+          "assertions": [
+            "Malformed profile JSON fails generation construction, old generation stays and profiles/node_modules is not created."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native installation mappings retain typed host-module restart restriction; profile move uses package-moved. Same canonical target comparison replaces Node realpath spellings."
+      ],
+      "limits": [
+        "Source link-relocation machinery that rewrites prior Node cached path spellings is not native cache functionality; it is not certified by these four source cases."
+      ]
+    },
+    {
+      "id": "S4-C05-refresh",
+      "slice": "S4",
+      "contract": "Refresh uses an explicitly recomputable generation and updates package/module metadata consistently without importing private exports; non-recomputable mapping changes retain typed restrictions.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source installs PluginPackages with computed resolution, initially misses metadata-lib, writes dependency/package and refreshes, then packageOf and CJS resolve see current files. Plain-data/absent resolution refresh throws and published resolution remains exposed."
+      ],
+      "setup": [
+        "Source resolution fixture writes package.json/exports, profile/installation dependency graph and real symlink/junction targets; afterEach disposes runtime interception and contexts before deleting files. Package service pkg helper writes package metadata and module exports without evaluating plugins.",
+        "Native DeploymentResolutionTests.Fixture writes real JSON package manifests and explicit (anchor,name) edges; resolver metadata object identity is checked before and after ValidateReplacement/Replace, not only selected strings. ProfileSession fixture provides a deterministic recomputable successor while genuine Loader lifecycle/cleanup runs."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/app-boot/tests/profile-resolution-service.spec.ts",
+          "profile package metadata service > refreshes a computed resolution without a profile",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/profile-resolution-service.spec.ts",
+          "profile package metadata service > refreshes the installed resolution from its own profile and installation",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/app-boot/tests/profile-resolution-service.spec.ts",
+          "profile package metadata service > rejects refreshing a plain-data or absent resolution, and exposes the installed one",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/profile-resolution/service.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs",
+          "method": "AdditiveReplacementInvalidatesMissAndMetadataCacheAtomically",
+          "assertions": [
+            "Existing miss and metadata cache are cleared together on accepted additive generation; prior generation object identity preserved until publish."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs",
+          "method": "MetadataUsesSelectedPackageWithoutRequiringPrivateExport",
+          "assertions": [
+            "Private subpath resolves metadata without importing export; same cached object survives file mutation until generation replace, then malformed JSON surfaces."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs",
+          "method": "ModuleAndMetadataResolutionSharePackageSelection",
+          "assertions": [
+            "Native module selection and metadata use the same selected package."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/ProfileSessionDeploymentTests.cs",
+          "method": "Mapping_changes_without_a_recomputable_resolver_return_their_specific_restart_reason",
+          "assertions": [
+            "local-remove no restart; local-move package-moved; installation-remove host-module; live worker Fiber stays same."
+          ]
+        }
+      ],
+      "adaptation": [
+        "The native public seam is DeploymentGeneration/DeploymentPackageResolver plus ProfileSession.RefreshAsync or the application-supplied generation owner, rather than publishing a new PluginPackages service API.",
+        "No Node Worker environment-data propagation is promised; workers/native applications receive their existing explicit host generation inputs."
+      ],
+      "limits": [
+        "The exact JavaScript mutation of profile.dir after capture and synthetic profile.layers case is not certified by this cluster.",
+        "Localized title/icon/subpath display metadata remains the separately named product/API scope decision; version/name metadata cache coverage must not be misreported as those display fields."
+      ]
+    },
+    {
+      "id": "S4-C05-drop-before-publish",
+      "slice": "S4",
+      "contract": "Dropped rows and their asynchronous owned cleanup finish under old mapping before successor publication; kept siblings retain identity.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source exact traces place stop:other before published, including delayed disposer; changed retained addon remains stopped until publication then starts with successor code/config. Nested dropped group child stops under same ordering."
+      ],
+      "setup": [
+        "Source HMR package fixture boots actual profile+Loader+Timer+Hmr with addon/other/shared-lib, explicit appReady, deterministic file aging and mocked watcher. Source resolution() injects a recomputable ProfileRuntimeResolution, spies computeLatestResolution to return a chosen table, and makes replace success/failure explicit; packageOf returns undefined so preflight admits rows.",
+        "Native ProfileSessionDeploymentTests Fixture.CreateAsync writes profile/config/package data, exposes Initial/Next generation and old-map checks inside asynchronous Worker cleanup, plus sibling Fiber references. Native publication rejection is induced by racing a host mapping during cleanup, with original group indices captured before any deletion."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "stops a row a generation drops from a group before publishing its resolution",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "stops the rows a generation drops before publishing its resolution, then applies it",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "waits for a dropped row to finish disposing, and keeps a stopped kept row stopped, until the resolution publishes",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/index.ts",
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Extensions.Tests/ProfileSessionDeploymentTests.cs",
+          "method": "Dropped_rows_finish_disposal_with_old_mapping_before_the_successor_publishes",
+          "assertions": [
+            "Cleanup asserts Initial generation and old worker directory; refresh incomplete while disposer blocked; after release Next published, worker mapping/entry absent, exact sibling Fiber retained."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/ProfileSessionDeploymentTests.cs",
+          "method": "Refresh_awaits_captured_retirement_already_started_by_another_caller",
+          "assertions": [
+            "Refresh waits on already-captured cleanup rather than assuming removed Loader row means disposer finished."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/ProfileSessionDeploymentTests.cs",
+          "method": "Retained_dependent_cleanup_failure_blocks_publication_before_mapping_withdrawal",
+          "assertions": [
+            "Dependent cleanup error blocks generation publish and cannot be erased by row withdrawal."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native tracks Fiber cleanup tasks and prior errors directly; Node module cache evictions are replaced by immutable CLR generation ownership."
+      ],
+      "limits": [
+        "No exact source JavaScript mtime/hash comparison or observer clock behavior is inferred from disposer ordering."
+      ]
+    },
+    {
+      "id": "S4-C05-publication-recovery",
+      "slice": "S4",
+      "contract": "Rejected successor restores stopped rows at original root/group positions without rewriting saved config; failed recovery retains primary failure and cleanup failure blocks unsafe revival.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source ResolutionRestartRequired returns package-moved after dropped row stop+restore; input config bytes unchanged. Several rows return at exact indices and nested child returns to original group; failing restoration is warned without replacing primary publication outcome."
+      ],
+      "setup": [
+        "Source HMR package fixture boots actual profile+Loader+Timer+Hmr with addon/other/shared-lib, explicit appReady, deterministic file aging and mocked watcher. Source resolution() injects a recomputable ProfileRuntimeResolution, spies computeLatestResolution to return a chosen table, and makes replace success/failure explicit; packageOf returns undefined so preflight admits rows.",
+        "Native ProfileSessionDeploymentTests Fixture.CreateAsync writes profile/config/package data, exposes Initial/Next generation and old-map checks inside asynchronous Worker cleanup, plus sibling Fiber references. Native publication rejection is induced by racing a host mapping during cleanup, with original group indices captured before any deletion."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "logs a failure to restore the stopped rows and still reports the rejected publication",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "puts a dropped row back into its group when the resolution waits for a restart",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "puts several dropped rows back at their places when the resolution waits for a restart",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "restores the composition while the resolution waits for a restart",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/index.ts",
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Extensions.Tests/ProfileSessionDeploymentTests.cs",
+          "method": "Rejected_publication_restores_group_children_and_original_row_positions",
+          "assertions": [
+            "Raced host map retained with host-module reason; root order before/group/after and child first/second restored; starts/stops exact; optional first recovery failure recorded and Fiber failed; siblings retain Fiber identity; edited source file is unchanged by restoration."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/ProfileSessionDeploymentTests.cs",
+          "method": "Invalid_successor_is_refused_before_stopping_rows",
+          "assertions": [
+            "Invalid profile/installation move returns respective typed reason before any disposer; old worker Fiber/generation retained."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/ProfileSessionDeploymentTests.cs",
+          "method": "Cleanup_failure_blocks_publication_restoration_and_later_activation",
+          "assertions": [
+            "Aggregate contains same cleanup error; old generation stays, starts once, later refresh refused."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native distinguishes host-module from package-moved instead of upstream single ResolutionRestartRequired package-moved label.",
+        "Native cleanup failure never revives overlapping effects, an explicit existing lifetime constraint rather than swallowing cleanup failure."
+      ],
+      "limits": [
+        "Exact JavaScript warning text is not matched; native error collection and typed reason preserve causal outcome."
+      ]
+    },
+    {
+      "id": "S4-C06-hot-reinstall",
+      "slice": "S4",
+      "contract": "Remove withdraws runtime routes and contributions, then reinstall creates fresh loaded identities while retained old code remains callable; disabled reinstall evaluates no plugin until selection.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source overwriting currently installed bundle is refused without pnpm; after removal another version starts with exact stop/publish/remove/add/publish/start order and top-level evaluation file has each version once.",
+        "Disabled installation publishes package facts but never evaluates plugin; removal stops owned fibers before private mappings and package own name are removed; unrelated sibling identity stays."
+      ],
+      "setup": [
+        "Source manager package-reload fixture writes real addon bundle and private addon-plugin whose top-level evaluation appends a file; installFiles/removeFiles simulate pnpm file+manifest effects, mockPnpm records invocations; real Loader/PluginPackages/HMR publication trace is observed and sibling object retained.",
+        "Native real package fixture InitializeAsync packs an independent .nupkg and executes DotnetPluginToolchain against local feed; StartAsync supplies ProfileSession/ClrModuleResolver, manifest locator and explicit generation lifecycle. Versioned package tests retain a Func<string> from old ALC to observe old behavior after removal/reinstall."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+          "publishes a newly installed disabled bundle without evaluating its plugin",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+          "refuses to overwrite an installed bundle, and installs another version once it is removed",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+          "removes a running bundle after its plugin stops and then publishes",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/hmr/src/index.ts",
+        "packages/boot/plugin-manager/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageHotReinstallTests.cs",
+          "method": "Hot_package_reinstall_replaces_runtime_identity_and_preserves_retained_code",
+          "assertions": [
+            "Remove applied, installed/selected false, routes empty, old directory retained/residual; same/different-version reinstall applied without restart, Module+Plugin+delegate fresh, current output code correct and retained old delegate remains v1."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageHotReinstallTests.cs",
+          "method": "Hot_package_disabled_reinstall_remains_inactive_until_selected",
+          "assertions": [
+            "Disabled install/reinstall selected=false; business service null and no loaded modules; dependency version2 saved; enabling applies v2."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/ClrPackageReinstallTests.cs",
+          "method": "Loaded_module_snapshot_preserves_import_identity_without_importing_inactive_exports",
+          "assertions": [
+            "Loaded snapshot empty before imports; deduplicates repeated request but retains alias imports; disabled invalid export never imported."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native removal is logical withdrawal, not rmSync: retained immutable artifact directories remain available for old delegates/resources. New version uses separate directory and collectible load context; identical same-version reinstall may reuse verified bytes with fresh runtime objects.",
+        "Native direct update of an installed retained mapping may return restart-required rather than silently overwriting current DLLs; remove/reinstall is the hot path reviewed here."
+      ],
+      "limits": [
+        "No native npm/pnpm process/cache claim. Source exact physical deletion assertion is intentionally not matched; native residuals and explicit offline deletion contract replace it.",
+        "Complete installed-update restart variants are not certified by this three-case cluster."
+      ]
+    },
+    {
+      "id": "S4-C06-private-dependency",
+      "slice": "S4",
+      "contract": "Changed private dependency is loaded with the new plugin generation while retained delegate and dependency bytes remain from the old generation.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source dependency update replaces affected importer only; inserted entry resolves current changed dependency; removed cache entries do not prevent fresh reinstall."
+      ],
+      "setup": [
+        "Source manager package-reload fixture writes real addon bundle and private addon-plugin whose top-level evaluation appends a file; installFiles/removeFiles simulate pnpm file+manifest effects, mockPnpm records invocations; real Loader/PluginPackages/HMR publication trace is observed and sibling object retained.",
+        "Native real package fixture InitializeAsync packs an independent .nupkg and executes DotnetPluginToolchain against local feed; StartAsync supplies ProfileSession/ClrModuleResolver, manifest locator and explicit generation lifecycle. Versioned package tests retain a Func<string> from old ALC to observe old behavior after removal/reinstall.",
+        "Native PackHotDependencyVersionsAsync packs IndependentDependency versions1/2 with exact PackageReference [version], rewrites plugin business callback to DependencyValue.Read(), then packs both plugin versions against local feed."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "links an entry inserted by the upgraded bundle to the current files of a changed dependency",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "loads a package reinstalled at the same path after removal",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "replaces the importers of a changed shared dependency only",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageHotReinstallTests.cs",
+          "method": "Hot_package_reinstall_loads_changed_private_dependency_and_retains_old_delegate_behavior",
+          "assertions": [
+            "Old output dependency-v1; after remove/reinstall current dependency-v2, retained old delegate still dependency-v1; retained dependency DLL bytes unchanged and new DLL bytes differ; no restart required."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Extensions.Tests/HmrModuleTests.cs",
+          "method": "Explicit_dependency_graph_selects_dependents_and_framework_changes_take_precedence",
+          "assertions": [
+            "Unrelated notification does nothing; dependency changes replace once; framework+dependency event requests restart without another replacement."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native uses explicit dependency graph/collectible CLR context rather than reading Node linked-module jobs or CJS require cache. Private dependency behavior is exercised using real compiled DLLs and package preparation."
+      ],
+      "limits": [
+        "Source arbitrary dynamic JS imports, data: URLs and CommonJS module link internals are not native features; their detailed cache eviction assertions remain source reference only."
+      ]
+    },
+    {
+      "id": "S4-C06-retained-integrity",
+      "slice": "S4",
+      "contract": "Identical same-version reinstall may reuse complete verified artifact tree; different or tampered files must refuse before route registration.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source removed package may be installed again and executes fresh code; no live installed overwrite. Native immutable-artifact integrity is an explicit stronger adaptation of that generation boundary."
+      ],
+      "setup": [
+        "Source manager package-reload fixture writes real addon bundle and private addon-plugin whose top-level evaluation appends a file; installFiles/removeFiles simulate pnpm file+manifest effects, mockPnpm records invocations; real Loader/PluginPackages/HMR publication trace is observed and sibling object retained.",
+        "Native real package fixture InitializeAsync packs an independent .nupkg and executes DotnetPluginToolchain against local feed; StartAsync supplies ProfileSession/ClrModuleResolver, manifest locator and explicit generation lifecycle. Versioned package tests retain a Func<string> from old ALC to observe old behavior after removal/reinstall.",
+        "Native ClrPackageReinstall Prepare helper creates a complete sealed staged bundle including assembly/deps/resource receipt, not only DLL; removal deliberately retains published directory. Identical-reinstall helper retains strong imports until identity assertions complete, returns only weak unload observations for collection assertions."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+          "refuses to overwrite an installed bundle, and installs another version once it is removed",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/hmr/tests/package-reload.spec.ts",
+          "loads a package reinstalled at the same path after removal",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/ClrPackageReinstallTests.cs",
+          "method": "Removal_releases_owned_routes_and_identical_reinstall_reuses_retained_files",
+          "assertions": [
+            "Owned routes/snapshots removed, retained directory remains; identical publication reuses directory and deletes redundant stage; fresh Module/Plugin; unload requested and eventually collectible after only weak refs remain."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/ClrPackageReinstallTests.cs",
+          "method": "Different_same_version_contents_preserve_both_artifacts_and_leave_routes_removed",
+          "assertions": [
+            "Changed dependency, scaffold DLL/deps, added or missing file produces package-moved; both staged+retained trees preserved and route remains unavailable."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/ClrPackageReinstallTests.cs",
+          "method": "Tampered_retained_artifact_is_an_integrity_failure_before_reinstall_registration",
+          "assertions": [
+            "Altered retained dependency triggers InvalidDataException before registering any bundle; staging tree kept and tampered retained bytes not overwritten."
+          ]
+        }
+      ],
+      "adaptation": [
+        "These file-receipt checks are native-specific stronger guarantees and are not attributed to a passed upstream integrity suite. A verified retained tree may coexist with old delegates after logical removal."
+      ],
+      "limits": [
+        "Physical artifact deletion/ALC GC timing is not an application permission; source npm cache semantics do not establish native file integrity."
+      ]
+    },
+    {
+      "id": "S4-C06-failure-persistence",
+      "slice": "S4",
+      "contract": "Failed preparation publishes/selects nothing; failure after successful package persistence retains installed/selected facts for diagnosis, removal and retry.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Source mockPnpm can return nonzero after writing candidate files; no publication/evaluation/selection remains. Post-success publication failure returns changed=true and keeps successful disk manifest/package changes; reinstalled bad import yields failed applied generation without business service."
+      ],
+      "setup": [
+        "Source manager package-reload fixture writes real addon bundle and private addon-plugin whose top-level evaluation appends a file; installFiles/removeFiles simulate pnpm file+manifest effects, mockPnpm records invocations; real Loader/PluginPackages/HMR publication trace is observed and sibling object retained.",
+        "Native real package fixture InitializeAsync packs an independent .nupkg and executes DotnetPluginToolchain against local feed; StartAsync supplies ProfileSession/ClrModuleResolver, manifest locator and explicit generation lifecycle. Versioned package tests retain a Func<string> from old ALC to observe old behavior after removal/reinstall."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+          "keeps successful install disk changes when resolution publication fails",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+          "publishes nothing after installation fails",
+          0
+        ],
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+          "reports the load error when a reinstalled version fails to load",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/index.ts",
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageManagementTests.cs",
+          "method": "Failed_sdk_build_cannot_select_or_publish_the_package",
+          "assertions": [
+            "Failing buildTransitive target produces failed package outcome without selecting or publishing."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageHotReinstallTests.cs",
+          "method": "Hot_package_failed_activation_keeps_saved_state_and_can_remove_then_retry",
+          "assertions": [
+            "Failed apply returns failed/apply with Installed=true Selected=true; dependency version+bundle selection+directory saved, service absent; subsequent remove succeeds and reinstall1.0.0 recovers."
+          ]
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageUpdateTests.cs",
+          "method": "Failed_later_package_update_preserves_pending_version_and_live_code",
+          "assertions": [
+            "SDK/admission/prepared-content/published-content/existing-destination failures retain prior pending manifest and running old delegate, preserve residuals and causal diagnostics."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native distinguishes pre-persistence SDK/admission/integrity refusal from post-persistence activation failure. It is not a general filesystem rollback of successful external package work.",
+        "Native invalid successor validation may stop before source publication failure stage; exact stage labels differ while saved versus running facts remain explicit."
+      ],
+      "limits": [
+        "The separate remove-after-success publication-failure source branch is reviewed in S4-C06-remove-publication-failure against its exact new native regression."
+      ]
+    },
+    {
+      "id": "S4-C06-remove-publication-failure",
+      "slice": "S4",
+      "contract": "A successful package removal remains persisted when the subsequent resolution publication fails; the prior successful stop-and-drop publication is not undone.",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "The fixture starts with addon installed. Removal first stops its plugins and successfully publishes the private mappings away, then mocked pnpm removes package files/manifest state. The second publication throws publication rejected. Exact assertions are failed application, changed=true, exitCode=0, two publication calls, empty dependencies, only core selected, addon directory absent, addon private mapping undefined and addon entry undefined."
+      ],
+      "setup": [
+        "Source manager package-reload fixture writes real addon bundle and private addon-plugin whose top-level evaluation appends a file; installFiles/removeFiles simulate pnpm file+manifest effects, mockPnpm records invocations; real Loader/PluginPackages/HMR publication trace is observed and sibling object retained.",
+        "Native real package fixture InitializeAsync packs an independent .nupkg and executes DotnetPluginToolchain against local feed; StartAsync supplies ProfileSession/ClrModuleResolver, manifest locator and explicit generation lifecycle. Versioned package tests retain a Func<string> from old ALC to observe old behavior after removal/reinstall.",
+        "Native callback wrapper captures the existing ReconcileCandidateAsync without replacing its associated ReconcileAsync. It invokes the original callback on the first removal reconciliation and rejects only the second. ObservedPackageToolchain forwards the real inner removal before observation; no package removal or CLR resolver outcome is mocked. A finally restores the callback. ReadHotDependencyVersion now returns null for an absent dependency key rather than throwing in test inspection."
+      ],
+      "sourceCases": [
+        [
+          "composition",
+          "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+          "keeps successful remove disk changes when resolution publication fails",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/boot/app-boot/src/index.ts",
+        "packages/boot/hmr/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/PackageHotReinstallTests.cs",
+          "method": "Hot_package_removal_keeps_durable_changes_when_final_reconciliation_fails",
+          "assertions": [
+            "Exactly two candidate reconciliation calls. The first invokes the real session callback with selection already removed and dependency still present, then asserts service and original module entry stopped before package removal.",
+            "ObservedPackageToolchain forwards real DotnetPluginToolchain.RemoveAsync before marking completion. The second callback sees durable dependency deletion, empty live bundle routes and KeyNotFoundException resolving nuget:independentplugin before throwing the exact removal publication rejected diagnostic.",
+            "Final operation returns failed/remove/operation-error, Installed=false and Selected=false. Saved manifest has no dependency or bundle selection, toolchain has no bundle or loaded module, service/entry stay absent and CLR route resolution still rejects.",
+            "The immutable deployment directory remains and is reported as residual; captured old delegate still returns v1. This asserts the native retention contract instead of Node physical deletion.",
+            "Restoring the real callback then explicit ProfileSession.RefreshAsync repairs successfully without rewriting the saved manifest or resurrecting the route/service. Installing the same exact package again applies with installed/selected state, fresh module identity and v1 service; old delegate remains callable and no session error/restart remains."
+          ]
+        }
+      ],
+      "adaptation": [
+        "Native removal retains immutable artifact directories for live module/delegate safety and distinguishes catalog selection from disk artifact lifetime. Source pnpm deletion cannot be mapped to physical native artifact deletion."
+      ],
+      "limits": [
+        "The rejection is injected at the existing session-owned candidate reconciliation boundary, equivalent to the source mocked resolution publisher rejecting before its second actual publication. This does not establish behavior for arbitrary partial failure inside CLR resolver withdrawal or cleanup.",
+        "Native immutable artifacts remain available to old consumers. No physical Node node_modules deletion, JavaScript namespace identity or pnpm exit code is promised by this CLR adaptation."
+      ]
+    },
+    {
+      "id": "S5-01",
+      "slice": "S5",
+      "contract": "Trusted principal attribution and payload isolation",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Outside-call and exact lower-case owner are unattributed; a case-lookalike kind remains a guest.",
+        "An extra principal envelope property is rejected, nested business data cannot replace trusted Peer identity, and business observes only admitted Host identity."
+      ],
+      "setup": [
+        "protocol invocationAs creates only a peer.principal shell; assertions target principalOf identity, not transport authentication.",
+        "Gateway setup mounts Registry, RemoteAccess, Gateway and AccessFixture, holds explicit resource bindings; peerFor/ownerPeer and optional Connection are reviewed alongside outer/nested payload paths."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/typert/protocol/tests/remote-access.spec.ts",
+          "principalOf > reports a non-owner caller and nothing for the owner or code outside a call",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway access checks > keeps the principal out of reach of wire fields",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/typert/protocol/src/principal.ts",
+        "packages/api/gateway/src/index.ts",
+        "packages/client/connection/src/peer.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertIdentityTests.cs",
+          "method": "Principal_is_detached_and_only_non_owner_calls_are_attributed"
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/RemoteCarrierTests.cs",
+          "method": "Carrier_identity_and_access_are_host_selected_before_lookup"
+        },
+        {
+          "file": "scripts/verify-remote-identity.py"
+        }
+      ],
+      "adaptation": "TypertPrincipal clones credential-free JSON at trusted Host construction; C# returns null where JS uses undefined. HTTP/mux retain native framing and Host credential admission.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S5-02",
+      "slice": "S5",
+      "contract": "Peer closure precedes payload/descriptor work and isolates siblings",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Disposed Peer refuses direct unary, stream and event preparation before invalid arguments or missing descriptors.",
+        "Closure cancels pending business stream/event delivery while a sibling Peer remains usable; already-running unary retains its carrier cancellation contract."
+      ],
+      "setup": [
+        "Gateway AccessFixture.slow uses an explicit release promise; watch yields once then waits on AbortSignal; setup gives each Peer its own Scope.",
+        "Native Setup creates service/registry/Gateway/Connection under one root; barriers separate unary completion from stream lifetime and assert sibling isolation."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway Peer lifetime > refuses calls and streams from a disposed Peer without affecting other Peers",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway Peer lifetime > refuses a disposed Peer before reading its wire payload",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway Peer lifetime > ends a disposed Peer's streams and lets its running unary calls finish",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/gateway/src/index.ts",
+        "packages/api/gateway/src/stream-server.ts",
+        "packages/client/connection/src/peer.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertIdentityTests.cs",
+          "method": "Closed_peer_precedes_descriptors_arguments_and_event_preparation"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertIdentityTests.cs",
+          "method": "Peer_closure_cancels_pending_stream_but_running_unary_keeps_carrier_token"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertIdentityTests.cs",
+          "method": "Peer_closure_ends_event_stream_and_explicit_sibling_remains_live"
+        }
+      ],
+      "adaptation": "Peer cancellation is cooperative; a non-settling business iterator can retain cleanup. Native tests additionally dispose unused uplink input without reading it.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S5-03",
+      "slice": "S5",
+      "contract": "Fiber-owned resource registry and provider resource preservation",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "A kind has one default field; duplicate/global declarations fail without a replacement registration.",
+        "Disposal removes the exact registering owner and preserves replacement snapshots; configured lookup and Context resolvers preserve resource kind without changing retained wire facts."
+      ],
+      "setup": [
+        "Registry tests register contributions through owned fibers and configure resolver overrides; review covers registration/disposal notifications and unchanged provider wire names."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/typert/registry/tests/typert.spec.ts",
+          "TypertRegistry > registers one default field per resource kind and withdraws it with its fiber",
+          0
+        ],
+        [
+          "remote",
+          "packages/typert/registry/tests/typert.spec.ts",
+          "TypertRegistry > reserves the built-in global resource kind",
+          0
+        ],
+        [
+          "remote",
+          "packages/typert/registry/tests/typert.spec.ts",
+          "TypertRegistry > keeps a lookup provider's resource kind under a configured resolver",
+          0
+        ],
+        [
+          "remote",
+          "packages/typert/registry/tests/typert.spec.ts",
+          "TypertRegistry > keeps a Host Context adapter's resource kind under a configured resolver",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/typert/registry/src/service.ts",
+        "packages/typert/protocol/src/types.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertResourceRegistryTests.cs",
+          "method": "Resources_withdraw_with_the_registering_fiber_and_notify_committed_changes"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertResourceRegistryTests.cs",
+          "method": "Resource_snapshots_remain_independent_and_replacement_moves_to_the_end"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertResourceRegistryTests.cs",
+          "method": "Resource_validation_matches_segment_and_wire_rules_and_rejects_duplicates"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertResourceRegistryTests.cs",
+          "method": "Lookup_resolver_configuration_preserves_provider_resource_and_stable_wire_contract"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertResourceRegistryTests.cs",
+          "method": "Host_resolver_configuration_preserves_provider_resource_before_and_after_withdrawal"
+        }
+      ],
+      "adaptation": "Native registry retains defensive detached snapshots and insertion order rather than promising author-object identity across registration. This snapshot boundary is retained in S5/S8 compatibility.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S6-01",
+      "slice": "S6",
+      "contract": "Ordinary JSON admission precedes policy, Context and lookup effects",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Rejected ordinary input returns gateway/input-invalid before decide/bindings/business.",
+        "Rejected authorization leaves Context/lookup codec/provider counters zero; admitted lookup identity is resolved once only after permission; reader, policy and business share the exact admitted ordinary object."
+      ],
+      "setup": [
+        "registerStrict supplies explicit zod codecs and named parameter descriptors; AccessFixture records calls, strictCodec counts schema creation, lookup resolver is a vi spy.",
+        "Native fixtures use stateful CountingCodec/provider counters and object reference assertions rather than serializing a second view."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway access checks on Typert-validated arguments > refuses arguments their codec rejects with gateway/input-invalid before the access check",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway access checks > checks access before resolving lookups, so a refused call activates nothing",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway access checks on Typert-validated arguments > passes readers the decoded arguments and lookup wire identities, resolving no lookup for a refused call",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/gateway/src/index.ts",
+        "packages/api/gateway/src/access.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Ordinary_JSON_errors_precede_access_context_service_and_lookup"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Refused_calls_do_not_decode_or_resolve_Context_and_lookup"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Decoded_object_is_shared_with_readers_policy_and_business_without_serialization"
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/RemoteCarrierTests.cs",
+          "method": "Both_carriers_reject_invalid_payload_before_lookup_and_business"
+        }
+      ],
+      "adaptation": "Native readers receive decoded CLR values and separate cancellation, while Context/lookup entries are detached wire JsonElement. Lookup-only preparation retains prior parallel/first-observed failure semantics.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S6-02",
+      "slice": "S6",
+      "contract": "Default resource extraction, explicit reader override and invalid resources",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Top-level ordinary wire name wins; otherwise only the first admitted object supplies the declared field; absence falls back to global.",
+        "Per-kind explicit reader replaces lower-priority sources, null removes that kind, and empty/throwing/non-string/empty IDs fail before policy."
+      ],
+      "setup": [
+        "setup registers shelf default field; callResources direct tests isolate reader precedence independently of Gateway dispatch; strict metadata removes unknown nested fields in the original fixture."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "resource resolution > reads a default field from a top-level argument, else from the first object argument, else touches global",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "resource resolution > lets a reader replace the defaults for its kind, called with the positional wire arguments",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "resource resolution > reports invalid resources when a reader throws or returns an empty list, or a resource id is not a non-empty string",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway access checks on Typert-validated arguments > resolves resources from the decoded arguments, so an undeclared nested field names no resource",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/gateway/src/access.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Unknown_fields_do_not_supply_resources_and_first_object_stops_fallback"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Reader_overrides_provider_and_default_per_kind_and_null_removes_that_kind"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Invalid_reader_does_not_fall_back_to_global"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Default_field_reads_normalized_native_input_without_unrelated_getters"
+        }
+      ],
+      "adaptation": "Zod stripping is not copied to STJ. Native input metadata readers use the selected deserialized contract, authored setters/defaults and explicit reader fallback for opaque/derived/unreadable values. Unknown fields cannot create accepted resource fields.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S6-03",
+      "slice": "S6",
+      "contract": "Context/lookup resource identities and owner bypass",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Context identity is extracted without activating its provider, combines with lookup IDs in declaration order, and each identity must allow.",
+        "Explicit reader overrides only its kind; owners bypass reader and policy execution."
+      ],
+      "setup": [
+        "registerScope records context wire and optional resource; registerStrict supplies context descriptors; recordDecisions captures action/resources ordering."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway access checks for Context methods > reads the Context identity as the resource its adapter declares, before resolving the Context",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway access checks for Context methods > adds the resources a reader declares to the Context resource, and lets a reader replace it for its kind",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway access checks > dispatches the owner without resolving resources or reading the policy",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/gateway/src/access.ts",
+        "packages/api/gateway/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Context_and_lookup_resources_replace_defaults_and_all_identities_require_permission"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Reader_overrides_provider_and_default_per_kind_and_null_removes_that_kind"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "Owner_bypasses_readers_and_event_admission_precedes_policy"
+        }
+      ],
+      "adaptation": "Native preserves wire JSON for receiver/lookup identities until authorization; admission still checks Peer liveness, descriptor and ordinary JSON for owners.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S6-04",
+      "slice": "S6",
+      "contract": "RemoteAccess binding logic, all resources, denial reasons and fail-closed diagnostics",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Owner bypasses policy; absent principal-kind policy denies. A matching role/action on one resource never authorizes a sibling/global resource.",
+        "Bindings are read once per decision; condition and explanation errors deny and diagnostics suppress repeated failures until invalidation/change. First condition reason survives unless another matching binding allows."
+      ],
+      "setup": [
+        "RemoteAccess setup mounts real registry/Gateway/service; ROOM/GLOBAL helpers and ask build exact requests; vi spies inject bindings/condition/explain failures.",
+        "Native Ask/Denied helpers compare reason and closed decision variant; actual independent consumer verifies provider counters and selected principal."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "RemoteAccessService.decide > allows the owner without any policy and refuses a kind without a policy",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "RemoteAccessService.decide > requires the action on every resource of the target",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "RemoteAccessService.decide > refuses with policy-failed when bindings(), a condition, or explain() throws, logging each policy once per change",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/remote-access/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteAccessTests.cs",
+          "method": "Owner_and_follow_are_allowed_and_an_unregistered_kind_is_refused"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteAccessTests.cs",
+          "method": "Bindings_are_read_once_per_decision_and_every_resource_requires_its_exact_action"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteAccessTests.cs",
+          "method": "First_condition_refusal_wins_unless_a_later_matching_binding_allows"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteAccessTests.cs",
+          "method": "Policy_exceptions_fail_closed_and_log_once_until_invalidated"
+        },
+        {
+          "file": "scripts/verify-remote-access.py"
+        }
+      ],
+      "adaptation": "Owner-only native Hosts may omit RemoteAccess; guests then receive no-allow. Native malformed policy outputs also fail closed. Application owns principals/roles/actions and account data.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S6-05",
+      "slice": "S6",
+      "contract": "List filtering rereads current invocation policy without arguments",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Each Allows query uses the current trusted invocation/action and only its target resource. It does not materialize business arguments or reuse a previous permission result.",
+        "Binding changes are visible on the next in-flight list/stream check; owner/outside-call use remains allowed."
+      ],
+      "setup": [
+        "Source call helper installs invocation context and list/stream fixture calls allows per item; policies record whether args are absent.",
+        "Independent consumer assertions list-checks-read-dynamic-bindings-without-arguments and list-checks-use-current-invocation-and-do-not-explain cover the package boundary."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "RemoteAccessService.allows > filters list items for non-owners on one resource without arguments",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "RemoteAccessService.allows > reads the bindings on every check, so a running call sees binding changes from its next check on",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/remote-access/src/index.ts",
+        "packages/typert/protocol/src/principal.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertGatewayAccessTests.cs",
+          "method": "List_filter_reads_current_policy_without_arguments_during_a_live_stream"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteAccessTests.cs",
+          "method": "Conditions_only_run_for_matching_bindings_and_receive_the_exact_call_arguments"
+        },
+        {
+          "file": "scripts/verify-remote-access.py"
+        }
+      ],
+      "adaptation": "Native TypertInvocation.Current is AsyncLocal execution attribution; no principal is accepted from the wire and list filtering stays business-owned.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S7-01",
+      "slice": "S7",
+      "contract": "Passive event refusal and non-owner whole-frame filtering",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Passive Peers cannot subscribe/answer before payload validation. Owners alone receive answerable waterfalls.",
+        "Guests receive an entire emit only when every event resource permits its event action; missing/throwing readers drop the guest frame without weakening owner delivery."
+      ],
+      "setup": [
+        "Source openEvents waits for ready frame and forward helper publishes explicit event frames; source registration supplies event reader map.",
+        "Native Forward/Ready barriers ensure subscription readiness; reader spies are counted once across multiple guest recipients."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway forwarded events for non-owner Peers > denies event streams and results for passive owner and guest Peers",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway forwarded events for non-owner Peers > delivers only allowed broadcasts and no answerable waterfall to a non-owner, and refuses its results",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway forwarded events for non-owner Peers > delivers a global event that a global role lists, and drops one whose resource is missing without asking remoteAccess",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/gateway/src/index.ts",
+        "packages/api/gateway/src/access.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs",
+          "method": "Passive_peers_cannot_subscribe_or_answer_before_payload_validation"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs",
+          "method": "Emit_resources_are_resolved_once_and_filter_whole_notifications"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs",
+          "method": "Owner_notifications_bypass_resource_readers"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs",
+          "method": "Only_the_delivered_owner_peer_can_answer_and_guest_never_receives_waterfalls"
+        }
+      ],
+      "adaptation": "Event readers receive encoded positional JsonElement values, unlike ordinary decoded CLR call readers. Authorization is at enqueue time; native queues do not retroactively remove already-enqueued frames after policy invalidation.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S7-02",
+      "slice": "S7",
+      "contract": "Same delivered Peer answers and closed/revoked buffered generations",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Only the reference-identical delivery Peer and active client generation may answer; another owner or a non-owner cannot claim another delivery.",
+        "Disposing a Peer or source drops its queued frames while unrelated streams remain live; disconnect does not answer-next a pending waterfall."
+      ],
+      "setup": [
+        "Source revoked-peer case disposes its Peer Scope, not merely a policy binding; lagging queue assertions are therefore mapped to Peer/source closure, not retroactive policy revocation.",
+        "Gateway host event helper uses real active client generation and explicit result submission; native fixture includes cross-owner Peer and stale-generation answers."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway forwarded events for non-owner Peers > discards the events buffered for a revoked non-owner Peer and keeps other streams",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway-access.host.spec.ts",
+          "Gateway forwarded events for non-owner Peers > contains a throwing policy to the non-owner deliveries it decides",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/gateway/tests/gateway.host.spec.ts",
+          "TypertGatewayService > claims and validates in-process Remote event results for the active Client generation",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/gateway/src/index.ts",
+        "packages/api/gateway/src/stream-server.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs",
+          "method": "Only_the_delivered_owner_peer_can_answer_and_guest_never_receives_waterfalls"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs",
+          "method": "Source_closure_discards_buffered_notifications"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertIdentityTests.cs",
+          "method": "Peer_closure_discards_buffered_event_frames"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/RemoteEventsGatewayTests.cs",
+          "method": "Pending_waterfall_survives_disconnect_and_settles_once_from_current_delivery"
+        }
+      ],
+      "adaptation": "Native source closure retains graceful stream-end behavior; cleanup failure belongs to the owning Fiber and can block replacement. Policy failure isolates non-owner admission rather than stopping owner notifications.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S7-03",
+      "slice": "S7",
+      "contract": "Access baseline enumeration and follow deltas",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Baselines enumerate per-resource endpoint actions without call arguments, exclude event actions and preserve deterministic resource/action order.",
+        "Follow emits an opening baseline then changed/new grants and removals; invalidation targets complete structural JSON identity and changes coalesce."
+      ],
+      "setup": [
+        "Source ask/invocationOf/follow helpers mount invocation context and capture frames before advancing queued changes; test ROOM/GLOBAL resources exercise role conditions with absent args."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "first snapshots > gives the owner the owner baseline and a non-owner its current grants",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "first snapshots > lists per bound resource the endpoint actions decide() allows there without arguments, and no grant where none is allowed",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "remoteAccess/follow > pushes upserts and removals after invalidation and policy changes",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/remote-access/src/index.ts",
+        "packages/api/remote-access/src/snapshot.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertAccessSnapshotTests.cs",
+          "method": "Snapshot_reads_bindings_once_preserves_resource_order_and_sorts_non_event_actions"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertAccessSnapshotTests.cs",
+          "method": "Registered_follow_is_callable_by_guest_and_targets_full_json_identity_with_coalesced_deltas"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertAccessSnapshotTests.cs",
+          "method": "Policy_registration_and_withdrawal_update_open_guest_followers"
+        }
+      ],
+      "adaptation": "Native snapshot is an explicit Host-selected input; it does not automatically inject an owner baseline into every rendered application page. The source webServer injection assertion is a separate documented Host-composition adaptation.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S7-04",
+      "slice": "S7",
+      "contract": "Follow lifetime, cancellation and fresh generations",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Service ownership ends old owner/guest streams; remount begins from a fresh baseline/policy set.",
+        "Cancelling a waiting generation settles it without retaining stale authority; the independent native client proves remount, revocation and service withdrawal."
+      ],
+      "setup": [
+        "Source follow helper builds real AsyncIterable and AbortController; native package consumer uses real loopback transport plus a scripted carrier for malformed/new generation ordering."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "remoteAccess/follow > ends every open generation when the service unloads, so a reloaded service starts from a fresh baseline",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/remote-access.host.spec.ts",
+          "remoteAccess/follow > stops a non-owner generation that is cancelled while waiting",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/remote-access/src/index.ts",
+        "packages/api/remote-access/src/client/mount.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertAccessSnapshotTests.cs",
+          "method": "Withdrawing_service_ends_owner_generation_and_remount_starts_with_new_baseline"
+        },
+        {
+          "file": "scripts/verify-access-client.py"
+        }
+      ],
+      "adaptation": "Native RunAsync owns one physical follow generation; surrounding application controls retry. Already-computed delta batches can finish before direct cancellation, while Gateway checks captured Peer/service at each iteration.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S7-05",
+      "slice": "S7",
+      "contract": "Browser access sources, terminal failure and remount fencing",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "No baseline means false; global and named grants never imply one another; observable source references remain stable within a mount.",
+        "Carrier loss retains the last accepted snapshot, terminal guest failure closes permission while owner remains allowed; reconnect and remount reject stale physical generations and malformed opening order."
+      ],
+      "setup": [
+        "Source ClientAccessState tests use a GRANTED baseline and independent frame application; mount fixture stubs only generated mount/follow and exercises ended callbacks.",
+        "Native installed-script consumer uses real generated namespace/Connection with socket frames and asserts stable observable references, terminal errors, cancellation before namespace withdrawal and fresh remount."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/remote-access/tests/client-access.client.spec.ts",
+          "ClientAccessState > answers false without a baseline and after a non-owner stream fails, and true for the owner",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/client-access.client.spec.ts",
+          "ClientAccessState > answers each resource from its own grant without falling back to the global resource",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/client-access.client.spec.ts",
+          "ClientAccessState > ignores increments outside a non-owner generation and keeps source identity stable",
+          0
+        ],
+        [
+          "remote",
+          "packages/api/remote-access/tests/client-access.client.spec.ts",
+          "remote-access Client mount > keeps the owner's answers when its stream fails terminally",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/remote-access/src/client/state.ts",
+        "packages/api/remote-access/src/client/mount.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertAccessSnapshotTests.cs",
+          "method": "Client_sources_are_stable_replace_atomically_and_fail_closed_except_owner"
+        },
+        {
+          "file": "scripts/verify-client-access.mjs"
+        },
+        {
+          "file": "scripts/verify-access-client.py"
+        }
+      ],
+      "adaptation": "Native browser adapter supplies source/global observables through the existing connection controller instead of adding upstream UI Hook registration to frozen Slots. Initial page baseline remains explicit Host input.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S8-01",
+      "slice": "S8",
+      "contract": "RemoteInfo lazy index, descriptor identity and loader admission",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Reading Info does not enumerate its index or create schemas; named direct methods are the exact descriptors in that Info and the cached index is stable.",
+        "Context-only descriptors stay available without a fabricated direct named invocation; native registry Info uses the exact stored snapshots and withdraws with owner."
+      ],
+      "setup": [
+        "Source definition helper builds static codec specs and spies on methods/get jsonSchema/create/strictObject independently; lazy-loader fixture uses throwing schema factories to prove admission never materializes them.",
+        "Native CountingCodec counts Decode/Schema reads and intentionally throws to verify independent lazy construction and retry."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/typert/protocol/tests/remote-info.spec.ts",
+          "lazy Remote info > returns a class instance and defers its index, schemas, and projections independently",
+          0
+        ],
+        [
+          "remote",
+          "packages/typert/loader/tests/lazy-info.spec.ts",
+          "validates invocation facts without selecting input policy or materializing schemas",
+          0
+        ],
+        [
+          "remote",
+          "packages/typert/protocol/tests/remote-info.spec.ts",
+          "lazy Remote info > keeps Context-only descriptors without inventing a named direct caller",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/typert/protocol/src/remote-info.ts",
+        "packages/typert/loader/src/index.ts",
+        "packages/typert/registry/src/service.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Index_input_parsers_and_projections_are_independent_and_share_descriptor_identity"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Info_defers_index_enumeration_and_retries_failed_construction"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Registry_infos_keep_exact_snapshot_objects_without_preparing_schema_and_withdraw_with_owner"
+        },
+        {
+          "file": "scripts/verify-remote-metadata.mjs"
+        }
+      ],
+      "adaptation": "Native registration intentionally snapshots author descriptors. Exact identity is promised within the stored Info, not across registration; no Zod object class or JavaScript structural guard API is promised by C#.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S8-02",
+      "slice": "S8",
+      "contract": "Independent normal/strict input views retain native codecs",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Normal and strict parsers/projections are independently cached, outer named fields remain closed, and strict recursively rejects undeclared fields in declared object shapes.",
+        "Dictionary/explicit JSON openness is preserved. Result admission remains independent of a consumer-selected input policy. Native generated Host parsing preserves authored setter normalization and optional omission."
+      ],
+      "setup": [
+        "Source fixture copies remote-model sources, injects source docs and generates executable artifacts through WorkspaceTypertGenerator/executableRemoteModule; input mutations distinguish nested normal stripping from strict closing.",
+        "Native GeneratedInfoInput setter uppercases/trims; metadata test asserts VALUE and no suffix entry, while installed TypeScript parser preserves original input object identity."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/typert/protocol/tests/remote-info.spec.ts",
+          "lazy Remote info > selects and caches independent parser/projection views without changing dispatch codecs",
+          0
+        ],
+        [
+          "metadata",
+          "packages/typert/generator/tests/remote-metadata.spec.ts",
+          "Remote method metadata > generates normal and strict input views from plain Remote methods without changing result codecs",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/typert/protocol/src/remote-info.ts",
+        "packages/typert/generator/src/emitter.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Strict_declared_objects_reject_unknown_nested_fields_and_keep_native_setter_transforms"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Strict_preserves_dictionary_keys_but_closes_their_declared_values_and_preserves_explicit_json"
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/TypertGeneratedInfoTests.cs",
+          "method": "Generated_host_metadata_reuses_descriptors_and_preserves_authored_parsing"
+        },
+        {
+          "file": "scripts/verify-remote-metadata.mjs"
+        }
+      ],
+      "adaptation": "Source normal Zod strips extra fields; normal STJ may preserve/ignore them under its selected contract and generated TypeScript validates wire JSON without CLR conversion. This difference is explicit, not claimed equivalent stripping. Strictness does not alter Host dispatch/result codecs.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S8-03",
+      "slice": "S8",
+      "contract": "Named required fields, omission, lookup identity and direct invocation",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Only ordinary optional arguments may be omitted; lookup/receiver identity remains required even if its codec accepts absence. Unexpected outer fields and explicit invalid null remain errors.",
+        "Named invocation rereads the current supplied client namespace, forwards original named arguments/cancellation and returns its exact task/duplex handle without reparsing or wrapping send/end/dispose."
+      ],
+      "setup": [
+        "Source vi.fn callback asserts receiver this, positional hole and exact signal/task; replacing namespace.watch proves current lookup.",
+        "Native CountingInvoker captures original argument dictionary and returns one task; SharedConsumer uses named omitted-default HTTP and named duplex Send/End over actual package-only transport."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/typert/protocol/tests/remote-info.spec.ts",
+          "lazy Remote info > preserves named omissions, lookup aliases, strict outer fields, and positional holes",
+          0
+        ],
+        [
+          "remote",
+          "packages/typert/protocol/tests/remote-info.spec.ts",
+          "lazy Remote info > requires declared fields even when their parser accepts undefined and permits empty methods",
+          0
+        ],
+        [
+          "remote",
+          "packages/typert/protocol/tests/remote-info.spec.ts",
+          "lazy Remote info > returns the exact stream handle and looks up the current mounted method on each call",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/typert/protocol/src/remote-info.ts",
+        "packages/typert/generator/src/emitter.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Unknown_fields_are_closed_and_only_ordinary_undefined_parameters_are_optional"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Named_invocation_returns_the_exact_task_and_never_parses_arguments"
+        },
+        {
+          "file": "scripts/verify-remote-metadata.mjs"
+        },
+        {
+          "file": "tests/fixtures/DeclarationModel/SharedConsumer.cs"
+        }
+      ],
+      "adaptation": "Native generated ITypertRemoteInvoker forwards to typed methods; CLR optional defaults and task/handle types adapt positional JavaScript invocation. TypeScript dynamically rereads namespace methods. Context-only receivers remain excluded from direct named index.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S8-04",
+      "slice": "S8",
+      "contract": "Unsupported tool projection retains parser/docs and unexpected factory failure retries",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Recursive/tuple/overlap/typed-dictionary or binary/absent standalone values can have no tool schema and a projection error while their established input/result parser and docs still function.",
+        "Unexpected schema-factory exceptions propagate and are retryable; projection refusal cannot silently weaken native integer/range/format constraints."
+      ],
+      "setup": [
+        "Source creates unsupported codec with independent create/decode/encode/docs and explicitly throwing factory; recursive DTO fixture demonstrates normal parser still works after unavailable projection.",
+        "Native explicit JSON schemas and real STJ codec exercise refusal independently of Parse; installed metadata consumer asserts parser identity and invalid recursive/numeric fields."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/typert/protocol/tests/remote-info.spec.ts",
+          "lazy Remote info > retains codecs and documentation when projection is unavailable, without masking parser failures",
+          0
+        ],
+        [
+          "metadata",
+          "packages/typert/generator/tests/remote-metadata.spec.ts",
+          "Remote method metadata > keeps recursive input parsers independent when JSON Schema cannot represent them",
+          0
+        ],
+        [
+          "metadata",
+          "packages/typert/generator/tests/remote-metadata.spec.ts",
+          "Remote method metadata > retains output codecs and source docs when optional JSON Schema projection is unsupported",
+          0
+        ],
+        [
+          "metadata",
+          "packages/typert/generator/tests/remote-metadata.spec.ts",
+          "Remote method metadata > retains tuple input parsers under both policies without requiring a tool projection",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/typert/protocol/src/remote-info.ts",
+        "packages/typert/generator/src/emitter.ts",
+        "packages/typert/generator/src/tool-schema.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Unsupported_tool_shapes_retain_independent_working_parsers"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Unexpected_schema_factory_failures_retry_instead_of_becoming_projection_errors"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Binary_result_metadata_refuses_tool_projection_without_disabling_native_parsing"
+        },
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertRemoteInfoTests.cs",
+          "method": "Native_numeric_bounds_are_not_weakened_by_tool_projection"
+        },
+        {
+          "file": "scripts/verify-remote-metadata.mjs"
+        }
+      ],
+      "adaptation": "Tool JsonSchema is a purpose projection distinct from native codec Schema/ResultSchema. Native retains stricter numeric and binary constraints; it refuses rather than adopting a weaker candidate subset. C15 authored-generic/serializer backend refusals remain unchanged.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S8-05",
+      "slice": "S8",
+      "contract": "Generated Host/Remote facts and provider-independent model-only metadata consumers",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Generated metadata derives from the same declaration facts as Host binding and preserves method/parameter/result docs without eager schemas or runtime Provider imports.",
+        "Independent caller resolves saved model-only contract package without Provider implementation and exercises recursive metadata, strict/normal views, omitted defaults and returned duplex handle.",
+        "External strict TypeScript accepts exact named invocation/uplink/result types and rejects Context direct index/missing endpoints/invalid argument or duplex input types."
+      ],
+      "setup": [
+        "Reviewed source fixture()/editFile()/assertConsumerTypechecks plus remote-module executable helper: copy fixture into temp workspace, emit static source, transpile controlled imports and run declarations with skipLibCheck=false.",
+        "Native verify_data_consumer authors separate Provider and model-only Contracts packages; SharedConsumer assets must omit IndependentData.Provider/IndependentDeclarations.External, reflection fallback is disabled, and actual HTTP Host has the implementation separately."
+      ],
+      "sourceCases": [
+        [
+          "metadata",
+          "packages/typert/generator/tests/remote-metadata.spec.ts",
+          "Remote method metadata > emits one static method spec without runtime Host imports or eager schemas",
+          0
+        ],
+        [
+          "metadata",
+          "packages/typert/generator/tests/remote-metadata.spec.ts",
+          "Remote method metadata > shares direct descriptors and codec documentation in ordinary Host and Remote artifacts",
+          0
+        ],
+        [
+          "metadata",
+          "packages/typert/generator/tests/remote-metadata.spec.ts",
+          "Remote method metadata > typechecks ordinary declarations for named invocation, Context exclusion, uplink, and decoded bytes",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/typert/generator/src/emitter.ts",
+        "packages/typert/generator/src/workspace.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Platform.Tests/TypertGeneratedInfoTests.cs",
+          "method": "Generated_host_metadata_reuses_descriptors_and_preserves_authored_parsing"
+        },
+        {
+          "file": "tests/fixtures/DeclarationModel/SharedConsumer.cs"
+        },
+        {
+          "file": "scripts/typert_declaration_consumer.py"
+        },
+        {
+          "file": "scripts/verify-remote-metadata.mjs"
+        }
+      ],
+      "adaptation": "Roslyn common declaration model and STJ code replace WorkspaceTypertGenerator/Zod runtime generation. MSBuild normal/incremental/Clean/design-time ownership and stale-output refusal remain one model route; generated DTOs never reconstruct arbitrary author bodies.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S9-01",
+      "slice": "S9",
+      "contract": "Only newly inserted factory styles are claimed; nested and throwing factories clean correctly",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Styles present before factory evaluation remain shell-owned. Nested require owns its own new styles and cannot steal the outer factory style.",
+        "Throwing factory claims and removes its new untagged/preset styles before exposing failure; cleanup preserves shell DOM identity and computed CSS."
+      ],
+      "setup": [
+        "Source loader bench uses jsdom, scripted bundle registration, page-global queue facade and afterEach removes style/script globals; no actual browser transport is claimed by these originals.",
+        "Native HTTP-served scripts include parent/child/failure factories, preset style tags and Context effects; assertions cover exact nodes, data-plugin ownership, cleanup order and computed CSS."
+      ],
+      "sourceCases": [
+        [
+          "browser",
+          "packages/client/modules/tests/loader.client.spec.ts",
+          "style claiming > leaves untagged style tags inserted before materialization unclaimed",
+          0
+        ],
+        [
+          "browser",
+          "packages/client/modules/tests/loader.client.spec.ts",
+          "style claiming > assigns an untagged style to the factory that inserted it before a nested require",
+          0
+        ],
+        [
+          "browser",
+          "packages/client/modules/tests/loader.client.spec.ts",
+          "style claiming > removes untagged styles inserted by a factory that throws",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/client/modules/src/client/system.ts"
+      ],
+      "native": [
+        {
+          "file": "scripts/verify-client-safety.mjs"
+        }
+      ],
+      "adaptation": "Native browser wrapper uses the adapted vendored factory runtime with real Chromium checks; later asynchronous application effects still require Cordis lifecycle ownership. Existing tagged ownership semantics remain.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S9-02",
+      "slice": "S9",
+      "contract": "Release mismatch blocks graph admission before parsing and keeps boot resources",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Stable application release version/optional commit is independent of graph rev; boot-release updates are admitted with no notice.",
+        "Foreign identity blocks graph parsing/rebuilt download/desired roster change and keeps existing modules. Unknown foreign graph format still produces a release notice; malformed same-release graph is rejected normally."
+      ],
+      "setup": [
+        "Source entries bench creates Cordis Loader and ClientModuleSystem with scripted URL fetch and visible factory effect counters; withRelease/r1/r2/r3 vary identity separately from row rev.",
+        "Native public wrapper tests exercise absent/version/commit fields, pre-parse rejection, accepted pending work/retry/disposal and both synchronous notification reentrancy directions."
+      ],
+      "sourceCases": [
+        [
+          "browser",
+          "packages/client/modules/tests/entries.client.spec.ts",
+          "Host release changes > applies graphs and rebuilt frames of the boot release without announcing anything",
+          0
+        ],
+        [
+          "browser",
+          "packages/client/modules/tests/entries.client.spec.ts",
+          "Host release changes > applies nothing from another release and announces it once",
+          0
+        ],
+        [
+          "browser",
+          "packages/client/modules/tests/entries.client.spec.ts",
+          "Host release changes > announces a graph of another release even when its format cannot be read",
+          0
+        ],
+        [
+          "browser",
+          "packages/client/modules/tests/loader.client.spec.ts",
+          "boot manifest wire > carries an optional Host release and rejects a malformed one",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/client/modules/src/client/release-change.ts",
+        "packages/client/modules/src/client/entries.ts",
+        "packages/client/modules/src/client/manifest.ts",
+        "packages/client/modules/src/index.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/ClientModuleCatalogTests.cs",
+          "method": "Release_identity_is_host_selected_and_does_not_change_the_artifact_graph_revision"
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/ManagementTransportTests.cs",
+          "method": "Client_graph_HTTP_preserves_optional_host_release_without_changing_graph_revision"
+        },
+        {
+          "file": "scripts/verify-client-release.mjs"
+        },
+        {
+          "file": "scripts/verify-client-safety.mjs"
+        }
+      ],
+      "adaptation": "Host explicitly supplies application release, never library version/process generation/graph hash. Native wrapper has one shared manual/reconnect gate and fixes source reentrant subscriber admission by capturing each observed frame comparison.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S9-03",
+      "slice": "S9",
+      "contract": "Dismissal, absent identity, return to boot release and subscriber isolation",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Dismiss hides only that Host identity notice and never admits its graph. Absent release is a real identity. Returning to boot release clears notice and reconciles changed rows only.",
+        "A failing synchronous observer cannot prevent remaining observers. Release observable remains stable across recovery.",
+        "Native generated events and Kestrel graph/artifact endpoints physically reconnect while preserving accepted Context state/DOM/style and refusing every foreign artifact download, then accept one boot-release replacement and cleanup once."
+      ],
+      "setup": [
+        "Source visible factory counts mount/dispose/listener effects and cleanup; afterEach disposes contexts and DOM and restores spies.",
+        "Native browser fixture toggles application A/B/A catalogs and forcibly aborts WebSocket upgrades; browser asserts socketOpens and graphReads grow, notification stream observes client-modules/changed, drafts/resources survive B, and final A2 replaces exact nodes once."
+      ],
+      "sourceCases": [
+        [
+          "browser",
+          "packages/client/modules/tests/entries.client.spec.ts",
+          "Host release changes > stops announcing a dismissed Host release but still applies nothing from it",
+          0
+        ],
+        [
+          "browser",
+          "packages/client/modules/tests/entries.client.spec.ts",
+          "Host release changes > treats an absent release as one identity",
+          0
+        ],
+        [
+          "browser",
+          "packages/client/modules/tests/entries.client.spec.ts",
+          "Host release changes > withdraws the announcement and replaces only changed modules when the Host returns to the boot release",
+          0
+        ],
+        [
+          "browser",
+          "packages/client/modules/tests/entries.client.spec.ts",
+          "Host release changes > notifies every subscriber when one of them throws",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/client/modules/src/client/release-change.ts",
+        "packages/client/modules/src/client/entries.ts",
+        "packages/client/modules/src/client/notify.ts"
+      ],
+      "native": [
+        {
+          "file": "scripts/verify-client-release.mjs"
+        },
+        {
+          "file": "scripts/verify-client-safety.mjs"
+        },
+        {
+          "file": "tests/fixtures/ClientReleaseBrowser/index.html"
+        },
+        {
+          "file": "scripts/verify-client-release-browser.py"
+        }
+      ],
+      "adaptation": "No DSH popup/reload UI is imported. Actual Kestrel/mux/Chromium reconnection is a native integration supplement to source scripted graph/rebuilt tests, not source proof of all Node transport combinations.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S9-04",
+      "slice": "S9",
+      "contract": "Exact image data URL and watch input ownership",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "Image loader registers the physical input as a watch dependency and exports exact MIME/base64 content; unrelated modules are not handled by the image plugin.",
+        "Installed author tool exercises SVG/PNG/WebP exact bytes, actual browser decoding, image-only watch publication and retention of previous immutable generations."
+      ],
+      "setup": [
+        "Original bundlePlugin obtains the browser config and named dsh-image-inline hook, calls resolveId/load with addWatchFile spy against a temporary SVG and verifies TS input ignored.",
+        "Native independent npm-bin consumer writes real image files, builds via installed archive, checks data URL exact bytes and image natural dimensions, mutates physical input under watch and verifies prior artifact hash/content unchanged."
+      ],
+      "sourceCases": [
+        [
+          "browser",
+          "scripts/client-bundle-css.spec.ts",
+          "client bundle images > embeds an imported image as a watched data URL and ignores other modules",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/client/tsdown.client.ts"
+      ],
+      "native": [
+        {
+          "file": "scripts/verify-client-author-package.mjs"
+        },
+        {
+          "file": "scripts/verify-client-author-watch.mjs"
+        }
+      ],
+      "adaptation": "esbuild/LightningCSS installed author pipeline replaces tsdown orchestration; only lowercase supported image extensions and single factory output are promised. Package-local dynamic chunks/Node client outputs remain separately scoped.",
+      "limits": "Only this named assertion cluster is reviewed. No file-wide or unrelated historical assertion status is inherited."
+    },
+    {
+      "id": "S9-05",
+      "slice": "S9",
+      "contract": "Slots inline literal and optional keyed-member declaration delta",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "SlotEntryDef and SlotSpec accept inline:true or omission; inline:false is a compile error.",
+        "KeyedStandardSource accepts key plus optional string member; legacy one-argument implementations remain assignable; numeric member/missing key/required-member implementation are compile errors."
+      ],
+      "setup": [
+        "Compared formal/candidate ui-slots index.ts and renderer.ts declaration diffs; native vendored declarations preserve the two changed public type contracts.",
+        "Native external temporary author project imports only built installed package, with strict=true, skipLibCheck=false and empty ambient types; @ts-expect-error failures become compiler diagnostics."
+      ],
+      "sourceCases": [],
+      "sourceAlgorithms": [
+        "packages/client/ui-slots/src/index.ts",
+        "packages/client/ui-slots/src/renderer.ts"
+      ],
+      "native": [
+        {
+          "file": "scripts/verify-client-module-types.mjs"
+        }
+      ],
+      "adaptation": "Applications provide actual renderer execution, including SPAN/DIV inline DOM behavior. The changed declaration signatures are ported; full React renderer is not claimed. There is no related inline/member runtime test identity in frozen 7320 discovery; the upstream inline renderer test remains outside that execution selection.",
+      "limits": "Source-case limitation: no matching inline/member source runtime identity exists in the frozen candidate discovery. Original packages/client/ui-renderer/tests/inline-slots.client.spec.tsx asserts renderer DOM tags and is not silently substituted by unrelated ui-slots/core cases. This record reviews only the declared type delta and explicit application-renderer adaptation.",
+      "sourceCaseBoundary": "No matching inline/member runtime identity in frozen discovery; declaration-only delta is reviewed separately.",
+      "rendererContext": {
+        "file": "packages/client/ui-renderer/tests/inline-slots.client.spec.tsx",
+        "claim": "Context only; application renderer behavior is explicitly outside this native type contract."
+      }
+    },
+    {
+      "id": "S7-06",
+      "slice": "S7",
+      "contract": "Lifecycle closure refuses future calls while admitted unary completion stays live",
+      "review": "reviewed-adaptation",
+      "assertions": [
+        "An admitted unary has an independent carrier cancellation token and can finish after Peer lifecycle closure; future calls are refused before business."
+      ],
+      "setup": [
+        "Original boot mounts Loader with temporary package map, browser files and OperatorConnectFixture; exchange obtains an interaction-none credential, mux attaches lifecycle, hold records invocation signal and controlled completion.",
+        "Native identity test holds admitted unary while disposing the Peer and checks token/completion; carrier test asserts closed-Peer error wins over invalid nested payload."
+      ],
+      "sourceCases": [
+        [
+          "remote",
+          "packages/api/gateway/tests/operator-connect.host.spec.ts",
+          "operator connect through Loader composition > lets an admitted unary finish after its lifecycle socket closes",
+          0
+        ]
+      ],
+      "sourceAlgorithms": [
+        "packages/api/gateway/src/index.ts",
+        "packages/client/connection/src/peer.ts"
+      ],
+      "native": [
+        {
+          "file": "tests/Cordis.Composition.Tests/TypertIdentityTests.cs",
+          "method": "Peer_closure_cancels_pending_stream_but_running_unary_keeps_carrier_token"
+        },
+        {
+          "file": "tests/Cordis.Platform.Tests/RemoteCarrierTests.cs",
+          "method": "Closed_peer_HTTP_error_precedes_nested_payload_validation"
+        }
+      ],
+      "adaptation": "Native Host admission and closed-peer HTTP errors replace cookie/Operator credential withdrawal. This reviews the lifetime invariant only; exchange-cookie rules, Node upgrade failure injection and every Node SDK handshake are outside this correspondence.",
+      "limits": "Selected lifetime assertions only. The source case also exercises Node Operator credentials; no native cookie-exchange compatibility is claimed."
+    }
+  ]
+}

@@ -141,6 +141,113 @@ public sealed partial class PackageManagementTests
         Assert.Null(host.Session.LastError);
     }
 
+    [Fact]
+    public async Task Hot_package_removal_keeps_durable_changes_when_final_reconciliation_fails()
+    {
+        await using var host = await StartAsync();
+        var owner = host.Session.ConfigurationOperations;
+        Assert.Equal(
+            "applied",
+            (await owner.InstallPackageAsync(host.Toolchain, new("IndependentPlugin", "1.0.0", Feed), "first", true))
+            .Application);
+        var original = Assert.Single(await host.Toolchain.GetLoadedModulesAsync("IndependentPlugin"));
+        var originalCode = Assert.IsType<Func<string>>(await ReadHotInstalledCodeAsync(host));
+        var retained = host.Toolchain.Bundles["IndependentPlugin"];
+        var parent = new Uri(Path.Combine(host.Profile, "package.json"));
+        var removalCompleted = false;
+        var toolchain = new ObservedPackageToolchain(host.Toolchain)
+        {
+            AfterRemove = _ =>
+            {
+                removalCompleted = true;
+                return Task.CompletedTask;
+            }
+        };
+        var reconcile = owner.ReconcileCandidateAsync;
+        Assert.NotNull(reconcile);
+        var reconciliations = 0;
+        owner.ReconcileCandidateAsync = async (candidate, required) =>
+        {
+            reconciliations++;
+            Assert.DoesNotContain(
+                "IndependentPlugin",
+                PackageManifest.Read(Path.Combine(host.Profile, "package.json")).Bundles);
+            if (reconciliations == 1)
+            {
+                Assert.False(removalCompleted);
+                Assert.Equal("1.0.0", ReadHotDependencyVersion(host));
+                var warnings = await reconcile(candidate, required);
+                Assert.Null(await ReadHotInstalledCodeAsync(host));
+                Assert.DoesNotContain(host.Session.Loader.Entries(), entry => ReferenceEquals(entry.Module, original));
+                return warnings;
+            }
+
+            Assert.Equal(2, reconciliations);
+            Assert.True(removalCompleted);
+            Assert.Null(ReadHotDependencyVersion(host));
+            Assert.Empty(host.Toolchain.Bundles);
+            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+                host.Resolver.ResolveAsync("nuget:independentplugin", parent).AsTask());
+            throw new InvalidOperationException("removal publication rejected");
+        };
+        PackageChange removed;
+        try
+        {
+            removed = await owner.RemovePackageAsync(toolchain, "IndependentPlugin");
+        }
+        finally
+        {
+            owner.ReconcileCandidateAsync = reconcile;
+        }
+
+        Assert.Equal(2, reconciliations);
+        Assert.True(removalCompleted);
+        Assert.Equal("failed", removed.Application);
+        Assert.Equal("remove", removed.Stage);
+        Assert.Equal("operation-error", removed.Error);
+        Assert.Equal("removal publication rejected", removed.Diagnostic);
+        Assert.False(removed.Installed);
+        Assert.False(removed.Selected);
+        Assert.Null(ReadHotDependencyVersion(host));
+        Assert.DoesNotContain(
+            "IndependentPlugin",
+            PackageManifest.Read(Path.Combine(host.Profile, "package.json")).Bundles);
+        Assert.Empty(host.Toolchain.Bundles);
+        Assert.Empty(await host.Toolchain.GetLoadedModulesAsync("IndependentPlugin"));
+        Assert.Null(await ReadHotInstalledCodeAsync(host));
+        Assert.DoesNotContain(host.Session.Loader.Entries(), entry => ReferenceEquals(entry.Module, original));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            host.Resolver.ResolveAsync("nuget:independentplugin", parent).AsTask());
+        Assert.True(Directory.Exists(retained));
+        Assert.Contains(retained, removed.Residuals!);
+        Assert.Equal("v1", originalCode());
+
+        var manifest = await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json"));
+        var repaired = await host.Session.RefreshAsync();
+        Assert.False(repaired.RequiresRestart);
+        Assert.Empty(repaired.Warnings);
+        Assert.Empty(repaired.Pending);
+        Assert.Equal(manifest, await File.ReadAllTextAsync(Path.Combine(host.Profile, "package.json")));
+        Assert.Null(await ReadHotInstalledCodeAsync(host));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            host.Resolver.ResolveAsync("nuget:independentplugin", parent).AsTask());
+        var retry = await owner.InstallPackageAsync(
+            host.Toolchain,
+            new("IndependentPlugin", "1.0.0", Feed),
+            "retry",
+            true);
+        Assert.Equal("applied", retry.Application);
+        Assert.Null(retry.Error);
+        Assert.True(retry.Installed, retry.Diagnostic);
+        Assert.True(retry.Selected);
+        Assert.Equal("1.0.0", ReadHotDependencyVersion(host));
+        Assert.Equal("v1", (await ReadHotInstalledCodeAsync(host))!());
+        Assert.NotSame(original, Assert.Single(await host.Toolchain.GetLoadedModulesAsync("IndependentPlugin")));
+        Assert.Equal("v1", originalCode());
+        Assert.Null(host.Session.LastError);
+        Assert.False(host.Session.RequiresRestart);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -295,6 +402,9 @@ public sealed partial class PackageManagementTests
     }
 
     private static string? ReadHotDependencyVersion(Host host) =>
-        (PackageManifest.Read(Path.Combine(host.Profile, "package.json")).Raw.GetValueOrDefault("dependencies")
-            as IDictionary<string, object?>)?["IndependentPlugin"] as string;
+        PackageManifest.Read(Path.Combine(host.Profile, "package.json")).Raw.GetValueOrDefault("dependencies")
+            is IDictionary<string, object?> dependencies &&
+        dependencies.TryGetValue("IndependentPlugin", out var version)
+            ? version as string
+            : null;
 }

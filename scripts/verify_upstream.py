@@ -43,6 +43,18 @@ def git(*args):
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
 
 
+def run_identity(explicit=None):
+    hosted = os.environ.get("GITHUB_RUN_ID")
+    if hosted:
+        attempt = os.environ.get("GITHUB_RUN_ATTEMPT")
+        require(bool(attempt), "Hosted upstream verification requires a workflow run attempt")
+        value = hosted + ":" + attempt
+        require(explicit is None or explicit == value, "Run identity differs from this workflow")
+        return value
+    require(bool(explicit), "Supply --run-id for a local upstream batch")
+    return explicit
+
+
 def relative_file(name, root):
     return Path(name).resolve().relative_to(root.resolve()).as_posix()
 
@@ -71,11 +83,25 @@ def plan(inventory):
     return {key: assignments.get(key, 1) for key in keys}
 
 
-def validate_report(report, suite, root, expected, selected):
+def matrix_selection(assignments, shard):
+    """Select one matrix shard and translate discovery titles to Vitest names."""
+    matrix = {key for key in assignments if key[:2] == ("composition", MATRIX)}
+    selected = {key for key in matrix if assignments[key] == shard}
+    # This pinned file has one named describe and no nested suites. The JSON
+    # discovery names use " > "; Vitest's name filter uses spaces instead.
+    require(all(key[2].count(" > ") == 1 and key[3] == 0 for key in matrix),
+            "Matrix nesting or unique case names changed")
+    selection = {"include": [MATRIX], "testNamePattern": "(?:^| )(?:" + "|".join(
+        re.escape(key[2].replace(" > ", " ")) for key in sorted(selected)) + ")$"}
+    return matrix, selected, selection
+
+
+def validate_report(report, suite, root, expected, selected, *, skippable=None):
     """Validate every emitted case, including cases excluded by the shard filter."""
     require(report.get("success") is True and report.get("numFailedTests") == 0,
             "Vitest did not report a successful run")
     require(not report.get("numRuntimeErrorTestSuites", 0), "Vitest suite/runtime failure")
+    allowed_skips = {SKIPPABLE} if skippable is None else set(skippable)
     observed, outcomes, statuses, occurrences = set(), [], Counter(), Counter()
     files = set()
     for file in report["testResults"]:
@@ -95,7 +121,7 @@ def validate_report(report, suite, root, expected, selected):
             if key not in selected:
                 require(key in expected and status == "skipped", "Unassigned test executed or unknown test reported")
                 continue
-            require(status == "passed" or (key == SKIPPABLE and status == "skipped"),
+            require(status == "passed" or (key in allowed_skips and status == "skipped"),
                     f"Selected test failed or unexpectedly skipped: {key}")
             outcomes.append({"case": list(key), "status": status})
     require(observed == expected, "Report does not contain the complete expected file/case set")
@@ -107,14 +133,14 @@ def validate_report(report, suite, root, expected, selected):
     return outcomes
 
 
-def run_shard(dsh, origin, shard):
+def run_shard(dsh, origin, shard, batch):
     output = ROOT / "artifacts" / f"upstream-shard-{shard}"
     require(not output.exists(), f"Output already exists: {output}; use a fresh checkout or output directory")
     output.mkdir(parents=True)
     initial = source_hashes()
     identity = {"commit": git("rev-parse", "HEAD"), "platform": platform.system(),
                 "architecture": platform.machine(), "node": subprocess.check_output(["node", "--version"], text=True).strip(),
-                "dsh": DSH, "origin": ORIGIN, "sourceSha256": initial}
+                "dsh": DSH, "origin": ORIGIN, "sourceSha256": initial, "runId": batch}
     env = dict(os.environ, CI="true", CORDIS_DSH_REFERENCE=str(dsh), CORDIS_ORIGIN_REFERENCE=str(origin))
     env.pop("CORDIS_UPSTREAM_SELECTION", None)
     env.pop("CORDIS_UPSTREAM_REPORT", None)
@@ -157,15 +183,9 @@ def run_shard(dsh, origin, shard):
         inventory.sort()
         validate_inventory(inventory, fixed_counts())
         assignments = plan(inventory)
-        matrix = {key for key in assignments if key[:2] == ("composition", MATRIX)}
-        selected_matrix = {key for key in matrix if assignments[key] == shard}
-        # This pinned file has one named describe and no nested suites. The JSON
-        # discovery names use " > "; Vitest's name filter uses spaces instead.
-        require(all(key[2].count(" > ") == 1 and key[3] == 0 for key in matrix),
-                "Matrix nesting or unique case names changed")
+        matrix, selected_matrix, matrix_filter = matrix_selection(assignments, shard)
         selection = output / "matrix-selection.json"
-        write(selection, {"include": [MATRIX], "testNamePattern": "(?:^| )(?:" + "|".join(
-            re.escape(key[2].replace(" > ", " ")) for key in sorted(selected_matrix)) + ")$"})
+        write(selection, matrix_filter)
         matrix_report = output / "matrix.json"
         execute("linked-resolution-matrix", ["node", "reference/node_modules/vitest/vitest.mjs", "run",
                                               "--config", CONFIGS["composition"]],
@@ -193,18 +213,23 @@ def run_shard(dsh, origin, shard):
         write(output / "result.json", result)
 
 
-def aggregate(directory, expected_commit, expected_platform):
+def aggregate(directory, expected_commit, expected_platform, batch):
     paths = sorted(Path(directory).glob("**/result.json"))
     require(len(paths) == SHARDS, f"Expected {SHARDS} shard results; found {len(paths)}")
     reports = [read(path) for path in paths]
     require(sorted(report["shard"] for report in reports) == list(range(1, SHARDS + 1)), "Missing or duplicate shard")
+    sources = source_hashes()
+    for report in reports:
+        require(report["identity"].get("runId") == batch, "Upstream receipt belongs to another run or attempt")
+        require(report["identity"]["sourceSha256"] == sources, "Shard source differs from current frozen checkpoint")
     return aggregate_reports(reports, expected_commit, expected_platform)
 
 
-def aggregate_reports(reports, expected_commit, expected_platform, *, dsh=DSH, origin=ORIGIN, counts=None):
+def aggregate_reports(reports, expected_commit, expected_platform, *, dsh=DSH, origin=ORIGIN, counts=None, skippable=None):
     """Shared complete-union validation; explicit candidates keep separate pinned inputs."""
     require(len(reports) == SHARDS, f"Expected {SHARDS} shard results; found {len(reports)}")
     require(sorted(report["shard"] for report in reports) == list(range(1, SHARDS + 1)), "Missing or duplicate shard")
+    allowed_skips = {SKIPPABLE} if skippable is None else set(skippable)
     first = reports[0]
     identity = first["identity"]
     require(identity["commit"] == expected_commit and identity["platform"] == expected_platform,
@@ -222,7 +247,7 @@ def aggregate_reports(reports, expected_commit, expected_platform, *, dsh=DSH, o
         require(len(set(actual)) == len(actual) and set(actual) == expected, "Missing, duplicate or misplaced case")
         require(not observed.intersection(actual), "Case executed by multiple shards")
         for row in report["outcomes"]:
-            require(row["status"] == "passed" or (tuple(row["case"]) == SKIPPABLE and row["status"] == "skipped"),
+            require(row["status"] == "passed" or (tuple(row["case"]) in allowed_skips and row["status"] == "skipped"),
                     "Failed or unexpectedly skipped selected case")
         observed.update(actual)
         outcomes.extend(report["outcomes"])
@@ -242,14 +267,17 @@ def main():
     run.add_argument("--dsh", type=Path, required=True)
     run.add_argument("--origin", type=Path, required=True)
     run.add_argument("--shard", type=int, choices=range(1, SHARDS + 1), required=True)
+    run.add_argument("--run-id", help="Required local batch identity; hosted runs use workflow run and attempt")
     merge = commands.add_parser("aggregate")
     merge.add_argument("--input", type=Path, required=True)
     merge.add_argument("--platform", choices=("Windows", "Linux"), required=True)
+    merge.add_argument("--run-id", help="Same local batch identity supplied to all four shards")
     args = parser.parse_args()
+    batch = run_identity(args.run_id)
     if args.command == "run":
-        run_shard(args.dsh.resolve(), args.origin.resolve(), args.shard)
+        run_shard(args.dsh.resolve(), args.origin.resolve(), args.shard, batch)
     else:
-        result = aggregate(args.input, git("rev-parse", "HEAD"), args.platform)
+        result = aggregate(args.input, git("rev-parse", "HEAD"), args.platform, batch)
         write(args.input / "summary.json", result)
         print(f"PASS complete upstream union: {result['passed']} passed, {len(result['skipped'])} explicit skips")
 

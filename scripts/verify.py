@@ -48,6 +48,46 @@ def source_hashes():
             if (ROOT / name).is_file() and not name.startswith("verification/")}
 
 
+def artifact_hashes(directory):
+    return {path.relative_to(directory).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(directory.rglob("*")) if path.is_file()}
+
+
+def pack_author_tool(directory):
+    directory.mkdir(parents=True, exist_ok=True)
+    script = """import { execFileSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+const args = ['pack', '--json', '--pack-destination', process.argv[1]];
+const windows = process.platform === 'win32';
+const command = windows ? process.execPath : 'npm';
+const parameters = windows ? [resolve(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'), ...args] : args;
+process.stdout.write(execFileSync(command, parameters, { encoding: 'utf8', windowsHide: true }));
+"""
+    packed = run("client-author-tool-pack", ["node", "--input-type=module", "-e", script, directory],
+                 ROOT / "clients/tools")
+    archive = directory / json.loads(packed.decode("utf-8"))[0]["filename"]
+    return archive, {"file": archive.name, "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}
+
+
+def verified_author_tool(directory):
+    receipt = json.loads((directory / "result.json").read_text(encoding="utf-8"))
+    archives = list(directory.glob("*.tgz"))
+    if receipt.get("status") != "passed" or len(archives) != 1:
+        raise RuntimeError("Expected one successfully consumed author-tool archive")
+    archive = archives[0]
+    if Path(receipt["toolArchive"]).resolve() != archive.resolve() or \
+            hashlib.sha256(archive.read_bytes()).hexdigest() != receipt["toolSha256"]:
+        raise RuntimeError("Author-tool archive differs from the bytes recorded by its consumer")
+    return archive, {"file": archive.name, "sha256": receipt["toolSha256"]}
+
+
+def check_client_artifacts(runtime, runtime_hashes, tool, tool_identity):
+    if artifact_hashes(runtime) != runtime_hashes:
+        raise RuntimeError("Client runtime changed after its verification inputs were captured")
+    if {"file": tool.name, "sha256": hashlib.sha256(tool.read_bytes()).hexdigest()} != tool_identity:
+        raise RuntimeError("Author-tool archive changed after its consumer verification")
+
+
 def run(label, command, cwd=ROOT, env=None, expected_exit=0):
     print(f"RUN {label}", flush=True)
     started = time.time()
@@ -289,6 +329,7 @@ def main():
         run("example", ["dotnet", ROOT / "examples/Composition/bin/Release/net10.0/Composition.dll"])
         client_artifacts = ROOT / "artifacts/client-modules"
         run("client-modules-build", ["node", "scripts/build-client-modules.mjs", client_artifacts])
+        client_hashes = artifact_hashes(client_artifacts)
         run("client-modules-types", ["node", "scripts/verify-client-module-types.mjs", client_artifacts])
         run("client-release", ["node", "scripts/verify-client-release.mjs", client_artifacts])
         run("client-access", ["node", "scripts/verify-client-access.mjs", client_artifacts])
@@ -296,7 +337,12 @@ def main():
         run("client-replacement", ["node", "scripts/verify-client-replacement.mjs", client_artifacts, OUT / "client-replacement"])
         run("client-shared-modules", ["node", "scripts/verify-client-shared-modules.mjs", client_artifacts])
         run("client-author-watch", ["node", "scripts/verify-client-author-watch.mjs"])
-        run("client-author-package", ["node", "scripts/verify-client-author-package.mjs", client_artifacts, OUT / "client-author-package"])
+        author_output = OUT / "client-author-package"
+        author_tool, author_tool_identity = pack_author_tool(author_output)
+        run("client-author-package", ["node", "scripts/verify-client-author-package.mjs", client_artifacts, author_output],
+            env=dict(os.environ, CORDIS_CLIENT_TOOLS_TGZ=str(author_tool)))
+        if verified_author_tool(author_output) != (author_tool, author_tool_identity):
+            raise RuntimeError("Author consumer did not verify the archive captured before installation")
         cli = ["dotnet", ROOT / "tools/Cordis.Cli/bin/Release/net10.0/Cordis.Cli.dll"]
         fixture = OUT / "cli-input.yml"
         fixture.write_text(
@@ -418,6 +464,9 @@ def main():
             assert package_hashes == {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                                       for path in sorted(package_dir.iterdir()) if path.is_file()}, "Package batch changed during consumption"
             steps.append({"name": "package-batch-unchanged", "exitCode": 0, "sha256": package_hashes})
+        check_client_artifacts(client_artifacts, client_hashes, author_tool, author_tool_identity)
+        steps.append({"name": "client-runtime-unchanged", "exitCode": 0, "sha256": client_hashes})
+        steps.append({"name": "client-author-tool-unchanged", "exitCode": 0, "tool": author_tool_identity})
         if git_checkout():
             run("whitespace", ["git", "diff", "--check"])
         else:

@@ -1,9 +1,11 @@
+using System.Runtime.CompilerServices;
 using Cordis.Clr;
 using Cordis.Composition;
 using Xunit;
 
 namespace Cordis.Platform.Tests;
 
+[Collection("Collectible CLR")]
 public sealed class ClrPackageReinstallTests : IDisposable
 {
     private readonly string directory = Directory.CreateTempSubdirectory("cordis-clr-reinstall-").FullName;
@@ -43,6 +45,23 @@ public sealed class ClrPackageReinstallTests : IDisposable
     [Fact]
     public async Task Removal_releases_owned_routes_and_identical_reinstall_reuses_retained_files()
     {
+        var observations = await ExerciseRemovalAndReinstallAsync();
+        Assert.Equal(2, observations.Length);
+        Assert.All(observations, observation => Assert.True(observation.UnloadRequested));
+        for (var attempt = 0;attempt < 12 && observations.Any(observation => !observation.IsCollected);attempt++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            await Task.Yield();
+        }
+
+        Assert.All(observations, observation => Assert.True(observation.IsCollected));
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private async Task<ClrUnloadObservation[]> ExerciseRemovalAndReinstallAsync()
+    {
         await using var resolver = new ClrModuleResolver();
         using var tools = new DotnetPluginToolchain(directory, resolver, []);
         var first = Prepare();
@@ -68,6 +87,10 @@ public sealed class ClrPackageReinstallTests : IDisposable
         Assert.NotSame(original, current);
         Assert.NotSame(original.Plugin, current.Plugin);
         Assert.Same(current, Assert.Single(await tools.GetLoadedModulesAsync("Example")));
+        // The test deliberately retains both imports until every identity assertion completes.
+        // Return only weak observations so xUnit's retained test task cannot keep their DLLs loaded.
+        await resolver.DisposeAsync();
+        return resolver.Unloads.ToArray();
     }
 
     [Theory]
@@ -137,5 +160,24 @@ public sealed class ClrPackageReinstallTests : IDisposable
         return new("Example", "1.0.0", prepared);
     }
 
-    public void Dispose() => Directory.Delete(directory, recursive: true);
+    public void Dispose()
+    {
+        for (var attempt = 0;;attempt++)
+        {
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+                return;
+            }
+            catch (Exception error) when (attempt < 11 && error is IOException or UnauthorizedAccessException)
+            {
+                // Managed ALC collection can precede release of Windows' native DLL handles.
+                // Retry finalization within the same bound as the other collectible CLR tests;
+                // a persistent lock still fails cleanup with its original filesystem exception.
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+            }
+        }
+    }
 }
