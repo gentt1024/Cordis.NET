@@ -136,6 +136,7 @@ internal sealed class CordisRemoteMux(
         {
             if (!await authorize(http, endpoint))
                 throw new RemoteError("gateway/forbidden", "Remote endpoint is not authorized.");
+            CordisRemoteEndpoints.RequireLivePeer(connection.Peer, endpoint);
             var arguments = CordisRemoteEndpoints.Arguments(payload);
             await foreach (var item in connection.StreamAsync(endpoint, arguments, call.Token, call.ReadUplink()))
             {

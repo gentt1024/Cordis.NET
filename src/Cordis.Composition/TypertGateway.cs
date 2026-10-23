@@ -108,7 +108,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
     private TypertPeer? inProcessOperator;
 
     private TypertPeer OperatorPeer() => caller.Get<TypertHostConnection>("connection", strict: false)?.Peer ??
-        (inProcessOperator ??= new TypertPeer(caller));
+        (inProcessOperator ??= new TypertPeer(caller, new(TypertPrincipal.Owner)));
 
     /// <summary>Invoke one unary method with exact arguments and current service and provider registrations.</summary>
     /// <remarks>
@@ -123,9 +123,20 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
     public Task<TypertRemoteResult> InvokeAsync(
         string endpoint,
         JsonElement arguments,
-        CancellationToken cancellationToken = default) => InvokeAsync(endpoint, arguments, cancellationToken, null);
+        CancellationToken cancellationToken = default) => InvokeCoreAsync(endpoint, arguments, cancellationToken, null);
 
-    internal async Task<TypertRemoteResult> InvokeAsync(
+    /// <summary>Invoke as the explicit Host-created Peer, checking admission before argument preparation.</summary>
+    public Task<TypertRemoteResult> InvokeAsync(
+        string endpoint,
+        JsonElement arguments,
+        TypertPeer peer,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(peer);
+        return InvokeCoreAsync(endpoint, arguments, cancellationToken, peer);
+    }
+
+    private async Task<TypertRemoteResult> InvokeCoreAsync(
         string endpoint,
         JsonElement arguments,
         CancellationToken cancellationToken,
@@ -136,6 +147,8 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         {
             await caller.RunAsync(async _ =>
             {
+                peer ??= OperatorPeer();
+                AdmitPeer(peer, endpoint);
                 if (endpoint == TypertEventProtocol.Result)
                 {
                     await ReceiveRemoteEventResultAsync(arguments);
@@ -155,7 +168,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                 using (TypertInvocation.Enter(
                            new(prepared.Receiver, endpoint, cancellationToken)
                            {
-                               Peer = peer ?? OperatorPeer()
+                               Peer = peer
                            }))
                 {
                     try
@@ -201,25 +214,61 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         JsonElement arguments,
         CancellationToken cancellationToken = default,
         IAsyncEnumerable<JsonElement>? uplink = null) =>
-        StreamAsync(endpoint, arguments, cancellationToken, null, uplink);
+        StreamCoreAsync(endpoint, arguments, cancellationToken, null, uplink);
 
-    internal async IAsyncEnumerable<TypertRemoteResult> StreamAsync(
+    /// <summary>Iterate as an explicit Host-created Peer. Peer closure cancels this stream.</summary>
+    public IAsyncEnumerable<TypertRemoteResult> StreamAsync(
+        string endpoint,
+        JsonElement arguments,
+        TypertPeer peer,
+        CancellationToken cancellationToken = default,
+        IAsyncEnumerable<JsonElement>? uplink = null)
+    {
+        ArgumentNullException.ThrowIfNull(peer);
+        return StreamCoreAsync(endpoint, arguments, cancellationToken, peer, uplink);
+    }
+
+    private async IAsyncEnumerable<TypertRemoteResult> StreamCoreAsync(
         string endpoint,
         JsonElement arguments,
         [EnumeratorCancellation] CancellationToken cancellationToken,
         TypertPeer? peer,
         IAsyncEnumerable<JsonElement>? uplink = null)
     {
+        Exception? admissionFailure = null;
+        try
+        {
+            await caller.RunAsync(_ =>
+            {
+                peer ??= OperatorPeer();
+                AdmitPeer(peer, endpoint);
+                return Task.CompletedTask;
+            });
+        }
+        catch (Exception error)
+        {
+            admissionFailure = error;
+        }
+
+        if (admissionFailure is not null)
+        {
+            if (uplink is not null)
+                await ReleaseUnusedUplinkAsync(uplink);
+            yield return TypertRemoteResult.Failure(admissionFailure);
+            yield break;
+        }
+
+        using var lifetime =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer!.CancellationToken);
         if (endpoint == TypertEventProtocol.Stream)
         {
             if (uplink is not null)
                 _ = ReleaseUnusedUplinkAsync(uplink);
-            await foreach (var frame in ReadRemoteEventsAsync(arguments, cancellationToken))
+            await foreach (var frame in ReadRemoteEventsAsync(arguments, peer, lifetime.Token))
                 yield return frame;
             yield break;
         }
 
-        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         Prepared? prepared = null;
         TypertUplinkReader? input = null;
         Exception? inputFailure = null;
@@ -230,11 +279,11 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         {
             await caller.RunAsync(async _ =>
             {
+                AdmitPeer(peer, endpoint);
                 prepared = await PrepareAsync(endpoint, arguments);
                 if (!prepared.Descriptor.IsStream ||
                     !prepared.Binding.Streams.TryGetValue(prepared.Descriptor.Method, out var invoke))
                     throw Fault("gateway/signature-invalid", endpoint, "This endpoint has no active stream binding.");
-                peer ??= OperatorPeer();
                 input = new(
                     uplink ?? EmptyUplink(),
                     value => prepared.Descriptor.Uplink is { } codec
@@ -265,6 +314,8 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         {
             if (input is not null)
                 await input.DisposeAsync();
+            else if (uplink is not null)
+                await ReleaseUnusedUplinkAsync(uplink);
             yield return TypertRemoteResult.Failure(failure);
             yield break;
         }
@@ -365,6 +416,30 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
 
         if (failure is not null)
             yield return TypertRemoteResult.Failure(failure);
+    }
+
+    private static void AdmitPeer(TypertPeer peer, string endpoint)
+    {
+        if (peer.CancellationToken.IsCancellationRequested)
+            throw Fault("gateway/peer-disposed", endpoint, "The calling Peer has been disposed.");
+        // S5 establishes identity; non-owner dispatch requires the S6/S7 authorization closure.
+        if (peer.Principal.Kind != "owner")
+        {
+            using var details = JsonDocument.Parse(
+                "{\"action\":" + JsonSerializer.Serialize(endpoint, TypertJson.Default.String) +
+                ",\"reason\":\"non-owner-unavailable\"}");
+            throw new RemoteError(
+                "remote-access/denied",
+                "Non-owner Remote dispatch is not available.",
+                details.RootElement.Clone());
+        }
+
+        if (endpoint is TypertEventProtocol.Stream or TypertEventProtocol.Result &&
+            peer.Interactions != TypertPeerInteractions.Answer)
+            throw Fault(
+                "gateway/interactions-forbidden",
+                endpoint,
+                "Forwarded Remote events require interactions=answer.");
     }
 
     private static async Task ReleaseUnusedUplinkAsync(IAsyncEnumerable<JsonElement> source)

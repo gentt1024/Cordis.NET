@@ -45,11 +45,14 @@ public sealed partial class TypertGateway
 
     private async IAsyncEnumerable<TypertRemoteResult> ReadRemoteEventsAsync(
         JsonElement arguments,
+        TypertPeer peer,
         [EnumeratorCancellation] CancellationToken token)
     {
         EventClient client = null!;
         await caller.RunAsync(_ =>
         {
+            AdmitPeer(peer, TypertEventProtocol.Stream);
+            token.ThrowIfCancellationRequested();
             if (!TypertEventProtocol.Exact(arguments))
                 throw Fault(
                     "gateway/arguments-invalid",
@@ -64,6 +67,7 @@ public sealed partial class TypertGateway
         });
         try
         {
+            token.ThrowIfCancellationRequested();
             yield return TypertRemoteResult.Success(
                 TypertEventProtocol.Json(
                     new()
@@ -76,7 +80,10 @@ public sealed partial class TypertGateway
                         }
                     }));
             await foreach (var frame in client.Queue.Reader.ReadAllAsync(token))
+            {
+                token.ThrowIfCancellationRequested();
                 yield return TypertRemoteResult.Success(frame);
+            }
         }
         finally
         {

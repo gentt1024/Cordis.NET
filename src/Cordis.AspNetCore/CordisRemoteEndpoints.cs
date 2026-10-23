@@ -99,6 +99,7 @@ public static class CordisRemoteEndpoints
                 TypertRemoteResult result;
                 try
                 {
+                    RequireLivePeer(connection.Peer, endpoint);
                     var arguments = Arguments(root.TryGetProperty("payload", out var payload) ? payload : default);
                     result = await connection.InvokeAsync(endpoint, arguments, http.RequestAborted);
                 }
@@ -196,6 +197,17 @@ public static class CordisRemoteEndpoints
             http.Response.ContentType = multipart.Headers.ContentType!.ToString();
             await multipart.CopyToAsync(http.Response.Body, http.RequestAborted);
         }
+    }
+
+    internal static void RequireLivePeer(TypertPeer peer, string endpoint)
+    {
+        if (!peer.CancellationToken.IsCancellationRequested)
+            return;
+        using var details = JsonDocument.Parse("{\"endpoint\":\"" + JsonEncodedText.Encode(endpoint) + "\"}");
+        throw new RemoteError(
+            "gateway/peer-disposed",
+            "The calling Peer has been disposed.",
+            details.RootElement.Clone());
     }
 
     internal static JsonElement Arguments(JsonElement payload)

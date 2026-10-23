@@ -2,6 +2,38 @@
 
 [English](validation.md)
 
+## 候选 Remote 身份与资源，2026-10-23
+
+S5 遵循[范围明确的候选例外](compatibility.zh.md#候选-remote-身份与资源分片2026-10-23)。候选源码仍为 `687f282e8625c6b8d11ff58211a90524be2e4317`；正式锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本轮环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
+
+未修改的候选原始测试共 65 项通过，无失败或跳过：`packages/typert/protocol/tests/remote-access.spec.ts` 8 项、`packages/typert/registry/tests/typert.spec.ts` 27 项、`packages/api/gateway/tests/gateway-access.host.spec.ts` 30 项。外部精简工具环境使用候选选定的 Vitest 4.1.11、TypeScript 6.0.3、Vite 8.2.2；这不是完整候选 pnpm workspace 构建或 TypeScript 类型检查。这些套件包含 S5 尚未实现的 S6/S7 参考行为，因此原始套件通过只代表参考端证据，不代表原生授权完全等价。
+
+| S5 源码合同 | 原生检查 |
+|---|---|
+| `principalOf` 的 guest 身份、owner/调用外省略和 kind 大小写 | `TypertIdentityTests.Principal_is_detached_and_only_non_owner_calls_are_attributed`，以及非法 JSON 身份边界用例 |
+| 资源 kind/field 所有权、保留 global、resolver 覆盖 | `TypertResourceRegistryTests` 全部 17 项，涵盖观察者异常隔离、订阅撤销、独立有序快照和原注册清理 |
+| 已关闭 Peer 早于准备拒绝，流寿命与已运行 unary 分离 | `TypertIdentityTests` 的直接、显式、挂载调用、两个事件入口、owner 撤销、同级隔离、未使用 uplink 释放和缓冲事件取消 |
+| wire 字段不能选择 Host 身份 | `RemoteCarrierTests.Carrier_identity_is_host_selected_and_non_owner_never_reaches_lookup`，使用真实 HTTP 和 WebSocket mux |
+| 原生载体与可信直接调用适配 | 已关闭 Peer 的 HTTP payload 优先级、异步 Context 解析前捕获身份、已关闭挂载 Connection 不回退，以及现有 Peer/Remote 事件套件 |
+
+原生 Composition 聚焦集通过 88 项，Remote 载体/事件聚焦集通过 15 项，均无失败或跳过。首轮实现曾把处于 `Loading` 状态的新建回退 scope 错判为关闭；修正后使用候选的取消信号规则，并重跑完整聚焦集。审查还补充了事件订阅、就绪帧和每条缓冲帧发送前的检查，防止关闭后继续转发。没有绕过失败断言。
+
+必需的整库验证使用正式基线 checkout，再从同一 Release 构建打包，供独立 S5 消费者验证：
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+python3 scripts/verify-remote-identity.py --packages <package-batch> --output <empty-output>
+```
+
+独立门禁仅引用 `Cordis.NET.Composition` 及其包依赖，使用全新缓存、显式本地包源映射和仓库外生成的控制台程序。它检查身份快照、owner/guest 归因、provider 资源事实、owner 调用、非 owner 拒绝和 Peer 所有的注册撤销，并禁用 serializer 反射。这些检查不代表 Windows/Linux 或 Native AOT 已执行，也不代表剩余 S6/S7 授权已完成或完全兼容 DSH Node SDK。
+
+执行结果：最终完整门禁通过全部 33 个请求步骤，`sourceUnchanged=true`。1,093 项原生测试通过，零失败，macOS 上仍只有既有的 Windows Job-object 宿主退出排除项。正式 profile/module 原始测试通过 54 项。生成客户端、API 快照、CLI、差分 trace 和映射测试实例均通过。本轮未请求或执行原始 Core/Loader 测试源码套件。此前一次执行因客户端输出目录非空的前置条件停止；归档其证据后，从空输出目录重跑了完整门禁，没有通过跳过测试解决该前置条件。
+
+同一 Release 批次的 9 个包通过内容检查，独立 S5 消费者的全部 15 项检查通过，既有 saved-model Remote 包消费者的全部 37 个步骤均符合预期结果。7 个打包库 DLL 与最终测试的 Release 输出逐字节一致。12 个变更 C# 文件的四个标准格式化阶段结果一致。最终门禁后仅补充本双语结果段落，再次检查文档和空白，并通过源码哈希确认没有其他变更。机器路径、原始日志和私有审计配置留在仓库外。
+
 ## 候选 Profile 与包热重装，2026-10-22
 
 S4 遵循[限定候选例外](compatibility.zh.md#候选-profile-与包热重装分片2026-10-22)，候选为 `687f282e8625c6b8d11ff58211a90524be2e4317`，正式锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。执行环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。

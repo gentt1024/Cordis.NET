@@ -4,6 +4,23 @@
 
 这些可选的 .NET 作者辅助接口复用现有 Cordis 运行时。包使代码可用；模块注册把名称映射到代码；patch/profile 条目选择实例；`Inject` 决定插件何时能够激活。服务身份仍由名称与 realm 决定。这些辅助接口不增加第二套注册表或生命周期。
 
+## 候选 Remote 身份与资源，2026-10-23
+
+在所属 Context 的执行域内创建 Peer。普通 `TypertHostConnection(owner, gateway)` 仍选择允许事件回答的本地 owner。禁用事件交互的 owner 连接需要显式声明：
+
+```csharp
+var connection = new TypertHostConnection(owner, gateway,
+    new TypertPeerOptions(TypertPrincipal.Owner, TypertPeerInteractions.None));
+```
+
+如果需要另一段由 Host 所有的寿命，构造 `new TypertPeer(owner, options)`，传入 `gateway.InvokeAsync(endpoint, arguments, peer, cancellationToken)` 或 `StreamAsync`。所属会话结束时释放 Peer，并在关闭 root 前等待活动流清理。释放一个 Peer 不影响其他 Peer，也不取消已运行的 unary 调用。已释放但仍挂载的 Connection 不会回退到新 owner；若希望可信进程内调用恢复使用回退 Peer，须显式撤销该服务注册。
+
+身份驱动使用自己提供的、具有 `kind` 字段的无凭据 JSON 对象构造 `TypertPrincipal`。该值克隆 JSON，所以可以释放原 `JsonDocument`。不得从请求的 principal 字段构造它。通过 `TypertPrincipal.PrincipalOf(TypertInvocation.Current)` 记录非 owner 调用方；对 owner 和 Remote 调用外部返回 null。S5 可以保存非 owner 身份，但在 S6/S7 授权工作完成前拒绝其调用。
+
+通过 `registry.RegisterResource(owner, "document", new TypertResourceDeclaration("documentId"))` 注册领域所有的默认身份字段。通过 `GetResource`、`ListResources` 查询，通过现有 `Subscribe` 观察变更。声明随所属 Fiber 消失。不得注册保留的 `global` kind。在对应 `TypertLookupProvider` 或 `TypertHostContextAdapter` 上设置 `Resource = "document"`；配置 resolver 时会保留这一关联。资源注册本身不授予访问权限，也尚不检查方法参数。
+
+S5 不要求现有生成业务客户端改变 wire 格式。原先向 Gateway 第三个参数直接传入 `default` 的调用，应改为 `cancellationToken: default`，以区分新增的 Peer 重载。Host 代码重新构建后可使用新增 API。[兼容性说明](compatibility.zh.md)区分了本片基础能力与后续授权工作。
+
 ## 从可运行示例开始
 
 首个仅依赖包的应用请从[入门指南](getting-started.zh.md)开始。本页描述当前所选批次，包括生成式 Remote 和模型消费者。请从[验证索引](validation.zh.md#已发行版本证据)选择精确 feed／版本。下方可选示例使用源码项目引用和 global.json 的 SDK。

@@ -14,6 +14,9 @@ public sealed class TypertRegistry(Context context)
     private readonly Dictionary<string, ProviderEntry<TypertLookupProvider>> lookups = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TypertLookupDefinition> definitions = new(StringComparer.Ordinal);
 
+    private readonly OrderedDictionary<string, ProviderEntry<TypertResourceDeclaration>> resources =
+        new(StringComparer.Ordinal);
+
     private readonly Dictionary<string, ProviderEntry<Func<object?, ValueTask<object?>>>> lookupResolvers =
         new(StringComparer.Ordinal);
 
@@ -202,6 +205,34 @@ public sealed class TypertRegistry(Context context)
             "typert registry subscription");
     }
 
+    /// <summary>Register one resource declaration under the caller's Fiber.</summary>
+    public EffectHandle RegisterResource(Context owner, string kind, TypertResourceDeclaration declaration)
+    {
+        EnsureOwner(owner);
+        ArgumentNullException.ThrowIfNull(declaration);
+        ValidateIdentity(kind, "resource kind");
+        if (kind == "global")
+            throw new ArgumentException(
+                "Typert resource kind 'global' is reserved for the built-in global resource.",
+                nameof(kind));
+        ValidateWire(declaration.Field, "resource field");
+        return RegisterProvider(owner, resources, "resource", kind, new(declaration.Field));
+    }
+
+    /// <summary>Get a live resource declaration.</summary>
+    public TypertResourceDeclaration? GetResource(string kind)
+    {
+        EnsureAccess();
+        return resources.GetValueOrDefault(kind)?.Provider;
+    }
+
+    /// <summary>List resource declarations as an independent snapshot in registration order.</summary>
+    public IReadOnlyList<TypertResourceEntry> ListResources()
+    {
+        EnsureAccess();
+        return resources.Select(entry => new TypertResourceEntry(entry.Key, entry.Value.Provider.Field)).ToArray();
+    }
+
     /// <summary>Register an object lookup provider while retaining its stable declaration across unload.</summary>
     public EffectHandle RegisterLookup(Context owner, string key, TypertLookupProvider provider)
     {
@@ -302,7 +333,7 @@ public sealed class TypertRegistry(Context context)
 
     private EffectHandle RegisterProvider<T>(
         Context owner,
-        Dictionary<string, ProviderEntry<T>> table,
+        IDictionary<string, ProviderEntry<T>> table,
         string kind,
         string key,
         T provider,
@@ -321,7 +352,7 @@ public sealed class TypertRegistry(Context context)
                 Emit(new(kind, key));
                 return (Action)(() =>
                 {
-                    if (!ReferenceEquals(table.GetValueOrDefault(key), entry))
+                    if (!table.TryGetValue(key, out var current) || !ReferenceEquals(current, entry))
                         return;
                     table.Remove(key);
                     Emit(new(kind, key));

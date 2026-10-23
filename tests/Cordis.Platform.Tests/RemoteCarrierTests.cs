@@ -175,6 +175,103 @@ public sealed class RemoteCarrierTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Carrier_identity_is_host_selected_and_non_owner_never_reaches_lookup(bool guest)
+    {
+        await using var root = new Context();
+        var service = new CarrierService();
+        using var identity = JsonDocument.Parse("{\"kind\":\"guest\",\"subject\":\"g1\"}");
+        await using var connection = await Connect(
+            root,
+            service,
+            options: new(guest ? new(identity.RootElement) : TypertPrincipal.Owner));
+        await using var app = Server(connection);
+        await app.StartAsync();
+        using var http = new HttpClient
+        {
+            BaseAddress = new Uri(app.Urls.Single())
+        };
+        using var socket = new ClientWebSocket();
+        await socket.ConnectAsync(
+            new UriBuilder(new Uri(http.BaseAddress, "/remote/remote.mux"))
+            {
+                Scheme = "ws"
+            }.Uri,
+            CancellationToken.None);
+        // HTTP permits extra envelope fields, but none may change the Host-selected Peer.
+        using var response = await http.PostAsync(
+            "/remote/carrier/read",
+            new StringContent(
+                "{\"type\":\"client-request\",\"rpcId\":\"identity\",\"method\":\"carrier/read\",\"principal\":{\"kind\":\"owner\"},\"peer\":{\"principal\":{\"kind\":\"owner\"}},\"payload\":{\"args\":{\"id\":1}}}",
+                Encoding.UTF8,
+                "application/json"));
+        response.EnsureSuccessStatusCode();
+        using var unary = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var result = unary.RootElement.GetProperty("result");
+        Assert.Equal(!guest, result.GetProperty("ok").GetBoolean());
+        if (guest)
+            Assert.Equal("remote-access/denied", result.GetProperty("error").GetProperty("code").GetString());
+        else
+            Assert.Same(connection.Peer, service.LastPeer);
+        await socket.SendAsync(
+            Encoding.UTF8.GetBytes(
+                "{\"type\":\"open\",\"streamId\":\"identity\",\"endpoint\":\"carrier/watch\",\"payload\":{\"args\":{\"id\":1}}}"),
+            WebSocketMessageType.Text,
+            true,
+            CancellationToken.None);
+        using var frame = await Read(socket).WaitAsync(Limit);
+        Assert.Equal(guest ? "error" : "item", frame.RootElement.GetProperty("type").GetString());
+        if (guest)
+            Assert.Equal(
+                "remote-access/denied",
+                frame.RootElement.GetProperty("error").GetProperty("code").GetString());
+        else
+        {
+            using var end = await Read(socket).WaitAsync(Limit);
+            Assert.Equal("end", end.RootElement.GetProperty("type").GetString());
+            Assert.Same(connection.Peer, service.LastPeer);
+        }
+
+        Assert.Equal(guest ? 0 : 2, service.Lookups);
+        Assert.Equal(guest ? 0 : 2, service.Calls);
+        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "done", CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Closed_peer_HTTP_error_precedes_nested_payload_validation()
+    {
+        await using var root = new Context();
+        var service = new CarrierService();
+        await using var connection = await Connect(root, service);
+        await using var app = Server(connection);
+        await app.StartAsync();
+        await connection.DisposeAsync();
+        using var http = new HttpClient
+        {
+            BaseAddress = new Uri(app.Urls.Single())
+        };
+        foreach (var endpoint in new[] { "carrier/read", "missing/read", "$events/result" })
+        {
+            using var response = await http.PostAsync(
+                "/remote/" + endpoint,
+                new StringContent(
+                    "{\"type\":\"client-request\",\"rpcId\":\"closed\",\"method\":\"" + endpoint +
+                    "\",\"payload\":null}",
+                    Encoding.UTF8,
+                    "application/json"));
+            response.EnsureSuccessStatusCode();
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var error = document.RootElement.GetProperty("result").GetProperty("error");
+            Assert.Equal("gateway/peer-disposed", error.GetProperty("code").GetString());
+            Assert.Equal(endpoint, error.GetProperty("details").GetProperty("endpoint").GetString());
+        }
+
+        Assert.Equal(0, service.Lookups);
+        Assert.Equal(0, service.Calls);
+    }
+
     private static WebApplication Server(TypertHostConnection connection, WebSocket? socket = null)
     {
         var builder = WebApplication.CreateBuilder();
@@ -192,7 +289,11 @@ public sealed class RemoteCarrierTests
         return app;
     }
 
-    private static async Task<TypertHostConnection> Connect(Context root, CarrierService service, bool events = false)
+    private static async Task<TypertHostConnection> Connect(
+        Context root,
+        CarrierService service,
+        bool events = false,
+        TypertPeerOptions? options = null)
     {
         TypertHostConnection result = null!;
         await root.RunAsync(owner =>
@@ -241,7 +342,7 @@ public sealed class RemoteCarrierTests
                     owner,
                     TypertRemoteEvents.FromCordis(owner, [new("carrier/changed", [codec])]),
                     new("test-home"));
-            result = new(owner, gateway);
+            result = new(owner, gateway, options ?? new(TypertPrincipal.Owner));
             return Task.CompletedTask;
         });
         return result;
@@ -259,6 +360,7 @@ public sealed class RemoteCarrierTests
     {
         public int Calls;
         public int Lookups;
+        public TypertPeer? LastPeer;
 
         public TypertRemoteBinding TypertRemote => new(
             "carrier",
@@ -268,6 +370,7 @@ public sealed class RemoteCarrierTests
                 ["read"] = (_, _, _) =>
                 {
                     Calls++;
+                    LastPeer = TypertInvocation.Current?.Peer;
                     return Task.FromResult<object?>(1);
                 }
             },
@@ -279,6 +382,7 @@ public sealed class RemoteCarrierTests
         private async IAsyncEnumerable<object?> Watch([EnumeratorCancellation] CancellationToken token)
         {
             Calls++;
+            LastPeer = TypertInvocation.Current?.Peer;
             token.ThrowIfCancellationRequested();
             yield return 1;
             await Task.CompletedTask;

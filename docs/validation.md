@@ -2,6 +2,38 @@
 
 [中文](validation.zh.md)
 
+## Candidate Remote identity and resources, 2026-10-23
+
+S5 follows the [scoped candidate exception](compatibility.md#candidate-remote-identity-and-resource-slice-2026-10-23). Candidate source remains `687f282e8625c6b8d11ff58211a90524be2e4317`; the formal lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. This run uses macOS arm64, .NET SDK 10.0.111/runtime 10.0.11 and Node 24.13.0.
+
+The unmodified candidate originals passed 65 cases with no failures or skips: `packages/typert/protocol/tests/remote-access.spec.ts` 8, `packages/typert/registry/tests/typert.spec.ts` 27 and `packages/api/gateway/tests/gateway-access.host.spec.ts` 30. The external minimal harness uses candidate-selected Vitest 4.1.11, TypeScript 6.0.3 and Vite 8.2.2; this is not a complete candidate pnpm workspace build or TypeScript typecheck. The suites include S6/S7 reference behavior that S5 does not implement. Passing the source suites is reference evidence, not a claim of complete native authorization equivalence.
+
+| S5 source contract | Native checks |
+|---|---|
+| `principalOf`: guest identity, owner/outside omission and case-sensitive kind | `TypertIdentityTests.Principal_is_detached_and_only_non_owner_calls_are_attributed`; malformed JSON identity boundary cases |
+| Resource kind/field ownership, reserved global and resolver overrides | All `TypertResourceRegistryTests`: 17 cases, including observer containment, subscription withdrawal, detached ordered snapshots and exact-registration cleanup |
+| Closed Peer before preparation; stream lifetime versus running unary | `TypertIdentityTests`: direct/explicit/mounted dispatch, both event endpoints, owner withdrawal, sibling independence, unused-uplink release and buffered event cancellation |
+| Host identity cannot be selected by wire fields | `RemoteCarrierTests.Carrier_identity_is_host_selected_and_non_owner_never_reaches_lookup`; real HTTP and WebSocket mux |
+| Native carrier and trusted direct-call adaptations | Closed-Peer HTTP payload priority, capture before asynchronous Context resolution, no fallback from a disposed mounted Connection; existing Peer/Remote event suites |
+
+The focused native composition run passed 88 cases; the Remote carrier/event run passed 15, with zero failures or skips. The first implementation incorrectly treated a newly created fallback scope in `Loading` state as closed. The corrected check follows the candidate cancellation signal; the full focused run was repeated. Review also added checks before event subscription/readiness and every buffered frame to prevent post-closure delivery. No failed assertion was bypassed.
+
+Required whole-repository verification uses the formal checkout, then packages the same Release build for an independent S5 consumer:
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+python3 scripts/verify-remote-identity.py --packages <package-batch> --output <empty-output>
+```
+
+The independent gate uses only `Cordis.NET.Composition` and its package dependencies, a fresh cache, explicit local package-source mapping and a generated console outside this checkout. It checks identity snapshots, owner/guest attribution, provider resource facts, owner dispatch, non-owner refusal and Peer-owned withdrawal. It runs with serializer reflection disabled. These checks do not establish Windows/Linux or Native AOT execution, the remaining S6/S7 authorization closure, or complete DSH Node SDK interoperability.
+
+Executed result: the final full gate passed all 33 requested steps with `sourceUnchanged=true`: 1,093 native tests passed, zero failed, and the single pre-existing Windows Job-object host-exit exclusion remained on macOS. Formal profile/module source tests passed 54 cases. Generated clients, API snapshot, CLI, differential traces and mapped test instances passed. The original Core/Loader test-source suite was not requested or run. An earlier attempt stopped at the nonempty client-output precondition; its evidence was archived, then the complete gate ran again with an empty output directory. No test was skipped to resolve that precondition.
+
+The same Release batch passed inspection for nine packages, all 15 independent S5 consumer checks, and all 37 steps of the existing saved-model Remote package consumer with their expected outcomes. Seven packaged library DLLs matched the final tested Release outputs byte for byte. All four canonical formatting stages agreed for the 12 changed C# files. After the final gate, only these bilingual result paragraphs changed; documentation and whitespace were checked again, and source hashes confirmed no other changes. Machine paths, raw logs and private audit setup remain outside the repository.
+
 ## Candidate Profile and package reinstall, 2026-10-22
 
 S4 follows the [scoped candidate exception](compatibility.md#candidate-profile-and-package-reinstall-slice-2026-10-22), with candidate `687f282e8625c6b8d11ff58211a90524be2e4317` and unchanged formal lock `639ed015397290b3745d163aafe02ffee4aa3f84`. Execution uses macOS arm64, .NET SDK 10.0.111/runtime 10.0.11 and Node 24.13.0.
