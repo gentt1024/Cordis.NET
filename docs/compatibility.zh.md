@@ -2,6 +2,21 @@
 
 [English](compatibility.md)
 
+## 候选事件与访问客户端，2026-10-23
+
+S7 对照固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 Gateway 事件、RemoteAccess snapshot/follow 和客户端状态。正式行为锁及历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本节替代 S5/S6 的临时事件拒绝与快照延期说明；S8 元数据投影另行推进。
+
+`Interactions=Answer` 允许订阅事件；只有 owner Peer 接收并回答 waterfall。非 owner 订阅者仅在 `event:<name>` 对每个资源都允许时收到完整通知。`TypertRemoteEventDefinition` 和 `TypertRemoteEventFrame` 新增可选 `ResourceReaders`，复用 `TypertResourceReader` 委托；位置参数是已显式编码、装箱的 `JsonElement`。每条通知对所有非 owner 接收者只解析一次资源；没有 reader 时使用 global。reader 返回 null、空列表、非法身份或抛错时，通知不发给非 owner。owner 交付绕过 reader 与策略。这个 wire JSON 边界对应候选的 JSON 事件参数；普通调用 reader 仍接收已解码 CLR 参数。
+
+结果提交先检查存活、交互能力和 owner 资格，再解析参数，并要求 client 代际仍有效、提交方与订阅方是同一个 Peer 对象。另一 owner Peer 得到 `gateway/interactions-forbidden`，非 owner 回答得到 `gateway/invocation-unavailable`。断线移除当前代际交付，不视为 next 回答；待处理 waterfall 可交付给后续 owner 代际。Peer 销毁后丢弃缓冲事件。事件源关闭也丢弃缓冲并结束观察者，保留原生已有的正常结束方式。授权发生在入队时；策略失效通知影响后续事件，不重新检查已入队事件。
+
+`TypertRemoteAccess.SnapshotFor` 返回封闭的 `TypertAccessFrame.Baseline`；`FollowAsync` 使用当前可信调用身份。`Contribution` 和 `RegisterRemote` 通过既有原生注册表暴露 `remoteAccess/follow`，没有 principal wire 参数。该端点不依赖策略授权。grants 保持资源首次绑定顺序，动作去重后排序并排除 `event:` 动作；条件不接收调用参数。`Invalidate(principal)` 按完整结构化 JSON 身份比较，忽略对象键顺序。失效通知合并处理；follow 先给基线，再给新增／变化项，最后给移除项。服务所有权结束旧代际；新服务使用新策略。与候选一致，直接调用 `FollowAsync` 可能先完成已计算的增量批次，再观察取消；Gateway 还会在每次远程迭代前后检查捕获的服务与 Peer。
+
+`TypertAccessState` 与浏览器 `ClientAccessState` 在替换快照后保留权限 source 身份。没有基线时返回 false。每个物理 follow 代际必须且只能以一个基线开头，顺序错误是终止性失败。载体断线保留最后快照直到替换；终止性失败关闭非 owner 状态，owner 保持允许。原生 `TypertRemoteAccessClient.RunAsync` 沿用事件客户端的一次代际合同，由外层应用控制重试。浏览器 `mountAccess` 使用既有连接控制器，先取消 follow 再撤回 namespace，重新挂载使用全新状态。浏览器原生适配暴露可观察的 `source`／`global` API，不向冻结 slots 实现加入候选的 UI hook 注册。页面初始快照由 Host 显式选择并传入，不自动注入 owner 全局值。
+
+S7 验证还暴露了既有原生执行上下文在 macOS arm64 上丢失唤醒的问题：执行器停止后，清理回调仍留在队列中。空闲状态切换现在通过完整内存屏障先于队列复查，使生产者启动新一轮执行，或由当前执行器发现新增任务。这修复了既有串行执行约定，不改变公开 API 或上游语义。
+
+
 ## 候选资源决策与调用准备，2026-10-23
 
 S6 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 Gateway access/preparation 与 RemoteAccess 决策、列表过滤。正式行为锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本节替代 S5 对非 owner 普通调用的临时全面拒绝。非 owner 事件订阅与回答仍拒绝，等待 S7；S5–S7 仍是非 owner 的最小发布闭包。本片不宣称已实现访问快照、follow、事件过滤、回答归属或事件吊销。
@@ -288,7 +303,6 @@ Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provi
 [独立多入口包消费者](../scripts/verify-clr-multi-entry.py) 已具有本地普通运行时及生成 TypeScript/HTTP 证据，覆盖共享 bundle 身份、配置、HMR 恢复/替换、provider/合同撤销与旧调用失效。独立的[原生 Remote 包消费者](../scripts/verify-typert.py) 验证其他边界。Windows/Linux、JIT 与静态 Native AOT 结果必须按最新已完成[验证记录](validation.zh.md)分别读取；进行中的运行和已有源码测试不能作为正式平台验收。动态 CLR 加载不声明 Native AOT 支持。
 
 产品替换接受、业务退休/排空、权限、Project authority、basis 与 receipt/outbox 规则仍由产品拥有。不引入应用 `ApiCatalog` 标准或竞争总规划。剩余通用缺口继续记在原应用基础设施范围中。
-
 
 ## 独立原生模型与 Settings 边界，2026-10-10
 

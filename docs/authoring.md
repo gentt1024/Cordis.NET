@@ -4,6 +4,22 @@
 
 These optional .NET authoring helpers use the existing Cordis runtime. A package makes code available; module registration maps names to code; patch/profile entries select instances; `Inject` determines when a plugin can activate. Service identity remains its name and realm. None of these helpers adds a second registry or lifecycle.
 
+## Candidate event access and permission clients, 2026-10-23
+
+Register the standard follow contribution alongside the Host service:
+
+```csharp
+var access = new TypertRemoteAccess(ctx);
+ctx.Provide("remoteAccess", access);
+access.RegisterRemote(ctx, registry);
+```
+
+Use roles containing `event:<selected-event-name>` to allow non-owner notifications. Add `ResourceReaders` to the selected event definition when the notification names resources; cast each positional reader argument to `JsonElement`. Event readers must return nonempty IDs; unlike ordinary call readers, null does not remove a kind. Owner subscriptions do not need grants. Bind a session's Peer lifetime to revocation; changing policies alone does not retract queued notifications.
+
+Call `Invalidate()` after changing bindings, expiry or conditional answers, or pass the complete affected principal to wake only matching followers. `SnapshotFor(principal)` supplies an explicit initial baseline for that trusted identity. A snapshot is a UI hint without call arguments, not permission to bypass Gateway authorization. `remoteAccess/follow` needs no grant and always observes the calling Peer.
+
+For .NET, construct `TypertRemoteAccessClient` with the owning Context and borrowed Connection. Read `State` permission sources and run `RunAsync` for each transport generation; the application owns reconnection. For browser modules, import `mountAccess` from `@cordis-net/client-modules/access`, then call `mountAccess({ context, connection })`. Subscribe through `source(kind, id, action)` or `global(action)`. Optional `initial` must be a Host-selected baseline. Dispose the mount before releasing its Context/Connection; a new mount without a baseline starts false. Browser observables can feed the application's existing UI framework.
+
 ## Candidate resource policies, 2026-10-23
 
 Inside the Host execution domain, provide one `TypertRemoteAccess` as `remoteAccess` and register a policy in its owner's Fiber:
@@ -20,7 +36,7 @@ Read current business grants in the policy callback; do not cache decisions acro
 
 Default resource fields use the S5 registry declarations and provider `Resource` facts. A Host service may implement `ITypertRemoteResourceSource` when a method needs custom extraction. `ResourceReaders` is keyed by exported method name, then resource kind. Each reader receives the same decoded CLR parameter objects as the method, with lookup identities still represented as `JsonElement`, omitted slots as `Undefined.Value`, and the caller cancellation token separately. Return `[id]`, several IDs, or null to remove that kind. Empty lists and invalid IDs refuse the call. Readers must not resolve Contexts or lookup objects themselves. Metadata is read from the root service even for a scoped Context invocation.
 
-Declare an explicit reader for setter-only resource fields, opaque custom-codec objects or polymorphic values without a selected metadata contract. Do not reserialize decoded values to infer permissions: converter output and serialization-only getters can differ from accepted input. Ordinary JSON decode errors now precede Service/Context/lookup preparation. No client wire change is needed. Non-owner events and access snapshots remain unavailable until S7; this candidate slice is not the complete non-owner release closure.
+Declare an explicit reader for setter-only resource fields, opaque custom-codec objects or polymorphic values without a selected metadata contract. Do not reserialize decoded values to infer permissions: converter output and serialization-only getters can differ from accepted input. Ordinary JSON decode errors now precede Service/Context/lookup preparation. No client wire change is needed. S7 above adds the event and access-snapshot closure.
 
 ## Candidate Remote identities and resources, 2026-10-23
 
@@ -33,7 +49,7 @@ var connection = new TypertHostConnection(owner, gateway,
 
 For another Host-owned lifetime, construct `new TypertPeer(owner, options)` and pass it to `gateway.InvokeAsync(endpoint, arguments, peer, cancellationToken)` or `StreamAsync`. Dispose the Peer when its owner session ends; await active stream cleanup before closing the root. Disposing one Peer leaves siblings and already-running unary calls alone. A disposed mounted Connection does not fall back to a fresh owner. Withdraw its service registration explicitly if the trusted direct-call fallback should become available again.
 
-Identity drivers construct `TypertPrincipal` from their own credential-free JSON object with a `kind` field. The value clones the JSON, so the originating `JsonDocument` may be disposed. Never build it from a request's principal field. Use `TypertPrincipal.PrincipalOf(TypertInvocation.Current)` for non-owner attribution; it returns null for owner and outside a Remote call. S5 stores non-owner identities but refuses their dispatch until the S6/S7 authorization work is complete.
+Identity drivers construct `TypertPrincipal` from their own credential-free JSON object with a `kind` field. The value clones the JSON, so the originating `JsonDocument` may be disposed. Never build it from a request's principal field. Use `TypertPrincipal.PrincipalOf(TypertInvocation.Current)` for non-owner attribution; it returns null for owner and outside a Remote call. S6/S7 now authorize non-owner dispatch through resource and event policies.
 
 Register a domain-owned default identity field with `registry.RegisterResource(owner, "document", new TypertResourceDeclaration("documentId"))`. Query it with `GetResource` or `ListResources`; observe changes through the existing `Subscribe`. The declaration disappears with its Fiber. Do not register the reserved `global` kind. Set `Resource = "document"` on the relevant `TypertLookupProvider` or `TypertHostContextAdapter`; configuring its resolver preserves the association. Resource registration alone grants no access and does not yet inspect method arguments.
 
@@ -333,7 +349,6 @@ The [multi-entry gate](../scripts/verify-clr-multi-entry.py) independently packs
 
 The selected fixed event workflow, reverse Context and owned-value handling use the common declarations described in [Remote events](remote-events.md). Browser outbound scoped calls, native Peer routing and Scope stores/layers have bounded consumer evidence; current support and refused shapes are in the [backend support table](development.md#alpha5-independent-backend-disposition), and outstanding named integrations are in [remaining support boundaries](development.md#remaining-support-boundaries). Recorded candidates are linked as [historical evidence](validation.md#historical-evidence). Operator Peer ownership, typed uplink and unary multipart are also implemented. These results do not establish arbitrary type graphs or every Peer workflow. Settings, PluginManager and selected host emit notifications use generated contracts over the existing profile owners; see [management migration](management-remote-migration.md). Native raw configuration, host state and artifact delivery retain their independent duties. Existing application-specific `MapCordisService` endpoints do not close the remaining wire gaps. Product replacement admission, permissions and business retirement/draining policies remain product responsibilities.
 
-
 ## Native authored models and .NET consumers, 2026-10-10
 
 Ordinary and Remote declarations use one common model and purpose-specific projections. The [current support table](development.md#current-support-and-release-status) and backend disposition distinguish runtime metadata from independent generation.
@@ -390,7 +405,6 @@ The production `SettingsController` resolves the optional ordinary `ISettingsPro
 The [independent .NET Settings gate](../scripts/verify-typert-dotnet.py) packs an author and contract package, then builds a package-only caller outside this repository. The caller does not reference the provider implementation and uses static metadata with reflection fallback disabled. It covers typed describe, redaction, missing/failed provider, retry, held-view invalidation, definition withdrawal/re-registration, scoped suspension and borrowed-client ownership. Primitive roots, null/default arguments, nullable-state annotations and unsupported projections have separate cases. Run with `--aot` for the static caller; the dynamic CLR Host remains an ordinary-runtime boundary. Formal platform results belong to the exact completed checkpoint in [validation](validation.md).
 
 This route covers supported unary/stream, Settings, PluginManager and event consumers. Consult the [backend disposition](development.md#alpha5-independent-backend-disposition) for refused shapes and [validation](validation.md#released-version-evidence) for named platform evidence.
-
 
 ## Typed Remote uplink
 

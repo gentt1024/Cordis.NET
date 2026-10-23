@@ -494,6 +494,223 @@ public sealed class RemoteEventsGatewayTests
             Json("{\"clientId\":\"" + clientId + "\",\"eventId\":\"" + eventId + "\",\"outcome\":" + reply + "}"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Source_closure_discards_buffered_notifications(bool fail)
+    {
+        await using var root = new Context();
+        var source = new ControlledSource();
+        var (gateway, owner) = await StartAsync(root, _ => source.Open);
+        await using var observer = Open(gateway);
+        await using var barrier = Open(gateway);
+        await ReadyAsync(observer);
+        await ReadyAsync(barrier);
+        source.Publish(new("selected", [Json("1")]));
+        source.Publish(new("selected", [Json("2")]));
+        await EventAsync(barrier);
+        await EventAsync(barrier);
+        if (fail)
+        {
+            source.Complete(new InvalidOperationException("source failed"));
+            await source.Ended.Task.WaitAsync(Limit);
+            Assert.False(await barrier.MoveNextAsync().AsTask().WaitAsync(Limit));
+        }
+        else
+            await owner.DisposeAsync();
+
+        Assert.False(await observer.MoveNextAsync().AsTask().WaitAsync(Limit));
+        await owner.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Owner_notifications_bypass_resource_readers()
+    {
+        await using var root = new Context();
+        var source = new ControlledSource();
+        var (gateway, owner) = await StartAsync(root, _ => source.Open);
+        await using var observer = Open(gateway);
+        await ReadyAsync(observer);
+        var reads = 0;
+        source.Publish(
+            new TypertRemoteEventFrame("selected", [])
+            {
+                ResourceReaders = new Dictionary<string, TypertResourceReader>
+                {
+                    ["doc"] = (_, _) =>
+                    {
+                        reads++;
+                        throw new InvalidOperationException("Owner must not resolve resources.");
+                    }
+                }
+            });
+        Assert.Equal("selected", (await EventAsync(observer)).GetProperty("event").GetString());
+        Assert.Equal(0, reads);
+        await observer.DisposeAsync();
+        await owner.DisposeAsync();
+    }
+
+    [Theory]
+    [InlineData("allowed")]
+    [InlineData("denied")]
+    [InlineData("empty")]
+    [InlineData("missing")]
+    [InlineData("throws")]
+    public async Task Emit_resources_are_resolved_once_and_filter_whole_notifications(string mode)
+    {
+        await using var root = new Context();
+        var source = new ControlledSource();
+        var (gateway, sourceOwner) = await StartAsync(root, _ => source.Open);
+        TypertPeer firstPeer = null!, secondPeer = null!;
+        var reads = 0;
+        var decisions = 0;
+        await root.RunAsync(ctx =>
+        {
+            var access = new TypertRemoteAccess(ctx);
+            ctx.Provide("remoteAccess", access);
+            access.RegisterPolicy(
+                ctx,
+                "guest",
+                new(_ =>
+                {
+                    decisions++;
+                    return
+                    [
+                        new(new("observe", "doc", ["event:selected"]), TypertAccessResource.Create("doc", "a")),
+                        new(new("marker", "global", ["event:marker"]), TypertAccessResource.Global)
+                    ];
+                }));
+            firstPeer = new(ctx, new(new(Json("{\"kind\":\"guest\"}"))));
+            secondPeer = new(ctx, new(new(Json("{\"kind\":\"guest\"}"))));
+            return Task.CompletedTask;
+        });
+        await using var firstLifetime = firstPeer;
+        await using var secondLifetime = secondPeer;
+        await using var owner = Open(gateway);
+        await using var first = gateway.StreamAsync("$events", Json("{}"), firstPeer).GetAsyncEnumerator();
+        await using var second = gateway.StreamAsync("$events", Json("{}"), secondPeer).GetAsyncEnumerator();
+        await ReadyAsync(owner);
+        await ReadyAsync(first);
+        await ReadyAsync(second);
+        source.Publish(
+            new TypertRemoteEventFrame("selected", [Json("{\"secret\":42}")])
+            {
+                ResourceReaders = new Dictionary<string, TypertResourceReader>
+                {
+                    ["doc"] = (arguments, _) =>
+                    {
+                        reads++;
+                        Assert.Equal(42, Assert.IsType<JsonElement>(arguments[0]).GetProperty("secret").GetInt32());
+                        return mode switch
+                        {
+                            "allowed" => ["a"],
+                            "denied" => ["a", "b"],
+                            "empty" => [],
+                            "missing" => null,
+                            _ => throw new InvalidOperationException("reader failed")
+                        };
+                    }
+                }
+            });
+        Assert.Equal("selected", (await EventAsync(owner)).GetProperty("event").GetString());
+        source.Publish(new("marker", []));
+        foreach (var observer in new[] { first, second })
+        {
+            if (mode == "allowed")
+                Assert.Equal(42, (await EventAsync(observer)).GetProperty("args")[0].GetProperty("secret").GetInt32());
+            Assert.Equal("marker", (await EventAsync(observer)).GetProperty("event").GetString());
+        }
+
+        Assert.Equal(1, reads);
+        Assert.Equal(mode is "allowed" or "denied" ? 4 : 2, decisions);
+        await first.DisposeAsync();
+        await second.DisposeAsync();
+        await owner.DisposeAsync();
+        await sourceOwner.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Only_the_delivered_owner_peer_can_answer_and_guest_never_receives_waterfalls()
+    {
+        await using var root = new Context();
+        var source = new ControlledSource();
+        var (gateway, sourceOwner) = await StartAsync(root, _ => source.Open);
+        TypertPeer owner = null!, other = null!, guest = null!;
+        await root.RunAsync(ctx =>
+        {
+            owner = new(ctx, new(TypertPrincipal.Owner));
+            other = new(ctx, new(TypertPrincipal.Owner));
+            guest = new(ctx, new(new(Json("{\"kind\":\"guest\"}"))));
+            var access = new TypertRemoteAccess(ctx);
+            ctx.Provide("remoteAccess", access);
+            access.RegisterPolicy(
+                ctx,
+                "guest",
+                new(_ => [new(new("observe", "global", ["event:marker"]), TypertAccessResource.Global)]));
+            return Task.CompletedTask;
+        });
+        await using var ownerLifetime = owner;
+        await using var otherLifetime = other;
+        await using var guestLifetime = guest;
+        await using var ownerStream = gateway.StreamAsync("$events", Json("{}"), owner).GetAsyncEnumerator();
+        await using var guestStream = gateway.StreamAsync("$events", Json("{}"), guest).GetAsyncEnumerator();
+        await ReadyAsync(ownerStream);
+        var clientId = ownerStream.Current.Value!.Value.GetProperty("clientId").GetString();
+        await ReadyAsync(guestStream);
+        var completion =
+            new TaskCompletionSource<TypertRemoteEventOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        source.Publish(
+            new TypertRemoteEventInvocation(
+                "approve",
+                root,
+                "agent",
+                Json("{}"),
+                default,
+                value => completion.TrySetResult(value),
+                error => completion.TrySetException(error)));
+        Assert.True(await ownerStream.MoveNextAsync().AsTask().WaitAsync(Limit));
+        var eventId = ownerStream.Current.Value!.Value.GetProperty("eventId").GetString();
+        var result = Json(
+            "{\"clientId\":\"" + clientId + "\",\"eventId\":\"" + eventId + "\",\"outcome\":{\"kind\":\"next\"}}");
+        Assert.Equal(
+            "gateway/interactions-forbidden",
+            (await gateway.InvokeAsync("$events/result", result, other)).Error?.Code);
+        Assert.Equal(
+            "gateway/invocation-unavailable",
+            (await gateway.InvokeAsync("$events/result", Json("null"), guest)).Error?.Code);
+        Assert.False(completion.Task.IsCompleted);
+        Assert.True((await gateway.InvokeAsync("$events/result", result, owner)).Ok);
+        Assert.IsType<TypertRemoteEventOutcome.Next>(await completion.Task.WaitAsync(Limit));
+        source.Publish(new("marker", []));
+        Assert.Equal("marker", (await EventAsync(guestStream)).GetProperty("event").GetString());
+        Assert.True((await gateway.InvokeAsync("$events/result", result, owner)).Ok);
+        await ownerStream.DisposeAsync();
+        await guestStream.DisposeAsync();
+        await sourceOwner.DisposeAsync();
+    }
+
+    [Theory]
+    [InlineData("owner")]
+    [InlineData("guest")]
+    public async Task Passive_peers_cannot_subscribe_or_answer_before_payload_validation(string kind)
+    {
+        await using var root = new Context();
+        var gateway = new TypertGateway(root, new TypertRegistry(root));
+        TypertPeer peer = null!;
+        await root.RunAsync(ctx =>
+        {
+            peer = new(ctx, new(new(Json("{\"kind\":\"" + kind + "\"}")), TypertPeerInteractions.None));
+            return Task.CompletedTask;
+        });
+        await using var lifetime = peer;
+        await using var stream = gateway.StreamAsync("$events", Json("null"), peer).GetAsyncEnumerator();
+        Assert.True(await stream.MoveNextAsync());
+        Assert.Equal("gateway/interactions-forbidden", stream.Current.Error?.Code);
+        Assert.Equal(
+            "gateway/interactions-forbidden",
+            (await gateway.InvokeAsync("$events/result", Json("null"), peer)).Error?.Code);
+    }
+
     private static async Task<(TypertGateway Gateway, Fiber Owner)> StartAsync(
         Context root,
         Func<Context, TypertRemoteEventSource> select)

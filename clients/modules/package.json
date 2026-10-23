@@ -10,6 +10,10 @@
       "types": "./lib/types/src/index.d.ts",
       "default": "./lib/client.mjs"
     },
+    "./access": {
+      "types": "./lib/types/src/access.d.ts",
+      "default": "./lib/access.mjs"
+    },
     "./slots": {
       "types": "./lib/types/vendor/slots/index.d.ts",
       "default": "./lib/client.mjs"

@@ -504,7 +504,7 @@ public sealed class TypertGatewayAccessTests
     }
 
     [Fact]
-    public async Task Owner_bypasses_readers_policy_and_non_owner_events_stay_closed_even_with_grants()
+    public async Task Owner_bypasses_readers_and_event_admission_precedes_policy()
     {
         await using var root = new Context();
         var f = await Setup(root, []);
@@ -515,11 +515,12 @@ public sealed class TypertGatewayAccessTests
             return Task.CompletedTask;
         });
         Assert.True((await f.Gateway.InvokeAsync("access/read", Json("{}"), f.Owner)).Ok);
-        Denied(await f.Gateway.InvokeAsync("$events/result", Json("null"), f.Guest), "non-owner-unavailable");
+        Assert.Equal(
+            "gateway/invocation-unavailable",
+            (await f.Gateway.InvokeAsync("$events/result", Json("null"), f.Guest)).Error?.Code);
         await using var stream = f.Gateway.StreamAsync("$events", Json("null"), f.Guest).GetAsyncEnumerator();
-        Assert.True(await stream.MoveNextAsync());
-        Denied(stream.Current, "non-owner-unavailable");
-        Assert.False(await stream.MoveNextAsync());
+        var failure = await Assert.ThrowsAsync<RemoteError>(() => stream.MoveNextAsync().AsTask());
+        Assert.Equal("gateway/arguments-invalid", failure.Code);
     }
 
     [Fact]

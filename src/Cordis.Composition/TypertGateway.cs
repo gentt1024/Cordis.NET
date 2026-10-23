@@ -152,7 +152,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                 AdmitPeer(peer, endpoint);
                 if (endpoint == TypertEventProtocol.Result)
                 {
-                    await ReceiveRemoteEventResultAsync(arguments);
+                    await ReceiveRemoteEventResultAsync(arguments, peer);
                     result = TypertRemoteResult.Success(default);
                     return;
                 }
@@ -423,24 +423,14 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
     {
         if (peer.CancellationToken.IsCancellationRequested)
             throw Fault("gateway/peer-disposed", endpoint, "The calling Peer has been disposed.");
-        // Event authorization and answer ownership remain closed until the S7 slice.
-        if (peer.Principal.Kind != "owner" && endpoint is TypertEventProtocol.Stream or TypertEventProtocol.Result)
-        {
-            using var details = JsonDocument.Parse(
-                "{\"action\":" + JsonSerializer.Serialize(endpoint, TypertJson.Default.String) +
-                ",\"reason\":\"non-owner-unavailable\"}");
-            throw new RemoteError(
-                "remote-access/denied",
-                "Non-owner Remote dispatch is not available.",
-                details.RootElement.Clone());
-        }
-
         if (endpoint is TypertEventProtocol.Stream or TypertEventProtocol.Result &&
             peer.Interactions != TypertPeerInteractions.Answer)
             throw Fault(
                 "gateway/interactions-forbidden",
                 endpoint,
                 "Forwarded Remote events require interactions=answer.");
+        if (endpoint == TypertEventProtocol.Result && peer.Principal.Kind != "owner")
+            throw Fault("gateway/invocation-unavailable", endpoint, "Only owners can answer Remote events.");
     }
 
     private static async Task ReleaseUnusedUplinkAsync(IAsyncEnumerable<JsonElement> source)

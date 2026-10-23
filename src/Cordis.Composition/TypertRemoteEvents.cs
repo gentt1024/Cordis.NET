@@ -7,6 +7,13 @@ namespace Cordis.Composition;
 /// <summary>One host-selected emit event and the explicit codec for each original argument.</summary>
 public sealed record TypertRemoteEventDefinition(string Event, IReadOnlyList<TypertCodec> Args)
 {
+    /// <summary>Optional emit resource readers over positional wire JSON values, boxed as JsonElement.</summary>
+    public IReadOnlyDictionary<string, TypertResourceReader>? ResourceReaders
+    {
+        get;
+        init;
+    }
+
     /// <summary>The projected request codec for a scoped waterfall; null for an emit.</summary>
     public TypertCodec? Request
     {
@@ -174,7 +181,10 @@ public static class TypertRemoteEvents
                                 }
 
                                 queue.Writer.TryWrite(
-                                    new TypertRemoteEventFrame(definition.Event, Array.AsReadOnly(values)));
+                                    new TypertRemoteEventFrame(definition.Event, Array.AsReadOnly(values))
+                                    {
+                                        ResourceReaders = definition.ResourceReaders
+                                    });
                             }
                             catch (Exception error)
                             {

@@ -27,7 +27,7 @@ public sealed class TypertRemoteAccessTests
     }
 
     [Fact]
-    public async Task Owner_is_allowed_and_an_unregistered_kind_is_refused_including_follow()
+    public async Task Owner_and_follow_are_allowed_and_an_unregistered_kind_is_refused()
     {
         await using var root = new Context();
         var access = new TypertRemoteAccess(root);
@@ -35,7 +35,8 @@ public sealed class TypertRemoteAccessTests
         {
             Assert.Same(TypertAccessDecision.Allowed, access.Decide(Ask(TypertPrincipal.Owner, "notes/hidden", Room)));
             Denied("no-allow", access.Decide(Ask(Guest, "notes/read", Room)));
-            Denied("no-allow", access.Decide(Ask(Guest, "remoteAccess/follow", TypertAccessResource.Global)));
+            Assert.IsType<TypertAccessDecision.Allow>(
+                access.Decide(Ask(Guest, "remoteAccess/follow", TypertAccessResource.Global)));
             Assert.True(access.Allows(Room));
             return Task.CompletedTask;
         });

@@ -2,6 +2,35 @@
 
 [中文](validation.zh.md)
 
+## Candidate events and access clients, 2026-10-23
+
+S7 uses the scoped candidate exception at `687f282e8625c6b8d11ff58211a90524be2e4317`; the formal lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`. Unmodified candidate originals passed 67 tests with zero failures/skips: Gateway access 30, RemoteAccess Host 21, ClientAccess 10 and OperatorConnect 6. The external source-mode harness uses Vitest 4.1.11, TypeScript 6.0.3 and Vite 8.2.2. An initial run passed 61 tests but could not collect OperatorConnect without `compression`; after resolving candidate-lock dependencies outside both checkouts, the complete retry passed 67. Counts are not added across runs. This is not a complete upstream workspace build or a native test result.
+
+| S7 contract | Native evidence |
+|---|---|
+| Whole-notification resource authorization, reader failures, owner bypass, passive refusal | `RemoteEventsGatewayTests` |
+| Same-Peer answer ownership, non-owner observation, pending waterfalls across generations | `RemoteEventsGatewayTests` |
+| Peer/source closure discards queued frames, sibling isolation | `TypertIdentityTests`, `RemoteEventsGatewayTests` |
+| Snapshot ordering, coalescing, targeted full-principal invalidation, policy/service withdrawal | `TypertAccessSnapshotTests` |
+| Native client carrier generations and terminal failure, package-only consumer | `scripts/verify-access-client.py` |
+| Installed TypeScript declarations/runtime, stable observables, malformed frames, reconnect, old-generation fencing and fresh remount | `scripts/verify-client-access.mjs`, now a required `verify.py` step |
+
+Run the full gate against the formal checkout, then exercise independent NuGet consumers from the resulting package batch:
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+python3 scripts/verify-access-client.py --packages <package-batch> --output <empty-access-output>
+python3 scripts/verify-remote-access.py --packages <package-batch> --output <empty-policy-output>
+```
+
+The browser check uses the built package outside the checkout and real generated namespace/Connection APIs. The .NET consumer uses a fresh mapped package cache and actual loopback transport. Remount checks are native acceptance evidence; the original candidate ClientAccess suite does not itself test remount. These local checks do not establish Windows/Linux, Native AOT, full Node SDK interoperability or S8 projection compatibility. Raw logs, local paths and harness setup remain outside the repository.
+
+`ExecutionContextTests.Concurrent_entries_keep_waking_the_context_and_remain_serial` exercises repeated public `Context.RunAsync` entry from one or four producers, verifies serialized callbacks, and bounds completion and disposal. It reproduced the native lost wake before the memory-ordering fix; the captured CLR-suite hang independently showed a queued disposal callback with no scheduled drain.
+
+
 ## Candidate resource decisions and preparation, 2026-10-23
 
 S6 uses the [scoped candidate exception](compatibility.md#candidate-resource-decisions-and-preparation-2026-10-23) at `687f282e8625c6b8d11ff58211a90524be2e4317`; formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. The local environment is macOS arm64, .NET SDK 10.0.111/runtime 10.0.11 and Node 24.13.0.

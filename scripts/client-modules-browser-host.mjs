@@ -104,6 +104,8 @@ const server = createServer(async (request, response) => {
       : url.pathname === '/shared' ? resolve(root, 'clients/modules/examples/shared/index.html')
       : url.pathname === '/shared-check.mjs' ? resolve(root, 'clients/modules/examples/shared/check.mjs')
       : url.pathname === '/client-runtime/client.mjs' ? resolve(runtime, 'client.mjs')
+      : url.pathname === '/client-runtime/access.mjs' ? resolve(runtime, 'access.mjs')
+      : url.pathname === '/client-runtime/access-remote.mjs' ? resolve(runtime, 'access-remote.mjs')
       : url.pathname === '/client-runtime/cordis-remote.mjs' ? resolve(runtime, 'cordis-remote.mjs')
       : url.pathname === '/client-runtime/events.mjs' ? resolve(runtime, 'events.mjs') : undefined
     if (file === undefined) { response.writeHead(404); response.end(); return }

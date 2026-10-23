@@ -288,17 +288,24 @@ Check(ownerAllowed.Ok && ownerAllowed.Value?.GetInt32() == 19, "owner-bypasses-a
 await root.RunAsync(ctx =>
 {
     accessMount = ctx.Provide("remoteAccess", access);
-    held = [Bound("$events", TypertAccessResource.Global), Bound("$events/result", TypertAccessResource.Global)];
+    held = [Bound("event:access/changed", TypertAccessResource.Global)];
+    gateway.RegisterRemoteEvents(ctx, TypertRemoteEvents.FromCordis(ctx,
+        [new("access/changed", [TypertCodec.Create(GateJson.Default.Int32)])]), new("test-host"));
     return Task.CompletedTask;
 });
+Check((await gateway.InvokeAsync("$events/result", Json("{}"), guest)).Error?.Code == "gateway/invocation-unavailable",
+    "nonowner-cannot-answer-waterfall");
 await using (var events = gateway.StreamAsync("$events", Json("{}"), guest).GetAsyncEnumerator())
 {
-    Check(await events.MoveNextAsync(), "nonowner-event-stream-returns-refusal");
-    Refused(events.Current, "non-owner-unavailable", "nonowner-event-stream-remains-closed");
-    Check(!await events.MoveNextAsync(), "refused-event-stream-ends");
+    Check(await events.MoveNextAsync() && events.Current.Ok &&
+        events.Current.Value?.GetProperty("type").GetString() == "ready", "nonowner-event-stream-ready");
+    await root.RunAsync(ctx => { ctx.Emit("access/changed", 42); return Task.CompletedTask; });
+    Check(await events.MoveNextAsync() && events.Current.Ok &&
+        events.Current.Value?.GetProperty("args")[0].GetInt32() == 42, "nonowner-authorized-notification-delivered");
+    await guest.DisposeAsync();
+    try { await events.MoveNextAsync(); throw new Exception("Expected Peer cancellation."); }
+    catch (OperationCanceledException) { Check(true, "revoked-event-stream-ends"); }
 }
-Refused(await gateway.InvokeAsync("$events/result", Json("{}"), guest), "non-owner-unavailable",
-    "nonowner-event-answer-remains-closed");
 await guest.DisposeAsync();
 await owner.DisposeAsync();
 await stranger.DisposeAsync();
@@ -442,9 +449,9 @@ def main():
             'list-policy-failures-filter-items',
             'missing-access-service-refuses-guest',
             'missing-principal-policy-refused',
-            'nonowner-event-answer-remains-closed',
-            'nonowner-event-stream-remains-closed',
-            'nonowner-event-stream-returns-refusal',
+            'nonowner-authorized-notification-delivered',
+            'nonowner-cannot-answer-waterfall',
+            'nonowner-event-stream-ready',
             'null-resource-reader-falls-back-to-global',
             'one-bindings-read-per-decision',
             'owner-bypasses-access-service',
@@ -455,10 +462,10 @@ def main():
             'policy-reader-business-share-decoded-instance',
             'policy-sees-decoded-ordinary-value',
             'policy-sees-wire-provider-identities',
-            'refused-event-stream-ends',
             'repeated-policy-exception-refuses-call',
             'resource-intersection-refusal-precedes-providers',
             'resource-reader-exception-contained',
+            'revoked-event-stream-ends',
             'ungranted-call-refused',
         ]
         if sorted(result["checks"]) != expected_checks:

@@ -50,6 +50,35 @@ public sealed class ClientModuleCatalogTests
     }
 
     [Fact]
+    public async Task Access_is_an_exact_default_platform_request()
+    {
+        var root = Directory.CreateTempSubdirectory("cordis-client-access-").FullName;
+        try
+        {
+            await PackageAsync(root, "consumer", "[]", "[\"@cordis-net/client-modules/access\"]");
+            await PackageAsync(root, "unknown-subpath", "[]", "[\"@cordis-net/client-modules/access/internal\"]");
+            var packages = DeploymentPackageResolver.Native((name, _) => Path.Combine(root, name));
+            var parent = new Uri(root + Path.DirectorySeparatorChar);
+            var catalog = await ClientModuleCatalog.CaptureAsync(packages, ["consumer"], parent);
+            var consumer = Assert.Single(catalog.Graph.Entries);
+            Assert.Equal(new[] { "@cordis-net/client-modules/access" }, consumer.External);
+            Assert.NotNull(catalog.FindArtifact(consumer.Id, consumer.Revision));
+            var closed = await ClientModuleCatalog.CaptureAsync(
+                packages,
+                ["consumer"],
+                parent,
+                withdrawUnavailableDependencies: true);
+            Assert.Equal(catalog.Graph.Revision, closed.Graph.Revision);
+            await Assert.ThrowsAsync<FormatException>(() =>
+                ClientModuleCatalog.CaptureAsync(packages, ["unknown-subpath"], parent));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task Graph_orders_external_modules_and_metadata_changes_select_a_new_roster()
     {
         var root = Directory.CreateTempSubdirectory("cordis-client-graph-").FullName;

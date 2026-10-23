@@ -56,7 +56,7 @@ async function main(args) {
   }
   let manifest = await readManifest()
   const failure = error => report({ kind: 'build-error', name: manifest.name, diagnostic: String(error) })
-  const requests = new Set(['@cordis-net/client-modules', '@cordis-net/client-modules/slots',
+  const requests = new Set(['@cordis-net/client-modules', '@cordis-net/client-modules/slots', '@cordis-net/client-modules/access',
     '@deepseek-ai/cordis', '@deepseek-ai/cosmokit', ...(manifest.dsh.client.external ?? [])])
   const mode = process.env.NODE_ENV ?? 'production'
   const publish = async bundle => {

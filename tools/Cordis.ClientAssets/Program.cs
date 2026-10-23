@@ -6,6 +6,7 @@ var directory = Path.GetFullPath(args[1]);
 Directory.CreateDirectory(directory);
 Save("cordis-remote.mjs", TypertClientRuntime.Module);
 Save("cordis-remote.d.mts", TypertClientRuntime.Declaration);
+Write("access-remote", TypertRemoteAccess.Contribution());
 Write("management", PluginManagerTypert.Contribution("Cordis.NET.PluginManager"));
 var events = TypertArtifacts.GenerateEvents(StandardRemoteEvents.Definitions);
 Save("events.mjs", events.Module);

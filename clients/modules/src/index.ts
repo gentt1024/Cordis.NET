@@ -6,6 +6,7 @@ import { parseBootManifest, stripClientSuffix } from '@cordis-net/modules/manife
 import type { ClientModuleCreateOptions, ClientModuleLoaderTarget, WebBootGraph } from '@cordis-net/modules/manifest'
 import type { ClientEntryState } from '@cordis-net/modules/entries'
 import * as management from './management.ts'
+import * as access from './access.ts'
 import * as slots from '@cordis-net/modules/slots'
 
 export { Context, Service } from '@deepseek-ai/cordis'
@@ -121,6 +122,7 @@ export async function bootClientModules(options: ClientModulesOptions): Promise<
     } },
     staticModules: {
       '@deepseek-ai/cordis': cordis, '@deepseek-ai/cosmokit': cosmokit, '@cordis-net/client-modules/slots': slots,
+      '@cordis-net/client-modules/access': access,
       ...options.staticModules,
     },
     ...(options.loadBundle === undefined ? {} : { loadBundle: options.loadBundle }),
