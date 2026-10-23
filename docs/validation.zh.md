@@ -12,7 +12,9 @@ S10 验证汇合后的 S1–S9 实现，不修改 `upstream.lock.json` 或历史
 
 候选范围包含 app-boot、plugin-manager 和 HMR 的全部测试文件，仅排除两份明确入账的 DSH 官方产品测试，另执行声明的 Remote、generator、浏览器和 Core/Loader suites。上游禁用的文档 catalog 仍记为 source-skipped。原始源码包含三个仅在 Windows 排除的 POSIX 后代进程夹具及一个文件系统能力排除；门禁只在适用平台接受这些精确身份，绝不计作通过。未进入执行范围的历史记录保留为范围未审查，除非已有明确的逐项排除决定。
 
-Linux 作业生产唯一的包／runtime／作者工具批次。Windows、Ubuntu 和 macOS 消费者在运行前后检查生产者验证收据、源码摘要及制品摘要。可移植调用者和真实浏览器消费这些确切字节。Windows 和 Ubuntu 另执行静态 AOT 调用者与动态 CLR 部署，两者是不同合同。包消费者使用独立 NuGet 缓存、来源映射及相对所选批次的归档摘要检查。主消费者与 Remote 元数据消费者共用准备和核验函数，隔离父目录构建文件、清空 fallback 缓存，并检查实际还原的 assets 后才声明仅消费包。macOS 作者消费不代表完整 macOS runtime 或 AOT 支持。
+Linux 作业生产唯一的包／runtime／作者工具批次。Windows、Ubuntu 和 macOS 消费者在运行前后检查生产者验证收据、源码摘要及制品摘要。可移植调用者和真实浏览器消费这些确切字节。Windows 和 Ubuntu 另执行静态 AOT 调用者与动态 CLR 部署，两者是不同合同。包消费者使用独立 NuGet 缓存、来源映射及相对所选批次的归档摘要检查。主消费者、Remote 元数据和原生浏览器消费者共用准备和核验函数，隔离父目录构建文件、清空 fallback 缓存，并检查实际还原的 assets 后才声明仅消费包。macOS 作者消费不代表完整 macOS runtime 或 AOT 支持。
+
+文件名仅有大小写差异的源码回归要求 `CaseParts.cs` 和 `caseparts.cs` 是两个独立文件。macOS portable 作业提供区分大小写的 APFS 临时卷，并在收集证据后卸载。消费者在写第二个文件之前拒绝路径别名，不跳过原有提取与条件编译断言。本地 macOS 执行完整 .NET 作者消费时也需要区分大小写的 `TMPDIR`。
 
 基线晋升要求所有必需矩阵结果通过、候选源码／测试清单和原生映射完成审查、有序差分 traces 一致、API 迁移说明与中英文文档一致，并且包／源码归档保留准确来源和 notices。缺少平台、结果未知和意外跳过都不算通过。仅源码检查不能满足原生行为断言。旧收据保留原有身份。只有这些条件成立，才应以另一个经过审查的改动同步更新锁、reference 断言、源码片段、候选映射及兼容性声明，再对晋升后的提交执行完整验证。
 

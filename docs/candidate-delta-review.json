@@ -271,7 +271,7 @@
     "scripts/verify-client-author-package.mjs": "61cd865b502b6046f07d4bdc0799642c973317beb495c9c679d1c1625944ad6d",
     "scripts/verify-client-author-watch.mjs": "b4e0f17a05f55fc1b89cb81708551fd58c3e3b8b8e5a21ae7fe56800e91882fd",
     "scripts/verify-client-module-types.mjs": "b5e4f47f98ddcd31483a431d5fa5005a6a5b1146f4b4ad33d52113a4d17ef38f",
-    "scripts/verify-client-release-browser.py": "64538ec45fd34f3cf3d3d0175b379cbbe2b7abac6f3c419d6827cc9900e164e1",
+    "scripts/verify-client-release-browser.py": "4709077bf2d2fe147eb3ea202c792a231aaf446b5dce87c6cafe834825957399",
     "scripts/verify-client-release.mjs": "eee0447eec29c580cb624c1d3f3478e15c7e34c3300f58a6da8a9017aa3a8030",
     "scripts/verify-client-safety.mjs": "dda5a29f19e878f50dd925e0c0b984b425defe9afa04cd3d3c159d450da99d54",
     "scripts/verify-remote-access.py": "c6e014c74fed7a8538563d7c5e26a895b2779762555b5ccbb56f70a30c1b133a",

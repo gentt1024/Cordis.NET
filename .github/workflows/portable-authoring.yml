@@ -63,6 +63,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes clang zlib1g-dev
+      - name: Prepare case-sensitive macOS consumer storage
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          hdiutil create -size 16g -type SPARSE -fs 'Case-sensitive APFS' \
+            -volname CordisConsumerTemp "$RUNNER_TEMP/cordis-consumer.sparseimage"
+          mkdir "$RUNNER_TEMP/cordis-consumer-volume"
+          hdiutil attach "$RUNNER_TEMP/cordis-consumer.sparseimage" -nobrowse \
+            -mountpoint "$RUNNER_TEMP/cordis-consumer-volume"
+          mkdir "$RUNNER_TEMP/cordis-consumer-volume/tmp"
+          echo "TMPDIR=$RUNNER_TEMP/cordis-consumer-volume/tmp" >> "$GITHUB_ENV"
       - name: Consume exact Linux packages with JIT and Native AOT
         if: runner.os != 'macOS'
         run: python scripts/verify-portable-authoring.py --packages artifacts/portable-packages --inputs artifacts/portable-inputs --output artifacts/portable-results --aot
@@ -77,3 +88,12 @@ jobs:
           path: artifacts/portable-results
           if-no-files-found: error
           retention-days: 30
+      - name: Detach macOS consumer storage
+        if: always() && runner.os == 'macOS'
+        shell: bash
+        run: |
+          export TMPDIR="$RUNNER_TEMP"
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          if mount | grep -Fq " on $RUNNER_TEMP/cordis-consumer-volume ("; then
+            hdiutil detach "$RUNNER_TEMP/cordis-consumer-volume"
+          fi
