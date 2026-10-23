@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 
 parser = argparse.ArgumentParser()
@@ -17,6 +18,8 @@ args = parser.parse_args()
 if not 1 <= args.repeat <= 3:
     parser.error('--repeat must be between 1 and 3')
 repo, dsh, origin, output = (path.resolve() for path in (args.repository, args.dsh, args.origin, args.output))
+sys.path.insert(0, str(repo / 'scripts'))
+from verify_candidate_upstream import environment
 output.mkdir(parents=True, exist_ok=True)
 test = dsh / 'packages/boot/plugin-manager/tests/manager.spec.ts'
 sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
@@ -34,10 +37,7 @@ rows = []
 for attempt in range(1, args.repeat + 1):
     directory = output / str(attempt)
     directory.mkdir(exist_ok=False)
-    env = {**os.environ,
-           'CORDIS_DSH_REFERENCE': str(dsh), 'CORDIS_ORIGIN_REFERENCE': str(origin),
-           'CORDIS_CANDIDATE_REFERENCE': str(repo / 'reference'), 'CORDIS_CANDIDATE_SUITE': 'composition',
-           'CORDIS_CANDIDATE_CACHE': str(directory / 'cache'),
+    env = {**environment(dsh, origin, directory, 'composition'),
            'CORDIS_UPSTREAM_REPORT': str(directory / 'report.json'),
            'GIT_TRACE2_EVENT': str(directory / 'git-trace.jsonl')}
     command = ['node', str(repo / 'reference/candidate-tools/node_modules/vitest/vitest.mjs'), 'run',
@@ -47,7 +47,7 @@ for attempt in range(1, args.repeat + 1):
     timed_out = False
     with (directory / 'stdout.log').open('wb') as stdout, (directory / 'stderr.log').open('wb') as stderr:
         try:
-            completed = subprocess.run(command, cwd=repo, env=env, stdout=stdout, stderr=stderr, timeout=180)
+            completed = subprocess.run(command, cwd=dsh, env=env, stdout=stdout, stderr=stderr, timeout=180)
             exit_code = completed.returncode
         except subprocess.TimeoutExpired:
             exit_code = None

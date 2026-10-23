@@ -27,6 +27,10 @@ DSH = "687f282e8625c6b8d11ff58211a90524be2e4317"
 ORIGIN = "56b3d4f725681cf4556c1a8695a709cc3b6eed74"
 
 
+class SuiteExecutionError(RuntimeError):
+    pass
+
+
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -97,13 +101,21 @@ def environment(dsh, origin, output, suite):
 def execute(output, steps, label, command, env, cwd=ROOT):
     print("RUN " + label, flush=True)
     started = time.monotonic()
-    result = subprocess.run(command, cwd=cwd, env=env, capture_output=True, timeout=2400)
+    try:
+        result = subprocess.run(command, cwd=cwd, env=env, capture_output=True, timeout=2400)
+    except subprocess.TimeoutExpired as error:
+        (output / (label + ".stdout.log")).write_bytes(error.stdout or b"")
+        (output / (label + ".stderr.log")).write_bytes(error.stderr or b"")
+        steps.append({"name": label, "exitCode": None, "status": "timed-out", "timeoutSeconds": error.timeout,
+                      "seconds": round(time.monotonic() - started, 3)})
+        raise
     (output / (label + ".stdout.log")).write_bytes(result.stdout)
     (output / (label + ".stderr.log")).write_bytes(result.stderr)
     steps.append({"name": label, "exitCode": result.returncode, "seconds": round(time.monotonic() - started, 3)})
     if result.returncode:
         print((result.stdout + result.stderr).decode("utf8", "replace")[-6000:])
-    require(result.returncode == 0, label + " failed")
+    if result.returncode:
+        raise SuiteExecutionError(label + " failed")
     print("PASS " + label, flush=True)
 
 
@@ -208,9 +220,24 @@ def run_shard(dsh, origin, frozen_path, output, shard, batch):
                 "architecture": platform.machine(), "dsh": DSH, "origin": ORIGIN,
                 "sourceSha256": before, "tools": tool_identity(), "runId": batch,
                 "inventorySha256": digest(frozen_path), "sourceTrees": trees}
-    steps, outcomes = [], []
+    steps, outcomes, failures = [], [], []
     result = {"status": "failed", "shard": shard, "shards": SHARDS, "identity": identity,
-              "inventory": frozen["inventory"], "outcomes": outcomes, "steps": steps}
+              "inventory": frozen["inventory"], "outcomes": outcomes, "steps": steps, "suiteFailures": failures}
+
+    def attempt(label, env, root):
+        try:
+            execute(output, steps, label, ["node", VITEST, "run", "--config", CONFIG], env, cwd=root)
+        except subprocess.TimeoutExpired as error:
+            failures.append({"name": label, "error": str(error)})
+            raise
+        except SuiteExecutionError as error:
+            failures.append({"name": label, "error": str(error)})
+            completed = False
+        else:
+            completed = True
+        require(trees == fixed_sources(dsh, origin) and before == source_hashes(), "Source changed during candidate run")
+        return completed
+
     try:
         # Rediscovery on every worker prevents a platform-dependent subset from passing.
         inventory, files = collect(dsh, origin, output, steps)
@@ -221,9 +248,9 @@ def run_shard(dsh, origin, frozen_path, output, shard, batch):
         write(selection, matrix_filter)
         report = output / "matrix.json"
         env = environment(dsh, origin, output, "composition")
-        execute(output, steps, "linked-resolution-matrix", ["node", VITEST, "run", "--config", CONFIG],
-                dict(env, CORDIS_UPSTREAM_SELECTION=str(selection), CORDIS_UPSTREAM_REPORT=str(report)), cwd=dsh)
-        outcomes.extend(candidate_report(read(report), "composition", dsh, matrix, selected))
+        if attempt("linked-resolution-matrix",
+                   dict(env, CORDIS_UPSTREAM_SELECTION=str(selection), CORDIS_UPSTREAM_REPORT=str(report)), dsh):
+            outcomes.extend(candidate_report(read(report), "composition", dsh, matrix, selected))
         if shard == 1:
             for suite, spec in manifest()["suites"].items():
                 expected = {key for key in assignments if key[0] == suite and key[1] != MATRIX}
@@ -233,11 +260,11 @@ def run_shard(dsh, origin, frozen_path, output, shard, batch):
                 selection = output / (suite + "-selection.json")
                 write(selection, {"include": sorted({key[1] for key in expected})})
                 report = output / (suite + ".json")
-                execute(output, steps, "original-" + suite, ["node", VITEST, "run", "--config", CONFIG],
-                        dict(environment(dsh, origin, output, suite), CORDIS_UPSTREAM_SELECTION=str(selection),
-                             CORDIS_UPSTREAM_REPORT=str(report)), cwd=root)
-                outcomes.extend(candidate_report(read(report), suite, root, expected, expected))
-        require(trees == fixed_sources(dsh, origin) and before == source_hashes(), "Source changed during candidate run")
+                if attempt("original-" + suite,
+                           dict(environment(dsh, origin, output, suite), CORDIS_UPSTREAM_SELECTION=str(selection),
+                                CORDIS_UPSTREAM_REPORT=str(report)), root):
+                    outcomes.extend(candidate_report(read(report), suite, root, expected, expected))
+        require(not failures, "Candidate suites failed: " + ", ".join(row["name"] for row in failures))
         result["status"] = "passed"
     finally:
         result["sourceUnchanged"] = before == source_hashes()

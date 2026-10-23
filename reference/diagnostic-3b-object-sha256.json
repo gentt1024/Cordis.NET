@@ -1,0 +1,51 @@
+{
+  "commit": "3b6364afddf8a9318d48f28d93e17de05a2c107a",
+  "files": {
+    "scripts/verify_candidate_upstream.py": {
+      "sha256": "bd53de19678c250a6b29b8a92a22756d58a39f60c325fb2237a5c02ea02c5a02",
+      "gitBlob": "1cb767e42fb96f4c183b3666be508631f2835665"
+    },
+    "scripts/verify.py": {
+      "sha256": "7d490ec887d02f1884b034e0f3b41b3cac492107e3f4b19d78c8a60a19089307",
+      "gitBlob": "26e97d64c90946fb942434e0b2ab56cbe0310775"
+    },
+    "scripts/verify_upstream.py": {
+      "sha256": "f04acd155149efe9a01e08bb006b02922292b01fc890083a9b6adf08bef6f123",
+      "gitBlob": "4e84981b18f9b3cc41573c8271a0ffa5e8cdb47d"
+    },
+    "scripts/package_inspection.py": {
+      "sha256": "cec15c2ba9b73de688f7109fdce59cb0781b54050573944b0fe5244454326f65",
+      "gitBlob": "e0fe8604b7a70cb972a3d82f46091b4c483c9030"
+    },
+    "reference/vitest-candidate.config.mjs": {
+      "sha256": "d9a161c5f5dc0b548bef27e98ea80b4bdd4d3900194249412d1ba6f6b9f8a476",
+      "gitBlob": "6473d4c7f5cce012750c3b6bc355c40ed7a9031a"
+    },
+    "reference/candidate-support.mjs": {
+      "sha256": "7dd8735da133b746c45cb833891d3c6cddc34a9ac04ca25cf21e0b8548b93d5e",
+      "gitBlob": "ca90bf3d5dc1da33326868c2eb29b58192e0f4bb"
+    },
+    "reference/candidate-native-specifier-hooks.mjs": {
+      "sha256": "a56c590373ae8363f167e589a1fd5d65017de04269d693d2d9a3a4496eec2b1e",
+      "gitBlob": "d8729ed3b5c1d62194505acb24b3ee145b56a05d"
+    },
+    "reference/candidate-manifest.json": {
+      "sha256": "ac1c33dc1651158b1a7591c05e1dab4dae57545c41d21c6383573a0416ed6983",
+      "gitBlob": "a422be93ea1b0ae7fd4a77e0f565c2c7918d3a92"
+    },
+    "reference/candidate-tools/package.json": {
+      "sha256": "df3f56310e5e62ed27609e9c5799a2d52ab56e5be82b91d56ef59d3a5688d392",
+      "gitBlob": "886a40c369a6e337145abe6d0d67d02d500bc61a"
+    },
+    "reference/candidate-tools/package-lock.json": {
+      "sha256": "54ffd5720acf8a37aea32bbcdb54403c2b41ec17207e9b01ef9053e4e8ebdf83",
+      "gitBlob": "c4bf9bdb56164bd58fde38479550772dd0f48564"
+    },
+    "reference/candidate-bind-tools.mjs": {
+      "sha256": "c5bb7c36a74c6590ec6a7b5337632259e6f8feb5eba5585fcba3a1736df204c8",
+      "gitBlob": "5b100d76416a73df722a36369a0036d87257bc19"
+    }
+  },
+  "selectionSha256": "15c51365a15ce7a87eceea98757d583bcdccb1ec101b65ffece8f43499cd8439",
+  "selectionOrigin": "run39922002150:1 candidate-windows-latest-1/composition-selection.json"
+}

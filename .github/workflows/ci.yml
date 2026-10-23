@@ -1,4 +1,4 @@
-name: S10 Windows manager Git diagnostic
+name: S10 Windows composition Git diagnostic
 on:
   workflow_dispatch:
 permissions:
@@ -8,7 +8,7 @@ env:
 jobs:
   manager:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -32,20 +32,20 @@ jobs:
           git -C ../origin-candidate checkout --detach FETCH_HEAD
           npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
           node reference/candidate-bind-tools.mjs ../dsh-candidate
-      - name: Observe unchanged entire manager file in three independent processes
+      - name: Replay unchanged original composition once with frozen production environment
         shell: pwsh
         run: |
-          python reference/run-manager-git-diagnostic.py --repository . --dsh ../dsh-candidate --origin ../origin-candidate --output artifacts/manager-git-diagnostic --repeat 3
+          python reference/run-composition-git-diagnostic.py --dsh ../dsh-candidate --origin ../origin-candidate --output artifacts/composition-git-diagnostic
           exit $LASTEXITCODE
       - name: Summarize Git precheck timings without changing their outcomes
         if: always()
         shell: pwsh
-        run: python reference/analyze-manager-git-trace.py artifacts/manager-git-diagnostic
+        run: python reference/analyze-manager-git-trace.py artifacts/composition-git-diagnostic
       - name: Preserve all diagnostic outcomes including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: manager-git-diagnostic
-          path: artifacts/manager-git-diagnostic
+          name: composition-git-diagnostic
+          path: artifacts/composition-git-diagnostic
           if-no-files-found: error
           retention-days: 14
