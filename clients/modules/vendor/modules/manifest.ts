@@ -82,8 +82,18 @@ export interface WebBootBatch {
   entries: string[]
 }
 
+/** Host release identity; two releases are the same when both fields are equal. */
+export interface WebBootRelease {
+  /** Release version label. */
+  version: string
+  /** Source commit recorded by the Host build; absent when none was recorded. */
+  commit?: string
+}
+
 /** The composed client entry graph the host injects as `window.__DSH_BOOT__`. */
 export interface WebBootGraph {
+  /** Host release identity; absent when the Host publishes none. */
+  release?: WebBootRelease
   /** Consistency anchor over the current entry and batch descriptors. */
   rev: string
   /**
@@ -124,6 +134,8 @@ export interface BootPluginRow {
 
 /** The parsed boot manifest: one wire, two consumer views. */
 export interface BootManifest {
+  /** Host release identity carried by the graph. */
+  release?: WebBootRelease
   /** Consistency anchor over the whole graph. */
   rev: string
   /** Rows as the module table consumes them. */
@@ -228,6 +240,10 @@ export function parseBootManifest(wire: unknown): BootManifest {
   if (!Array.isArray(graph.batches)) {
     throw new Error('client-modules: boot manifest batches must be an array')
   }
+  const release = decodeRelease(graph.release)
+  if (release === null) {
+    throw new Error('client-modules: boot manifest release must carry a string version and an optional string commit')
+  }
   const moduleFields: Omit<BootModuleRow, 'initialUrl'>[] = []
   const plugins: BootPluginRow[] = []
   const seenEntryIds = new Set<string>()
@@ -302,7 +318,31 @@ export function parseBootManifest(wire: unknown): BootManifest {
     }
     return { ...row, initialUrl }
   })
-  return { rev: graph.rev, modules, plugins }
+  return { rev: graph.rev, ...(release === undefined ? {} : { release }), modules, plugins }
+}
+
+/**
+ * Decode a wire release identity, dropping members outside {@link WebBootRelease}.
+ * @param value - the graph's `release` member.
+ * @returns the release, undefined when absent, or null when present but malformed.
+ */
+function decodeRelease(value: unknown): WebBootRelease | undefined | null {
+  if (value === undefined) return undefined
+  const release = typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined
+  const commit = release?.commit
+  if (release === undefined || typeof release.version !== 'string' || (commit !== undefined && typeof commit !== 'string')) return null
+  return { version: release.version, ...(commit === undefined ? {} : { commit }) }
+}
+
+/**
+ * Read a Host graph's release without validating the rest of the graph, so releases stay comparable
+ * when another release changes the graph format.
+ * @param wire - JSON-decoded graph received from the Host.
+ * @returns the release, or undefined when the graph carries none or it cannot be read.
+ */
+export function readRelease(wire: unknown): WebBootRelease | undefined {
+  if (typeof wire !== 'object' || wire === null) return undefined
+  return decodeRelease((wire as Record<string, unknown>).release) ?? undefined
 }
 
 /** Module resolver passed into a registered Client bundle factory. */

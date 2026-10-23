@@ -139,32 +139,42 @@ public sealed class CordisManagement(
             async http =>
             {
                 var graph = (await RequireClientModules()(http.RequestAborted)).Graph;
-                await WriteAsync(
-                    http,
-                    new EntryOptions
+                var wire = new EntryOptions
+                {
+                    ["rev"] = graph.Revision,
+                    ["entries"] = graph
+                        .Entries.Select(row => new EntryOptions
+                        {
+                            ["id"] = row.Id,
+                            ["url"] = row.Url,
+                            ["rev"] = row.Revision,
+                            ["inject"] = row.Inject.ToArray(),
+                            ["external"] = row.External.ToArray(),
+                            ["immediately"] = row.Immediately,
+                        })
+                        .ToList(),
+                    ["batches"] = graph
+                        .Batches.Select(row => new EntryOptions
+                        {
+                            ["phase"] = row.Phase,
+                            ["url"] = row.Url,
+                            ["rev"] = row.Revision,
+                            ["entries"] = row.Entries.ToArray()
+                        })
+                        .ToList(),
+                };
+                if (graph.Release is { } release)
+                {
+                    var identity = new EntryOptions
                     {
-                        ["rev"] = graph.Revision,
-                        ["entries"] = graph
-                            .Entries.Select(row => new EntryOptions
-                            {
-                                ["id"] = row.Id,
-                                ["url"] = row.Url,
-                                ["rev"] = row.Revision,
-                                ["inject"] = row.Inject.ToArray(),
-                                ["external"] = row.External.ToArray(),
-                                ["immediately"] = row.Immediately,
-                            })
-                            .ToList(),
-                        ["batches"] = graph
-                            .Batches.Select(row => new EntryOptions
-                            {
-                                ["phase"] = row.Phase,
-                                ["url"] = row.Url,
-                                ["rev"] = row.Revision,
-                                ["entries"] = row.Entries.ToArray()
-                            })
-                            .ToList(),
-                    });
+                        ["version"] = release.Version
+                    };
+                    if (release.Commit is not null)
+                        identity["commit"] = release.Commit;
+                    wire["release"] = identity;
+                }
+
+                await WriteAsync(http, wire);
             });
         GetTarget(
             "/client/artifacts/{**package}",

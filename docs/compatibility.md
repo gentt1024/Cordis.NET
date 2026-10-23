@@ -2,6 +2,20 @@
 
 [中文](compatibility.zh.md)
 
+## Candidate browser safety and author increments, 2026-10-23
+
+S9 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317` for factory style ownership, Host release admission, image imports and Slots declarations. The formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. Vendored adaptations retain their original provenance and record candidate source identity separately. This is not S10 baseline promotion.
+
+A factory claims only untagged style elements inserted since that factory began. Existing page styles remain shell-owned, nested factories retain their own styles, and a throwing factory claims and removes its newly inserted styles before reporting failure. Existing explicitly tagged ownership continues to apply. This covers synchronous factory evaluation; application effects still belong to their Cordis lifecycle.
+
+Host release identity is optional `{version, commit?}` and is supplied by the application through `ClientModuleRelease`. It is independent of the graph revision, which continues to bind only graph content. An absent release is a valid identity. The supported browser wrapper compares both fields before parsing a received graph or changing its desired roster. Other releases, including graphs with an unknown body format, pause incoming updates while the page retains its existing modules. `releaseChange` announces the page, previous Host and current Host identities. `dismissRelease()` hides that identity's notice without admitting its graph. Returning to the boot release resumes reconciliation. As in the candidate, already accepted work and retry of the previously accepted graph remain available. Explicit disconnect and disposal still withdraw the page's resources. The wrapper owns one gate shared by manual synchronization and management reconnection; no separate gate history or reload UI is introduced.
+
+The native application supplies a stable application version and optional build commit. No identity is inferred from the Cordis library version, process generation or graph hash. `ClientModuleGraph.Release` preserves the existing positional constructor; `ClientModuleCatalog.CaptureAsync` adds a trailing optional release argument, so binary consumers of those methods must rebuild. Management graph responses include the same identity and omit absent fields.
+
+Author builds inline lowercase SVG, PNG and WebP imports as exact MIME/base64 data URLs and watch the physical image inputs. Input protection and immutable generation publication still apply. The supported artifact remains one factory script; package-local chunks and a Node client format remain outside this contract. Slots adds `inline?: true` and optional keyed-source `member` forwarding. The package supplies registry and renderer declarations; applications still supply the renderer, including inline DOM behavior.
+
+A local correction captures each incoming frame's release comparison before synchronous notification callbacks. A callback that synchronizes another graph cannot admit the outer foreign graph or reject the outer accepted graph. The newest observed Host still owns the notification. Public-wrapper regression tests reproduce the candidate defect and verify both directions.
+
 ## Candidate metadata projection, 2026-10-23
 
 S8 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`: RemoteInfo, named input views and optional tool-schema projection. The formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. S8 does not select a new release baseline.

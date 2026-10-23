@@ -4,6 +4,14 @@
 
 These optional .NET authoring helpers use the existing Cordis runtime. A package makes code available; module registration maps names to code; patch/profile entries select instances; `Inject` determines when a plugin can activate. Service identity remains its name and realm. None of these helpers adds a second registry or lifecycle.
 
+## Candidate browser release and assets, 2026-10-23
+
+Pass `release: new ClientModuleRelease("application-version", "build-commit")` when capturing a `ClientModuleCatalog`. Use the same application identity for the initial graph and subsequent management responses. Omit it only when the application intentionally has no release identity. A graph revision change within one release permits normal plugin replacement; a release change requires a page reload before that release's graph can run.
+
+Subscribe to `modules.releaseChange` and read its `getSnapshot()` to display a reload notice. `modules.dismissRelease()` dismisses the notice only. Keep the normal `management.close()` and `modules.dispose()` ownership sequence. The SDK does not reload the page automatically.
+
+Author packages can import `.svg`, `.png` and `.webp` files as data URL strings. Image-only changes participate in `cordis-client-build --watch` and produce a new immutable generation. Declare inline slots with `inline: true`; application renderers consume that hint and may pass a member name to keyed standard sources. These additions do not install a React renderer.
+
 ## Candidate Remote metadata, 2026-10-23
 
 Use the generated Host `Info(package)` factory or the independent .NET caller's static `Info` to inspect Remote methods without opening a connection. `CreateInfo(package)` on an independent caller selects an explicit deployment package identity; its default Info uses the saved model's assembly identity. `Methods` contains direct endpoints; `Descriptors` also contains Context receivers. For registered facts, use `TypertRegistry.GetLocalInfo(package)` or `GetRemoteInfo(package)`.

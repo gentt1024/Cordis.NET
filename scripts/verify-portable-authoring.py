@@ -52,6 +52,8 @@ def main():
     result = {'status': 'failed', 'producer': producer, 'consumerPlatform': platform.system(),
               'checkoutCommit': commit, 'steps': [], 'aotRequested': False}
     commands = [
+        ('client-safety', ['node', 'scripts/verify-client-safety.mjs', str(runtime),
+                           str(output / 'client-safety')]),
         ('management', [sys.executable, 'scripts/verify-typert-dotnet.py', '--packages', str(packages),
                         '--output', str(output / 'management'), '--management-only']),
         ('browser', ['node', 'scripts/verify-client-author-package.mjs', str(runtime),

@@ -40,6 +40,7 @@ const alias = {
   '@cordis-net/modules/system': resolve(source, 'vendor/modules/system.ts'),
   '@cordis-net/modules/manifest': resolve(source, 'vendor/modules/manifest.ts'),
   '@cordis-net/modules/entries': resolve(source, 'vendor/modules/entries.ts'),
+  '@cordis-net/modules/release-change': resolve(source, 'vendor/modules/release-change.ts'),
   '@cordis-net/modules/slots': resolve(source, 'vendor/slots/index.ts'),
   'node:module': resolve(source, 'vendor/contracts/node-module-stub.ts'),
 }
@@ -99,6 +100,7 @@ const typeAliases = {
   '@cordis-net/modules/system': 'vendor/modules/system.d.ts',
   '@cordis-net/modules/manifest': 'vendor/modules/manifest.d.ts',
   '@cordis-net/modules/entries': 'vendor/modules/entries.d.ts',
+  '@cordis-net/modules/release-change': 'vendor/modules/release-change.d.ts',
   '@cordis-net/modules/slots': 'vendor/slots/index.d.ts',
   '@deepseek-ai/schemastery': 'vendor/contracts/schema-metadata.d.ts',
   '@standard-schema/spec': 'vendor/contracts/standard-schema.d.ts',

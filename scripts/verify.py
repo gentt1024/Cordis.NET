@@ -289,6 +289,7 @@ def main():
         client_artifacts = ROOT / "artifacts/client-modules"
         run("client-modules-build", ["node", "scripts/build-client-modules.mjs", client_artifacts])
         run("client-modules-types", ["node", "scripts/verify-client-module-types.mjs", client_artifacts])
+        run("client-release", ["node", "scripts/verify-client-release.mjs", client_artifacts])
         run("client-access", ["node", "scripts/verify-client-access.mjs", client_artifacts])
         run("client-lifecycle", ["node", "scripts/verify-client-lifecycle.mjs", client_artifacts])
         run("client-replacement", ["node", "scripts/verify-client-replacement.mjs", client_artifacts, OUT / "client-replacement"])

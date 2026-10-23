@@ -31,13 +31,21 @@ const packed = supplied ? resolve(supplied) : resolve(output, JSON.parse(npm(
 const manifest = { name: 'independent-author', private: true, type: 'module',
   dsh: { client: { platform: 'web', external: ['@example/shared'] } },
   devDependencies: { '@cordis-net/client-tools': 'file:' + packed.replaceAll('\\', '/') } }
+const images = {
+  svg: { type: 'image/svg+xml', bytes: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><title>图像</title><path fill="#123456" d="M0 0h1v1H0z"/></svg>\n') },
+  png: { type: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGMQVDIGAACuAGcVHqFfAAAAAElFTkSuQmCC', 'base64') },
+  webp: { type: 'image/webp', bytes: Buffer.from('UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAdQkUZ0pv+BiOh/AAA=', 'base64') }
+}
 await writeFile(resolve(author, 'package.json'), JSON.stringify(manifest))
 await writeFile(resolve(author, 'src/client.tsx'), `
 import classes from './surface.module.css'
 import './global.css'
 import inline from './owned.css?inline'
+import svg from './image.svg'
+import png from './image.png'
+import webp from './image.webp'
 import { marker } from '@example/shared'
-export const observed = { classes, inline, marker }
+export const observed = { classes, inline, marker, images: { svg, png, webp } }
 export function apply(ctx) {
   ctx.provide('fixture', observed)
   ctx.effect(() => {
@@ -60,6 +68,7 @@ export function apply(ctx) {
 await writeFile(resolve(author, 'src/surface.module.css'), '.panel { color: rgb(1, 2, 3); }')
 await writeFile(resolve(author, 'src/global.css'), 'body { --author-global: ready; }')
 await writeFile(resolve(author, 'src/owned.css'), '.owned { font-weight: 700; }')
+for (const [extension, image] of Object.entries(images)) await writeFile(resolve(author, 'src/image.' + extension), image.bytes)
 await writeFile(resolve(output, 'install.log'), npm(['install', '--ignore-scripts', '--no-audit', '--no-fund'], author))
 // npm exec must find the installed bin; no source checkout paths or .NET invocation are supplied.
 const log = npm(['exec', '--offline', '--', 'cordis-client-build', '.', 'dist', '--entry', 'src/client.tsx'], author)
@@ -91,7 +100,9 @@ for (const specimen of [
   { name: 'stylesheet', entry: 'client.ts', destination: 'styles',
     files: { 'client.ts': "import './styles/theme.css'; export const value = 1", 'styles/theme.css': '.panel { color: red }' } },
   { name: 'inline-stylesheet', entry: 'client.ts', destination: 'styles',
-    files: { 'client.ts': "export { default } from './styles/theme.css?inline'", 'styles/theme.css': '.panel { color: blue }' } }
+    files: { 'client.ts': "export { default } from './styles/theme.css?inline'", 'styles/theme.css': '.panel { color: blue }' } },
+  ...Object.entries(images).map(([extension, image]) => ({ name: extension + '-image', entry: 'client.ts', destination: 'images',
+    files: { 'client.ts': `export { default } from './images/value.${extension}'`, ['images/value.' + extension]: image.bytes } }))
 ]) {
   for (const watch of [false, true]) {
     const fixture = resolve(directory, specimen.name + (watch ? '-watch' : '-once'))
@@ -116,7 +127,10 @@ await writeFile(resolve(output, 'source-protection.json'), JSON.stringify({
   status: protection.every(item => item.unchanged && item.rejected) ? 'passed' : 'failed', cases: protection
 }, null, 2) + '\n')
 assert.ok(protection.every(item => item.unchanged && item.rejected),
-  'Installed builder must reject source/dependency/CSS outputs without changing input paths or bytes; see source-protection.json')
+  'Installed builder must reject source/dependency/CSS/image outputs without changing input paths or bytes; see source-protection.json')
+const watchLog = execFileSync(process.execPath, [resolve(root, 'scripts/verify-client-author-watch.mjs'), installedBin],
+  { encoding: 'utf8', windowsHide: true, maxBuffer: 4 * 1024 * 1024 })
+await writeFile(resolve(output, 'watch.log'), watchLog)
 
 async function snapshotFiles(directory) {
   const result = {}
@@ -164,6 +178,14 @@ assert.equal(requests, 1)
 assert.equal(plugin.observed.marker, marker)
 assert.match(plugin.observed.classes.panel, /_panel$/)
 assert.match(plugin.observed.inline, /font-weight:700/)
+for (const [extension, image] of Object.entries(images)) {
+  const url = plugin.observed.images[extension]
+  const prefix = `data:${image.type};base64,`
+  assert.ok(url.startsWith(prefix), extension + ' import must export its exact base64 MIME prefix')
+  const encoded = url.slice(prefix.length)
+  assert.equal(encoded, image.bytes.toString('base64'), extension + ' import must preserve canonical base64 bytes')
+  assert.deepEqual(Buffer.from(encoded, 'base64'), image.bytes, extension + ' import must preserve every source byte')
+}
 const snapshot = { rev: frame.revision, entries: [{ id: manifest.name, rev: frame.revision,
   url: '/plugin.js?rev=' + frame.revision, inject: [], external: ['@example/shared'] }],
   batches: [{ phase: 'application', url: '/plugin.js?rev=' + frame.revision,
@@ -171,10 +193,11 @@ const snapshot = { rev: frame.revision, entries: [{ id: manifest.name, rev: fram
 const receipt = { status: 'passed', toolArchive: packed, toolSha256: createHash('sha256').update(await readFile(packed)).digest('hex'),
   author, artifact, artifactSha256: frame.revision, installedBin: true,
   exactExternalIdentity: true, cssModuleExport: true, inlineCssExport: true,
+  imageMimeAndBytes: true, installedWatch: true,
   browser: serve || headless ? 'pending' : 'not requested' }
 await writeFile(resolve(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n')
 if (!serve && !headless) {
-  console.log('PASS installed author package: independent npm bin, TSX entry, exact external identity, CSS module and inline outputs')
+  console.log('PASS installed author package: independent npm bin, TSX entry, exact external identity, CSS module and inline outputs, SVG/PNG/WebP MIME and exact bytes, installed watch lifecycle')
 } else {
   const html = `<!doctype html><meta charset="utf-8"><title>Installed Cordis author consumer</title>
 <h1>Installed author package</h1><pre id="result">Running real browser lifecycle checks</pre>
@@ -189,6 +212,18 @@ try {
   client=await bootClientModules({graph,staticModules:{'@example/shared':{marker}}})
   check(client.state.getSnapshot().failures.length===0,'plugin activated')
   check(client.context.get('fixture').marker===marker,'external singleton retained')
+  const expectedImages=${JSON.stringify(Object.fromEntries(Object.entries(images).map(([extension, image]) =>
+    [extension, { type: image.type, base64: image.bytes.toString('base64') }])))}
+  for(const [extension,expected] of Object.entries(expectedImages)){
+    const url=client.context.get('fixture').images[extension]
+    const response=await fetch(url)
+    const blob=await response.blob()
+    check(blob.type===expected.type,extension+' image MIME retained')
+    check(btoa(String.fromCharCode(...new Uint8Array(await blob.arrayBuffer())))===expected.base64,extension+' image source bytes retained')
+    const image=new Image();image.src=url
+    await image.decode()
+    check(image.naturalWidth===1&&image.naturalHeight===1,extension+' data URL decoded by browser')
+  }
   const styles=()=>document.querySelectorAll('style[data-plugin="independent-author"]').length
   check(styles()===2,'module and global styles owned by plugin')
   check(getComputedStyle(document.querySelector('#author-element')).color==='rgb(1, 2, 3)','CSS module applied')

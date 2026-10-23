@@ -2,6 +2,26 @@
 
 [English](validation.md)
 
+## 候选浏览器安全与作者增量，2026-10-23
+
+S9 的正式行为锁与历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。限定范围的源码来源记录候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，并单独记录通知重入的本地修正。未修改的候选原始用例共通过 111 项，零失败、零跳过：浏览器 loader 72、entries 35、CSS／图片作者构建 4。这些结果来自外部源码执行环境，不代表完整候选工作区构建或类型检查通过。
+
+必跑的 `client-release` 门禁通过公开包装器覆盖：两个版本字段、缺省身份、先准入后解析图、dismiss、retry、已接受的待处理更新、销毁、可观察对象生命周期及同步订阅者重入。管理重连测试使用真实 Connection／events 代码和套接字帧夹具，工厂脚本通过真实回环 HTTP 加载。`ManagementTransportTests` 另通过原生 Kestrel 图端点验证版本传递及缺省字段省略。这些是分开的检查，不宣称已完成原生管理 WebSocket 与浏览器整套部署验证。
+
+真实 Chromium 检查通过公开 boot／sync 和 HTTP 提供的图、脚本，验证外壳样式保留、嵌套归属、工厂抛错清理及版本迁移。它检查 DOM 节点身份和计算后的 CSS，并证明 dismiss 后也不下载异版本工厂。独立安装的作者归档验证 SVG／PNG／WebP 精确 data URL、真实图片解码、仅图片变化触发 watch 发布，以及旧代目录不可变。输入／输出碰撞检查继续生效。外部严格 TypeScript 消费验证 Slots inline／keyed-member 声明和公开 release 类型。
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+node scripts/verify-client-safety.mjs artifacts/client-modules <empty-browser-output>
+CORDIS_CLIENT_TOOLS_TGZ=<archive-from-the-full-gate> node scripts/verify-client-author-package.mjs \
+  artifacts/client-modules <empty-author-browser-output> --headless
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+```
+
+同批 portable authoring 运行器也强制执行浏览器安全检查。Chromium 不在运行器已知安装路径时设置 `CORDIS_TEST_BROWSER`。浏览器安全运行器也支持 `--serve` 交互执行。本地 macOS 证据不代表 Windows／Linux 或 Native AOT 发布准入。继续保留单 factory 发布和应用提供 renderer 的边界，不进行 S10 晋升。原始日志和机器专属证据保留在仓库之外。
+
 ## 候选 Remote 元数据，2026-10-23
 
 S8 保持正式行为锁为 `639ed015397290b3745d163aafe02ffee4aa3f84`，对候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 使用限定范围例外。未修改的候选原始测试实际通过 56 项，无失败或跳过：RemoteInfo 8 项、懒加载器 1 项、生成器元数据 29 项、完整 loader 套件 18 项。仓外源码模式工具使用 Vitest 4.1.11、TypeScript 6.0.3 和 Vite 8.2.2；这不代表完整上游工作区构建或类型检查通过。

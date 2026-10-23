@@ -2,9 +2,11 @@ import * as cordis from '@deepseek-ai/cordis'
 import * as cosmokit from '@deepseek-ai/cosmokit'
 import { bootClient } from '@cordis-net/web/boot-client'
 import { ClientModuleSystem } from '@cordis-net/modules/system'
-import { parseBootManifest, stripClientSuffix } from '@cordis-net/modules/manifest'
+import { parseBootManifest, readRelease, stripClientSuffix } from '@cordis-net/modules/manifest'
 import type { ClientModuleCreateOptions, ClientModuleLoaderTarget, WebBootGraph } from '@cordis-net/modules/manifest'
 import type { ClientEntryState } from '@cordis-net/modules/entries'
+import { ReleaseChangeGate } from '@cordis-net/modules/release-change'
+import type { ClientReleaseChange } from '@cordis-net/modules/release-change'
 import * as management from './management.ts'
 import * as access from './access.ts'
 import * as slots from '@cordis-net/modules/slots'
@@ -13,7 +15,8 @@ export { Context, Service } from '@deepseek-ai/cordis'
 export { SlotCore } from '@cordis-net/modules/slots'
 export type { Plugin } from '@deepseek-ai/cordis'
 export type { ClientEntryState } from '@cordis-net/modules/entries'
-export type { WebBootGraph } from '@cordis-net/modules/manifest'
+export type { ClientReleaseChange } from '@cordis-net/modules/release-change'
+export type { WebBootGraph, WebBootRelease } from '@cordis-net/modules/manifest'
 export * from './management.ts'
 
 declare global {
@@ -29,6 +32,13 @@ export interface ClientModules {
     getSnapshot(): ClientEntryState
     subscribe(listener: () => void): () => void
   }
+  /** Stable release mismatch notification. A dismissed release remains blocked. */
+  readonly releaseChange: {
+    getSnapshot(): ClientReleaseChange | undefined
+    subscribe(listener: () => void): () => void
+  }
+  /** Dismiss the current release notification without accepting its graph. */
+  dismissRelease(): void
   /** Apply a full roster. Retain active fibers on failed arrival; refresh consumers after successful replacement. */
   sync(graph: unknown): Promise<void>
   /** Retry the latest failed roster, including unchanged artifacts. */
@@ -67,7 +77,7 @@ function graphOf(wire: unknown): WebBootGraph {
     }
   }
   // One-resource initial batches keep the consumer independent of Host batching choices.
-  return { rev: manifest.rev, entries, batches: entries.map(row => ({
+  return { rev: manifest.rev, ...(manifest.release === undefined ? {} : { release: manifest.release }), entries, batches: entries.map(row => ({
     phase: 'application', url: row.url, rev: row.rev, entries: [row.id],
   })) }
 }
@@ -95,7 +105,7 @@ function changedClosure(previous: WebBootGraph, next: WebBootGraph): Set<string>
 
 function without(graph: WebBootGraph, ids: ReadonlySet<string>): WebBootGraph {
   const entries = graph.entries.filter(row => !ids.has(row.id))
-  return { rev: graph.rev, entries, batches: entries.map(row => ({
+  return { rev: graph.rev, ...(graph.release === undefined ? {} : { release: graph.release }), entries, batches: entries.map(row => ({
     phase: 'application', url: row.url, rev: row.rev, entries: [row.id],
   })) }
 }
@@ -110,6 +120,7 @@ function without(graph: WebBootGraph, ids: ReadonlySet<string>): WebBootGraph {
 export async function bootClientModules(options: ClientModulesOptions): Promise<ClientModules> {
   if (globalThis.__ModuleLoader__ !== undefined) throw new Error('client-modules: this page already owns a module facade')
   let graph = graphOf(options.graph)
+  const release = new ReleaseChangeGate(graph.release)
   const facade: ClientModuleLoaderTarget = {
     mode: 'queue', pendingQueue: [],
     load(registration) { this.pendingQueue.push(registration) },
@@ -172,18 +183,27 @@ export async function bootClientModules(options: ClientModulesOptions): Promise<
     if (modules.entries.state.getSnapshot().failures.length === 0) pendingRemount.clear()
   }
   return {
-    context, state: modules.entries.state,
+    context, state: modules.entries.state, releaseChange: release.change,
+    dismissRelease() { release.dismiss() },
     sync(wire) {
+      if (stopped) return Promise.reject(new Error('client-modules: this consumer is disposed'))
+      if (!release.observe(readRelease(wire))) return Promise.resolve()
       const next = graphOf(wire)
       return enqueue(() => synchronize(next))
     },
     retry() { return enqueue(() => synchronize(graph)) },
-    disconnect() { return enqueue(() => synchronize({ rev: 'disconnected', entries: [], batches: [] })) },
+    disconnect() {
+      return enqueue(() => synchronize({
+        rev: 'disconnected', ...(graph.release === undefined ? {} : { release: graph.release }), entries: [], batches: [],
+      }))
+    },
     async dispose() {
       if (stopped) return queue
       stopped = true
       update++
-      const withdraw = modules.entries.sync({ rev: 'disposed', entries: [], batches: [] })
+      const withdraw = modules.entries.sync({
+        rev: 'disposed', ...(graph.release === undefined ? {} : { release: graph.release }), entries: [], batches: [],
+      })
       // Drain accepted updates before root disposal. The root is the lifecycle owner, not this adapter.
       queue = Promise.all([queue, withdraw]).then(async () => {
         await context.fiber.dispose()

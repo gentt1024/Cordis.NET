@@ -2,6 +2,26 @@
 
 [中文](validation.zh.md)
 
+## Candidate browser safety and author increments, 2026-10-23
+
+S9 keeps the formal behavior lock and historical inventory at `639ed015397290b3745d163aafe02ffee4aa3f84`. Scoped source provenance identifies candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, including the local notification-reentrancy correction. Unmodified candidate originals passed 111 cases with zero failures or skips: browser loader 72, entries 35 and CSS/image author builds 4. These ran in the external source-mode harness; they do not establish a full candidate workspace build or typecheck.
+
+The required `client-release` gate exercises the public wrapper: both release fields and absent identities, admission before graph parsing, dismissal, retry, accepted pending work, disposal, observable lifetime and synchronous subscriber reentrancy. Its generated management client uses the real Connection/events code with a socket-frame fixture to verify reconnection. Factory scripts use actual loopback HTTP. `ManagementTransportTests` separately verifies release propagation and field omission through the native Kestrel graph endpoint. These are distinct checks, not a claim of a complete native management WebSocket/browser deployment.
+
+The actual Chromium check verifies shell-style preservation, nested ownership, throwing-factory cleanup and release transitions through public boot/sync with HTTP-served graphs and scripts. It checks DOM node identity and computed CSS and refuses any foreign factory download, including after dismissal. The installed author archive verifies exact SVG/PNG/WebP data URLs, real image decoding, image-only watch publication and immutable prior generations. Source/output collision checks remain active. External strict TypeScript consumption verifies Slots inline/keyed-member declarations and the public release types.
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+node scripts/verify-client-safety.mjs artifacts/client-modules <empty-browser-output>
+CORDIS_CLIENT_TOOLS_TGZ=<archive-from-the-full-gate> node scripts/verify-client-author-package.mjs \
+  artifacts/client-modules <empty-author-browser-output> --headless
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+```
+
+The same-batch portable authoring runner also requires the browser safety check. Set `CORDIS_TEST_BROWSER` if Chromium is outside the test runner's known installation paths. The browser safety runner also accepts `--serve` for an interactive run. This local macOS evidence does not establish Windows/Linux or Native AOT release approval. Single-factory publication and application-owned renderers remain the supported boundary; no S10 promotion is performed. Raw logs and machine-specific evidence remain outside the repository.
+
 ## Candidate Remote metadata, 2026-10-23
 
 S8 keeps the formal lock at `639ed015397290b3745d163aafe02ffee4aa3f84` and uses a scoped exception for candidate `687f282e8625c6b8d11ff58211a90524be2e4317`. Unmodified candidate originals passed 56 tests with no failures or skips: RemoteInfo 8, lazy loader 1, generator metadata 29 and the complete loader suite 18. The external source-mode harness uses Vitest 4.1.11, TypeScript 6.0.3 and Vite 8.2.2; this does not establish a full upstream workspace build or typecheck.

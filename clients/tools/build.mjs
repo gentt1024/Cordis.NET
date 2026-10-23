@@ -89,6 +89,12 @@ async function main(args) {
       'import.meta.env': JSON.stringify({ MODE: mode }) },
     plugins: [{ name: 'client-inputs', setup(plugin) {
       plugin.onResolve({ filter: /.*/ }, args => requests.has(args.path) ? { path: args.path, external: true } : undefined)
+      plugin.onLoad({ filter: /\.(svg|png|webp)$/, namespace: 'file' }, async args => {
+        const mediaType = { '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp' }[extname(args.path)]
+        const source = await readFile(args.path)
+        return { contents: `export default ${JSON.stringify(`data:${mediaType};base64,${source.toString('base64')}`)};`,
+          loader: 'js', watchFiles: [args.path] }
+      })
       plugin.onResolve({ filter: /\.css(?:\?inline)?$/ }, async args => {
         if (args.pluginData?.resolvedCss) return
         const inline = args.path.endsWith('?inline')

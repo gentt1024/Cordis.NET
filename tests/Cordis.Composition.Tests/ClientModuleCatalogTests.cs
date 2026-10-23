@@ -6,6 +6,50 @@ namespace Cordis.Composition.Tests;
 public sealed class ClientModuleCatalogTests
 {
     [Fact]
+    public async Task Release_identity_is_host_selected_and_does_not_change_the_artifact_graph_revision()
+    {
+        var root = Directory.CreateTempSubdirectory("cordis-client-release-").FullName;
+        try
+        {
+            await PackageAsync(root, "consumer", "[]", "[]");
+            var packages = DeploymentPackageResolver.Native((name, _) => Path.Combine(root, name));
+            var parent = new Uri(root + Path.DirectorySeparatorChar);
+            var absent = await ClientModuleCatalog.CaptureAsync(packages, ["consumer"], parent);
+            var identity = new ClientModuleRelease("1.2.3", "fixed-commit");
+            var released = await ClientModuleCatalog.CaptureAsync(packages, ["consumer"], parent, release: identity);
+            var other = await ClientModuleCatalog.CaptureAsync(
+                packages,
+                ["consumer"],
+                parent,
+                Array.Empty<string>(),
+                release: new("1.2.4"));
+            Assert.Same(identity, released.Graph.Release);
+            Assert.Equal(absent.Graph.Revision, released.Graph.Revision);
+            Assert.Equal(released.Graph.Revision, other.Graph.Revision);
+            Assert.Equal(
+                JsonSerializer.Serialize(absent.Graph.Entries),
+                JsonSerializer.Serialize(released.Graph.Entries));
+            Assert.Equal(absent.Graph.Batches.Select(row => row.Url), released.Graph.Batches.Select(row => row.Url));
+            using var absentWire = JsonDocument.Parse(JsonSerializer.Serialize(absent.Graph));
+            Assert.False(absentWire.RootElement.TryGetProperty("release", out _));
+            using var wire = JsonDocument.Parse(JsonSerializer.Serialize(released.Graph));
+            Assert.Equal("1.2.3", wire.RootElement.GetProperty("release").GetProperty("version").GetString());
+            Assert.Equal("fixed-commit", wire.RootElement.GetProperty("release").GetProperty("commit").GetString());
+            using var noCommit = JsonDocument.Parse(JsonSerializer.Serialize(other.Graph));
+            Assert.False(noCommit.RootElement.GetProperty("release").TryGetProperty("commit", out _));
+            // Keep the original positional construction and deconstruction contract.
+            var (revision, entries, batches) = new ClientModuleGraph("manual", [], []);
+            Assert.Equal("manual", revision);
+            Assert.Empty(entries);
+            Assert.Empty(batches);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task Shell_requests_are_exact_and_do_not_require_dynamic_provider_rows()
     {
         var root = Directory.CreateTempSubdirectory("cordis-client-shell-").FullName;
