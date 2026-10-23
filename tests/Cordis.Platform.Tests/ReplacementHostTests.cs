@@ -517,7 +517,10 @@ public sealed class ReplacementHostTests
                     await host.Loader.WaitAsync();
                     await ctx
                         .Plugin(
-                            (await host.Resolver.ResolveAsync("fixture", new Uri("file:///"), cancellationToken)).Plugin,
+                            (await host.Resolver.ResolveAsync(
+                                "fixture",
+                                new Uri("file:///"),
+                                cancellationToken)).Plugin,
                             "direct")
                         .WaitAsync();
                 }));

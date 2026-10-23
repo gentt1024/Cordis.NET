@@ -16,17 +16,27 @@ public sealed class DevelopmentBuildProcessTests
         string[] arguments = OperatingSystem.IsWindows()
             ? ["/d", "/c", "echo ready & ping -n 1000 127.0.0.1 >nul"]
             : ["-c", "printf 'ready\\n'; sleep 1000"];
-        var running = DevelopmentBuildProcess.RunAsync(command, arguments, directory, record, _ =>
-        {
-            ready.TrySetResult();
-            return Task.CompletedTask;
-        }, stop.Token);
+        var running = DevelopmentBuildProcess.RunAsync(
+            command,
+            arguments,
+            directory,
+            record,
+            _ =>
+            {
+                ready.TrySetResult();
+                return Task.CompletedTask;
+            },
+            stop.Token);
         try
         {
             await ready.Task.WaitAsync(TimeSpan.FromSeconds(10));
             var original = await File.ReadAllTextAsync(record);
             var refusal = await Assert.ThrowsAsync<IOException>(() => DevelopmentBuildProcess.RunAsync(
-                "dotnet", ["--version"], directory, record, _ => Task.CompletedTask));
+                "dotnet",
+                ["--version"],
+                directory,
+                record,
+                _ => Task.CompletedTask));
             Assert.Contains("still active", refusal.Message);
             Assert.Equal(original, await File.ReadAllTextAsync(record));
             stop.Cancel();
@@ -55,9 +65,17 @@ public sealed class DevelopmentBuildProcessTests
             var command = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh";
             string[] arguments = OperatingSystem.IsWindows()
                 ? ["/d", "/c", $"echo tool-output& echo tool-error 1>&2& exit /b {exitCode}"]
-                : ["-c", "printf '%s\\n' \"$1\"; printf 'tool-error\\n' >&2; exit \"$2\"", "tool", "tool-output", exitCode.ToString(System.Globalization.CultureInfo.InvariantCulture)];
+                :
+                [
+                    "-c", "printf '%s\\n' \"$1\"; printf 'tool-error\\n' >&2; exit \"$2\"", "tool", "tool-output",
+                    exitCode.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                ];
             var error = await Record.ExceptionAsync(() => DevelopmentBuildProcess.RunAsync(
-                command, arguments, directory, record, line =>
+                command,
+                arguments,
+                directory,
+                record,
+                line =>
                 {
                     lines.Add(line);
                     return Task.CompletedTask;

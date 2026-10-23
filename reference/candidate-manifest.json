@@ -1,0 +1,102 @@
+{
+  "format": "cordis-candidate-scope/v1",
+  "purpose": "Candidate validation only; does not change upstream.lock.json or promote a baseline.",
+  "dsh": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "origin": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
+  "extensionOrigin": "abb0a307cb1d3b0947f455d590cf5ba922d4caa4",
+  "matrix": "packages/boot/app-boot/tests/linked-resolution-matrix.spec.ts",
+  "matrixBlob": "fe3fafc63cd77302bf6d0b3e1ae5c280b7ffcbb1",
+  "matrixInstances": 4800,
+  "suites": {
+    "composition": {
+      "repository": "dsh",
+      "include": [
+        "packages/boot/app-boot/tests/app-boot.spec.ts",
+        "packages/boot/app-boot/tests/compatibility-preflight.spec.ts",
+        "packages/boot/app-boot/tests/config-reload.spec.ts",
+        "packages/boot/app-boot/tests/linked-resolution-matrix.spec.ts",
+        "packages/boot/app-boot/tests/loader-shape.compat.spec.ts",
+        "packages/boot/app-boot/tests/package-meta.spec.ts",
+        "packages/boot/app-boot/tests/plugin-compatibility.spec.ts",
+        "packages/boot/app-boot/tests/profile-compatibility.spec.ts",
+        "packages/boot/app-boot/tests/profile-plugins.spec.ts",
+        "packages/boot/app-boot/tests/profile-resolution-service.spec.ts",
+        "packages/boot/app-boot/tests/profile-resolution-worker-bootstrap.spec.ts",
+        "packages/boot/app-boot/tests/profile-resolution.spec.ts",
+        "packages/boot/app-boot/tests/profile-sanitize.spec.ts",
+        "packages/boot/app-boot/tests/profile.spec.ts",
+        "packages/boot/app-boot/tests/user-patches.spec.ts",
+        "packages/boot/hmr/tests/*.spec.ts",
+        "packages/boot/hmr/tests/coordination.spec.ts",
+        "packages/boot/hmr/tests/error.spec.ts",
+        "packages/boot/hmr/tests/modules.spec.ts",
+        "packages/boot/hmr/tests/profile.spec.ts",
+        "packages/boot/hmr/tests/reconciliation.spec.ts",
+        "packages/boot/hmr/tests/watch-config.spec.ts",
+        "packages/boot/plugin-manager/tests/package-reload.spec.ts",
+        "packages/boot/plugin-manager/tests/patch.spec.ts",
+        "scripts/loader-config-diff.spec.ts",
+        "scripts/loader-volatile-update.spec.ts",
+        "scripts/volatile-config.spec.ts"
+      ]
+    },
+    "remote": {
+      "repository": "dsh",
+      "include": [
+        "packages/api/gateway/tests/*.spec.ts",
+        "packages/api/remote-access/tests/*.spec.ts",
+        "packages/typert/protocol/tests/*.spec.ts",
+        "packages/typert/registry/tests/*.spec.ts",
+        "packages/typert/loader/tests/*.spec.ts"
+      ]
+    },
+    "metadata": {
+      "repository": "dsh",
+      "include": [
+        "packages/typert/generator/tests/cordis-catalog.spec.ts",
+        "packages/typert/generator/tests/remote-metadata.spec.ts",
+        "packages/typert/generator/tests/remote-model.spec.ts",
+        "packages/typert/generator/tests/renderer.spec.ts",
+        "packages/typert/generator/tests/schema-emitter.spec.ts",
+        "packages/typert/generator/tests/tools-catalog.spec.ts",
+        "packages/typert/generator/tests/tsdown-plugin-worker.spec.ts",
+        "packages/typert/generator/tests/tsdown-plugin.spec.ts",
+        "packages/typert/generator/tests/type-model.spec.ts"
+      ]
+    },
+    "browser": {
+      "repository": "dsh",
+      "include": [
+        "packages/client/modules/tests/*.spec.ts",
+        "packages/client/ui-slots/tests/*.spec.ts",
+        "scripts/client-bundle-css.spec.ts"
+      ]
+    },
+    "core": {
+      "repository": "origin",
+      "include": [
+        "packages/core/tests/*.spec.ts",
+        "packages/loader/tests/*.spec.ts"
+      ]
+    }
+  },
+  "historicalInventory": "docs/upstream-tests.json",
+  "historicalScopePolicy": "Retain every historical source record. Files outside these execution suites remain explicitly not executed by this candidate matrix; source presence and native mapping are not a pass.",
+  "candidateScopePolicy": "Complete execution means the frozen runtime suite union above, including all linked-resolution instances. DSH application builds and product-specific historical entries are outside the native contract. The candidate node-half and generator suites are retained as source reference even where their feature is not promised by Cordis.NET.",
+  "knownCapabilitySkip": {
+    "suite": "composition",
+    "file": "packages/boot/app-boot/tests/package-meta.spec.ts",
+    "name": "plugin locale display metadata > rejects case-equivalent language files on case-sensitive filesystems",
+    "ordinal": 0,
+    "reason": "Original upstream calls context.skip() when the filesystem cannot store en.json and EN.json independently."
+  },
+  "excludedSourceTests": [
+    {
+      "file": "packages/typert/generator/tests/cordis-catalog-contract.spec.ts",
+      "sourceBlob": "7ef7a3f5bae2b98b10eabfd56f3dfc271035a71b",
+      "status": "source-skipped",
+      "scopeDecision": "outside-native-runtime-contract",
+      "reason": "The fixed upstream file uses describe.skip. It tests DSH product documentation catalog extraction, outside the S8 Remote metadata contract. Retained as source evidence; never counted as passed."
+    }
+  ]
+}

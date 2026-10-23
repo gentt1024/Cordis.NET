@@ -7,6 +7,8 @@ import subprocess
 import shutil
 import xml.etree.ElementTree as ET
 
+from package_inspection import inspect_restored_packages
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -52,10 +54,16 @@ def main():
         ET.SubElement(sources, "clear")
         ET.SubElement(sources, "add", key="local", value=str(options.packages.resolve()))
         ET.SubElement(sources, "add", key="nuget.org", value="https://api.nuget.org/v3/index.json")
+        ET.SubElement(ET.SubElement(config, "fallbackPackageFolders"), "clear")
+        mapping = ET.SubElement(config, "packageSourceMapping")
+        for key, pattern in (("local", "Cordis.NET.*"), ("nuget.org", "*")):
+            ET.SubElement(ET.SubElement(mapping, "packageSource", key=key), "package", pattern=pattern)
         ET.ElementTree(config).write(source / "NuGet.Config", encoding="utf-8")
         fixtures = copied
     outcomes = []
-    environment = dict(os.environ, DOTNET_ROOT=str(Path(options.dotnet).resolve().parent))
+    environment = dict(os.environ, DOTNET_ROOT=str(Path(shutil.which(options.dotnet) or options.dotnet).resolve().parent))
+    if options.packages:
+        environment["NUGET_PACKAGES"] = str((options.output / "cache").resolve())
 
     def run(label, command):
         result = subprocess.run([str(part) for part in command], cwd=root, env=environment,
@@ -98,7 +106,11 @@ def main():
             command = [options.dotnet, host / (name + ".dll")]
         run(label + "-run", [*command, bundle, kind, "single" if single else "folder"])
     (options.output / "results.json").write_text(json.dumps(outcomes, indent=2) + "\n", encoding="utf-8")
-    return int(any(outcome["exitCode"] != 0 for outcome in outcomes))
+    failed = any(outcome["exitCode"] != 0 for outcome in outcomes)
+    if options.packages and not failed:
+        restored = inspect_restored_packages(options.output / "cache", options.packages)
+        (options.output / "package-origin.json").write_text(json.dumps(restored, indent=2) + "\n", encoding="utf-8")
+    return int(failed)
 
 
 if __name__ == "__main__":

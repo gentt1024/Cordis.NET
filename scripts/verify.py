@@ -253,6 +253,7 @@ def consume_http_package(directory, rid, version, aot, env):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dsh", type=Path)
+    parser.add_argument("--candidate-dsh", type=Path, help="Also compare fixed candidate traces with this same JIT run; does not change the formal lock")
     parser.add_argument("--origin", type=Path, help="Pinned Cordis source checkout containing the original Core/Loader tests")
     parser.add_argument("--upstream-test", action="append", default=[], help="Select a relevant original DSH test file; repeat for multiple files. Default retains the original suite.")
     parser.add_argument("--defer-upstream-source-tests", action="store_true",
@@ -362,6 +363,13 @@ def main():
                 record_source_results(source_reports)
         else:
             print("LOCAL-ONLY: DSH differential not requested; no upstream-conformance claim.")
+        if options.candidate_dsh:
+            candidate_runner = ["node", "--experimental-transform-types", "reference/run-upgrade-reference.mjs",
+                                "--candidate", f"--dsh={options.candidate_dsh.resolve()}"]
+            candidate_core = run("candidate-core", [*candidate_runner, "--established"])
+            compare("candidate-core-differential", candidate_core, jit)
+            candidate_upgrade = run("candidate-upgrade", candidate_runner)
+            compare("candidate-upgrade-differential", candidate_upgrade, upgrade_jit)
         if options.aot:
             run("aot-publish", ["dotnet", "publish", "tests/Cordis.Conformance", "-c", "Release", "-r", rid,
                                 "-p:PublishAot=true", "-p:NuGetLockFilePath=obj/aot.packages.lock.json", "-o", ROOT / "artifacts/aot"])
@@ -388,6 +396,8 @@ def main():
             run("package-symbols-and-debug-consumer", [sys.executable, "scripts/package_inspection.py",
                 "--directory", package_dir, "--version", version, "--symbols", "--debug-consumer", "--source-root", ROOT])
             steps.append({"name": "package-content-boundaries", "exitCode": 0, "packages": inspected})
+            package_hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                              for path in sorted(package_dir.iterdir()) if path.is_file()}
             consume_packages(rid, package_dir, version, options.aot)
             deployment_dir = Path(tempfile.mkdtemp(prefix="clr-deployment-", dir=ROOT / "artifacts"))
             run("clr-deployment", [sys.executable, "scripts/verify-clr-deployment.py", "--dotnet", shutil.which("dotnet"),
@@ -395,11 +405,19 @@ def main():
             run("clr-multi-entry", [sys.executable, "scripts/verify-clr-multi-entry.py", "--dotnet", shutil.which("dotnet"),
                 "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="clr-multi-entry-", dir=OUT)])
             run("typert-package-consumer", [sys.executable, "scripts/verify-typert.py", "--dotnet", shutil.which("dotnet"),
-                "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="typert-consumer-", dir=OUT), *(["--aot"] if options.aot else [])])
+                "--packages", package_dir, "--runtime", client_artifacts,
+                "--output", tempfile.mkdtemp(prefix="typert-consumer-", dir=OUT), *(["--aot"] if options.aot else [])])
+            for name in ("remote-identity", "remote-access", "access-client"):
+                run(name + "-package-consumer", [sys.executable, "scripts/verify-" + name + ".py",
+                    "--dotnet", shutil.which("dotnet"), "--packages", package_dir,
+                    "--output", tempfile.mkdtemp(prefix=name + "-", dir=OUT)])
             run("remote-metadata-package-consumer", [sys.executable, "scripts/verify-remote-metadata.py", "--dotnet", shutil.which("dotnet"),
                 "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="remote-metadata-", dir=OUT)])
             run("typert-dotnet-settings", [sys.executable, "scripts/verify-typert-dotnet.py", "--dotnet", shutil.which("dotnet"),
                 "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="typert-dotnet-settings-", dir=OUT), *(["--aot"] if options.aot else [])])
+            assert package_hashes == {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                                      for path in sorted(package_dir.iterdir()) if path.is_file()}, "Package batch changed during consumption"
+            steps.append({"name": "package-batch-unchanged", "exitCode": 0, "sha256": package_hashes})
         if git_checkout():
             run("whitespace", ["git", "diff", "--check"])
         else:
@@ -418,6 +436,7 @@ def main():
         hashes = source_hashes()
         (OUT / "verification.json").write_text(json.dumps({"status": status, "commit": commit, "workingTree": dirty,
             "platform": platform.platform(), "rid": rid, "sdkVersion": sdk_version,
+            "runId": os.environ.get("GITHUB_RUN_ID"), "runAttempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
             "checkoutRoot": str(ROOT.resolve()),
             "testResults": {"directory": str(test_results.resolve()), "sha256": {
                 path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(test_results.glob("*.trx"))

@@ -13,18 +13,22 @@ namespace Cordis.Clr;
 internal sealed class MacPackageProcess : IDisposable
 {
     private readonly Task<int> exit;
+
     internal Process Process
     {
         get;
     }
+
     internal StreamReader StandardOutput
     {
         get;
     }
+
     internal StreamReader StandardError
     {
         get;
     }
+
     internal int ExitCode => exit.GetAwaiter().GetResult();
 
     private MacPackageProcess(int pid, StreamReader output, StreamReader error)
@@ -49,8 +53,11 @@ internal sealed class MacPackageProcess : IDisposable
             Check(Native.InitAttributes(out attributes));
             Check(Native.InitActions(out actions));
             Check(Native.SetGroup(ref attributes, 0));
-            Check(Native.SetFlags(ref attributes, Native.SetProcessGroup | Native.StartSuspended |
-                Native.CloseOnExecDefault | Native.SetSignalMask | Native.SetSignalDefaults));
+            Check(
+                Native.SetFlags(
+                    ref attributes,
+                    Native.SetProcessGroup | Native.StartSuspended |
+                    Native.CloseOnExecDefault | Native.SetSignalMask | Native.SetSignalDefaults));
             uint emptyMask = 0, defaults = uint.MaxValue;
             Check(Native.SetMask(ref attributes, ref emptyMask));
             Check(Native.SetDefaults(ref attributes, ref defaults));
@@ -58,7 +65,14 @@ internal sealed class MacPackageProcess : IDisposable
             Check(Native.Open(ref actions, 0, "/dev/null", 0, 0));
             Check(Native.Duplicate(ref actions, output.Write, 1));
             Check(Native.Duplicate(ref actions, error.Write, 2));
-            Check(Native.Spawn(out var spawned, start.FileName, ref actions, ref attributes, arguments.Pointer, environment.Pointer));
+            Check(
+                Native.Spawn(
+                    out var spawned,
+                    start.FileName,
+                    ref actions,
+                    ref attributes,
+                    arguments.Pointer,
+                    environment.Pointer));
             pid = spawned;
             reader = output.OpenReader();
             errorReader = error.OpenReader();
@@ -73,6 +87,7 @@ internal sealed class MacPackageProcess : IDisposable
                 {
                 }
             }
+
             reader?.Dispose();
             errorReader?.Dispose();
             throw;
@@ -125,6 +140,7 @@ internal sealed class MacPackageProcess : IDisposable
                 capacity = checked(capacity * 2);
                 continue;
             }
+
             foreach (var pid in pids.Take(bytes / sizeof(int)))
             {
                 if (pid == 0)
@@ -137,9 +153,11 @@ internal sealed class MacPackageProcess : IDisposable
                         continue;
                     return true;
                 }
+
                 if (info[2] == group && info[3] != 5) // SZOMB cannot execute or retain live threads.
                     return true;
             }
+
             return false;
         }
     }
@@ -170,7 +188,8 @@ internal sealed class MacPackageProcess : IDisposable
                 throw new Win32Exception(Marshal.GetLastPInvokeError());
             read = new((nint)descriptors[0], ownsHandle: true);
             write = new((nint)descriptors[1], ownsHandle: true);
-            if (Native.CloseOnExec(descriptors[0], 0x20006601) < 0 || Native.CloseOnExec(descriptors[1], 0x20006601) < 0)
+            if (Native.CloseOnExec(descriptors[0], 0x20006601) < 0 ||
+                Native.CloseOnExec(descriptors[1], 0x20006601) < 0)
             {
                 var error = Marshal.GetLastPInvokeError();
                 Dispose();
@@ -195,9 +214,11 @@ internal sealed class MacPackageProcess : IDisposable
     private sealed class Strings : IDisposable
     {
         private readonly List<nint> strings = [];
+
         internal nint Pointer
         {
-            get; private set;
+            get;
+            private set;
         }
 
         internal Strings(IEnumerable<string> values)
@@ -210,6 +231,7 @@ internal sealed class MacPackageProcess : IDisposable
                         throw new ArgumentException("Process values cannot contain NUL.");
                     strings.Add(Marshal.StringToCoTaskMemUTF8(value));
                 }
+
                 Pointer = Marshal.AllocHGlobal((strings.Count + 1) * IntPtr.Size);
                 Marshal.Copy([.. strings, 0], 0, Pointer, strings.Count + 1);
             }
@@ -230,42 +252,74 @@ internal sealed class MacPackageProcess : IDisposable
 
     private static class Native
     {
-        internal const short SetProcessGroup = 0x0002, SetSignalDefaults = 0x0004, SetSignalMask = 0x0008,
-            StartSuspended = 0x0080, CloseOnExecDefault = 0x4000;
+        internal const short SetProcessGroup = 0x0002,
+            SetSignalDefaults = 0x0004,
+            SetSignalMask = 0x0008,
+            StartSuspended = 0x0080,
+            CloseOnExecDefault = 0x4000;
+
         [DllImport("libc", EntryPoint = "posix_spawnattr_init")]
         internal static extern int InitAttributes(out nint attributes);
+
         [DllImport("libc", EntryPoint = "posix_spawnattr_destroy")]
         internal static extern int DestroyAttributes(ref nint attributes);
+
         [DllImport("libc", EntryPoint = "posix_spawn_file_actions_init")]
         internal static extern int InitActions(out nint actions);
+
         [DllImport("libc", EntryPoint = "posix_spawn_file_actions_destroy")]
         internal static extern int DestroyActions(ref nint actions);
+
         [DllImport("libc", EntryPoint = "posix_spawnattr_setpgroup")]
         internal static extern int SetGroup(ref nint attributes, int group);
+
         [DllImport("libc", EntryPoint = "posix_spawnattr_setflags")]
         internal static extern int SetFlags(ref nint attributes, short flags);
+
         [DllImport("libc", EntryPoint = "posix_spawnattr_setsigmask")]
         internal static extern int SetMask(ref nint attributes, ref uint mask);
+
         [DllImport("libc", EntryPoint = "posix_spawnattr_setsigdefault")]
         internal static extern int SetDefaults(ref nint attributes, ref uint mask);
+
         [DllImport("libc", EntryPoint = "posix_spawn_file_actions_addchdir_np")]
         internal static extern int ChangeDirectory(ref nint actions, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+
         [DllImport("libc", EntryPoint = "posix_spawn_file_actions_addopen")]
-        internal static extern int Open(ref nint actions, int fd, [MarshalAs(UnmanagedType.LPUTF8Str)] string path, int flags, ushort mode);
+        internal static extern int Open(
+            ref nint actions,
+            int fd,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+            int flags,
+            ushort mode);
+
         [DllImport("libc", EntryPoint = "posix_spawn_file_actions_adddup2")]
         internal static extern int Duplicate(ref nint actions, int from, int to);
+
         [DllImport("libc", EntryPoint = "posix_spawnp")]
-        internal static extern int Spawn(out int pid, [MarshalAs(UnmanagedType.LPUTF8Str)] string command, ref nint actions, ref nint attributes, nint arguments, nint environment);
+        internal static extern int Spawn(
+            out int pid,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string command,
+            ref nint actions,
+            ref nint attributes,
+            nint arguments,
+            nint environment);
+
         [DllImport("libc", EntryPoint = "pipe", SetLastError = true)]
         internal static extern int Pipe([Out] int[] descriptors);
+
         [DllImport("libc", EntryPoint = "ioctl", SetLastError = true)]
         internal static extern int CloseOnExec(int fd, uint command);
+
         [DllImport("libc", EntryPoint = "kill", SetLastError = true)]
         internal static extern int Kill(int pid, int signal);
+
         [DllImport("libc", EntryPoint = "waitpid", SetLastError = true)]
         internal static extern int WaitPid(int pid, out int status, int options);
+
         [DllImport("libproc", EntryPoint = "proc_listpids", SetLastError = true)]
         internal static extern int ListGroup(uint type, uint group, [Out] int[] pids, int size);
+
         [DllImport("libproc", EntryPoint = "proc_pidinfo", SetLastError = true)]
         internal static extern int ProcessInfo(int pid, int flavor, ulong argument, [Out] uint[] info, int size);
     }

@@ -2,6 +2,16 @@
 
 [中文](validation.zh.md)
 
+## Candidate S10 same-batch gate, before promotion
+
+S10 validates the integrated S1–S9 implementation without changing `upstream.lock.json` or the historical `docs/upstream-tests.json`. The formal baseline remains `639ed015397290b3745d163aafe02ffee4aa3f84`; candidate evidence is separately pinned to `687f282e8625c6b8d11ff58211a90524be2e4317`. No new application API is introduced by this verification slice.
+
+Run the existing `verify` workflow on one frozen branch commit with the `candidate` dispatch input enabled. Its Windows x64 and Ubuntu x64 jobs retain the formal source gates and execute JIT, Native AOT, package inspection, isolated authoring, generated clients and CLR deployment. Candidate discovery, partitioned execution and union validation are additional required checks. Each shard must use the same source identities, discovered case multiplicities, workflow run and attempt; filtered-out cases are not counted as executions.
+
+The Linux job produces one package/runtime/author-tool batch. Windows, Ubuntu and macOS consumers check the producer's verification receipt, source hashes and artifact hashes before and after consumption. Portable callers and real browsers consume those exact bytes. Windows and Ubuntu also exercise static AOT callers and dynamic CLR deployments; those are separate contracts. CLR consumers use an isolated NuGet cache, source mapping and archive digest checks against the selected batch. macOS author consumption does not establish full macOS runtime or AOT support.
+
+Baseline promotion requires every required matrix result to pass, candidate source/test inventories and native mappings to be reviewed, ordered differential traces to agree, API migration notes and bilingual documents to be consistent, and package/source archives to retain exact provenance and notices. Missing platforms, unknown outcomes and unexpected skips are not passes. A source-only check cannot satisfy a native behavior assertion. Preserve prior receipts under their original identities. Only after these conditions hold should a separate reviewed change update the lock, reference assertions, excerpts, candidate mappings and compatibility declaration together, followed by full verification of that promoted checkpoint.
+
 ## Candidate browser safety and author increments, 2026-10-23
 
 S9 keeps the formal behavior lock and historical inventory at `639ed015397290b3745d163aafe02ffee4aa3f84`. Scoped source provenance identifies candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, including the local notification-reentrancy correction. Unmodified candidate originals passed 111 cases with zero failures or skips: browser loader 72, entries 35 and CSS/image author builds 4. These ran in the external source-mode harness; they do not establish a full candidate workspace build or typecheck.

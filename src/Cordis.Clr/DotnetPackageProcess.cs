@@ -64,8 +64,11 @@ internal static class DotnetPackageProcess
         var process = fallback;
         WindowsPackageProcess? windows = null;
         MacPackageProcess? mac = null;
+
         Task WaitForExitAsync(CancellationToken token = default) => OperatingSystem.IsMacOS()
-            ? mac!.WaitForExitAsync(token) : process.WaitForExitAsync(token);
+            ? mac!.WaitForExitAsync(token)
+            : process.WaitForExitAsync(token);
+
         int ExitCode() => OperatingSystem.IsMacOS() ? mac!.ExitCode : process.ExitCode;
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(timeout);
@@ -122,6 +125,7 @@ internal static class DotnetPackageProcess
                             if (!process.HasExited)
                                 process.Kill(entireProcessTree: true);
                         }
+
                         await WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
                     }
                     catch (Exception cleanup)
@@ -170,10 +174,12 @@ internal static class DotnetPackageProcess
 
             var drains = Task.WhenAll(
                 DrainAsync(
-                    OperatingSystem.IsWindows() ? windows!.StandardOutput : OperatingSystem.IsMacOS() ? mac!.StandardOutput : process.StandardOutput,
+                    OperatingSystem.IsWindows() ? windows!.StandardOutput :
+                    OperatingSystem.IsMacOS() ? mac!.StandardOutput : process.StandardOutput,
                     isError: false),
                 DrainAsync(
-                    OperatingSystem.IsWindows() ? windows!.StandardError : OperatingSystem.IsMacOS() ? mac!.StandardError : process.StandardError,
+                    OperatingSystem.IsWindows() ? windows!.StandardError :
+                    OperatingSystem.IsMacOS() ? mac!.StandardError : process.StandardError,
                     isError: true));
             try
             {

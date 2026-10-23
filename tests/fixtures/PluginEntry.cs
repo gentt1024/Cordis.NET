@@ -345,6 +345,7 @@ public sealed class IdentityOne : IClrPluginModule
 {
     internal static readonly IPlugin Shared = Create("shared");
     private static readonly IPlugin Own = Create("one");
+
     public IPlugin CreatePlugin()
     {
 #if VERSION_TWO || VERSION_BAD
@@ -381,6 +382,7 @@ public sealed class IdentityOne : IClrPluginModule
 public sealed class IdentityTwo : IClrPluginModule
 {
     private static readonly IPlugin Own = IdentityOne.Create("two");
+
     public IPlugin CreatePlugin()
     {
 #if VERSION_TWO || VERSION_BAD

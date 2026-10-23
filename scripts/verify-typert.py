@@ -1,5 +1,6 @@
 """Verify a generated Remote author NuGet package with isolated JIT/AOT and TypeScript consumers."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -10,19 +11,34 @@ import tempfile
 import threading
 import xml.etree.ElementTree as ET
 
+from package_inspection import inspect_restored_packages
+
+
+def hashes(directory):
+    return {path.relative_to(directory).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(directory.rglob("*")) if path.is_file()}
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--packages", required=True, type=Path)
     parser.add_argument("--package-version", help="Use the isolated candidate package version.")
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--runtime", type=Path, help="Consume an existing browser runtime without rebuilding it")
     parser.add_argument("--dotnet", default="dotnet")
     parser.add_argument("--aot", action="store_true")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
+    runtime = options.runtime.resolve() if options.runtime else root / "artifacts/client-modules"
+    if options.runtime and not (runtime / "client.mjs").is_file():
+        parser.error("The supplied runtime must contain client.mjs")
     options.output = options.output.resolve()
+    if options.output.exists() and any(options.output.iterdir()):
+        parser.error("Output must be empty; preserve prior evidence and choose a new directory")
     options.output.mkdir(parents=True, exist_ok=True)
-    source = Path(tempfile.mkdtemp(prefix="cordis-remote-consumer-"))
+    source = Path(tempfile.mkdtemp(prefix="cordis-remote-consumer-")).resolve()
+    if source.is_relative_to(root):
+        raise RuntimeError("The independent consumer source must be outside the checkout")
     (source / "global.json").write_bytes((root / "global.json").read_bytes())
     version = options.package_version or ET.parse(root / "Directory.Build.props").findtext(".//Version")
     author_feed = source / "author-feed"
@@ -32,11 +48,18 @@ def main():
     ET.SubElement(feeds, "clear")
     for key, value in (("local", str(options.packages.resolve())), ("author", str(author_feed)), ("nuget.org", "https://api.nuget.org/v3/index.json")):
         ET.SubElement(feeds, "add", key=key, value=value)
+    ET.SubElement(ET.SubElement(config, "fallbackPackageFolders"), "clear")
+    mapping = ET.SubElement(config, "packageSourceMapping")
+    for key, pattern in (("local", "Cordis.NET.*"), ("author", "IndependentRemote"), ("nuget.org", "*")):
+        ET.SubElement(ET.SubElement(mapping, "packageSource", key=key), "package", pattern=pattern)
     ET.ElementTree(config).write(source / "NuGet.Config", encoding="utf-8")
     env = dict(os.environ, DOTNET_ROOT=str(Path(shutil.which(options.dotnet) or options.dotnet).resolve().parent),
-               NUGET_PACKAGES=str(source / "cache"), DOTNET_CLI_UI_LANGUAGE="en")
+               NUGET_PACKAGES=str(source / "cache"), NUGET_FALLBACK_PACKAGES="", DOTNET_CLI_UI_LANGUAGE="en")
     env["PATH"] = env["DOTNET_ROOT"] + os.pathsep + env["PATH"]
     steps = []
+    runtime_hashes = hashes(runtime) if options.runtime else None
+    restored_packages = {}
+    status = "failed"
 
     def run(label, command, cwd=source, expected=0):
         process = subprocess.run([str(part) for part in command], cwd=cwd, env=env, capture_output=True)
@@ -54,6 +77,7 @@ def main():
         path = directory / (name + ".csproj")
         path.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework>'
                         '<ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors>' +
+                        '<RestorePackagesPath>' + str(source / 'cache') + '</RestorePackagesPath>' +
                         properties + '</PropertyGroup><ItemGroup>' + references + '</ItemGroup></Project>', encoding="utf-8")
         return directory, path
 
@@ -76,8 +100,9 @@ def main():
         shutil.copyfile(root / "tests/fixtures/TypertConsumer/LifetimeCases.cs", consumer / "LifetimeCases.cs")
         generated = options.output / "generated"
         run("consumer-jit", [options.dotnet, "run", "--project", consumer_project, "-c", "Release", "--", generated])
-        runtime = root / "artifacts/client-modules"
-        run("client-runtime-build", ["node", root / "scripts/build-client-modules.mjs", runtime], root)
+        if options.runtime is None:
+            run("client-runtime-build", ["node", root / "scripts/build-client-modules.mjs", runtime], root)
+            runtime_hashes = hashes(runtime)
         readiness = queue.Queue()
         process = subprocess.Popen([options.dotnet, str(consumer / "bin/Release/net10.0/Consumer.dll"), str(generated), "--serve"],
             cwd=source, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
@@ -95,9 +120,21 @@ def main():
             native = source / "native"
             run("consumer-aot-publish", [options.dotnet, "publish", consumer_project, "-c", "Release", "-p:PublishAot=true", "-o", native])
             run("consumer-aot-run", [native / ("Consumer.exe" if os.name == "nt" else "Consumer"), options.output / "generated-aot"])
+        for directory in (author, consumer):
+            assets = json.loads((directory / "obj/project.assets.json").read_text(encoding="utf-8"))
+            if any(value.get("type") == "project" for value in assets["libraries"].values()):
+                raise RuntimeError("The package consumer resolved a project dependency")
+            if {Path(path).resolve() for path in assets["packageFolders"]} != {source / "cache"}:
+                raise RuntimeError("The package consumer used a shared or fallback cache")
+        restored_packages = inspect_restored_packages(source / "cache", options.packages.resolve())
+        if hashes(runtime) != runtime_hashes:
+            raise RuntimeError("The consumed browser runtime changed during verification")
+        status = "requested-checks-passed"
     finally:
-        (options.output / "results.json").write_text(json.dumps({"steps": steps, "independentSourceDirectory": str(source),
-            "packageReferencesOnly": True, "aotRequested": options.aot}, indent=2) + "\n", encoding="utf-8")
+        (options.output / "results.json").write_text(json.dumps({"status": status, "steps": steps, "independentSourceDirectory": str(source),
+            "packageReferencesOnly": True, "aotRequested": options.aot,
+            "runtimeDirectory": str(runtime), "runtimeSupplied": options.runtime is not None,
+            "runtimeSha256": runtime_hashes, "restoredPackages": restored_packages}, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

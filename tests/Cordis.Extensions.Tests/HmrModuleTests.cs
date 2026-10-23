@@ -10,7 +10,9 @@ public sealed class HmrModuleTests
 
     private sealed class LocatedResolver(ResolvedModule module) : IModuleResolver
     {
-        public ValueTask<ResolvedModule> ResolveAsync(string specifier, Uri baseUri,
+        public ValueTask<ResolvedModule> ResolveAsync(
+            string specifier,
+            Uri baseUri,
             CancellationToken cancellationToken = default) => ValueTask.FromResult(module);
     }
 
@@ -19,30 +21,48 @@ public sealed class HmrModuleTests
     {
         await using var context = new Context();
         await using var hmr = new HmrCoordinator();
-        var module = new ResolvedModule(new Plugin<object?> { Apply = (_, _) => { } }, "actual.dll");
+        var module = new ResolvedModule(
+            new Plugin<object?>
+            {
+                Apply = (_, _) =>
+                {
+                }
+            },
+            "actual.dll");
         Loader? loader = null;
         await context.RunAsync(async ctx =>
         {
             loader = new Loader(ctx, new LocatedResolver(module));
-            await loader.Root.UpdateAsync([new() { Id = "row", Name = "plugin" }]);
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "row",
+                    Name = "plugin"
+                }
+            ]);
             await loader.WaitAsync();
         });
         var calls = 0;
         var warnings = new List<object?>();
         hmr.Warning += warnings.Add;
-        using var tracking = hmr.TrackLoader(loader!, (_, _) =>
-        {
-            calls++;
-            throw new FileNotFoundException("new mapping is missing");
-        });
+        using var tracking = hmr.TrackLoader(
+            loader!,
+            (_, _) =>
+            {
+                calls++;
+                throw new FileNotFoundException("new mapping is missing");
+            });
         await hmr.NotifyChangedAsync("actual.dll");
         Assert.Equal(0, calls);
         Assert.Empty(warnings);
         Assert.Same(module, loader!.Resolve("row").Module);
-        await loader.UpdateAsync("row", new()
-        {
-            Disabled = true
-        });
+        await loader.UpdateAsync(
+            "row",
+            new()
+            {
+                Disabled = true
+            });
         await loader.WaitAsync();
         Assert.Null(loader.Resolve("row").Module);
         await hmr.NotifyChangedAsync("actual.dll");

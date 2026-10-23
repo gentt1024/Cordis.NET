@@ -10,8 +10,10 @@ public sealed class ClrIdentityTests
     private static readonly Uri Basis = new("file:///");
 
     private static ClrModuleDefinition Definition(string version, string entry) =>
-        new(Path.Combine(AppContext.BaseDirectory, "fixtures", version),
-            "VersionedPlugin.dll", "VersionedPlugin.Identity" + entry);
+        new(
+            Path.Combine(AppContext.BaseDirectory, "fixtures", version),
+            "VersionedPlugin.dll",
+            "VersionedPlugin.Identity" + entry);
 
     private static Dictionary<string, ClrModuleDefinition> Definitions(string version) => new()
     {
@@ -29,11 +31,32 @@ public sealed class ClrIdentityTests
         {
             ctx.Provide("trace", trace);
             loader = new Loader(ctx, resolver);
-            await loader.Root.UpdateAsync([
-                new() { Id = "one", Name = "one", Config = "one" },
-                new() { Id = "alias", Name = "alias", Config = "alias" },
-                new() { Id = "two", Name = "two", Config = "two" },
-                new() { Id = "cold", Name = "one", Disabled = true }
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "one",
+                    Name = "one",
+                    Config = "one"
+                },
+                new()
+                {
+                    Id = "alias",
+                    Name = "alias",
+                    Config = "alias"
+                },
+                new()
+                {
+                    Id = "two",
+                    Name = "two",
+                    Config = "two"
+                },
+                new()
+                {
+                    Id = "cold",
+                    Name = "one",
+                    Disabled = true
+                }
             ]);
             await loader.WaitAsync();
         });
@@ -58,16 +81,20 @@ public sealed class ClrIdentityTests
         foreach (var version in new[] { "v2", "v1", "v2" })
         {
             trace.Clear();
-            await resolver.ReplaceAsync(Definitions(version), async pairs =>
-            {
-                Assert.Equal(3, pairs.Count);
-                await loader.ReplacePluginsAsync(pairs);
-            });
+            await resolver.ReplaceAsync(
+                Definitions(version),
+                async pairs =>
+                {
+                    Assert.Equal(3, pairs.Count);
+                    await loader.ReplacePluginsAsync(pairs);
+                });
             Assert.Equal(3, trace.Count(value => value.StartsWith("stop:", StringComparison.Ordinal)));
             var expected = version == "v1"
                 ? new[] { "start:v1:shared:one", "start:v1:shared:alias", "start:v1:shared:two" }
                 : new[] { "start:v2:one:one", "start:v2:one:alias", "start:v2:two:two" };
-            Assert.Equal(expected.Order(), trace.Where(value => value.StartsWith("start:", StringComparison.Ordinal)).Order());
+            Assert.Equal(
+                expected.Order(),
+                trace.Where(value => value.StartsWith("start:", StringComparison.Ordinal)).Order());
             await context.RunAsync(async ctx =>
             {
                 foreach (var name in new[] { "one", "alias", "two" })
@@ -76,12 +103,14 @@ public sealed class ClrIdentityTests
                     Assert.Same(await resolver.ResolveAsync(name, Basis), entry.Module);
                     Assert.Equal(FiberState.Active, entry.Fiber!.State);
                 }
+
                 var current = loader.Resolve("one").Module!;
                 Assert.Equal(version == "v1" ? 3 : 2, ctx.Registry.Get(current.Plugin)!.Fibers.Count());
                 Assert.Null(loader.Resolve("cold").Fiber);
                 Assert.Null(loader.Resolve("cold").Module);
             });
         }
+
         await context.DisposeAsync();
         Assert.All(loader.Entries(), entry => Assert.Null(entry.Module));
     }
@@ -112,12 +141,14 @@ public sealed class ClrIdentityTests
             Assert.Equal(3, trace.Count(value => value.StartsWith("stop:bad:", StringComparison.Ordinal)));
             Assert.Equal(3, trace.Count(value => value.StartsWith("start:v1:", StringComparison.Ordinal)));
         }
+
         foreach (var (name, module) in previous)
         {
             Assert.Same(module, loader.Resolve(name).Module);
             Assert.Same(module, await resolver.ResolveAsync(name, Basis));
             Assert.Equal(FiberState.Active, loader.Resolve(name).Fiber!.State);
         }
+
         await resolver.ReplaceAsync(Definitions("v2"), async pairs => await loader.ReplacePluginsAsync(pairs));
         Assert.NotSame(previous["two"].Plugin, loader.Resolve("two").Module!.Plugin);
     }
@@ -143,7 +174,8 @@ public sealed class ClrIdentityTests
         Assert.Empty(trace);
         Assert.Equal(FiberState.Active, direct!.State);
         Assert.Same(original, loader.Resolve("one").Module);
-        Assert.All(new[] { "one", "alias", "two" },
+        Assert.All(
+            new[] { "one", "alias", "two" },
             name => Assert.Equal(FiberState.Active, loader.Resolve(name).Fiber!.State));
         await direct.DisposeAsync();
         await resolver.ReplaceAsync(Definitions("v2"), async pairs => await loader.ReplacePluginsAsync(pairs));

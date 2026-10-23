@@ -88,7 +88,10 @@ public interface IModuleResolver
     /// Returns the same module reference for repeated imports in one generation.
     /// Aliases may retain distinct module references while sharing an exported plugin.
     /// </summary>
-    ValueTask<ResolvedModule> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default);
+    ValueTask<ResolvedModule> ResolveAsync(
+        string specifier,
+        Uri baseUri,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -110,7 +113,10 @@ public sealed class StaticModuleResolver : IModuleResolver
     /// <summary>
     /// Resolves async.
     /// </summary>
-    public ValueTask<ResolvedModule> ResolveAsync(string specifier, Uri baseUri, CancellationToken cancellationToken = default)
+    public ValueTask<ResolvedModule> ResolveAsync(
+        string specifier,
+        Uri baseUri,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (modules.TryGetValue(specifier, out var plugin) || modules.TryGetValue(

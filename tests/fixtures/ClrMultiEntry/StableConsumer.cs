@@ -74,7 +74,7 @@ await using var installed = new ClrModuleResolver(Path.Combine(profile, "forbidd
 using var packages = new DotnetPluginToolchain(
     profile,
     installed,
-    [args[0], args[1], "https://api.nuget.org/v3/index.json"],
+    [args[0], args[1]],
     args[2]);
 var inspection = await packages.InspectAsync(new(package, "1.0.0-alpha", args[0]));
 var prepared = await packages.PrepareAsync(

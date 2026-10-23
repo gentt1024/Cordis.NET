@@ -207,6 +207,7 @@ public static partial class ProfileMaintenance
                 break;
             }
         }
+
         if (implied is not null && (target < 0 || root.Children[target].PlainSwitch) &&
             implied(target))
         {
@@ -269,8 +270,11 @@ public static partial class ProfileMaintenance
 
         var start = text.LastIndexOf('\n', node.Start) + 1;
         var end = EndOfLine(text, node.Flow ? node.ContentEnd : node.Fields.Values.Max(field => field.ContentEnd));
-        var comments = string.Concat(text[start..end].Split('\n')
-            .Where(line => line.TrimStart().StartsWith('#')).Select(line => line + "\n"));
+        var comments = string.Concat(
+            text[start..end]
+                .Split('\n')
+                .Where(line => line.TrimStart().StartsWith('#'))
+                .Select(line => line + "\n"));
         return text[..start] + comments + (root.Children.Count == 1 ? "[]\n" : "") + text[end..];
     }
 
@@ -377,19 +381,26 @@ public static partial class ProfileMaintenance
     {
         public string? Anchor
         {
-            get; init;
+            get;
+            init;
         }
+
         public bool Alias
         {
-            get; init;
+            get;
+            init;
         }
+
         public string? ScalarValue
         {
-            get; init;
+            get;
+            init;
         }
+
         public bool PlainSwitch
         {
-            get; set;
+            get;
+            set;
         }
 
         public int Start
@@ -465,6 +476,7 @@ public static partial class ProfileMaintenance
                 anchors[anchor] = node;
             return node;
         }
+
         if (parser.TryConsume<AnchorAlias>(out var alias))
             return new(checked((int)alias.Start.Index), checked((int)alias.Start.Column))
             {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -27,6 +28,25 @@ PACKAGE_LAYOUTS = {
 }
 
 PUBLISHABLE_PACKAGE_IDS = tuple(identity for identity in PACKAGE_LAYOUTS if identity.startswith("Cordis.NET."))
+
+
+def inspect_restored_packages(cache: Path, batch: Path) -> dict[str, str]:
+    """Require every restored Cordis archive to match the selected package batch."""
+    expected = {path.name.casefold(): path for path in batch.glob("*.nupkg")}
+    restored = sorted(path for path in cache.rglob("*.nupkg")
+                      if path.name.casefold().startswith("cordis.net."))
+    if not restored:
+        raise ValueError("No restored Cordis packages found in the isolated cache")
+    result = {}
+    for path in restored:
+        name = path.name.casefold()
+        if name not in expected:
+            raise ValueError(f"Restored Cordis package is absent from the selected batch: {path.name}")
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != hashlib.sha256(expected[name].read_bytes()).hexdigest():
+            raise ValueError(f"Restored Cordis package differs from the selected batch: {path.name}")
+        result[name] = digest
+    return result
 
 
 def inspect_readme_links(readme: str, entries: set[str]) -> None:

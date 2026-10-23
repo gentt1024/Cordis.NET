@@ -410,7 +410,8 @@ public sealed class Entry
     /// <summary>The actual import used by the current Fiber; later name resolution does not replace it.</summary>
     public ResolvedModule? Module
     {
-        get; internal set;
+        get;
+        internal set;
     }
 
     /// <summary>
@@ -898,12 +899,19 @@ public sealed class Loader : EntryTree
     {
         ArgumentNullException.ThrowIfNull(previous);
         ArgumentNullException.ThrowIfNull(replacement);
-        var modules = Entries().Select(entry => entry.Module)
-            .OfType<ResolvedModule>().Where(module => ReferenceEquals(module.Plugin.Identity, previous.Identity)).Distinct().ToArray();
+        var modules = Entries()
+            .Select(entry => entry.Module)
+            .OfType<ResolvedModule>()
+            .Where(module => ReferenceEquals(module.Plugin.Identity, previous.Identity))
+            .Distinct()
+            .ToArray();
         if (modules.Length == 0)
             modules = [new(previous)];
-        await ReplacePluginsAsync(modules.Select(module =>
-            new ModuleReplacement(module, new(replacement, module.Filename))).ToArray());
+        await ReplacePluginsAsync(
+            modules
+                .Select(module =>
+                    new ModuleReplacement(module, new(replacement, module.Filename)))
+                .ToArray());
     });
 
     /// <summary>Switch a prepared module group together, restoring all previous plugins if candidate activation fails.</summary>
@@ -924,13 +932,16 @@ public sealed class Loader : EntryTree
         foreach (var pair in pairs)
         {
             if (imports.TryGetValue(pair.Previous, out var existing) && !ReferenceEquals(existing, pair.Replacement))
-                throw new ArgumentException("One loaded import cannot have conflicting successors.", nameof(replacements));
+                throw new ArgumentException(
+                    "One loaded import cannot have conflicting successors.",
+                    nameof(replacements));
             imports[pair.Previous] = pair.Replacement;
         }
 
         return Context.RunAsync(async _ =>
         {
-            var rows = pairs.GroupBy(pair => pair.Previous.Plugin.Identity, ReferenceEqualityComparer.Instance)
+            var rows = pairs
+                .GroupBy(pair => pair.Previous.Plugin.Identity, ReferenceEqualityComparer.Instance)
                 .SelectMany(group =>
                     (Context.Registry.Get(group.First().Previous.Plugin)?.Fibers.ToArray() ?? []).Select(f =>
                     {
@@ -939,12 +950,15 @@ public sealed class Loader : EntryTree
                         if (entry is not null)
                         {
                             if (entry.Module is not { } module || !imports.TryGetValue(module, out replacement!))
-                                throw new InvalidOperationException("No replacement was supplied for a loaded Loader import.");
+                                throw new InvalidOperationException(
+                                    "No replacement was supplied for a loaded Loader import.");
                         }
                         else
                         {
-                            var candidates = group.Select(pair => pair.Replacement.Plugin.Identity)
-                                .Distinct(ReferenceEqualityComparer.Instance).ToArray();
+                            var candidates = group
+                                .Select(pair => pair.Replacement.Plugin.Identity)
+                                .Distinct(ReferenceEqualityComparer.Instance)
+                                .ToArray();
                             if (candidates.Length != 1)
                                 throw new InvalidOperationException(
                                     "HMR replacement is ambiguous for a plugin instance without a Loader entry.");
@@ -953,7 +967,8 @@ public sealed class Loader : EntryTree
 
                         return (Fiber: f, Entry: entry, Parent: f.Parent,
                             Raw: entry is not null ? entry.Options.RawConfig : f.RawConfig,
-                            Previous: entry?.Module?.Plugin ?? group.First().Previous.Plugin, Replacement: replacement.Plugin,
+                            Previous: entry?.Module?.Plugin ?? group.First().Previous.Plugin,
+                            Replacement: replacement.Plugin,
                             PreviousModule: entry?.Module, ReplacementModule: replacement);
                     }))
                 .ToArray();
@@ -1145,7 +1160,8 @@ public sealed class Loader : EntryTree
     {
         if (!name.StartsWith("cordis:", StringComparison.Ordinal))
             return resolver.ResolveAsync(name, baseUri);
-        var plugin = Builtins.GetValueOrDefault(name[7..]) ?? throw new FileNotFoundException($"Unknown builtin {name}.");
+        var plugin = Builtins.GetValueOrDefault(name[7..]) ??
+            throw new FileNotFoundException($"Unknown builtin {name}.");
         if (!builtinModules.TryGetValue(plugin, out var module))
             builtinModules[plugin] = module = new(plugin);
         return ValueTask.FromResult(module);
