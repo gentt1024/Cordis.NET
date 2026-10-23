@@ -2,6 +2,39 @@
 
 [中文](validation.zh.md)
 
+## Candidate resource decisions and preparation, 2026-10-23
+
+S6 uses the [scoped candidate exception](compatibility.md#candidate-resource-decisions-and-preparation-2026-10-23) at `687f282e8625c6b8d11ff58211a90524be2e4317`; formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. The local environment is macOS arm64, .NET SDK 10.0.111/runtime 10.0.11 and Node 24.13.0.
+
+The unmodified candidate originals passed 106 cases, zero failures/skips: protocol remote-access 8, gateway-access 30, gateway host 47 and RemoteAccess host 21. The external minimal harness uses candidate-selected Vitest 4.1.11, TypeScript 6.0.3 and Vite 8.2.2. This is not a complete candidate workspace build/typecheck. Some original cases cover S7 events/snapshots; their source pass is reference evidence, not native implementation of those deferred contracts.
+
+| S6 contract | Native checks |
+|---|---|
+| Binding alternatives, resource intersection, condition/explanation priority, failed policy and owner | `TypertRemoteAccessTests`; native malformed-output and diagnostic suppression/reset cases |
+| No Context/lookup side effects before authorization; ordinary JSON error priority | `TypertGatewayAccessTests` and existing lookup-only `TypertGatewayPreparationTests` |
+| Reader/provider/default precedence, first-object fallback, duplicate IDs, invalid/absent resources | `TypertGatewayAccessTests`, independent NuGet consumer |
+| Decoded view reused by business; defaults, setter-only and opaque/polymorphic types, optional/null and cancellation | `TypertGatewayAccessTests`; serialization is forbidden by a counting codec |
+| Dynamic list filtering and continued S7 event refusal | Real Gateway unary/stream tests and independent NuGet consumer |
+| Identity cannot be chosen by wire; grants and withdrawal precede provider calls | `RemoteCarrierTests.Carrier_identity_and_access_are_host_selected_before_lookup`, real HTTP and WebSocket mux |
+
+The required full gate uses the formal checkout, with prior evidence archived before choosing an empty output directory. The independent S6 consumer is a separate command, not an implicit `verify.py` step:
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+python3 scripts/verify-remote-access.py --packages <package-batch> --output <empty-output>
+```
+
+The consumer uses a generated console outside the checkout, a fresh cache and explicit local package-source mapping, with only `Cordis.NET.Composition` as a direct package dependency and serializer reflection disabled. Local evidence does not establish Windows/Linux, Native AOT, full DSH Node SDK interoperability or the remaining S7 closure. Machine paths, raw logs and private audit setup remain outside the repository.
+
+Executed result: all 33 requested full-gate steps passed with `sourceUnchanged=true`. Native tests passed 1,153 cases with zero failures and the single existing Windows Job-object host-exit exclusion on macOS. Formal profile/module originals passed 54 cases. API, generated clients, CLI, differential traces and mapped test instances passed; original Core/Loader source suites were not requested. Focused composition tests passed 117 cases and real carrier/event tests passed 16, without failures or skips.
+
+Nine packages passed inspection; seven packaged library DLLs matched the final tested Release outputs byte for byte. The independent S6 consumer passed all 37 checks; the existing saved-model Remote consumer passed all 37 steps with their expected outcomes. Eleven changed C# files passed all four canonical formatting stages. Review corrected implicit extraction for opaque enumerable and polymorphic objects and optional direct IDs; regression tests prove both refusal and explicit-reader recovery.
+
+The S5 consumer's first run exposed an obsolete error-priority assertion: an undeclared `principal` argument now fails exact-field validation before access. Its successor explicitly checks that refusal and separately checks access denial for valid guest arguments, retaining zero-business-invocation assertions on both paths. All 16 checks then passed from the integrated root script. After the full gate, only that independently verified consumer script and these bilingual result paragraphs changed; documentation, whitespace and source hashes were rechecked. Runtime, tests and public API bytes remained unchanged. No failed test was skipped or removed.
+
 ## Candidate Remote identity and resources, 2026-10-23
 
 S5 follows the [scoped candidate exception](compatibility.md#candidate-remote-identity-and-resource-slice-2026-10-23). Candidate source remains `687f282e8625c6b8d11ff58211a90524be2e4317`; the formal lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. This run uses macOS arm64, .NET SDK 10.0.111/runtime 10.0.11 and Node 24.13.0.

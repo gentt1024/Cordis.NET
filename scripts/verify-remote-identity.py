@@ -88,7 +88,10 @@ await root.RunAsync(async ctx =>
             TypertCodec.Create(GateJson.Default.Int32))]));
 });
 
-var denied = await gateway.InvokeAsync("identity/read", Json("""{"principal":{"kind":"owner"}}"""), guest);
+var spoofed = await gateway.InvokeAsync("identity/read", Json("""{"principal":{"kind":"owner"}}"""), guest);
+Check(!spoofed.Ok && spoofed.Error?.Code == "gateway/arguments-invalid" && invocations == 0,
+    "spoofed-principal-payload-rejected-before-business");
+var denied = await gateway.InvokeAsync("identity/read", Json("{}"), guest);
 Check(!denied.Ok && denied.Error?.Code == "remote-access/denied" && invocations == 0,
     "guest-denied-before-business");
 var allowed = await gateway.InvokeAsync("identity/read", Json("{}"), owner);
@@ -218,7 +221,7 @@ def main():
         if len(reports) != 1:
             raise RuntimeError("Consumer did not emit exactly one identity result.")
         result["checks"] = json.loads(reports[0])
-        if len(result["checks"]) != 15 or len(set(result["checks"])) != 15:
+        if len(result["checks"]) != 16 or len(set(result["checks"])) != 16:
             raise RuntimeError("Consumer did not finish every identity check exactly once.")
         result["status"] = "passed"
     except Exception as error:

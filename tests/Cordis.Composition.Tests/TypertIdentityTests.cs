@@ -140,7 +140,9 @@ public sealed class TypertIdentityTests
     [InlineData("$events/result", false)]
     [InlineData("identity/watch", true)]
     [InlineData("$events", true)]
-    public async Task Non_owner_is_refused_before_preparation_on_every_gateway_entry(string endpoint, bool stream)
+    public async Task Non_owner_without_access_is_refused_before_resolvers_on_every_gateway_entry(
+        string endpoint,
+        bool stream)
     {
         await using var root = new Context();
         var (gateway, connection, service) = await Setup(
@@ -158,19 +160,21 @@ public sealed class TypertIdentityTests
             if (stream)
             {
                 await using var reader = (explicitPeer == 1
-                    ? gateway.StreamAsync(endpoint, Json("null"), connection.Peer)
-                    : gateway.StreamAsync(endpoint, Json("null"))).GetAsyncEnumerator();
+                    ? gateway.StreamAsync(endpoint, Json("{}"), connection.Peer)
+                    : gateway.StreamAsync(endpoint, Json("{}"))).GetAsyncEnumerator();
                 Assert.True(await reader.MoveNextAsync());
                 result = reader.Current;
                 Assert.False(await reader.MoveNextAsync());
             }
             else
                 result = explicitPeer == 1
-                    ? await gateway.InvokeAsync(endpoint, Json("null"), connection.Peer)
-                    : await gateway.InvokeAsync(endpoint, Json("null"));
+                    ? await gateway.InvokeAsync(endpoint, Json("{}"), connection.Peer)
+                    : await gateway.InvokeAsync(endpoint, Json("{}"));
 
             Assert.Equal("remote-access/denied", result.Error?.Code);
-            Assert.Equal("non-owner-unavailable", result.Error?.Details?.GetProperty("reason").GetString());
+            Assert.Equal(
+                endpoint.StartsWith("$events", StringComparison.Ordinal) ? "non-owner-unavailable" : "no-allow",
+                result.Error?.Details?.GetProperty("reason").GetString());
         }
 
         Assert.Equal(0, service.Calls);

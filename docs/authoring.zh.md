@@ -4,6 +4,24 @@
 
 这些可选的 .NET 作者辅助接口复用现有 Cordis 运行时。包使代码可用；模块注册把名称映射到代码；patch/profile 条目选择实例；`Inject` 决定插件何时能够激活。服务身份仍由名称与 realm 决定。这些辅助接口不增加第二套注册表或生命周期。
 
+## 候选资源策略，2026-10-23
+
+在 Host 执行域内将一个 `TypertRemoteAccess` 提供为 `remoteAccess`，并在所属 Fiber 中注册策略：
+
+```csharp
+var access = new TypertRemoteAccess(ctx);
+ctx.Provide("remoteAccess", access);
+var read = new TypertAccessRole("document reader", "document", ["documents/read"]);
+access.RegisterPolicy(ctx, "guest", new(principal =>
+    [new(read, TypertAccessResource.Create("document", "document-1"))]));
+```
+
+策略回调应读取当前业务授权，不跨调用缓存决定。condition 对具体调用接收 action、resource 和解码后的命名参数；`Allows` 中的参数为 null。返回 `TypertAccessDecision.Allowed` 或 `new TypertAccessDecision.Deny("reason")`。`Explain` 只解释已经发生的拒绝。在 Remote 方法中调用 `access.Allows(itemResource)` 逐项过滤列表或流，每次都观察当前 bindings。策略注册随 owner 撤销，异常会拒绝访问。
+
+默认资源字段使用 S5 注册声明和 provider 的 `Resource` 事实。方法需要自定义提取时，Host 服务可实现 `ITypertRemoteResourceSource`。`ResourceReaders` 先按导出方法名、再按资源 kind 索引。reader 接收与业务方法相同的已解码 CLR 参数对象，lookup 身份仍为 `JsonElement`，省略的位置为 `Undefined.Value`，调用者取消令牌单独传入。返回 `[id]`、多个 ID，或用 null 移除本 kind；空列表和非法 ID 会拒绝调用。reader 不应自行解析 Context 或 lookup 对象。即使是 scoped Context 调用，元数据也从根服务读取。
+
+只写资源字段、不透明自定义 codec 对象、尚未选定元数据合同的多态值需要显式 reader。不要通过重新序列化已解码值来推导权限，converter 输出和仅供序列化的 getter 可能不同于已接受的输入。普通 JSON 解码错误现优先于 Service/Context/lookup 准备。客户端 wire 无需变化。非 owner 事件和访问快照仍等待 S7，此候选片不代表完整非 owner 发布闭包。
+
 ## 候选 Remote 身份与资源，2026-10-23
 
 在所属 Context 的执行域内创建 Peer。普通 `TypertHostConnection(owner, gateway)` 仍选择允许事件回答的本地 owner。禁用事件交互的 owner 连接需要显式声明：

@@ -102,6 +102,26 @@ public abstract partial class TypertCodec
             return item.HasValue ? inner.EncodeInput(item.Value) : default;
         }
 
+        internal override ResourceFieldRead ReadResourceField(object? decoded, string field)
+        {
+            if (decoded is JsonElement)
+                return base.ReadResourceField(decoded, field);
+            if (ReferenceEquals(decoded, Undefined.Value))
+                return new(ResourceFieldStatus.NotObject);
+            var item = (RemoteOptional<T>)decoded!;
+            return item.HasValue
+                ? inner.ReadResourceField(item.Value, field)
+                : new(ResourceFieldStatus.NotObject);
+        }
+
+        internal override object? ResourceIdentity(object? decoded)
+        {
+            if (decoded is JsonElement || ReferenceEquals(decoded, Undefined.Value))
+                return decoded;
+            var item = (RemoteOptional<T>)decoded!;
+            return item.HasValue ? inner.ResourceIdentity(item.Value) : Undefined.Value;
+        }
+
         public override object DecodeOutput(JsonElement value)
         {
             _ = inner.ResultSchema;
@@ -130,6 +150,10 @@ public abstract partial class TypertCodec
         public override object? Decode(JsonElement value) => Inner.Decode(value);
         public override JsonElement Encode(object? value) => Inner.Encode(value);
         public override JsonElement EncodeInput(object? value) => Inner.EncodeInput(value);
+        internal override object? ResourceIdentity(object? decoded) => Inner.ResourceIdentity(decoded);
+
+        internal override ResourceFieldRead ReadResourceField(object? decoded, string field) =>
+            Inner.ReadResourceField(decoded, field);
 
         public override object? DecodeOutput(JsonElement value)
         {

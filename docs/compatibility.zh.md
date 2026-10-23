@@ -2,6 +2,22 @@
 
 [English](compatibility.md)
 
+## 候选资源决策与调用准备，2026-10-23
+
+S6 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 Gateway access/preparation 与 RemoteAccess 决策、列表过滤。正式行为锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本节替代 S5 对非 owner 普通调用的临时全面拒绝。非 owner 事件订阅与回答仍拒绝，等待 S7；S5–S7 仍是非 owner 的最小发布闭包。本片不宣称已实现访问快照、follow、事件过滤、回答归属或事件吊销。
+
+调用准备依次检查 Peer 活性、活动 descriptor 和精确字段，再对每个实际传入的普通 JSON 参数解码一次。资源提取与授权早于 Context 解析、Service/binding 准入和 lookup 解码解析。业务调用复用已经解码的普通值。因此非法普通 JSON 优先于 Service 缺失或无效、Context 和 lookup 错误，owner 也遵循此顺序。只有 lookup 的准备仍保留 Service 准入和并行首个失败语义。省略的普通参数保持缺省，显式 null 保持存在。这是相对正式基线有意改变的错误优先级。
+
+`TypertRemoteAccess` 是 Host 持有的 `remoteAccess` Context 服务。`RegisterPolicy(owner, kind, policy)` 将非 owner kind 的策略归属于调用者 Fiber，并拒绝重复注册。`Decide` 每次读取一次 bindings，要求所有涉及的资源分别获准，同一资源的匹配 binding 互为备选。首个拒绝条件提供原因，除非后续 binding 允许；没有拒绝条件时使用 `Explain` 的原因或 `no-allow`。bindings、condition 和 explanation 异常返回 `policy-failed`；非法原生策略输出也拒绝。每个策略在 `Invalidate` 或注册变更前只报告一次诊断。原生 owner-only 宿主可以不安装该服务，非 owner 此时以 `no-allow` 拒绝。这是保留现有 owner 组合的明确适配，与上游必需注入不同。S7 前不会为 `remoteAccess/follow` 添加特殊许可。
+
+`TypertAccessResource.Global` 没有身份，`Create(kind, id)` 创建 ID 为非空字符串的命名资源。role、binding、request 和封闭的 allow/deny 类型表达业务自有策略。`Allows(resource)` 读取当前 invocation 的 principal 和 endpoint，不传调用参数，每次重新读取当前 bindings。owner 和调用外允许，策略缺失或失败返回 false。应用在方法中用它过滤列表或流项目；一个资源的权限不会授予另一个资源。
+
+`ITypertRemoteResourceSource.ResourceReaders` 在根服务上将导出方法名映射到按 kind 区分的 `TypertResourceReader`。每个 kind 的方法 reader 覆盖合并的 Context/lookup 身份，后者覆盖注册默认字段，并保持 kind 原有顺序。Context 身份早于 lookup 参数，重复 ID 保留且逐一检查。默认字段优先取同名顶层参数，否则只取第一个对象参数。reader 可返回多个 ID；null 移除本 kind，空列表、异常、非法 kind 或非字符串／空 ID 在策略求值前产生 `resource-invalid`。没有资源时使用 global。owner 不执行资源 reader 或策略决策。所有载体仍共享已关闭 Peer 和事件准入检查。
+
+原生 reader 接收 `IReadOnlyList<object?>` 和单独的 `CancellationToken`，位置参数列表不会追加取消参数。policy/condition 的命名参数采用 `IReadOnlyDictionary<string, object?>`。普通项是之后传给业务的同一份已解码 CLR 值；lookup/Context 项是独立的原始 `JsonElement`。这是对上游已解码 JavaScript 视图的明确原生适配，不通过再次序列化或运行时反射构造授权视图。默认字段使用 codec 自有 JSON 元数据名称和生成的可读输入访问器，或已解码 JSON／字典字段。setter 规范化和构造默认值可见，仅供序列化的 getter 不提供输入字段。不可读字段、不透明对象或尚未选定元数据合同的运行时派生对象需要显式 reader，否则拒绝。可选顶层身份可解包，同时保持业务参数不变。嵌套 ID 使用包装类型的自定义 DTO 应声明显式 reader。
+
+原生普通参数还会在 codec 解码前递归拒绝按 double 解释为非有限值的 JSON 数字，包括本可被 codec 丢弃的未声明字段。这有意严于候选在 parse 后检查 JSON 安全性的规则，避免构造第二份序列化视图，并覆盖无限制 JSON schema 路径；普通 CLR 数字宽度和转换仍由 codec 决定。直接调用、HTTP 和 mux 使用同一准备流程。业务 wire schema、生成客户端签名、正式锁和历史测试清单不变。参见[作者指南](authoring.zh.md)与[验证](validation.zh.md)。
+
 ## 候选 Remote 身份与资源分片，2026-10-23
 
 S5 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 `packages/typert/protocol/src/principal.ts`、`packages/client/connection/src/peer.ts`、注册表资源存储及 Gateway Peer 准入与寿命。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`，历史源码清单不变。这是范围明确的候选例外，不代表已完成候选 Remote 授权。

@@ -245,6 +245,10 @@ public abstract partial class TypertCodec
 
         public override JsonElement Encode(object? value) => inner.Encode(value);
         public override JsonElement EncodeInput(object? value) => inner.EncodeInput(value);
+        internal override object? ResourceIdentity(object? decoded) => inner.ResourceIdentity(decoded);
+
+        internal override ResourceFieldRead ReadResourceField(object? decoded, string field) =>
+            decoded is null ? new(ResourceFieldStatus.NotObject) : inner.ReadResourceField(decoded, field);
 
         public override object? DecodeOutput(JsonElement value)
         {

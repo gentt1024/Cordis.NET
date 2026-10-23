@@ -2,6 +2,39 @@
 
 [English](validation.md)
 
+## 候选资源决策与调用准备，2026-10-23
+
+S6 使用固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的[范围明确例外](compatibility.zh.md#候选资源决策与调用准备2026-10-23)，正式行为锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本地环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
+
+未修改的候选原始测试通过 106 项，无失败或跳过：protocol remote-access 8 项、gateway-access 30 项、gateway host 47 项、RemoteAccess host 21 项。外部精简测试环境使用候选选定的 Vitest 4.1.11、TypeScript 6.0.3 和 Vite 8.2.2，不代表完整候选 workspace 构建或类型检查。部分原始用例覆盖 S7 事件／快照，其通过只提供参考端证据，不代表原生已实现这些后续合同。
+
+| S6 合同 | 原生检查 |
+|---|---|
+| Binding 备选、资源交集、condition/explanation 优先级、策略失败与 owner | `TypertRemoteAccessTests`，以及非法原生输出和诊断抑制／重置用例 |
+| 授权前没有 Context/lookup 副作用，普通 JSON 错误优先级 | `TypertGatewayAccessTests` 与现有仅 lookup 的 `TypertGatewayPreparationTests` |
+| Reader/provider/default 优先级、首对象回退、重复 ID、非法和缺省资源 | `TypertGatewayAccessTests`、独立 NuGet 消费者 |
+| 业务复用解码视图，默认值、只写和不透明／多态对象、可选／null 与取消 | `TypertGatewayAccessTests`，计数 codec 明确禁止序列化 |
+| 动态列表过滤与继续关闭 S7 事件 | 真实 Gateway unary/stream 测试和独立 NuGet 消费者 |
+| wire 无法选择身份，授权和撤销早于 provider 调用 | `RemoteCarrierTests.Carrier_identity_and_access_are_host_selected_before_lookup`，真实 HTTP 和 WebSocket mux |
+
+必需的完整门禁使用正式 checkout，并在选择空输出目录前归档旧证据。独立 S6 消费者是单独命令，不是 `verify.py` 隐含步骤：
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+python3 scripts/verify-remote-access.py --packages <package-batch> --output <empty-output>
+```
+
+消费者使用仓库外生成的控制台、全新缓存和显式本地包源映射，仅直接依赖 `Cordis.NET.Composition`，并禁用 serializer 反射。本地证据不代表 Windows/Linux、Native AOT、完整 DSH Node SDK 互操作或剩余 S7 闭包已验收。机器路径、原始日志和私有审计配置留在仓库外。
+
+执行结果：完整门禁全部 33 个请求步骤通过，`sourceUnchanged=true`。原生测试通过 1,153 项，零失败，macOS 上只有既有的 Windows Job-object 宿主退出排除项。正式 profile/module 原始测试通过 54 项。API、生成客户端、CLI、差分 trace 和映射测试实例均通过；本轮未请求原始 Core/Loader 源码套件。Composition 聚焦集通过 117 项，真实载体／事件集通过 16 项，均无失败或跳过。
+
+9 个包通过内容检查，7 个打包库 DLL 与最终测试的 Release 输出逐字节一致。独立 S6 消费者的 37 项检查全部通过，既有 saved-model Remote 消费者的 37 个步骤全部符合预期。11 个变更 C# 文件通过四个标准格式化阶段。审查修正了不透明枚举对象、多态对象和可选顶层 ID 的隐式提取，回归测试证明拒绝路径和显式 reader 恢复路径均正确。
+
+S5 消费者首轮发现一项旧错误优先级断言：未声明的 `principal` 参数现在先被精确字段验证拒绝。后继检查明确断言该拒绝，再单独检查合法 guest 参数的权限拒绝，两条路径均保留业务调用次数为零的断言。合入主工作区的脚本随后通过全部 16 项检查。完整门禁后仅修改这一独立验证过的消费者脚本与本双语结果段落，并重查文档、空白和源码哈希；运行时、测试和公开 API 字节不变。没有通过跳过或删除失败测试完成验证。
+
 ## 候选 Remote 身份与资源，2026-10-23
 
 S5 遵循[范围明确的候选例外](compatibility.zh.md#候选-remote-身份与资源分片2026-10-23)。候选源码仍为 `687f282e8625c6b8d11ff58211a90524be2e4317`；正式锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本轮环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
