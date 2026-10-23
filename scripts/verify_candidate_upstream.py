@@ -15,6 +15,7 @@ import subprocess
 import time
 
 from verify import ROOT, source_hashes
+from candidate_source import COMMIT as DSH, identity as source_adaptation
 from verify_upstream import (SHARDS, MATRIX, aggregate_reports, matrix_selection, plan, read, require, run_identity,
                              validate_inventory, validate_report, write)
 
@@ -23,7 +24,6 @@ COUNTS = ROOT / "reference/candidate-suite-counts.json"
 CONFIG = str(ROOT / "reference/vitest-candidate.config.mjs")
 VITEST = str(ROOT / "reference/candidate-tools/node_modules/vitest/vitest.mjs")
 COLLECTOR = str(ROOT / "reference/collect-candidate-tests.mjs")
-DSH = "687f282e8625c6b8d11ff58211a90524be2e4317"
 ORIGIN = "56b3d4f725681cf4556c1a8695a709cc3b6eed74"
 
 
@@ -156,6 +156,7 @@ def validate_frozen(value):
             "Invalid candidate discovery identity")
     require(value["tools"]["lockSha256"] == tool_identity()["lockSha256"] and
             value["tools"]["manifestSha256"] == digest(MANIFEST) and value["tools"]["node"] == tool_identity()["node"], "Discovery tools or scope changed")
+    require(value["sourceAdaptation"] == source_adaptation(), "Candidate adaptation differs from discovery")
     validate_inventory(value["inventory"], approved_counts())
     require(sum(case[:2] == ["composition", MATRIX] for case in value["inventory"]) == 4800,
             "Incomplete candidate linked-resolution matrix")
@@ -171,7 +172,7 @@ def discover(dsh, origin, output, batch):
     inventory, files = collect(dsh, origin, output, steps)
     require(trees == fixed_sources(dsh, origin) and before == source_hashes(), "Source changed during discovery")
     value = {"format": "cordis-candidate-discovery/v1", "dsh": DSH, "origin": ORIGIN, "runId": batch,
-             "tools": tool_identity(), "sourceTrees": trees, "sourceFiles": files,
+             "tools": tool_identity(), "sourceTrees": trees, "sourceFiles": files, "sourceAdaptation": source_adaptation(),
              "inventory": inventory, "steps": steps,
              "meaning": "Discovered original instances only. No runtime pass or native assertion correspondence inferred."}
     # Save raw discovery even before the independently reviewed count file exists.
@@ -219,7 +220,7 @@ def run_shard(dsh, origin, frozen_path, output, shard, batch):
     identity = {"commit": git(ROOT, "rev-parse", "HEAD"), "platform": platform.system(),
                 "architecture": platform.machine(), "dsh": DSH, "origin": ORIGIN,
                 "sourceSha256": before, "tools": tool_identity(), "runId": batch,
-                "inventorySha256": digest(frozen_path), "sourceTrees": trees}
+                "inventorySha256": digest(frozen_path), "sourceTrees": trees, "sourceAdaptation": source_adaptation()}
     steps, outcomes, failures = [], [], []
     result = {"status": "failed", "shard": shard, "shards": SHARDS, "identity": identity,
               "inventory": frozen["inventory"], "outcomes": outcomes, "steps": steps, "suiteFailures": failures}
@@ -284,6 +285,7 @@ def aggregate(directory, frozen_path, expected_commit, expected_platform, batch)
         require(identity["runId"] == batch and identity["inventorySha256"] == digest(frozen_path), "Foreign candidate run or discovery")
         require(identity["tools"] == frozen["tools"], "Candidate tools or scope changed")
         require(identity["sourceTrees"] == frozen["sourceTrees"], "Candidate source identity differs")
+        require(identity["sourceAdaptation"] == frozen["sourceAdaptation"], "Candidate adaptation differs")
         require(identity["sourceSha256"] == source_hashes(), "Shard source differs from current frozen checkpoint")
     rules = skip_rules(expected_platform)
     for report in reports:
@@ -292,7 +294,8 @@ def aggregate(directory, frozen_path, expected_commit, expected_platform, batch)
                 require(row.get("skipReason") == rules.get(tuple(row["case"])), "Candidate skip reason or platform differs")
     result = aggregate_reports(reports, expected_commit, expected_platform, dsh=DSH, origin=ORIGIN,
                                counts=approved_counts(), skippable=rules)
-    result["meaning"] = "Complete frozen candidate original-suite union for this batch and platform. Does not promote the formal baseline or prove native assertion equivalence."
+    result["sourceAdaptation"] = source_adaptation()
+    result["meaning"] = "Complete frozen derived candidate original-suite union for this batch and platform. Does not promote the formal baseline or prove native assertion equivalence."
     return result
 
 

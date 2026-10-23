@@ -1,0 +1,18 @@
+{
+  "format": "cordis-candidate-adaptation/v1",
+  "upstreamRepository": "https://github.com/deepseek-ai/deepseek-harness.git",
+  "upstreamCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "upstreamTree": "f127f0f96a815eac4dea336a2ae0d9cd0f2aa82d",
+  "commit": "fba488001a6c2d37787d800beeab54a770c826a1",
+  "tree": "2feaeeca49ded00fa17d36489e2ed86916c473cc",
+  "commitObject": "tree 2feaeeca49ded00fa17d36489e2ed86916c473cc\nparent 687f282e8625c6b8d11ff58211a90524be2e4317\nauthor Cordis.NET candidate adaptation <candidate@cordis.invalid> 1792713600 +0000\ncommitter Cordis.NET candidate adaptation <candidate@cordis.invalid> 1792713600 +0000\n\nNormalize Windows manifest scope fallback paths\n\nLocal candidate adaptation; original tests and formal behavior lock unchanged.\n",
+  "patch": "candidate-patches/windows-manifest-scope.patch",
+  "patchSha256": "4f8e8f26fee8934fb9e76445ab1a39dbd5e9c5ae6df44c996a1f48c86bac06b0",
+  "files": {
+    "packages/boot/hmr/src/package-manifest.ts": {
+      "beforeBlob": "0c41fbb42ca86cf63d21c68ac7acd9ada4757e99",
+      "afterBlob": "39050136aeb434b528d9cecb68daea1c68c23919"
+    }
+  },
+  "testPolicy": "Original test files, assertions and platform skips are unchanged. This derived commit is not an upstream release or a formal baseline promotion."
+}

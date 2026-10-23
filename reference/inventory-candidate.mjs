@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { checkout, manifest } from './candidate-support.mjs';
 import { historicalDisposition } from './candidate-inventory-scope.mjs';
 import { validateCandidateReview } from './candidate-review.mjs';
@@ -18,6 +19,8 @@ if (existsSync(target)) throw new Error('Do not overwrite candidate inventory ev
 const dsh = checkout(options.dsh, manifest.dsh);
 const origin = checkout(options.origin, manifest.origin);
 const frozen = JSON.parse(readFileSync(options.inventory, 'utf8'));
+const adaptation = JSON.parse(readFileSync(new URL('./candidate-adaptation.json', import.meta.url), 'utf8'));
+if (!isDeepStrictEqual(frozen.sourceAdaptation, adaptation) || adaptation.commit !== manifest.dsh || adaptation.upstreamCommit !== manifest.upstreamDsh) throw new Error('Foreign candidate adaptation');
 if (frozen.dsh !== manifest.dsh || frozen.origin !== manifest.origin) throw new Error('Foreign runtime discovery');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const counts = JSON.parse(readFileSync(new URL('./candidate-suite-counts.json', import.meta.url), 'utf8'));
@@ -78,16 +81,18 @@ const tests = frozen.inventory.map(([suite, file, name, ordinal]) => {
   const sourceRepository = repository === 'origin' ? 'cordiverse/cordis' : 'deepseek-ai/deepseek-harness';
   const blob = gitBlob(root, pin, file);
   if (!blob || frozen.sourceFiles[suite][file] !== blob) throw new Error('Unbound candidate source file: ' + file);
+  if (repository === 'dsh' && gitBlob(root, adaptation.upstreamCommit, file) !== blob) throw new Error('Original candidate test was changed: ' + file);
   return { id: 'C-' + sha256(sourceRepository + ':' + file + ':' + name + ':' + ordinal).slice(0, 16),
     case: [suite, file, name, ordinal], targetCommit: manifest.dsh, sourceRepository,
-    sourceCommit: pin, sourceBlob: blob, title: name, occurrence: ordinal,
+    sourceCommit: repository === 'dsh' ? adaptation.upstreamCommit : pin, candidateSourceCommit: pin,
+    sourceBlob: blob, title: name, occurrence: ordinal,
     sourceSha256: sourceHash(resolve(root, file)), kind: 'original-runtime-test-instance',
     status: 'discovered-not-executed', dotnet: [], assertionReviewStatus: 'unreviewed', evidence: [],
     historicalFileRecordIds: history.filter(record => record.sourceRepository === sourceRepository && record.file === file).map(record => record.id) };
 });
 if (new Set(tests.map(test => test.id)).size !== tests.length) throw new Error('Duplicate candidate stable identity');
 writeFileSync(target, JSON.stringify({ format: 'cordis-candidate-inventory/v1', targetCommit: manifest.dsh,
-  formalBaselineUnchanged: true, discoverySha256: sha256(readFileSync(options.inventory)), runId: frozen.runId,
+  sourceAdaptation: adaptation, formalBaselineUnchanged: true, discoverySha256: sha256(readFileSync(options.inventory)), runId: frozen.runId,
   meaning: 'Runtime instance discovery and retained historical scope. Execution receipts and native assertion correspondence remain separate.',
   tests, historicalTests: history, excludedSourceTests: manifest.excludedSourceTests,
   nativeDeltaReview: { sha256: sha256(reviewBytes), ...nativeDeltaReview },

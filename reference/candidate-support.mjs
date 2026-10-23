@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from './candidate-tools/node_modules/typescript/lib/typescript.js';
 export const manifest = JSON.parse(readFileSync(new URL('./candidate-manifest.json', import.meta.url), 'utf8'));
-if (manifest.dsh !== '687f282e8625c6b8d11ff58211a90524be2e4317' ||
+if (manifest.dsh !== 'fba488001a6c2d37787d800beeab54a770c826a1' ||
     manifest.origin !== '56b3d4f725681cf4556c1a8695a709cc3b6eed74') throw new Error('Unreviewed candidate identity');
 export const toolRequire = createRequire(new URL('./candidate-tools/package.json', import.meta.url));
 export function checkout(path, pin) {

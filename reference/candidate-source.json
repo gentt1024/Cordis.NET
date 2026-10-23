@@ -1,6 +1,6 @@
 {
-  "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
-  "binding": "Candidate only. Git blob SHA-1 verified before loading original algorithms. Does not change the formal behavior lock.",
+  "commit": "fba488001a6c2d37787d800beeab54a770c826a1",
+  "binding": "Derived candidate only. Git blobs bind the reviewed source; candidate-adaptation.json records the original commit and exact patch. Formal behavior lock unchanged.",
   "files": {
     "packages/boot/app-boot/README.i18n.yaml": "c13fb647d12be61a66e2775cf7e893dbb105b91e",
     "packages/boot/app-boot/README.md": "59c38476da21b74b0bf18e46c4c2298cd2919cf6",
@@ -52,6 +52,7 @@
     "packages/boot/app-boot/tests/user-patches.spec.ts": "09e5653c56f5435001f65a581d6ab3e4d814fcfa",
     "packages/boot/app-boot/tsconfig.json": "9c3e57c80989e331b255fabb51cc16a0d225ee46",
     "packages/boot/app-boot/tsdown.config.ts": "6af29018c2cdeb5356e8922cb5b6e21574a3d111",
+    "packages/boot/hmr/src/package-manifest.ts": "39050136aeb434b528d9cecb68daea1c68c23919",
     "packages/core/scope/README.i18n.yaml": "f5011125b1edc3183e7209e356acc58791fa2fb7",
     "packages/core/scope/README.md": "d5f88240e07cfbf113e9b554b2814ab916529795",
     "packages/core/scope/README.zh.md": "a5cf67dcf51e72d1e49fbabddf3d8646e466bda1",
@@ -196,5 +197,6 @@
     "vendor/timer/package.json": "9228d1adc2f7fdd2adac5f1c6edc27365b010c05",
     "vendor/timer/src/index.ts": "009d14a5d43dae08da826fa6014cf185fed714fd",
     "vendor/timer/tsconfig.json": "843303e870c287fcbd7707649a37b962618c872d"
-  }
+  },
+  "upstreamCommit": "687f282e8625c6b8d11ff58211a90524be2e4317"
 }

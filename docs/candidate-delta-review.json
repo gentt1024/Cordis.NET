@@ -1,7 +1,7 @@
 {
   "format": "cordis-candidate-delta-review/v1",
   "formal": "639ed015397290b3745d163aafe02ffee4aa3f84",
-  "candidate": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "candidate": "fba488001a6c2d37787d800beeab54a770c826a1",
   "boundary": "Reviews named S1-S9 assertion clusters only. Neither whole-source-case equivalence nor historical mapping completion is inferred. Execution is recorded separately by the frozen workflow receipts.",
   "sourceFiles": {
     "packages/api/gateway/src/access.ts": {
@@ -3133,5 +3133,7 @@
       "adaptation": "Native Host admission and closed-peer HTTP errors replace cookie/Operator credential withdrawal. This reviews the lifetime invariant only; exchange-cookie rules, Node upgrade failure injection and every Node SDK handshake are outside this correspondence.",
       "limits": "Selected lifetime assertions only. The source case also exercises Node Operator credentials; no native cookie-exchange compatibility is claimed."
     }
-  ]
+  ],
+  "upstreamCandidate": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "candidateAdaptation": "reference/candidate-adaptation.json"
 }

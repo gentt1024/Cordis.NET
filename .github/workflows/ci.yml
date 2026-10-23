@@ -115,10 +115,7 @@ jobs:
         if: ${{ inputs.candidate == true }}
         shell: bash
         run: |
-          git init ../dsh-candidate
-          git -C ../dsh-candidate remote add origin https://github.com/deepseek-ai/deepseek-harness.git
-          git -C ../dsh-candidate fetch --depth=1 origin 687f282e8625c6b8d11ff58211a90524be2e4317
-          git -C ../dsh-candidate checkout --detach FETCH_HEAD
+          python scripts/candidate_source.py --output ../dsh-candidate
       - name: Verify package inspector regression
         run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
       - name: Verify
@@ -254,10 +251,7 @@ jobs:
       - name: Fetch fixed candidate and source origin
         shell: bash
         run: |
-          git init ../dsh-candidate
-          git -C ../dsh-candidate remote add origin https://github.com/deepseek-ai/deepseek-harness.git
-          git -C ../dsh-candidate fetch --depth=1 origin 687f282e8625c6b8d11ff58211a90524be2e4317
-          git -C ../dsh-candidate checkout --detach FETCH_HEAD
+          python scripts/candidate_source.py --output ../dsh-candidate
           git init ../upstream-cordis
           git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
           git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
@@ -301,10 +295,7 @@ jobs:
       - name: Fetch fixed candidate and source origin
         shell: bash
         run: |
-          git init ../dsh-candidate
-          git -C ../dsh-candidate remote add origin https://github.com/deepseek-ai/deepseek-harness.git
-          git -C ../dsh-candidate fetch --depth=1 origin 687f282e8625c6b8d11ff58211a90524be2e4317
-          git -C ../dsh-candidate checkout --detach FETCH_HEAD
+          python scripts/candidate_source.py --output ../dsh-candidate
           git init ../upstream-cordis
           git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
           git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74

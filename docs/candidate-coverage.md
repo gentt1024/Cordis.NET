@@ -2,7 +2,7 @@
 
 [中文](candidate-coverage.zh.md)
 
-This index follows the C01–C22 capability identifiers in the 2026-10-22 upgrade investigation. The candidate is DSH `687f282e8625c6b8d11ff58211a90524be2e4317`; Core/Loader source origin is `56b3d4f725681cf4556c1a8695a709cc3b6eed74`. The formal [behavior lock](../upstream.lock.json) remains `639ed015397290b3745d163aafe02ffee4aa3f84`. S1–S9 are scoped candidate adaptations, not a baseline promotion.
+This index follows the C01–C22 capability identifiers in the 2026-10-22 upgrade investigation. The upstream candidate is DSH `687f282e8625c6b8d11ff58211a90524be2e4317`; current validation uses derived candidate `fba488001a6c2d37787d800beeab54a770c826a1` with the [recorded Windows manifest fix](compatibility.md#candidate-windows-manifest-path-adaptation-2026-10-23); Core/Loader source origin is `56b3d4f725681cf4556c1a8695a709cc3b6eed74`. The formal [behavior lock](../upstream.lock.json) remains `639ed015397290b3745d163aafe02ffee4aa3f84`. S1–S9 are scoped candidate adaptations, not a baseline promotion.
 
 Each row identifies implementation and checks that exercise a capability. It does not assert that every upstream setup, helper or assertion has been individually matched. “Implemented”, “executed” and “assertion reviewed” retain their separate [compatibility meanings](compatibility.md#status-vocabulary). The immutable [historical inventory](upstream-tests.json) and its existing dispositions are unchanged. Passing upstream source cases establishes source execution; passing a native consumer establishes that consumer's contract. Neither alone proves complete assertion equivalence.
 

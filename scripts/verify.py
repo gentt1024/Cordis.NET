@@ -14,6 +14,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 
 from package_inspection import inspect_packages, inspect_package_consumer, prepare_package_consumer
+from candidate_source import identity as candidate_source_identity
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "verification"
@@ -305,6 +306,7 @@ def main():
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--package-output", type=Path, help="Write and validate the exact package batch in this directory")
     options = parser.parse_args()
+    candidate_identity = candidate_source_identity() if options.candidate_dsh else None
     if options.defer_upstream_source_tests and (not options.dsh or options.upstream_test):
         parser.error("Deferred source tests require --dsh and cannot select --upstream-test")
     rid = ("win" if os.name == "nt" else "linux" if sys.platform.startswith("linux") else "osx") + ("-arm64" if platform.machine().lower() in ("aarch64", "arm64") else "-x64")
@@ -489,6 +491,7 @@ def main():
         (OUT / "verification.json").write_text(json.dumps({"status": status, "commit": commit, "workingTree": dirty,
             "platform": platform.platform(), "rid": rid, "sdkVersion": sdk_version,
             "runId": os.environ.get("GITHUB_RUN_ID"), "runAttempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+            "candidateSourceAdaptation": candidate_identity,
             "checkoutRoot": str(ROOT.resolve()),
             "testResults": {"directory": str(test_results.resolve()), "sha256": {
                 path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(test_results.glob("*.trx"))
