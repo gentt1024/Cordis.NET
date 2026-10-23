@@ -918,6 +918,18 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
     for path in owned_sources:
         assert hashlib.sha256(path.read_bytes()).hexdigest() == hashes[path.name]
 
+    refused_client_name = contracts / "RefusedClientName.Generated.g.cs"
+    for client_name in ("Info", "CreateInfo"):
+        refused_client_name.write_text("stale generated client", encoding="utf-8")
+        rejected = run("saved-remote-refuse-client-name-" + client_name.lower(),
+            [dotnet, compiler, "--roslyn-directory", roslyn, "emit-dotnet", "--model", model,
+             "--namespace", "IndependentDeclarations.Wire", "--service", "sharedData",
+             "--client", client_name, "--output", refused_client_name], True)
+        diagnostic = ("Caller type name '" + client_name +
+            "' conflicts with the generated Remote metadata member '" + client_name + "'")
+        assert diagnostic.encode() in rejected, rejected
+        assert not refused_client_name.exists(), "Refused caller name retained stale source: " + client_name
+
     if not saved_remote_only:
         caller, caller_project = project("OrdinaryDataConsumer", '<OutputType>Exe</OutputType>',
             '<PackageReference Include="IndependentData.Contracts" Version="1.0.0-alpha"/>')

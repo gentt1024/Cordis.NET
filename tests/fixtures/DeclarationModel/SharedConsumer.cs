@@ -16,6 +16,58 @@ using var http = new HttpClient(transport)
 http.DefaultRequestHeaders.Authorization = new("consumer-policy");
 await using var connection = new TypertConnection(http, new Uri(host, "/remote"));
 await using var client = new SharedClient(connection);
+var info = SharedClient.Info;
+Check(ReferenceEquals(info, SharedClient.Info), "generated metadata catalog is stable");
+var echoInfo = info.Methods["sharedData/echo"];
+Check(
+    ReferenceEquals(echoInfo, info.Descriptors.Single(method => method.Endpoint == "sharedData/echo")),
+    "method index shares the exact descriptor");
+Check(
+    info
+        .Descriptors.Where(method => method.Invocation is not null)
+        .All(method => !info.Methods.ContainsKey(method.Endpoint)),
+    "Context receivers do not acquire direct named calls");
+var normalInput = echoInfo.Input();
+var strictInput = echoInfo.Input(strict: true);
+Check(
+    ReferenceEquals(normalInput, echoInfo.Input(false)) && !ReferenceEquals(normalInput, strictInput),
+    "normal and strict metadata views are independently cached");
+Check(
+    normalInput.JsonSchema is null && !string.IsNullOrEmpty(normalInput.JsonSchemaError),
+    "recursive input reports unavailable tool projection");
+using var namedJson = JsonDocument.Parse("""{"value":{"display_name":"named","count":29,"extra":"ignored"}}""");
+var named = normalInput.Parse(namedJson.RootElement);
+Check(
+    named["value"] is SharedData { Name: "named", Count: 29 },
+    "parser remains usable without a tool projection");
+try
+{
+    strictInput.Parse(namedJson.RootElement);
+    throw new Exception("Strict metadata input accepted an undeclared nested field.");
+}
+catch (JsonException)
+{
+}
+
+var namedReply = await (Task<RemoteResult<SharedData>>)echoInfo.Invoke(client, named);
+Check(
+    namedReply.Ok && namedReply.Value.Count == 32 && namedReply.Value.Name == "named",
+    "named invocation preserves omitted defaults over the real HTTP carrier");
+var inputTextInfo = info.Methods["sharedData/inputText"];
+await using (var namedStream = await (Task<RemoteStreamHandle<string, string>>)inputTextInfo.Invoke(
+                 client,
+                 new Dictionary<string, object?>
+                 {
+                     ["prefix"] = "named:"
+                 }))
+{
+    namedStream.Send("item");
+    namedStream.End();
+    Check(
+        (await Collect(namedStream)).SequenceEqual(new[] { "named:item", "ended" }),
+        "named invocation returns the generated duplex handle with its uplink");
+}
+
 await using (var text = await client.InputTextAsync("prefix:"))
 {
     try

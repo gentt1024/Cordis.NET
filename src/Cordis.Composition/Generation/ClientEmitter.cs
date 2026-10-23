@@ -11,9 +11,17 @@ internal sealed record ClientCodec(
     JsonElement Schema,
     bool IsVoid = false,
     bool AcceptsUndefined = false,
-    JsonTypeInfo? ResultMetadata = null);
+    JsonTypeInfo? ResultMetadata = null,
+    string TypeSymbol = "unknown",
+    string? Description = null);
 
-internal sealed record ClientParameter(string Wire, ClientCodec Codec, bool AcceptsUndefined, string? Lookup);
+internal sealed record ClientParameter(
+    string Wire,
+    ClientCodec Codec,
+    bool AcceptsUndefined,
+    string? Lookup,
+    string? Name = null,
+    string? Description = null);
 
 internal sealed record ClientScope(string Context, string Wire);
 
@@ -28,7 +36,12 @@ internal sealed record ClientMethod(
     bool IsStream,
     ClientInvocation? Invocation,
     ClientScope? Scope,
-    ClientCodec? Uplink);
+    ClientCodec? Uplink,
+    string? Service = null,
+    string? Id = null,
+    string? Implementation = null,
+    string? Description = null,
+    bool Cancellation = false);
 
 [JsonSerializable(typeof(string))]
 internal partial class ClientEmitterJson : JsonSerializerContext;
@@ -36,7 +49,7 @@ internal partial class ClientEmitterJson : JsonSerializerContext;
 internal static class ClientEmitter
 {
     /// <summary>Emit typed Client methods borrowing the shared Connection runtime. Unsupported schema constructs fail generation.</summary>
-    internal static ClientArtifact Generate(IReadOnlyList<ClientMethod> methodsInput)
+    internal static ClientArtifact Generate(IReadOnlyList<ClientMethod> methodsInput, string package)
     {
         ArgumentNullException.ThrowIfNull(methodsInput);
         if (methodsInput
@@ -46,16 +59,16 @@ internal static class ClientEmitter
                 "A Client contribution cannot contain duplicate Remote endpoints.",
                 nameof(methodsInput));
         var definitions = new StringBuilder(
-            "import type { TypertConnection, RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters } from './cordis-remote.mjs';\n" +
+            "import type { TypertConnection, RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters, RemoteInfo, RemoteMethod } from './cordis-remote.mjs';\n" +
             "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
-            "export type { RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters } from './cordis-remote.mjs';\n");
+            "export type { RemoteResult, RemoteStreamHandle, RemoteDuplexHandle, RemoteOwner, RemoteCaller, RemoteContextAdapters, RemoteInfo, RemoteMethod, RemoteSchema, RemoteValue, RemoteCodec, RemoteDescriptor, RemoteParameter, RemoteInputOptions } from './cordis-remote.mjs';\n");
         var methods = new StringBuilder("export interface RemoteClient {\n  dispose(): Promise<void>;\n");
         var services = new Dictionary<string, StringBuilder>(StringComparer.Ordinal);
         var codecs = new StringBuilder("export const resultCodecs = Object.freeze({\n");
         var codecTypes = new StringBuilder("export declare const resultCodecs: {\n");
         var predicates = new StringBuilder();
         var runtime = new StringBuilder(
-            "import { createClient, mountClient, createResultCodec, resultJson, resultObject, resultEqual } from './cordis-remote.mjs';\n" +
+            "import { createClient, mountClient, createRemoteInfo, createStrictInputCodec, createResultCodec, resultJson, resultObject, resultEqual } from './cordis-remote.mjs';\n" +
             "export { TypertConnection, RemoteError, RemoteStreamCarrierError } from './cordis-remote.mjs';\n" +
             "export function createRemote(connection) { return createClient(connection, [\n");
         var index = 0;
@@ -73,7 +86,8 @@ internal static class ClientEmitter
             {
                 var type = "Boundary" + index++;
                 AppendType(definitions, type, parameter.Codec.Schema);
-                var field = Quote(parameter.Wire) + (parameter.AcceptsUndefined ? "?" : "") + ": " + type;
+                var field = Quote(parameter.Wire) +
+                    (parameter.AcceptsUndefined && parameter.Lookup is null ? "?" : "") + ": " + type;
                 fields.Add(field);
                 if (parameter.Wire != scopeWire)
                     scopedFields.Add(field);
@@ -197,8 +211,10 @@ internal static class ClientEmitter
             "export function getRemote(ctx, namespace) { const service = ctx.get('remote.' + namespace); if (!service) throw new Error('Remote namespace is not mounted: ' + namespace); return service; }\n");
         methods.Append(
             "export declare function mountRemote(ctx: RemoteOwner, connection: TypertConnection, adapters?: RemoteContextAdapters): Promise<{remote: RemoteClient; dispose: () => Promise<void>}>;\n");
+        var metadata = ClientMetadataEmitter.Generate(methodsInput, package);
+        definitions.Append(metadata.Declaration);
         return new(
-            runtime.Append(predicates).Append(codecs).Append("});\n").ToString(),
+            runtime.Append(predicates).Append(codecs).Append("});\n").Append(metadata.Module).ToString(),
             definitions.Append(codecTypes).Append("};\n").Append(methods).ToString());
     }
 

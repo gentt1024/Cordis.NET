@@ -615,3 +615,201 @@ export function createEventsClient(owner, connection, selection, adapters) {
     dispose() { return lifetime.dispose(); }
   };
 }
+
+
+/** Assemble generated metadata without mounting namespaces or constructing parsers. */
+export function createRemoteInfo(spec) {
+  let index;
+  const resolve = () => {
+    if (index !== undefined) return index;
+    const descriptors = [];
+    const methods = Object.create(null);
+    for (const [endpoint, definition] of Object.entries(spec.methods)) {
+      const separator = endpoint.indexOf('/');
+      const namespace = endpoint.slice(0, separator);
+      const method = endpoint.slice(separator + 1);
+      const parameters = definition.parameters.map(parameter => ({
+        ...parameter,
+        wire: parameter.wire ?? parameter.name,
+        codec: remoteValue(parameter.codec),
+        strictCodec: remoteValue(parameter.strictCodec),
+      }));
+      const descriptor = {
+        ...definition,
+        id: definition.id ?? spec.package + '#' + endpoint,
+        namespace,
+        method,
+        parameters,
+        result: remoteValue(definition.result),
+        invocation: definition.invocation.kind === 'direct' ? definition.invocation
+          : {...definition.invocation, codec:remoteValue(definition.invocation.codec)},
+        ...(definition.uplink === undefined ? {} : {uplink:{codec:remoteValue(definition.uplink.codec)}}),
+      };
+      if (definition.invocation.kind === 'direct') {
+        const inputs = [];
+        descriptor.input = options => {
+          const strict = options?.strict === true;
+          return inputs[strict ? 1 : 0] ??= namedRemoteInput(parameters, strict);
+        };
+        descriptor.invoke = (remote, named, signal) => {
+          const receiver = typeof remote.get === 'function'
+            ? remote.get('remote.' + namespace)
+            : Reflect.get(remote, namespace);
+          if (!receiver) throw new Error('Remote namespace is not mounted: ' + namespace);
+          const call = Reflect.get(receiver, method);
+          if (typeof call !== 'function') throw new Error('Remote method is not mounted: ' + endpoint);
+          return call.call(receiver, named, signal);
+        };
+        methods[endpoint] = descriptor;
+      }
+      descriptors.push(descriptor);
+    }
+    return index = {descriptors, methods};
+  };
+  return {
+    get package() { return spec.package; },
+    get descriptors() { return resolve().descriptors; },
+    get methods() { return resolve().methods; },
+  };
+}
+
+// Each cache is independent. An author factory that throws is retried on the next access.
+function remoteValue(spec) {
+  let parser;
+  let projection;
+  const project = () => {
+    if (projection !== undefined) return projection;
+    const value = spec.project();
+    return projection = value.jsonSchema === undefined || spec.description === undefined
+      ? value : {...value, jsonSchema:{...value.jsonSchema, description:spec.description}};
+  };
+  return {
+    mode: 'strict',
+    typeSymbol: spec.typeSymbol,
+    ...(spec.description === undefined ? {} : {description:spec.description}),
+    create: () => parser ??= spec.create(),
+    get jsonSchema() { return project().jsonSchema; },
+    get jsonSchemaError() { return project().jsonSchemaError; },
+  };
+}
+
+function namedRemoteInput(parameters, strict) {
+  let parser;
+  let projection;
+  const codec = parameter => strict ? parameter.strictCodec : parameter.codec;
+  const optional = parameter => parameter.source === 'json' && parameter.acceptsUndefined === true;
+  const project = () => {
+    if (projection !== undefined) return projection;
+    const properties = Object.create(null);
+    const required = [];
+    for (const parameter of parameters) {
+      const value = codec(parameter);
+      const schema = value.jsonSchema;
+      if (schema === undefined) return projection = {
+        jsonSchemaError:value.jsonSchemaError ?? 'No JSON Schema for parameter ' + parameter.wire,
+      };
+      properties[parameter.wire] = parameter.description === undefined ? schema : {...schema, description:parameter.description};
+      if (!optional(parameter)) required.push(parameter.wire);
+    }
+    return projection = {jsonSchema:{type:'object', properties, required, additionalProperties:false}};
+  };
+  return {
+    create: () => {
+      if (parser !== undefined) return parser;
+      const codecs = parameters.map(parameter => codec(parameter).create());
+      return parser = Object.freeze({parse(value) {
+        if (!resultObject(value)) throw new TypeError('Remote input requires a named argument object.');
+        if (Object.keys(value).some(key => !parameters.some(parameter => parameter.wire === key)))
+          throw new TypeError('Remote input contains an undeclared argument.');
+        for (let index = 0; index < parameters.length; index++) {
+          const parameter = parameters[index];
+          if (!Object.hasOwn(value, parameter.wire) || value[parameter.wire] === undefined) {
+            if (optional(parameter)) continue;
+            throw new TypeError('Remote input requires argument ' + JSON.stringify(parameter.wire) + '.');
+          }
+          codecs[index].parse(value[parameter.wire]);
+        }
+        return value;
+      }});
+    },
+    get jsonSchema() { return project().jsonSchema; },
+    get jsonSchemaError() { return project().jsonSchemaError; },
+  };
+}
+
+
+/** Internal strict counterpart of a compiled ordinary input codec. */
+export function createStrictInputCodec(normal, schema, branchFactories) {
+  const branches = new Map();
+  const pointer = (path, key) => path + '/' + String(key).replaceAll('~', '~0').replaceAll('/', '~1');
+  const resolve = path => {
+    let node = schema;
+    if (path !== '#') for (const key of path.slice(2).split('/'))
+      node = node[decodeURIComponent(key).replaceAll('~1', '/').replaceAll('~0', '~')];
+    return {node, path};
+  };
+  const accepts = (path, value) => {
+    let parser = branches.get(path);
+    if (parser === undefined) { parser = branchFactories[path](); branches.set(path, parser); }
+    try { parser.parse(value); return true; } catch (error) { if (error instanceof TypeError) return false; throw error; }
+  };
+  const validate = (value, constraints, depth) => {
+    if (depth > 256) return false;
+    const expand = (pending, selected, seen) => {
+      if (pending.length === 0) return check(selected);
+      const [{node, path}, ...rest] = pending;
+      if (!node || typeof node !== 'object' || Array.isArray(node) || seen.has(path))
+        return expand(rest, selected, seen);
+      const visited = new Set(seen).add(path);
+      let next = rest;
+      if (node.$ref !== undefined) next = [resolve(node.$ref), ...next];
+      if (node.allOf !== undefined) next = node.allOf.map((child, index) => ({node:child, path:pointer(pointer(path, 'allOf'), index)})).concat(next);
+      const chosen = [...selected, {node, path}];
+      const groups = ['anyOf', 'oneOf'].filter(keyword => node[keyword] !== undefined);
+      const choose = (index, pending) => {
+        if (index === groups.length) return expand(pending, chosen, visited);
+        const keyword = groups[index];
+        return node[keyword].some((child, childIndex) => {
+          const childPath = pointer(pointer(path, keyword), childIndex);
+          return accepts(childPath, value) && choose(index + 1, [{node:child, path:childPath}, ...pending]);
+        });
+      };
+      return choose(0, next);
+    };
+    const check = selected => {
+      if (resultObject(value)) {
+        const declared = selected.some(({node}) => node.properties !== undefined);
+        const indexed = selected.some(({node}) => node.additionalProperties !== undefined && node.additionalProperties !== false);
+        for (const key of Object.keys(value)) {
+          const children = [];
+          let known = false;
+          for (const {node, path} of selected) {
+            if (node.properties && Object.hasOwn(node.properties, key)) {
+              known = true;
+              children.push({node:node.properties[key], path:pointer(pointer(path, 'properties'), key)});
+            } else if (node.additionalProperties && typeof node.additionalProperties === 'object')
+              children.push({node:node.additionalProperties, path:pointer(path, 'additionalProperties')});
+          }
+          if (declared && !known && !indexed || !validate(value[key], children, depth + 1)) return false;
+        }
+      } else if (Array.isArray(value)) {
+        for (let index = 0; index < value.length; index++) {
+          const children = [];
+          for (const {node, path} of selected) {
+            if (node.prefixItems && index < node.prefixItems.length)
+              children.push({node:node.prefixItems[index], path:pointer(pointer(path, 'prefixItems'), index)});
+            else if (node.items && typeof node.items === 'object') children.push({node:node.items, path:pointer(path, 'items')});
+          }
+          if (!validate(value[index], children, depth + 1)) return false;
+        }
+      }
+      return true;
+    };
+    return expand(constraints, [], new Set());
+  };
+  return Object.freeze({parse(value) {
+    normal.parse(value);
+    if (!validate(value, [{node:schema, path:'#'}], 0)) throw new TypeError('Remote strict input contains an undeclared field.');
+    return value;
+  }});
+}

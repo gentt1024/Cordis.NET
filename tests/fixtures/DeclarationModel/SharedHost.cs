@@ -58,6 +58,10 @@ await context.RunAsync(owner =>
         new("receiverId", "int", value => ValueTask.FromResult<Context?>(value is 7 ? receiver : null)));
     owner.Provide("sharedData", new SharedRemote());
     registry.Register(owner, SharedRemoteTypert.Contribution("IndependentData.Provider"));
+    var registeredInfo = registry.GetLocalInfo("IndependentData.Provider")!;
+    if (!ReferenceEquals(registeredInfo, registry.GetLocalInfo("IndependentData.Provider")) ||
+        registeredInfo.Methods.Values.Any(method => !ReferenceEquals(method, registry.GetLocal(method.Endpoint))))
+        throw new Exception("Registered metadata lost its stored descriptor identity.");
 #endif
     return Task.CompletedTask;
 });

@@ -10,7 +10,8 @@ public sealed class TypertRegistry(Context context)
     private readonly Dictionary<string, SchemaEntry> schemas = new(StringComparer.Ordinal);
     private readonly DescriptorStore local = new("local");
     private readonly DescriptorStore remotes = new("remote");
-    private readonly Dictionary<string, object> remotePackages = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TypertRemoteInfo> remotePackages = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TypertRemoteInfo> localInfos = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ProviderEntry<TypertLookupProvider>> lookups = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TypertLookupDefinition> definitions = new(StringComparer.Ordinal);
 
@@ -81,6 +82,7 @@ public sealed class TypertRegistry(Context context)
             () =>
             {
                 packages.Add(packageKey, contribution);
+                localInfos.Add(packageKey, new(contribution.Package, contribution.Invocations));
                 foreach (var entry in entries)
                     schemas.Add(entry.Key, entry);
                 local.Commit(token, descriptors);
@@ -88,7 +90,11 @@ public sealed class TypertRegistry(Context context)
                 return (Action)(() =>
                 {
                     if (ReferenceEquals(packages.GetValueOrDefault(packageKey), contribution))
+                    {
                         packages.Remove(packageKey);
+                        localInfos.Remove(packageKey);
+                    }
+
                     foreach (var entry in entries)
                         if (ReferenceEquals(schemas.GetValueOrDefault(entry.Key), entry))
                             schemas.Remove(entry.Key);
@@ -113,7 +119,7 @@ public sealed class TypertRegistry(Context context)
                 $"Typert Remote package '{contribution.Package}' is already registered.");
         var descriptors = contribution.Descriptors.ToArray();
         remotes.Validate(descriptors);
-        var token = new object();
+        var token = new TypertRemoteInfo(contribution.Package, contribution.Descriptors);
         return owner.Effect(
             () =>
             {
@@ -136,6 +142,20 @@ public sealed class TypertRegistry(Context context)
     {
         EnsureAccess();
         return local.Get(endpoint);
+    }
+
+    /// <summary>Get lazy metadata over the currently registered local package snapshot.</summary>
+    public TypertRemoteInfo? GetLocalInfo(string package, string face = "host")
+    {
+        EnsureAccess();
+        return localInfos.GetValueOrDefault(package + "#" + face);
+    }
+
+    /// <summary>Get lazy metadata over the consumer-selected Remote package snapshot.</summary>
+    public TypertRemoteInfo? GetRemoteInfo(string package)
+    {
+        EnsureAccess();
+        return remotePackages.GetValueOrDefault(package);
     }
 
     /// <summary>Check the strict local endpoint tombstone, retained after withdrawal.</summary>

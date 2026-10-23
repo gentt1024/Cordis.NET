@@ -1,4 +1,4 @@
-import { createRemote, mountRemote, getRemote, resultCodecs, TypertConnection, RemoteError, type RemoteOwner, type RemoteCaller } from './shared.mjs'
+import { createRemote, mountRemote, getRemote, resultCodecs, info, TypertConnection, RemoteError, type RemoteOwner, type RemoteCaller } from './shared.mjs'
 
 export async function resultContracts(origin: string) {
   let sends = 0
@@ -234,6 +234,18 @@ export async function scopedCalls(origin: string, socketOrigin: string, createCo
   }
   try {
     const service = getRemote(caller, 'sharedData')
+    const metadata = info.methods['sharedData/echo']
+    check(info.descriptors.includes(metadata), 'Named metadata copied its descriptor')
+    check(metadata.input() === metadata.input({ strict: false }) && metadata.input() !== metadata.input({ strict: true }),
+      'Input policies did not retain separate stable views')
+    check(metadata.input().jsonSchema === undefined && typeof metadata.input().jsonSchemaError === 'string',
+      'Recursive metadata claimed a lossless tool schema')
+    const named = metadata.input().create().parse({ value: { display_name: 'metadata', count: 11 } })
+    const namedReply = await metadata.invoke(caller, named)
+    check(namedReply.ok && namedReply.value.display_name === 'metadata' && namedReply.value.count === 14,
+      'Metadata invocation lost the mounted caller or omitted defaults over HTTP')
+    check(info.methods['sharedData/bytes'].result.jsonSchema === undefined,
+      'Binary result was incorrectly projected as a JSON string')
     equal(await service.scopeLayers({}), { ok: true, value: 'child>peer>global' },
       'Scope layer package consumption lost Peer inheritance or owner cleanup')
     equal(await service.peerRouting({}),

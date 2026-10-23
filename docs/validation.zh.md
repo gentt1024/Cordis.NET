@@ -2,6 +2,28 @@
 
 [English](validation.md)
 
+## 候选 Remote 元数据，2026-10-23
+
+S8 保持正式行为锁为 `639ed015397290b3745d163aafe02ffee4aa3f84`，对候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 使用限定范围例外。未修改的候选原始测试实际通过 56 项，无失败或跳过：RemoteInfo 8 项、懒加载器 1 项、生成器元数据 29 项、完整 loader 套件 18 项。仓外源码模式工具使用 Vitest 4.1.11、TypeScript 6.0.3 和 Vite 8.2.2；这不代表完整上游工作区构建或类型检查通过。
+
+原生测试覆盖索引、parser 与投影的独立懒加载、normal/strict 视图、快照身份与描述符复制、缺省与 null、命名调用及可选工具投影失败。保存模型的独立消费者在没有作者程序集时使用生成元数据，在递归 DTO 投影被拒绝后继续解析，并通过真实 HTTP 和双向流执行命名调用。生成 TypeScript 检查覆盖元数据身份、输入策略、可选投影及返回句柄保留。既有声明、输出 codec 与作者错误拒绝检查继续保留。
+
+运行完整固定基线门禁，并验证同一批新构建的包：
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+python3 scripts/verify-typert-dotnet.py --packages <package-batch> --output <empty-saved-output> --saved-remote-only
+python3 scripts/verify-typert-dotnet.py --packages <package-batch> --output <empty-web-output> --web-contracts-only
+python3 scripts/verify-typert.py --packages <package-batch> --output <empty-author-output>
+python3 scripts/verify-remote-metadata.py --packages <package-batch> --output <empty-metadata-output>
+```
+
+本地候选检查不构成 Windows/Linux 或 Native AOT 发布批准。这些仍属于正式基线晋升前的同批平台矩阵。原始日志和本机路径保留在仓库之外。
+
+
 ## 候选事件与访问客户端，2026-10-23
 
 S7 使用固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的范围例外；正式锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。未修改的候选原始测试通过 67 项，失败／跳过均为零：Gateway access 30、RemoteAccess Host 21、ClientAccess 10、OperatorConnect 6。外部源码模式 harness 使用 Vitest 4.1.11、TypeScript 6.0.3、Vite 8.2.2。首次运行通过 61 项，但因缺少 `compression` 未能收集 OperatorConnect；在两个 checkout 之外补齐候选锁定依赖后，完整重跑通过 67 项。不跨运行累加数量。这不是完整上游 workspace 构建，也不是原生测试结果。

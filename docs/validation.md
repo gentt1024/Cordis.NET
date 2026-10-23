@@ -2,6 +2,28 @@
 
 [中文](validation.zh.md)
 
+## Candidate Remote metadata, 2026-10-23
+
+S8 keeps the formal lock at `639ed015397290b3745d163aafe02ffee4aa3f84` and uses a scoped exception for candidate `687f282e8625c6b8d11ff58211a90524be2e4317`. Unmodified candidate originals passed 56 tests with no failures or skips: RemoteInfo 8, lazy loader 1, generator metadata 29 and the complete loader suite 18. The external source-mode harness uses Vitest 4.1.11, TypeScript 6.0.3 and Vite 8.2.2; this does not establish a full upstream workspace build or typecheck.
+
+Native tests cover lazy index/parser/projection boundaries, independent normal/strict views, snapshot identity and descriptor copies, missing versus null, named invocation and optional tool-schema failure. The saved-model independent consumer exercises generated metadata without the author assembly, parses a recursive DTO despite projection refusal, and uses named invocation over real HTTP and duplex transport. Generated TypeScript checks cover metadata identity, input policies, optional projections and return-handle preservation. Existing declaration, output-codec and authoring failure checks remain in place.
+
+Run the full fixed-baseline gate and verify one freshly built package batch:
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+python3 scripts/verify-typert-dotnet.py --packages <package-batch> --output <empty-saved-output> --saved-remote-only
+python3 scripts/verify-typert-dotnet.py --packages <package-batch> --output <empty-web-output> --web-contracts-only
+python3 scripts/verify-typert.py --packages <package-batch> --output <empty-author-output>
+python3 scripts/verify-remote-metadata.py --packages <package-batch> --output <empty-metadata-output>
+```
+
+The local candidate checks do not establish Windows/Linux or Native AOT release approval. Those remain part of the same-batch platform matrix before a formal baseline promotion. Raw logs and machine-specific paths remain outside the repository.
+
+
 ## Candidate events and access clients, 2026-10-23
 
 S7 uses the scoped candidate exception at `687f282e8625c6b8d11ff58211a90524be2e4317`; the formal lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`. Unmodified candidate originals passed 67 tests with zero failures/skips: Gateway access 30, RemoteAccess Host 21, ClientAccess 10 and OperatorConnect 6. The external source-mode harness uses Vitest 4.1.11, TypeScript 6.0.3 and Vite 8.2.2. An initial run passed 61 tests but could not collect OperatorConnect without `compression`; after resolving candidate-lock dependencies outside both checkouts, the complete retry passed 67. Counts are not added across runs. This is not a complete upstream workspace build or a native test result.
