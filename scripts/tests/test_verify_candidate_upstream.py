@@ -187,7 +187,8 @@ describe.skipIf(true)('platform excluded', () => {
         tools = candidate.tool_identity()
         trees = {"dsh": "candidate-tree", "origin": "fixed-origin-tree"}
         frozen = {"format": "cordis-candidate-discovery/v1", "dsh": candidate.DSH, "origin": candidate.ORIGIN,
-                  "runId": "workflow:1", "tools": tools, "sourceTrees": trees, "inventory": inventory}
+                  "runId": "workflow:1", "tools": tools, "sourceTrees": trees, "inventory": inventory,
+                  "sourceAdaptation": candidate.source_adaptation()}
         reports = []
         for shard in range(1, 5):
             selected = [case for index, case in enumerate(matrix) if index % 4 + 1 == shard]
@@ -199,7 +200,7 @@ describe.skipIf(true)('platform excluded', () => {
             reports.append({"shard": shard, "shards": 4, "status": "passed", "sourceUnchanged": True,
                 "identity": {"commit": "checkpoint", "platform": target_platform, "architecture": "AMD64",
                     "dsh": candidate.DSH, "origin": candidate.ORIGIN, "runId": "workflow:1", "tools": tools,
-                    "sourceSha256": {"source": "digest"}, "sourceTrees": trees},
+                    "sourceSha256": {"source": "digest"}, "sourceTrees": trees, "sourceAdaptation": candidate.source_adaptation()},
                 "inventory": inventory, "outcomes": outcomes, "steps": []})
         return frozen, reports
 
@@ -239,6 +240,7 @@ describe.skipIf(true)('platform excluded', () => {
             lambda r: r[0]["identity"]["tools"].update(lockSha256="different-tools"),
             lambda r: [report["identity"]["tools"].update(node="different-node") for report in r],
             lambda r: r[0]["identity"].update(dsh="639ed015397290b3745d163aafe02ffee4aa3f84"),
+            lambda r: r[0]["identity"]["sourceAdaptation"].update(commit=candidate.source_adaptation()["upstreamCommit"]),
             lambda r: r[0].update(sourceUnchanged=False),
         ]
         for index, mutation in enumerate(mutations):
@@ -249,6 +251,13 @@ describe.skipIf(true)('platform excluded', () => {
                 mutation(reports)
                 with self.assertRaises(ValueError):
                     self.merge(frozen, reports)
+
+    def test_discovery_cannot_omit_or_relabel_the_source_adaptation(self):
+        for value in (None, {"commit": candidate.source_adaptation()["upstreamCommit"]}):
+            frozen, reports = self.fixtures()
+            frozen["sourceAdaptation"] = value
+            with self.assertRaisesRegex(ValueError, "adaptation differs"):
+                self.merge(frozen, reports)
 
     def test_missing_duplicate_misplaced_failed_or_skipped_cases_cannot_pass(self):
         mutations = [

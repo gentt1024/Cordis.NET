@@ -1,0 +1,20 @@
+diff --git a/packages/boot/hmr/src/package-manifest.ts b/packages/boot/hmr/src/package-manifest.ts
+index 0c41fbb4..39050136 100644
+--- a/packages/boot/hmr/src/package-manifest.ts
++++ b/packages/boot/hmr/src/package-manifest.ts
+@@ -234,7 +234,14 @@ export class PackageManifests {
+   private hookBindingGetPackageScopeConfig(url: string) {
+     if (!this.isUrlInInvalidatedDirectory(url)) return this.rawBinding.getPackageScopeConfig(url)
+     const found = this.findNearestPackageConfig(fileURLToPath(url), true)
+-    if (typeof found === 'string') return this.rawBinding.getPackageScopeConfig(pathToFileURL(found).href)
++    if (typeof found === 'string') {
++      const configuration = this.rawBinding.getPackageScopeConfig(pathToFileURL(found).href)
++      if (typeof configuration === 'string') return configuration
++      // Native fallback may return a plain Windows path; match the invalidated-manifest tuple contract.
++      const serialized: PackageTuple = [...configuration]
++      serialized[5] = toNamespacedPath(serialized[5])
++      return serialized
++    }
+     return found.configuration?.serialized ?? found.path
+   }
+ 

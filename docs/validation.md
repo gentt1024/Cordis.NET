@@ -4,7 +4,9 @@
 
 ## Candidate S10 same-batch gate, before promotion
 
-S10 validates the integrated S1–S9 implementation without changing `upstream.lock.json` or the historical `docs/upstream-tests.json`. The formal baseline remains `639ed015397290b3745d163aafe02ffee4aa3f84`; candidate evidence is separately pinned to `687f282e8625c6b8d11ff58211a90524be2e4317`. No new application API is introduced by this verification slice.
+S10 validates the integrated S1–S9 implementation without changing `upstream.lock.json` or the historical `docs/upstream-tests.json`. The formal baseline remains `639ed015397290b3745d163aafe02ffee4aa3f84`; candidate evidence is separately pinned to derived commit `fba488001a6c2d37787d800beeab54a770c826a1`, based on upstream `687f282e8625c6b8d11ff58211a90524be2e4317`. No new application API is introduced by this verification slice.
+
+Prepare a fresh candidate checkout with `python scripts/candidate_source.py --output ../dsh-candidate`. The command fetches the fixed upstream parent and reconstructs the reviewed commit from [candidate-adaptation.json](../reference/candidate-adaptation.json). An optional `--source` points to an existing local upstream repository; that repository is fetched at the same pin and is never edited. Existing output directories are refused. CI uses this same preparation entry point for runtime traces, discovery and every shard. The derived commit changes one implementation file; original tests and platform skips remain byte-identical to the upstream parent. Candidate receipts retain the adaptation record and reject source-identity mixing.
 
 Run the existing `verify` workflow on one frozen branch commit with the `candidate` dispatch input enabled. Its Windows x64 and Ubuntu x64 jobs retain the formal source gates and execute JIT, Native AOT, package inspection, isolated authoring, generated clients and CLR deployment. Candidate discovery, partitioned execution and union validation are additional required checks. Each shard must use the same source identities, discovered case multiplicities, workflow run and attempt; filtered-out cases are not counted as executions.
 

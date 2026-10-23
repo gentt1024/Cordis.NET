@@ -2,13 +2,21 @@
 
 [English](compatibility.md)
 
+## 候选 Windows manifest 路径适配，2026-10-23
+
+当前验证候选改为本地派生提交 `fba488001a6c2d37787d800beeab54a770c826a1`，唯一父提交为上游 `687f282e8625c6b8d11ff58211a90524be2e4317`。这是 Cordis.NET 的候选适配，不是上游发布，也不更新正式行为锁。[来源记录](../reference/candidate-adaptation.json)固定上游树、补丁 SHA-256、前后 blob 和可重建的提交对象。原始上游 checkout 与历史收据保留各自身份。
+
+[补丁](../reference/candidate-patches/windows-manifest-scope.patch)只修改 `PackageManifests.hookBindingGetPackageScopeConfig` 中成功的原生 fallback：复制返回元组，再用现有 `toNamespacedPath` 规范其 manifest 路径，与 Windows 上已失效 manifest 的元组合同一致。字符串结果保持不变，不原地修改原生元组。.NET 公开 API 和原生运行时行为均不变。原始测试文件、断言、数量和平台跳过规则均不变。
+
+候选准备从固定父提交重建这一干净 Git 提交，拒绝不同的补丁、树、文件集合或 blob。发现、差分 traces、全部源码分片及严格并集均使用派生身份，收据同时记录源码适配。派生提交通过不能改写成未修改上游提交通过，也不代表正式基线晋升。
+
 ## 候选 S10 验证范围，2026-10-23
 
 S10 增加独立候选门禁，保留正式行为锁和历史测试清单，不引入应用公开 API。候选源码通过、原生断言结果及平台／包收据仍是分开的证据；候选能力索引不声称逐一移植了每条上游断言。
 
 S10 还修复了包进程记录中的既有 Linux 竞态：短命根进程可能在读取启动时间前退出。由进程组或 Windows Job 持有的运行按组或 Job 身份恢复，记录的启动时间字段保留为零，不再读取已退出的根进程。无分组的 PID 恢复仍要求真实启动时间。子进程存活检查、输出排空和未解决记录的拒绝规则保持不变，根进程退出不代表可以删除运行记录。这是正式基线下既有进程合同的修复。
 
-固定候选已确认存在 Windows 原始测试失败，位于 `package-manifest.spec.ts` 删除 manifest 后继续查找外层作用域的用例。作用域读取器返回普通盘符路径，原断言要求带命名空间前缀的路径。独立 Node 24.12.0 进程在有、无候选解析钩子两种情况下均复现失败；该 Node 版本处于上游声明的支持范围。见[诊断运行](https://github.com/gentt1024/Cordis.NET/actions/runs/39919928667)。另一次 [Windows 补丁对照](https://github.com/gentt1024/Cordis.NET/actions/runs/39920616943) 执行未修改的 39 项测试文件，原始实现有一项失败，隔离副本仅修正 fallback 路径后 39 项全过、零跳过。该补丁未应用到固定候选。门禁中的原始源码、断言和跳过策略保持不变，因此这项失败仍阻断基线晋升。
+固定候选已确认存在 Windows 原始测试失败，位于 `package-manifest.spec.ts` 删除 manifest 后继续查找外层作用域的用例。作用域读取器返回普通盘符路径，原断言要求带命名空间前缀的路径。独立 Node 24.12.0 进程在有、无候选解析钩子两种情况下均复现失败；该 Node 版本处于上游声明的支持范围。见[诊断运行](https://github.com/gentt1024/Cordis.NET/actions/runs/39919928667)。另一次 [Windows 补丁对照](https://github.com/gentt1024/Cordis.NET/actions/runs/39920616943) 执行未修改的 39 项测试文件，原始实现有一项失败，隔离副本仅修正 fallback 路径后 39 项全过、零跳过。未适配候选直到 [771d69a 批次](https://github.com/gentt1024/Cordis.NET/actions/runs/39935870050)仍保留此失败。上文使用独立身份的适配现在应用已归因的修复，不改写这些失败收据，也不证明未修改的上游通过。
 
 [3b6364a 验证批次](https://github.com/gentt1024/Cordis.NET/actions/runs/39922002150)还在私有仓库 SSH 回退用例中记录了一次五秒 Git 预检超时，发生在 pnpm 启动之前。[完整 composition 对照](https://github.com/gentt1024/Cordis.NET/actions/runs/39925752082)使用相同的原始用例、文件执行顺序、Git 版本和 runner 镜像，未复现该超时，根因仍未解决。失败批次继续保留，没有放宽超时、断言或跳过策略。
 

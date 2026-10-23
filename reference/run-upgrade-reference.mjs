@@ -1,4 +1,4 @@
-// Execute original source at the fixed upgrade commit. The relevant source inventory
+// Execute source at the fixed target, including the recorded candidate adaptation. The relevant source inventory
 // binds each loaded file even when the reference is an exported tree without .git.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -19,7 +19,7 @@ assert.ok(Number(process.versions.node.split('.')[0]) >= 24, 'Use Node >=24 for 
 const candidate = process.argv.includes('--candidate');
 const root = candidate ? realpathSync(resolve(arg.slice(6))) : resolve(arg.slice(6));
 const inventory = JSON.parse(readFileSync(new URL(candidate ? './candidate-source.json' : './upgrade-source.json', import.meta.url), 'utf8'));
-assert.equal(inventory.commit, candidate ? '687f282e8625c6b8d11ff58211a90524be2e4317' : '639ed015397290b3745d163aafe02ffee4aa3f84');
+assert.equal(inventory.commit, candidate ? 'fba488001a6c2d37787d800beeab54a770c826a1' : '639ed015397290b3745d163aafe02ffee4aa3f84');
 const candidateSupport = candidate ? await import('./candidate-support.mjs') : undefined;
 if (candidate) candidateSupport.bindTools(root);
 const candidateSource = candidateSupport?.sourceResolver(root);

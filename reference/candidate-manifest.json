@@ -1,7 +1,7 @@
 {
   "format": "cordis-candidate-scope/v1",
   "purpose": "Candidate validation only; does not change upstream.lock.json or promote a baseline.",
-  "dsh": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "dsh": "fba488001a6c2d37787d800beeab54a770c826a1",
   "origin": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
   "extensionOrigin": "abb0a307cb1d3b0947f455d590cf5ba922d4caa4",
   "matrix": "packages/boot/app-boot/tests/linked-resolution-matrix.spec.ts",
@@ -128,5 +128,7 @@
       "sourceBlob": "e040b235581e7ba2755f621514123d37c40f0788",
       "reason": "The unchanged upstream describe.skipIf(process.platform === win32) excludes this POSIX descendant fixture: Windows descendants neither retain inherited pipes past leader exit nor lead a stoppable process group; mocked-child drain cases still execute."
     }
-  ]
+  ],
+  "upstreamDsh": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "sourceAdaptation": "candidate-adaptation.json"
 }

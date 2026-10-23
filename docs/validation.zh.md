@@ -4,7 +4,9 @@
 
 ## 候选 S10 同批门禁，晋升前验证
 
-S10 验证汇合后的 S1–S9 实现，不修改 `upstream.lock.json` 或历史 `docs/upstream-tests.json`。正式基线仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；候选证据独立固定到 `687f282e8625c6b8d11ff58211a90524be2e4317`。本验证片不引入新的应用公开 API。
+S10 验证汇合后的 S1–S9 实现，不修改 `upstream.lock.json` 或历史 `docs/upstream-tests.json`。正式基线仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；候选证据独立固定到派生提交 `fba488001a6c2d37787d800beeab54a770c826a1`，其上游基础为 `687f282e8625c6b8d11ff58211a90524be2e4317`。本验证片不引入新的应用公开 API。
+
+使用 `python scripts/candidate_source.py --output ../dsh-candidate` 准备新的候选 checkout。命令获取固定上游父提交，并按 [candidate-adaptation.json](../reference/candidate-adaptation.json) 重建经过审查的提交。可选 `--source` 指向已有本地上游仓库，仍按同一固定提交 fetch，不编辑该仓库；输出目录已存在时拒绝执行。CI 的运行时 traces、发现及所有分片共用这一准备入口。派生提交只改变一个实现文件，原始测试和平台跳过规则与上游父提交逐字节一致。候选收据保留适配记录，拒绝混用来源身份。
 
 在一个冻结的分支提交上运行现有 `verify` 工作流，并启用 dispatch 输入 `candidate`。Windows x64 和 Ubuntu x64 作业保留正式源码门禁，执行 JIT、Native AOT、包检查、独立作者消费、生成客户端和 CLR 部署。候选发现、分片执行及并集验证是额外必需检查。各分片必须使用相同源码身份、发现的用例及重复次数、workflow run 和 attempt；因分片筛选未运行的用例不计为执行。
 
