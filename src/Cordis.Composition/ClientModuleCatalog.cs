@@ -24,6 +24,13 @@ public sealed record ClientModuleBatch(
     [property: JsonPropertyName("entries")]
     IReadOnlyList<string> Entries);
 
+/// <summary>A stable host-selected release identity, independent of the captured module revision.</summary>
+public sealed record ClientModuleRelease(
+    [property: JsonPropertyName("version")]
+    string Version,
+    [property: JsonPropertyName("commit"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Commit = null);
+
 /// <summary>A complete roster compatible with the fixed DSH browser module consumer.</summary>
 /// <remarks>Replacing a graph retracts absent plugins. Its revision binds artifacts and dependency declarations, not application configuration.</remarks>
 public sealed record ClientModuleGraph(
@@ -31,7 +38,17 @@ public sealed record ClientModuleGraph(
     [property: JsonPropertyName("entries")]
     IReadOnlyList<ClientModuleEntry> Entries,
     [property: JsonPropertyName("batches")]
-    IReadOnlyList<ClientModuleBatch> Batches);
+    IReadOnlyList<ClientModuleBatch> Batches)
+{
+    /// <summary>The host release, omitted when the host publishes no identity.</summary>
+    [JsonPropertyName("release")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ClientModuleRelease? Release
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>Captures a selected browser roster through existing deployment routing.</summary>
 /// <remarks>
@@ -80,7 +97,8 @@ public sealed class ClientModuleCatalog
         Uri parent,
         string artifactBasePath = "/client/artifacts",
         CancellationToken cancellationToken = default,
-        bool withdrawUnavailableDependencies = false) =>
+        bool withdrawUnavailableDependencies = false,
+        ClientModuleRelease? release = null) =>
         CaptureAsync(
             packages,
             packageNames,
@@ -88,7 +106,8 @@ public sealed class ClientModuleCatalog
             Array.Empty<string>(),
             artifactBasePath,
             cancellationToken,
-            withdrawUnavailableDependencies);
+            withdrawUnavailableDependencies,
+            release);
 
     /// <summary>Capture a roster whose external requests may also be supplied by the page shell.</summary>
     /// <param name="packages">The existing deployment resolver; capture does not change deployments.</param>
@@ -99,6 +118,7 @@ public sealed class ClientModuleCatalog
     /// <param name="artifactBasePath">An absolute same-origin path serving the captured revisioned artifacts.</param>
     /// <param name="cancellationToken">Cancellation of capture; an incomplete catalog is never returned.</param>
     /// <param name="withdrawUnavailableDependencies">Project selection to a closed delivery roster instead of failing on missing dependencies.</param>
+    /// <param name="release">Stable identity selected by the host build; independent of the artifact graph hash.</param>
     /// <remarks>SDK platform modules remain available. Additional names are not npm aliases or package resolution rules.
     /// Capture failures leave the caller's previously published catalog intact; selection and publication use its existing owner.</remarks>
     public static async Task<ClientModuleCatalog> CaptureAsync(
@@ -108,7 +128,8 @@ public sealed class ClientModuleCatalog
         IEnumerable<string> platformModules,
         string artifactBasePath = "/client/artifacts",
         CancellationToken cancellationToken = default,
-        bool withdrawUnavailableDependencies = false)
+        bool withdrawUnavailableDependencies = false,
+        ClientModuleRelease? release = null)
     {
         ArgumentNullException.ThrowIfNull(packages);
         ArgumentNullException.ThrowIfNull(packageNames);
@@ -250,7 +271,12 @@ public sealed class ClientModuleCatalog
         }
 
         var revision = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
-        return new(new(revision, entries, batches), captured);
+        return new(
+            new(revision, entries, batches)
+            {
+                Release = release
+            },
+            captured);
     }
 
     private static IReadOnlyList<string> Strings(JsonElement declaration, string field, string name)

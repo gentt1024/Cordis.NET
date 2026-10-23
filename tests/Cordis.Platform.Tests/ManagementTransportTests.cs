@@ -20,6 +20,58 @@ namespace Cordis.Platform.Tests;
 public sealed class ManagementTransportTests
 {
     [Fact]
+    public async Task Client_graph_HTTP_preserves_optional_host_release_without_changing_graph_revision()
+    {
+        var root = Directory.CreateTempSubdirectory("cordis-http-release-").FullName;
+        try
+        {
+            var profile = Path.Combine(root, "profile");
+            Profiles.Initialize(profile, []);
+            var config = Path.Combine(root, "cordis.yml");
+            await File.WriteAllTextAsync(config, "[]");
+            var launch = new ProfileLaunch(
+                await Profiles.LoadAsync(profile, new Dictionary<string, string>()),
+                root,
+                [],
+                new Dictionary<string, string>());
+            await using var session = await ProfileSession.StartAsync(config, launch, new StaticModuleResolver());
+            var packages = DeploymentPackageResolver.Native((name, _) => Path.Combine(root, name));
+            var parent = new Uri(root + Path.DirectorySeparatorChar);
+            var current = await ClientModuleCatalog.CaptureAsync(packages, [], parent);
+            var revision = current.Graph.Revision;
+            await using var server = CreateServer();
+            new CordisManagement(session, (_, _) => Task.FromResult(true), clientModules: _ => Task.FromResult(current))
+                .Map(server);
+            await server.StartAsync();
+            using var client = new HttpClient
+            {
+                BaseAddress = new Uri(server.Urls.Single())
+            };
+            using var absent = JsonDocument.Parse(await client.GetStringAsync("/cordis/client/graph"));
+            Assert.False(absent.RootElement.TryGetProperty("release", out _));
+            current = await ClientModuleCatalog.CaptureAsync(
+                packages,
+                [],
+                parent,
+                release: new("1.2.3", "fixed-commit"));
+            using var released = JsonDocument.Parse(await client.GetStringAsync("/cordis/client/graph"));
+            Assert.Equal(revision, released.RootElement.GetProperty("rev").GetString());
+            Assert.Equal("1.2.3", released.RootElement.GetProperty("release").GetProperty("version").GetString());
+            Assert.Equal("fixed-commit", released.RootElement.GetProperty("release").GetProperty("commit").GetString());
+            current = await ClientModuleCatalog.CaptureAsync(packages, [], parent, release: new("1.2.4"));
+            using var noCommit = JsonDocument.Parse(await client.GetStringAsync("/cordis/client/graph"));
+            Assert.Equal(revision, noCommit.RootElement.GetProperty("rev").GetString());
+            Assert.Equal("1.2.4", noCommit.RootElement.GetProperty("release").GetProperty("version").GetString());
+            Assert.False(noCommit.RootElement.GetProperty("release").TryGetProperty("commit", out _));
+            await server.StopAsync();
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task
         Real_remote_settings_enforce_authorization_and_revision_while_configuration_retains_generation_fencing()
     {

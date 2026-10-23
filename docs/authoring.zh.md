@@ -4,6 +4,14 @@
 
 这些可选的 .NET 作者辅助接口复用现有 Cordis 运行时。包使代码可用；模块注册把名称映射到代码；patch/profile 条目选择实例；`Inject` 决定插件何时能够激活。服务身份仍由名称与 realm 决定。这些辅助接口不增加第二套注册表或生命周期。
 
+## 候选浏览器 release 与资源，2026-10-23
+
+捕获 `ClientModuleCatalog` 时传入 `release: new ClientModuleRelease("application-version", "build-commit")`。初始 graph 和后续管理响应应使用同一应用身份。只有应用明确没有 release 身份时才省略。相同 release 内的 graph revision 变化允许正常插件替换；release 变化后必须重载页面，才能运行该 release 的 graph。
+
+订阅 `modules.releaseChange` 并读取其 `getSnapshot()` 来展示重载提示。`modules.dismissRelease()` 只关闭提示。继续遵循既有的 `management.close()`、`modules.dispose()` 归属顺序。SDK 不会自动重载页面。
+
+作者包可将 `.svg`、`.png`、`.webp` 文件导入为 data URL 字符串。仅图片变化也会参与 `cordis-client-build --watch` 并产生新的不可变 generation。通过 `inline: true` 声明内联 slot；应用 renderer 消费该提示，也可把 member 名传给 keyed standard source。这些增量不会安装 React renderer。
+
 ## 候选 Remote 元数据，2026-10-23
 
 使用生成 Host 的 `Info(package)` 工厂或独立 .NET 调用者的静态 `Info`，无需建立连接即可检查 Remote 方法。独立调用者的 `CreateInfo(package)` 可指定部署包身份；默认 Info 使用保存模型的程序集身份。`Methods` 包含直接端点，`Descriptors` 还包含 Context 接收者。读取已注册事实时，使用 `TypertRegistry.GetLocalInfo(package)` 或 `GetRemoteInfo(package)`。

@@ -2,6 +2,20 @@
 
 [English](compatibility.md)
 
+## 候选浏览器安全与作者增量，2026-10-23
+
+S9 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，涵盖 factory 样式归属、Host release 准入、图片导入和 Slots 声明。正式行为锁与历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。vendor 适配保留原始来源记录，并单独记录候选源码身份。本片不执行 S10 基线晋升。
+
+factory 只认领自本次执行开始后插入的无标签 style 元素。页面原有样式仍归外壳所有，嵌套 factory 保留各自样式，抛错的 factory 先认领并删除本次新插入的样式，再报告失败。已有显式标签的归属规则继续有效。此规则覆盖同步 factory 求值；应用 effect 仍由其 Cordis 生命周期持有。
+
+Host release 身份是可缺省的 `{version, commit?}`，由应用通过 `ClientModuleRelease` 提供，与继续仅绑定 graph 内容的 revision 分开。缺省 release 本身也是有效身份。受支持的浏览器包装层在解析收到的 graph 或改变目标 roster 前比较这两个字段。其他 release 的更新会暂停，包括采用未知 body 格式的 graph，页面保留现有模块。`releaseChange` 通知页面、前一个 Host 和当前 Host 的身份。`dismissRelease()` 仅隐藏该身份的提示，不允许其 graph 准入。Host 返回启动 release 后恢复协调。与候选一致，已接受的工作及对先前已接受 graph 的 retry 仍可继续。显式 disconnect 和 dispose 仍会撤销页面资源。包装层用同一门禁覆盖手动同步与管理重连，不另建一份门禁历史，也不内置重载界面。
+
+原生应用提供稳定的应用版本和可选构建 commit，不从 Cordis 库版本、进程代或 graph hash 推导身份。`ClientModuleGraph.Release` 保留既有位置构造器；`ClientModuleCatalog.CaptureAsync` 增加末尾可选 release 参数，因此这些方法的二进制消费者必须重新构建。管理 graph 响应携带同一身份，缺省字段不输出。
+
+作者构建把小写扩展名 SVG、PNG、WebP 导入内联为精确 MIME/base64 data URL，并观察实际图片输入。输入保护与不可变 generation 发布继续有效。受支持的制品仍是单个 factory 脚本；包内 chunks 和 Node 客户端格式不在此合同内。Slots 增加 `inline?: true` 及 keyed source 的可选 `member` 转发。包提供 registry 和 renderer 声明，应用仍需提供 renderer，包括 inline DOM 行为。
+
+本地修正会在同步通知回调前保存当前消息的版本比较结果。回调中再次同步其他图，不能使外层异版本图获准，也不能拒绝外层已接受的图；通知仍反映最后观察到的 Host。通过公开包装器的回归测试复现候选缺陷，并验证两个方向。
+
 ## 候选元数据投影，2026-10-23
 
 S8 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，涵盖 RemoteInfo、命名输入视图及可选工具 Schema 投影。正式行为锁与历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。S8 不选择新的发布基线。
