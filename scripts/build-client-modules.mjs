@@ -51,8 +51,15 @@ for (const config of ['tsconfig.vendor.json', 'tsconfig.json']) {
 if (declarationsOnly) process.exit(0)
 await mkdir(output, { recursive: true })
 await cp(resolve(source, 'vendor/provenance.json'), resolve(output, 'provenance.json'))
-await build({ entryPoints: [resolve(source, 'src/index.ts')], bundle: true, format: 'esm', platform: 'browser',
-  outfile: resolve(output, 'client.mjs'), alias, define, legalComments: 'eof' })
+// Preserve one access-module identity between package imports and the factory static table.
+const externalAccess = { name: 'native-access-modules', setup(builder) {
+  builder.onResolve({ filter: /^\.\/access\.ts$/ }, () => ({ path: './access.mjs', external: true }))
+  builder.onResolve({ filter: /^\.\.\/\.types\/standard\/access-remote\.js$/ }, () => ({ path: './access-remote.mjs', external: true }))
+} }
+for (const [entry, filename] of [['index', 'client'], ['access', 'access']]) {
+  await build({ entryPoints: [resolve(source, 'src/' + entry + '.ts')], bundle: true, format: 'esm', platform: 'browser',
+    outfile: resolve(output, filename + '.mjs'), alias, define, legalComments: 'eof', plugins: [externalAccess] })
+}
 // A normal deployment can copy this directory; it does not require the author sources or Node.
 const licenses = await Promise.all(['cordis', 'cosmokit', 'loader', 'modules', 'slots', 'web', 'connection'].map(async name =>
   `${name}\n${await readFile(resolve(source, 'vendor', name, 'LICENSE'), 'utf8')}`))
@@ -63,7 +70,7 @@ await cp(resolve(source, '.types/vendor'), resolve(output, 'types/vendor'), { re
 await cp(standard, resolve(output, 'types/standard'), { recursive: true })
 await cp(resolve(standard, 'cordis-remote.mjs'), resolve(output, 'cordis-remote.mjs'))
 await cp(resolve(standard, 'cordis-remote.d.mts'), resolve(output, 'cordis-remote.d.mts'))
-for (const name of ['management', 'events', 'settings']) {
+for (const name of ['management', 'events', 'settings', 'access-remote']) {
   await cp(resolve(standard, name + '.mjs'), resolve(output, name + '.mjs'))
   await cp(resolve(standard, name + '.d.ts'), resolve(output, name + '.d.ts'))
 }
@@ -100,6 +107,7 @@ const typeAliases = {
   'prop-types': 'vendor/contracts/prop-types/index.d.ts',
   'csstype': 'vendor/contracts/csstype/index.d.ts',
   '../.types/standard/events.js': 'standard/events.d.ts',
+  '../.types/standard/access-remote.js': 'standard/access-remote.d.ts',
 }
 async function rewriteTypes(directory) {
   for (const item of await readdir(directory, { withFileTypes: true })) {
@@ -119,6 +127,7 @@ async function rewriteTypes(directory) {
 await rewriteTypes(resolve(output, 'types'))
 await writeFile(resolve(output, 'package.json'), JSON.stringify({ name: '@cordis-net/client-modules',
   private: true, type: 'module', exports: { '.': { types: './types/src/index.d.ts', default: './client.mjs' },
+    './access': { types: './types/src/access.d.ts', default: './access.mjs' },
     './slots': { types: './types/vendor/slots/index.d.ts', default: './client.mjs' },
     ...Object.fromEntries(['management', 'events', 'settings'].map(name => [
       './' + name, { types: './types/standard/' + name + '.d.ts', default: './' + name + '.mjs' },

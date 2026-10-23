@@ -4,7 +4,15 @@ namespace Cordis.Composition;
 
 /// <summary>One selected Cordis notification with its original, explicitly encoded argument list.</summary>
 public sealed record TypertRemoteEventFrame(string Event, IReadOnlyList<JsonElement> Args)
-    : TypertRemoteEventDispatch(Event);
+    : TypertRemoteEventDispatch(Event)
+{
+    /// <summary>Optional resource readers over the original positional JSON values, boxed as JsonElement.</summary>
+    public IReadOnlyDictionary<string, TypertResourceReader>? ResourceReaders
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>Attach application-selected listeners before returning the Gateway's sole event source.</summary>
 /// <remarks>The source retains the original event names and owns its listener cleanup. It must

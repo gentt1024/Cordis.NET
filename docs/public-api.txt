@@ -1711,6 +1711,31 @@ Cordis.Composition: Cordis.Composition.TypertAccessDecision+Allow : Cordis.Compo
 Cordis.Composition: Cordis.Composition.TypertAccessDecision+Deny : Cordis.Composition.TypertAccessDecision [] flags=NestedPublic, Sealed, BeforeFieldInit attrs=
   Property System.String Reason attrs= NotNull/Unknown get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False
   Constructor Void .ctor(System.String) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=Reason:NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertAccessFrame : System.Object [] flags=Public, Abstract, BeforeFieldInit attrs=
+  Method Cordis.Composition.TypertAccessFrame FromJson(System.Text.Json.JsonElement) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=value:NotNull/NotNull  return=NotNull/NotNull
+  Method System.Text.Json.JsonElement ToJson() attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertAccessFrame+Baseline : Cordis.Composition.TypertAccessFrame [] flags=NestedPublic, Abstract, BeforeFieldInit attrs=
+Cordis.Composition: Cordis.Composition.TypertAccessFrame+Baseline+Granted : Cordis.Composition.TypertAccessFrame+Baseline [] flags=NestedPublic, Sealed, BeforeFieldInit attrs=
+  Property System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertAccessGrant] Grants attrs= NotNull/Unknown<NotNull/NotNull> get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False
+  Constructor Void .ctor(System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertAccessGrant]) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=grants:NotNull/NotNull<NotNull/NotNull>
+Cordis.Composition: Cordis.Composition.TypertAccessFrame+Baseline+Owner : Cordis.Composition.TypertAccessFrame+Baseline [] flags=NestedPublic, Sealed, BeforeFieldInit attrs=
+  Constructor Void .ctor() attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=
+Cordis.Composition: Cordis.Composition.TypertAccessFrame+Remove : Cordis.Composition.TypertAccessFrame [] flags=NestedPublic, Sealed, BeforeFieldInit attrs=
+  Property Cordis.Composition.TypertAccessResource Resource attrs= NotNull/Unknown get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False
+  Constructor Void .ctor(Cordis.Composition.TypertAccessResource) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=resource:NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertAccessFrame+Upsert : Cordis.Composition.TypertAccessFrame [] flags=NestedPublic, Sealed, BeforeFieldInit attrs=
+  Property Cordis.Composition.TypertAccessGrant Grant attrs= NotNull/Unknown get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False
+  Constructor Void .ctor(Cordis.Composition.TypertAccessGrant) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=grant:NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertAccessGrant : System.Object [System.IEquatable`1[Cordis.Composition.TypertAccessGrant]] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Boolean Equals(Cordis.Composition.TypertAccessGrant) attrs= flags=virtual=True,abstract=False,final=True,newSlot=True params=other:Nullable/Nullable  return=NotNull/NotNull
+  Method Boolean Equals(System.Object) attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params=obj:Nullable/Nullable  return=NotNull/NotNull
+  Method Cordis.Composition.TypertAccessGrant <Clone>$() attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
+  Property Cordis.Composition.TypertAccessResource Resource attrs= NotNull/NotNull get=True set=True init=True getFlags=virtual=False,abstract=False,final=False,newSlot=False setFlags=virtual=False,abstract=False,final=False,newSlot=False
+  Method Int32 GetHashCode() attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyList`1[System.String] Actions attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True getFlags=virtual=False,abstract=False,final=False,newSlot=False setFlags=virtual=False,abstract=False,final=False,newSlot=False
+  Method System.String ToString() attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
+  Constructor Void .ctor(Cordis.Composition.TypertAccessResource, System.Collections.Generic.IReadOnlyList`1[System.String]) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=Resource:NotNull/NotNull ;Actions:NotNull/NotNull<NotNull/NotNull>
+  Method Void Deconstruct(Cordis.Composition.TypertAccessResource ByRef, System.Collections.Generic.IReadOnlyList`1[System.String] ByRef) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=Resource:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Actions:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertAccessPolicy : System.Object [System.IEquatable`1[Cordis.Composition.TypertAccessPolicy]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.TypertAccessPolicy) attrs= flags=virtual=True,abstract=False,final=True,newSlot=True params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params=obj:Nullable/Nullable  return=NotNull/NotNull
@@ -1754,6 +1779,17 @@ Cordis.Composition: Cordis.Composition.TypertAccessRole : System.Object [System.
   Method System.String ToString() attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
   Constructor Void .ctor(System.String, System.String, System.Collections.Generic.IReadOnlyList`1[System.String]) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=Name:NotNull/NotNull ;Resource:NotNull/NotNull ;Actions:NotNull/NotNull<NotNull/NotNull>
   Method Void Deconstruct(System.String ByRef, System.String ByRef, System.Collections.Generic.IReadOnlyList`1[System.String] ByRef) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=Name:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Resource:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Actions:NotNull/NotNull<NotNull/NotNull> [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertAccessSource : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property Boolean Value attrs= NotNull/Unknown get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False
+  Method System.IDisposable Subscribe(System.Action) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=listener:NotNull/NotNull  return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertAccessState : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property Boolean Owner attrs= NotNull/Unknown get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False
+  Method Cordis.Composition.TypertAccessSource Global(System.String) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=action:NotNull/NotNull  return=NotNull/NotNull
+  Method Cordis.Composition.TypertAccessSource Resource(System.String, System.String, System.String) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=kind:NotNull/NotNull ;id:NotNull/NotNull ;action:NotNull/NotNull  return=NotNull/NotNull
+  Constructor Void .ctor(Baseline) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=initial:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()]
+  Method Void Replace(Baseline) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=baseline:NotNull/NotNull  return=NotNull/NotNull
+  Method Void Unavailable() attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
+  Method Void Update(Cordis.Composition.TypertAccessFrame) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=frame:NotNull/NotNull  return=NotNull/NotNull
 Cordis.Composition: Cordis.Composition.TypertArtifacts : System.Object [] flags=Public, Abstract, Sealed, BeforeFieldInit attrs=
   Method Cordis.Composition.TypertClientArtifact GenerateClient(Cordis.Composition.TypertContribution) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=contribution:NotNull/NotNull  return=NotNull/NotNull
   Method Cordis.Composition.TypertClientArtifact GenerateEvents(System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertRemoteEventDefinition]) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=events:NotNull/NotNull<NotNull/NotNull>  return=NotNull/NotNull
@@ -2092,12 +2128,23 @@ Cordis.Composition: Cordis.Composition.TypertRegistryChange : System.Object [Sys
   Method System.String ToString() attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
   Constructor Void .ctor(System.String, System.String) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=Kind:NotNull/NotNull ;Key:NotNull/NotNull
   Method Void Deconstruct(System.String ByRef, System.String ByRef) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=Kind:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()];Key:NotNull/NotNull [System.Runtime.InteropServices.OutAttribute()] return=NotNull/NotNull
-Cordis.Composition: Cordis.Composition.TypertRemoteAccess : System.Object [] flags=Public, Sealed, BeforeFieldInit attrs=
+Cordis.Composition: Cordis.Composition.TypertRemoteAccess : System.Object [Cordis.Composition.ITypertRemoteService] flags=Public, Sealed, BeforeFieldInit attrs=
+  Method Baseline SnapshotFor(Cordis.Composition.TypertPrincipal) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=principal:NotNull/NotNull  return=NotNull/NotNull
   Method Boolean Allows(Cordis.Composition.TypertAccessResource) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=resource:NotNull/NotNull  return=NotNull/NotNull
   Method Cordis.Composition.TypertAccessDecision Decide(Cordis.Composition.TypertAccessRequest) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=request:NotNull/NotNull  return=NotNull/NotNull
+  Method Cordis.Composition.TypertContribution Contribution(System.String) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=package:NotNull/NotNull optional="cordis/remote-access" [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
+  Property Cordis.Composition.TypertRemoteBinding TypertRemote attrs= NotNull/Unknown get=True set=False init=False getFlags=virtual=True,abstract=False,final=True,newSlot=True
   Method Cordis.EffectHandle RegisterPolicy(Cordis.Context, System.String, Cordis.Composition.TypertAccessPolicy) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=owner:NotNull/NotNull ;kind:NotNull/NotNull ;policy:NotNull/NotNull  return=NotNull/NotNull
+  Method Cordis.EffectHandle RegisterRemote(Cordis.Context, Cordis.Composition.TypertRegistry) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=owner:NotNull/NotNull ;registry:NotNull/NotNull  return=NotNull/NotNull
+  Method System.Collections.Generic.IAsyncEnumerable`1[Cordis.Composition.TypertAccessFrame] FollowAsync(System.Threading.CancellationToken) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull<NotNull/NotNull>
   Constructor Void .ctor(Cordis.Context) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=context:NotNull/NotNull
   Method Void Invalidate() attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
+  Method Void Invalidate(Cordis.Composition.TypertPrincipal) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=principal:Nullable/Nullable  return=NotNull/NotNull
+Cordis.Composition: Cordis.Composition.TypertRemoteAccessClient : System.Object [System.IAsyncDisposable] flags=Public, Sealed, BeforeFieldInit attrs=
+  Property Cordis.Composition.TypertAccessState State attrs= NotNull/Unknown get=True set=False init=False getFlags=virtual=False,abstract=False,final=False,newSlot=False
+  Method System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=cancellationToken:NotNull/NotNull optional=null [System.Runtime.InteropServices.OptionalAttribute()] return=NotNull/NotNull
+  Method System.Threading.Tasks.ValueTask DisposeAsync() attrs= flags=virtual=True,abstract=False,final=True,newSlot=True params= return=NotNull/NotNull
+  Constructor Void .ctor(Cordis.Context, Cordis.Composition.TypertConnection, Baseline) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=owner:NotNull/NotNull ;connection:NotNull/NotNull ;initial:Nullable/Nullable optional=null [System.Runtime.InteropServices.OptionalAttribute()]
 Cordis.Composition: Cordis.Composition.TypertRemoteBinding : System.Object [System.IEquatable`1[Cordis.Composition.TypertRemoteBinding]] flags=Public, Sealed, BeforeFieldInit attrs=
   Method Boolean Equals(Cordis.Composition.TypertRemoteBinding) attrs= flags=virtual=True,abstract=False,final=True,newSlot=True params=other:Nullable/Nullable  return=NotNull/NotNull
   Method Boolean Equals(System.Object) attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params=obj:Nullable/Nullable  return=NotNull/NotNull
@@ -2127,6 +2174,7 @@ Cordis.Composition: Cordis.Composition.TypertRemoteEventDefinition : System.Obje
   Property Cordis.Composition.TypertCodec Result attrs= Nullable/Nullable get=True set=False init=True getFlags=virtual=False,abstract=False,final=False,newSlot=False
   Method Cordis.Composition.TypertRemoteEventDefinition <Clone>$() attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
   Method Int32 GetHashCode() attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyDictionary`2[System.String,Cordis.Composition.TypertResourceReader] ResourceReaders attrs= Nullable/Nullable<NotNull/NotNull,NotNull/NotNull> get=True set=True init=True getFlags=virtual=False,abstract=False,final=False,newSlot=False setFlags=virtual=False,abstract=False,final=False,newSlot=False
   Property System.Collections.Generic.IReadOnlyList`1[Cordis.Composition.TypertCodec] Args attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True getFlags=virtual=False,abstract=False,final=False,newSlot=False setFlags=virtual=False,abstract=False,final=False,newSlot=False
   Property System.String Event attrs= NotNull/NotNull get=True set=True init=True getFlags=virtual=False,abstract=False,final=False,newSlot=False setFlags=virtual=False,abstract=False,final=False,newSlot=False
   Method System.String ToString() attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
@@ -2151,6 +2199,7 @@ Cordis.Composition: Cordis.Composition.TypertRemoteEventFrame : Cordis.Compositi
   Method Boolean Equals(System.Object) attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params=obj:Nullable/Nullable  return=NotNull/NotNull
   Method Cordis.Composition.TypertRemoteEventFrame <Clone>$() attrs= flags=virtual=True,abstract=False,final=False,newSlot=True params= return=NotNull/NotNull
   Method Int32 GetHashCode() attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
+  Property System.Collections.Generic.IReadOnlyDictionary`2[System.String,Cordis.Composition.TypertResourceReader] ResourceReaders attrs= Nullable/Nullable<NotNull/NotNull,NotNull/NotNull> get=True set=True init=True getFlags=virtual=False,abstract=False,final=False,newSlot=False setFlags=virtual=False,abstract=False,final=False,newSlot=False
   Property System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement] Args attrs= NotNull/NotNull<NotNull/NotNull> get=True set=True init=True getFlags=virtual=False,abstract=False,final=False,newSlot=False setFlags=virtual=False,abstract=False,final=False,newSlot=False
   Method System.String ToString() attrs= flags=virtual=True,abstract=False,final=False,newSlot=False params= return=NotNull/NotNull
   Constructor Void .ctor(System.String, System.Collections.Generic.IReadOnlyList`1[System.Text.Json.JsonElement]) attrs= flags=virtual=False,abstract=False,final=False,newSlot=False params=Event:NotNull/NotNull ;Args:NotNull/NotNull<NotNull/NotNull>

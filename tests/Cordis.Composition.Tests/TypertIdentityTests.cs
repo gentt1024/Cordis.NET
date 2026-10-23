@@ -137,9 +137,7 @@ public sealed class TypertIdentityTests
 
     [Theory]
     [InlineData("identity/read", false)]
-    [InlineData("$events/result", false)]
     [InlineData("identity/watch", true)]
-    [InlineData("$events", true)]
     public async Task Non_owner_without_access_is_refused_before_resolvers_on_every_gateway_entry(
         string endpoint,
         bool stream)
@@ -173,7 +171,7 @@ public sealed class TypertIdentityTests
 
             Assert.Equal("remote-access/denied", result.Error?.Code);
             Assert.Equal(
-                endpoint.StartsWith("$events", StringComparison.Ordinal) ? "non-owner-unavailable" : "no-allow",
+                "no-allow",
                 result.Error?.Details?.GetProperty("reason").GetString());
         }
 
@@ -244,14 +242,23 @@ public sealed class TypertIdentityTests
         Assert.True((await sibling.InvokeAsync("identity/read", Json("{}"))).Ok);
     }
 
-    [Fact]
-    public async Task Peer_closure_discards_buffered_event_frames()
+    [Theory]
+    [InlineData("owner")]
+    [InlineData("guest")]
+    public async Task Peer_closure_discards_buffered_event_frames(string kind)
     {
         await using var root = new Context();
-        var (gateway, connection, _) = await Setup(root);
+        var (gateway, connection, _) = await Setup(root, new(new(Json("{\"kind\":\"" + kind + "\"}"))));
         await using var peerLifetime = connection;
         await root.RunAsync(ctx =>
         {
+            var access = new TypertRemoteAccess(ctx);
+            ctx.Provide("remoteAccess", access);
+            access.RegisterPolicy(
+                ctx,
+                "guest",
+                new(_ =>
+                    [new(new("observe", "global", ["event:identity/changed"]), TypertAccessResource.Global)]));
             var codec = TypertCodec.Create(TypertRegistryJson.Default.Int32);
             gateway.RegisterRemoteEvents(
                 ctx,

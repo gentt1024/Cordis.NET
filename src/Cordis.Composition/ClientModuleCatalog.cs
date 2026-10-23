@@ -46,6 +46,7 @@ public sealed class ClientModuleCatalog
     {
         "@cordis-net/client-modules",
         "@cordis-net/client-modules/slots",
+        "@cordis-net/client-modules/access",
         "@deepseek-ai/cordis",
         "@deepseek-ai/cosmokit",
     };

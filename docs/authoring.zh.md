@@ -4,6 +4,22 @@
 
 这些可选的 .NET 作者辅助接口复用现有 Cordis 运行时。包使代码可用；模块注册把名称映射到代码；patch/profile 条目选择实例；`Inject` 决定插件何时能够激活。服务身份仍由名称与 realm 决定。这些辅助接口不增加第二套注册表或生命周期。
 
+## 候选事件访问与权限客户端，2026-10-23
+
+在 Host 服务旁登记标准 follow 贡献：
+
+```csharp
+var access = new TypertRemoteAccess(ctx);
+ctx.Provide("remoteAccess", access);
+access.RegisterRemote(ctx, registry);
+```
+
+角色中使用 `event:<所选事件名>` 授权非 owner 通知。通知涉及资源时，在所选事件定义上添加 `ResourceReaders`；将 reader 的位置参数转换为 `JsonElement`。事件 reader 必须返回非空身份；与普通调用 reader 不同，null 不表示移除资源种类。owner 订阅无需 grants。将会话 Peer 生命周期绑定到吊销；只修改策略不会撤回已入队通知。
+
+绑定、过期状态或条件答案变化后调用 `Invalidate()`，也可传入完整受影响 principal，只唤醒身份匹配的跟随者。`SnapshotFor(principal)` 为该可信身份提供显式初始基线。快照是没有调用参数的 UI 提示，不能绕过 Gateway 授权。`remoteAccess/follow` 无需 grant，始终观察调用 Peer 自身。
+
+.NET 端以所属 Context 和借用 Connection 构造 `TypertRemoteAccessClient`，从 `State` 读取权限 source，为每个传输代际运行 `RunAsync`；应用负责重连。浏览器模块从 `@cordis-net/client-modules/access` 导入 `mountAccess`，调用 `mountAccess({ context, connection })`，通过 `source(kind, id, action)` 或 `global(action)` 订阅。可选 `initial` 必须是 Host 选择的基线。先释放 mount，再释放 Context／Connection；新 mount 未给基线时从 false 开始。浏览器 observable 可对接应用已有 UI 框架。
+
 ## 候选资源策略，2026-10-23
 
 在 Host 执行域内将一个 `TypertRemoteAccess` 提供为 `remoteAccess`，并在所属 Fiber 中注册策略：
@@ -20,7 +36,7 @@ access.RegisterPolicy(ctx, "guest", new(principal =>
 
 默认资源字段使用 S5 注册声明和 provider 的 `Resource` 事实。方法需要自定义提取时，Host 服务可实现 `ITypertRemoteResourceSource`。`ResourceReaders` 先按导出方法名、再按资源 kind 索引。reader 接收与业务方法相同的已解码 CLR 参数对象，lookup 身份仍为 `JsonElement`，省略的位置为 `Undefined.Value`，调用者取消令牌单独传入。返回 `[id]`、多个 ID，或用 null 移除本 kind；空列表和非法 ID 会拒绝调用。reader 不应自行解析 Context 或 lookup 对象。即使是 scoped Context 调用，元数据也从根服务读取。
 
-只写资源字段、不透明自定义 codec 对象、尚未选定元数据合同的多态值需要显式 reader。不要通过重新序列化已解码值来推导权限，converter 输出和仅供序列化的 getter 可能不同于已接受的输入。普通 JSON 解码错误现优先于 Service/Context/lookup 准备。客户端 wire 无需变化。非 owner 事件和访问快照仍等待 S7，此候选片不代表完整非 owner 发布闭包。
+只写资源字段、不透明自定义 codec 对象、尚未选定元数据合同的多态值需要显式 reader。不要通过重新序列化已解码值来推导权限，converter 输出和仅供序列化的 getter 可能不同于已接受的输入。普通 JSON 解码错误现优先于 Service/Context/lookup 准备。客户端 wire 无需变化。上文 S7 补齐事件与访问快照闭包。
 
 ## 候选 Remote 身份与资源，2026-10-23
 
@@ -33,7 +49,7 @@ var connection = new TypertHostConnection(owner, gateway,
 
 如果需要另一段由 Host 所有的寿命，构造 `new TypertPeer(owner, options)`，传入 `gateway.InvokeAsync(endpoint, arguments, peer, cancellationToken)` 或 `StreamAsync`。所属会话结束时释放 Peer，并在关闭 root 前等待活动流清理。释放一个 Peer 不影响其他 Peer，也不取消已运行的 unary 调用。已释放但仍挂载的 Connection 不会回退到新 owner；若希望可信进程内调用恢复使用回退 Peer，须显式撤销该服务注册。
 
-身份驱动使用自己提供的、具有 `kind` 字段的无凭据 JSON 对象构造 `TypertPrincipal`。该值克隆 JSON，所以可以释放原 `JsonDocument`。不得从请求的 principal 字段构造它。通过 `TypertPrincipal.PrincipalOf(TypertInvocation.Current)` 记录非 owner 调用方；对 owner 和 Remote 调用外部返回 null。S5 可以保存非 owner 身份，但在 S6/S7 授权工作完成前拒绝其调用。
+身份驱动使用自己提供的、具有 `kind` 字段的无凭据 JSON 对象构造 `TypertPrincipal`。该值克隆 JSON，所以可以释放原 `JsonDocument`。不得从请求的 principal 字段构造它。通过 `TypertPrincipal.PrincipalOf(TypertInvocation.Current)` 记录非 owner 调用方；对 owner 和 Remote 调用外部返回 null。S6/S7 现通过资源与事件策略授权非 owner 调用。
 
 通过 `registry.RegisterResource(owner, "document", new TypertResourceDeclaration("documentId"))` 注册领域所有的默认身份字段。通过 `GetResource`、`ListResources` 查询，通过现有 `Subscribe` 观察变更。声明随所属 Fiber 消失。不得注册保留的 `global` kind。在对应 `TypertLookupProvider` 或 `TypertHostContextAdapter` 上设置 `Resource = "document"`；配置 resolver 时会保留这一关联。资源注册本身不授予访问权限，也尚不检查方法参数。
 
@@ -333,7 +349,6 @@ await connection.dispose();
 
 选定的固定事件工作流、反向 Context 和 owned-value 处理使用[Remote 事件](remote-events.zh.md)所述共同声明。浏览器出站 scoped 调用、原生 Peer 路由及 Scope store/layer 已有有界消费证据；当前支持与拒绝形状见[后端支持表](development.zh.md#alpha5-独立后端处置)，剩余具名集成见[剩余支持边界](development.zh.md#剩余支持边界)；历史候选及证据通过[验证记录](validation.zh.md#历史证据)追溯。operator Peer 所有权、typed uplink 和 unary multipart 也已有实现。这些结果不证明任意类型图或所有 Peer 工作流均已完成。Settings、PluginManager 与选定宿主 emit 通知通过既有 profile owner 使用生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
 
-
 ## 原生作者模型与 .NET 消费者，2026-10-10
 
 普通声明和 Remote 使用共同模型及各用途投影。[当前支持表](development.zh.md#当前支持与发行状态)与后端处置区分运行 metadata 和独立生成。
@@ -390,7 +405,6 @@ var view = reply.Value;
 [独立 .NET Settings 门禁](../scripts/verify-typert-dotnet.py) 打包作者与合同包，再于仓库外构建仅依赖包的调用者。调用者不引用提供者实现，关闭 reflection fallback 并使用静态 metadata。门禁覆盖类型化 describe、脱敏、provider 缺失/失败、重试、已持视图失效重读、definition 撤销/重注册、局部 suspend 和借用客户端所有权；基础类型根、null/default 参数、空状态注解及拒绝不支持投影另有用例。`--aot` 验证静态调用者；动态 CLR Host 仍属于普通运行时边界。正式平台结果以[验证记录](validation.zh.md)中的确切完成检查点为准。
 
 此路线覆盖受支持的 unary／stream、Settings、PluginManager 和事件消费者。拒绝形状见[后端处置](development.zh.md#alpha5-独立后端处置)，具名平台证据见[验证索引](validation.zh.md#已发行版本证据)。
-
 
 ## 类型化 Remote 上行
 

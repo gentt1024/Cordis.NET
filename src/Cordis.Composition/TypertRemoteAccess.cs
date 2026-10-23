@@ -96,7 +96,7 @@ public sealed record TypertAccessPolicy(
 
 /// <summary>Fiber-owned access policies, resource decisions and Remote list filtering.</summary>
 /// <remarks>Use the owning Context execution domain for reads and mutations.</remarks>
-public sealed class TypertRemoteAccess
+public sealed partial class TypertRemoteAccess : ITypertRemoteService
 {
     private static readonly TypertAccessDecision.Deny NoAllow = new("no-allow");
     private static readonly TypertAccessDecision.Deny PolicyFailed = new("policy-failed");
@@ -150,7 +150,7 @@ public sealed class TypertRemoteAccess
         ArgumentNullException.ThrowIfNull(request.Principal);
         ArgumentNullException.ThrowIfNull(request.Action);
         ArgumentNullException.ThrowIfNull(request.Resources);
-        if (request.Principal.Kind == "owner")
+        if (request.Principal.Kind == "owner" || request.Action == FollowEndpoint)
             return TypertAccessDecision.Allowed;
         if (!policies.TryGetValue(request.Principal.Kind, out var entry))
             return NoAllow;
@@ -184,10 +184,16 @@ public sealed class TypertRemoteAccess
     }
 
     /// <summary>Allow the next failure of each policy to be diagnosed again.</summary>
-    public void Invalidate()
+    public void Invalidate() => Invalidate(null);
+
+    /// <summary>Invalidate followers of an exact JSON identity, or every follower when omitted.</summary>
+    public void Invalidate(TypertPrincipal? principal)
     {
         EnsureAccess();
         reported.Clear();
+        foreach (var follower in followers)
+            if (principal is null || SameIdentity(principal.Identity, follower.Principal.Identity))
+                follower.Touch();
     }
 
     private IReadOnlyList<TypertAccessBinding>? BindingsOf(PolicyEntry entry, TypertPrincipal principal, string action)
@@ -276,7 +282,14 @@ public sealed class TypertRemoteAccess
         }
     }
 
-    private void EnsureAccess() => _ = context.Get<object>("remoteAccess", strict: false);
+    private void EnsureAccess()
+    {
+        _ = context.Get<object>("remoteAccess", strict: false);
+        if (ownsLifetime)
+            return;
+        context.Effect(() => (Action)(() => lifetime.Cancel()), "remoteAccess: snapshot generations");
+        ownsLifetime = true;
+    }
 
     private sealed class PolicyEntry(string kind, TypertAccessPolicy policy)
     {

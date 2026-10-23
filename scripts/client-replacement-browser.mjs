@@ -6,7 +6,8 @@ import {bundleSource} from '../clients/modules/examples/replacement/check.mjs'
 // Serve the exact package installed by verify-client-replacement.mjs, without rebuilding it.
 const runtime = resolve(process.argv[2])
 const assets = new Map([
-  ['/client.mjs', await readFile(resolve(runtime, 'client.mjs'))],
+  ...await Promise.all(['client', 'access', 'access-remote', 'cordis-remote'].map(async name =>
+    ['/' + name + '.mjs', await readFile(resolve(runtime, name + '.mjs'))])),
   ['/check.mjs', await readFile(new URL('../clients/modules/examples/replacement/check.mjs', import.meta.url))],
 ])
 const page = `<!doctype html><meta charset="utf-8"><title>Browser target replacement</title>

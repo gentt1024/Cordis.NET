@@ -47,7 +47,9 @@ internal sealed class CordisExecutionContext : SynchronizationContext
         finally
         {
             SetSynchronizationContext(previous);
-            Volatile.Write(ref _draining, 0);
+            // Publish the idle state before checking the queue, so a concurrent Post
+            // either starts a drain or is observed by this drain's final check.
+            Interlocked.Exchange(ref _draining, 0);
             if (!_queue.IsEmpty)
                 Schedule();
         }

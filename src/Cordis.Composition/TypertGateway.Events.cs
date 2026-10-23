@@ -62,12 +62,14 @@ public sealed partial class TypertGateway
                 "gateway/service-unavailable",
                 TypertEventProtocol.Stream,
                 "The selected Remote event source is unavailable.");
-            client = registration.Subscribe();
+            client = registration.Subscribe(peer);
             return Task.CompletedTask;
         });
         try
         {
             token.ThrowIfCancellationRequested();
+            if (client.Owner.Ended)
+                yield break;
             yield return TypertRemoteResult.Success(
                 TypertEventProtocol.Json(
                     new()
@@ -82,6 +84,8 @@ public sealed partial class TypertGateway
             await foreach (var frame in client.Queue.Reader.ReadAllAsync(token))
             {
                 token.ThrowIfCancellationRequested();
+                if (client.Owner.Ended)
+                    yield break;
                 yield return TypertRemoteResult.Success(frame);
             }
         }
@@ -97,16 +101,43 @@ public sealed partial class TypertGateway
 
     private Task RunEventCallback(Func<Task> callback) => caller.RunAsync(_ => callback());
 
-    private async Task ReceiveRemoteEventResultAsync(JsonElement arguments)
+    private async Task ReceiveRemoteEventResultAsync(JsonElement arguments, TypertPeer peer)
     {
         var result = TypertEventProtocol.ReadResult(arguments);
         if (!eventClients.TryGetValue(result.Client, out var client))
             throw new InvalidOperationException("Remote event result identifies no active event stream.");
+        if (!ReferenceEquals(client.Peer, peer))
+            throw Fault(
+                "gateway/interactions-forbidden",
+                TypertEventProtocol.Result,
+                "The result must come from the event subscription Peer.");
         await client.Owner.ReceiveAsync(client, result.Event, result.Outcome, result.Error);
     }
 
-    private sealed class EventClient(RemoteEventRegistration owner)
+    private bool AllowsEvent(TypertPeer peer, string name, IReadOnlyList<TypertAccessResource> resources)
     {
+        try
+        {
+            return caller
+                .Get<TypertRemoteAccess>("remoteAccess", strict: false)
+                ?.Decide(new(peer.Principal, "event:" + name, resources)) is TypertAccessDecision.Allow;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+
+    private sealed class EventClient(RemoteEventRegistration owner, TypertPeer peer)
+    {
+        internal TypertPeer Peer
+        {
+            get;
+        } = peer;
+
+        internal bool Answers => Peer.Principal.Kind == "owner";
+
         internal string Id
         {
             get;
@@ -204,13 +235,15 @@ public sealed partial class TypertGateway
             get;
         }
 
+        internal bool Ended => ended;
+
         internal void Start() => done = ConsumeAsync();
 
-        internal EventClient Subscribe()
+        internal EventClient Subscribe(TypertPeer peer)
         {
             if (ended)
                 throw new InvalidOperationException("The event source has ended.");
-            var client = new EventClient(this);
+            var client = new EventClient(this, peer);
             clients.Add(client);
             gateway.eventClients.Add(client.Id, client);
             foreach (var item in pending.Values)
@@ -230,6 +263,8 @@ public sealed partial class TypertGateway
 
         private static void Deliver(PendingEvent item, EventClient client)
         {
+            if (!client.Answers || client.Peer.CancellationToken.IsCancellationRequested)
+                return;
             item.Deliveries.Add(client);
             client.Deliveries.Add(item);
             client.Queue.Writer.TryWrite(item.Frame);
@@ -373,8 +408,26 @@ public sealed partial class TypertGateway
                                 ["event"] = frame.Event,
                                 ["args"] = args
                             });
+                        IReadOnlyList<TypertAccessResource>? resources = null;
+                        var resolved = false;
                         foreach (var client in clients)
+                        {
+                            if (client.Peer.CancellationToken.IsCancellationRequested)
+                                continue;
+                            if (!client.Answers)
+                            {
+                                if (!resolved)
+                                {
+                                    resources = EventResources(frame, lifetime.Token);
+                                    resolved = true;
+                                }
+
+                                if (resources is null || !gateway.AllowsEvent(client.Peer, frame.Event, resources))
+                                    continue;
+                            }
+
                             client.Queue.Writer.TryWrite(wire);
+                        }
                     }
                     else
                         throw new InvalidOperationException("Unknown Remote event dispatch.");
@@ -397,6 +450,39 @@ public sealed partial class TypertGateway
             }
         }
 
+        private static IReadOnlyList<TypertAccessResource>? EventResources(
+            TypertRemoteEventFrame frame,
+            CancellationToken token)
+        {
+            try
+            {
+                if (frame.ResourceReaders is null || frame.ResourceReaders.Count == 0)
+                    return [TypertAccessResource.Global];
+                var resources = new List<TypertAccessResource>();
+                var arguments = Array.AsReadOnly(frame.Args.Select(value => (object?)value).ToArray());
+                foreach (var (kind, reader) in frame.ResourceReaders)
+                {
+                    if (string.IsNullOrEmpty(kind) || kind == "global" || kind.Contains('#', StringComparison.Ordinal))
+                        return null;
+                    var ids = reader(arguments, token);
+                    if (ids is null || ids.Count == 0)
+                        return null;
+                    foreach (var id in ids)
+                    {
+                        if (string.IsNullOrEmpty(id))
+                            return null;
+                        resources.Add(TypertAccessResource.Create(kind, id));
+                    }
+                }
+
+                return resources.AsReadOnly();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         private async Task EndAsync(Exception reason)
         {
             if (ended)
@@ -406,8 +492,8 @@ public sealed partial class TypertGateway
                 gateway.remoteEvents = null;
             foreach (var item in pending.Values.ToArray())
                 await FinishAsync(item, null, reason);
-            foreach (var client in clients)
-                client.Queue.Writer.TryComplete();
+            foreach (var client in clients.ToArray())
+                Unsubscribe(client);
         }
 
         public ValueTask DisposeAsync() => new(disposal ??= DisposeCoreAsync());

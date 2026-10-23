@@ -2,6 +2,35 @@
 
 [English](validation.md)
 
+## 候选事件与访问客户端，2026-10-23
+
+S7 使用固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的范围例外；正式锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。未修改的候选原始测试通过 67 项，失败／跳过均为零：Gateway access 30、RemoteAccess Host 21、ClientAccess 10、OperatorConnect 6。外部源码模式 harness 使用 Vitest 4.1.11、TypeScript 6.0.3、Vite 8.2.2。首次运行通过 61 项，但因缺少 `compression` 未能收集 OperatorConnect；在两个 checkout 之外补齐候选锁定依赖后，完整重跑通过 67 项。不跨运行累加数量。这不是完整上游 workspace 构建，也不是原生测试结果。
+
+| S7 合同 | 原生证据 |
+|---|---|
+| 整条通知资源授权、reader 失败、owner 绕过、passive 拒绝 | `RemoteEventsGatewayTests` |
+| 同 Peer 回答归属、非 owner 观察、跨代际保留待处理 waterfall | `RemoteEventsGatewayTests` |
+| Peer／事件源关闭丢弃缓冲、sibling 隔离 | `TypertIdentityTests`、`RemoteEventsGatewayTests` |
+| 快照顺序、失效合并、完整 principal 定向失效、策略／服务撤回 | `TypertAccessSnapshotTests` |
+| 原生客户端载体代际、终止性失败、仅包引用消费者 | `scripts/verify-access-client.py` |
+| 安装后 TypeScript 声明／运行时、稳定 observable、非法帧、重连、旧代际隔离与全新 remount | `scripts/verify-client-access.mjs`，已纳入 `verify.py` 必跑步骤 |
+
+对正式 checkout 运行整库门禁，再用生成的包批次运行独立 NuGet 消费者：
+
+```sh
+python3 scripts/verify.py --dsh <fixed-0.2.0-checkout> \
+  --upstream-test packages/boot/app-boot/tests/profile.spec.ts \
+  --upstream-test packages/boot/hmr/tests/modules.spec.ts
+dotnet pack Cordis.slnx -c Release --no-build --no-restore -o <package-batch>
+python3 scripts/verify-access-client.py --packages <package-batch> --output <empty-access-output>
+python3 scripts/verify-remote-access.py --packages <package-batch> --output <empty-policy-output>
+```
+
+浏览器检查在 checkout 外使用构建后的包及真实生成的 namespace／Connection API。.NET 消费者使用全新映射包缓存与真实 loopback 传输。remount 检查是原生验收证据，候选 ClientAccess 原始套件自身没有 remount 用例。这些本地检查不代表 Windows／Linux、Native AOT、完整 Node SDK 互通或 S8 投影兼容。原始日志、本机路径和 harness 配置保留在仓库外。
+
+`ExecutionContextTests.Concurrent_entries_keep_waking_the_context_and_remain_serial` 通过一个或四个生产者反复调用公开的 `Context.RunAsync`，验证回调串行执行，并限制任务完成与清理的等待时间。该测试在内存顺序修复前复现了原生丢失唤醒；CLR 测试停滞时的转储也独立证实，清理回调已入队但没有待执行的调度。
+
+
 ## 候选资源决策与调用准备，2026-10-23
 
 S6 使用固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的[范围明确例外](compatibility.zh.md#候选资源决策与调用准备2026-10-23)，正式行为锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本地环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
