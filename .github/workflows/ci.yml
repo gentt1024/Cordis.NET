@@ -46,6 +46,16 @@ jobs:
           $patchedExit = $LASTEXITCODE
           @{originalExit=$originalExit;patchedExit=$patchedExit;commit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;patchSha256=(Get-FileHash upstream-manifest-scope.patch -Algorithm SHA256).Hash} | ConvertTo-Json | Set-Content artifacts/exits.json
           if ($originalExit -ne 0 -or $patchedExit -ne 0) { throw 'Original or patched assertions failed; this diagnostic is not candidate acceptance.' }
+      - name: Record diagnostic source identities
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          Copy-Item upstream-manifest-scope.patch artifacts/
+          $source = 'packages/boot/hmr/src/package-manifest.ts'
+          $test = 'packages/boot/hmr/tests/package-manifest.spec.ts'
+          @{originalSourceSha256=(Get-FileHash "../dsh-candidate/$source" -Algorithm SHA256).Hash;patchedSourceSha256=(Get-FileHash "../dsh-manifest-patched/$source" -Algorithm SHA256).Hash;originalTestSha256=(Get-FileHash "../dsh-candidate/$test" -Algorithm SHA256).Hash;patchedTestSha256=(Get-FileHash "../dsh-manifest-patched/$test" -Algorithm SHA256).Hash} | ConvertTo-Json | Set-Content artifacts/source-identities.json
+          git -C ../dsh-manifest-patched diff --no-ext-diff -- $source | Set-Content artifacts/applied.patch
       - name: Preserve diagnostic observations
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
