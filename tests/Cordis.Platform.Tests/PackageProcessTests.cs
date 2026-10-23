@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Security;
 using System.Text.Json;
 using Cordis.Clr;
@@ -428,6 +429,114 @@ public sealed class PackageProcessTests : IAsyncLifetime
 public sealed class PackageProcessReservationTests
 {
     [Fact]
+    public async Task Exited_root_keeps_descendant_and_pipe_ownership_until_both_have_settled()
+    {
+        var directory = Directory.CreateTempSubdirectory("cordis-exited-root-").FullName;
+        var path = Path.Combine(directory, "run.json");
+        var lease = CreateLease(path);
+        Process? process = null;
+        object? owner = null;
+        Task<string>? output = null, error = null;
+        var recordingAttempted = false;
+        var windows = OperatingSystem.IsWindows();
+
+        void Stop()
+        {
+            if (windows && owner is not null)
+                Invoke(owner, "Stop");
+            else if (recordingAttempted)
+                Invoke(lease, "StopGroup");
+            else if (process is not null && !process.HasExited)
+                process.Kill(entireProcessTree: true);
+        }
+
+        try
+        {
+            await BeginAsync(path, CancellationToken.None);
+            var start = new ProcessStartInfo(
+                windows ? "cmd.exe" : OperatingSystem.IsLinux() ? "/usr/bin/setsid" : "/bin/sh")
+            {
+                WorkingDirectory = directory,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            if (OperatingSystem.IsLinux())
+                start.ArgumentList.Add("/bin/sh");
+            foreach (var argument in windows
+                         ? new[]
+                         {
+                             "/d", "/c", "start /b ping -n 1000 127.0.0.1 & echo root-output & 1>&2 echo root-error"
+                         }
+                         : new[] { "-c", "sleep 1000 & printf 'root-output\\n'; printf 'root-error\\n' >&2" })
+                start.ArgumentList.Add(argument);
+            if (windows || OperatingSystem.IsMacOS())
+            {
+                var type = typeof(DotnetPluginToolchain).Assembly.GetType(
+                    windows ? "Cordis.Clr.WindowsPackageProcess" : "Cordis.Clr.MacPackageProcess",
+                    throwOnError: true)!;
+                owner = type.GetMethod("Start", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [start])!;
+                process = Property<Process>(owner, "Process");
+                // Widen the exact race deliberately: the real owner normally records before Resume.
+                Invoke(owner, "Resume");
+            }
+            else
+                process = Process.Start(start)!;
+
+            var exited = OperatingSystem.IsMacOS()
+                ? (Task)Invoke(owner!, "WaitForExitAsync", CancellationToken.None)!
+                : process.WaitForExitAsync();
+            await exited.WaitAsync(TimeSpan.FromSeconds(10));
+            recordingAttempted = true;
+            Invoke(lease, "Started", process, !windows, windows ? Property<string>(owner!, "JobName") : null);
+            output = (owner is null ? process.StandardOutput : Property<StreamReader>(owner, "StandardOutput"))
+                .ReadToEndAsync();
+            error = (owner is null ? process.StandardError : Property<StreamReader>(owner, "StandardError"))
+                .ReadToEndAsync();
+            Assert.False(output.IsCompleted, "The descendant must still hold the inherited output pipe.");
+            var recorded = await File.ReadAllTextAsync(path);
+            var refusal = await Assert.ThrowsAsync<IOException>(() => BeginAsync(path, CancellationToken.None));
+            Assert.Contains("still active", refusal.Message);
+            Assert.Equal(recorded, await File.ReadAllTextAsync(path));
+            Assert.Throws<IOException>(() => Invoke(lease, "Finish", true));
+            Assert.Equal(recorded, await File.ReadAllTextAsync(path));
+
+            Stop();
+            var empty = windows
+                ? (Task<bool>)Invoke(owner!, "WaitUntilEmptyAsync", TimeSpan.FromSeconds(5), CancellationToken.None)!
+                : (Task<bool>)Invoke(lease, "WaitForGroupExitAsync", TimeSpan.FromSeconds(5))!;
+            Assert.True(await empty);
+            Assert.Throws<IOException>(() => Invoke(lease, "Finish", false));
+            Assert.Equal(recorded, await File.ReadAllTextAsync(path));
+            Assert.Contains("root-output", await output.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.Contains("root-error", await error.WaitAsync(TimeSpan.FromSeconds(5)));
+            Invoke(lease, "Finish", true);
+            Assert.False(File.Exists(path));
+
+            // Older group/job records carry root start ticks. They still use the same actual owner.
+            var legacy = (EntryOptions)ConfigurationFile.Parse(recorded, true)!;
+            legacy["started"] = DateTime.UtcNow.Ticks;
+            await File.WriteAllTextAsync(path, ConfigurationFile.Write(legacy, true));
+            await BeginAsync(path, CancellationToken.None);
+            Assert.Contains("starting", await File.ReadAllTextAsync(path));
+        }
+        finally
+        {
+            Stop();
+            if (output is not null)
+                await output.WaitAsync(TimeSpan.FromSeconds(5));
+            if (error is not null)
+                await error.WaitAsync(TimeSpan.FromSeconds(5));
+            if (owner is IDisposable disposable)
+                disposable.Dispose();
+            else
+                process?.Dispose();
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Cancelled_write_of_a_new_reservation_does_not_block_a_later_operation()
     {
         var directory = Directory.CreateTempSubdirectory("cordis-run-reservation-").FullName;
@@ -470,16 +579,31 @@ public sealed class PackageProcessReservationTests
         // Inject cancellation at the real ownership boundary, before any process exists.
         // Public preparation observes cancellation in several earlier async writes, so
         // racing a watcher against this point would not provide a deterministic regression.
-        var type = typeof(DotnetPluginToolchain).Assembly.GetType(
-            "Cordis.Clr.PackageProcessLease",
-            throwOnError: true)!;
-        var lease = type.GetConstructor(
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            [typeof(string)],
-            null)!.Invoke([path]);
-        return (Task)type.GetMethod("BeginAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(
-            lease,
-            [token])!;
+        return (Task)Invoke(CreateLease(path), "BeginAsync", token)!;
+    }
+
+    private static object CreateLease(string path) =>
+        typeof(DotnetPluginToolchain).Assembly.GetType("Cordis.Clr.PackageProcessLease", throwOnError: true)!
+            .GetConstructor(
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                [typeof(string)],
+                null)!.Invoke([path]);
+
+    private static T Property<T>(object instance, string name) =>
+        (T)instance.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(instance)!;
+
+    private static object? Invoke(object instance, string name, params object?[] arguments)
+    {
+        try
+        {
+            return instance.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(instance, arguments);
+        }
+        catch (TargetInvocationException error) when (error.InnerException is not null)
+        {
+            ExceptionDispatchInfo.Capture(error.InnerException).Throw();
+            throw;
+        }
     }
 }

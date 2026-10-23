@@ -72,7 +72,9 @@ internal sealed class PackageProcessLease(string path)
         var record = new EntryOptions
         {
             ["pid"] = pid,
-            ["started"] = process.StartTime.ToUniversalTime().Ticks,
+            // Group/job recovery owns descendants independently of an already-exited root.
+            // Keep the legacy field, but read root start ticks only for the PID-only fallback.
+            ["started"] = grouped || windowsJob is not null ? 0L : process.StartTime.ToUniversalTime().Ticks,
             ["grouped"] = grouped,
         };
         if (windowsJob is not null)
