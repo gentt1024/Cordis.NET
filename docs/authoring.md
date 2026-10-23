@@ -4,6 +4,24 @@
 
 These optional .NET authoring helpers use the existing Cordis runtime. A package makes code available; module registration maps names to code; patch/profile entries select instances; `Inject` determines when a plugin can activate. Service identity remains its name and realm. None of these helpers adds a second registry or lifecycle.
 
+## Candidate resource policies, 2026-10-23
+
+Inside the Host execution domain, provide one `TypertRemoteAccess` as `remoteAccess` and register a policy in its owner's Fiber:
+
+```csharp
+var access = new TypertRemoteAccess(ctx);
+ctx.Provide("remoteAccess", access);
+var read = new TypertAccessRole("document reader", "document", ["documents/read"]);
+access.RegisterPolicy(ctx, "guest", new(principal =>
+    [new(read, TypertAccessResource.Create("document", "document-1"))]));
+```
+
+Read current business grants in the policy callback; do not cache decisions across calls. A condition receives the action, resource and decoded named arguments for a concrete call. Its arguments are null for `Allows`. Return `TypertAccessDecision.Allowed` or `new TypertAccessDecision.Deny("reason")`. `Explain` only describes an existing refusal. Call `access.Allows(itemResource)` inside the Remote method to filter each list/stream item. Each call observes current bindings. Policy registration is withdrawn with its owner; exceptions deny access.
+
+Default resource fields use the S5 registry declarations and provider `Resource` facts. A Host service may implement `ITypertRemoteResourceSource` when a method needs custom extraction. `ResourceReaders` is keyed by exported method name, then resource kind. Each reader receives the same decoded CLR parameter objects as the method, with lookup identities still represented as `JsonElement`, omitted slots as `Undefined.Value`, and the caller cancellation token separately. Return `[id]`, several IDs, or null to remove that kind. Empty lists and invalid IDs refuse the call. Readers must not resolve Contexts or lookup objects themselves. Metadata is read from the root service even for a scoped Context invocation.
+
+Declare an explicit reader for setter-only resource fields, opaque custom-codec objects or polymorphic values without a selected metadata contract. Do not reserialize decoded values to infer permissions: converter output and serialization-only getters can differ from accepted input. Ordinary JSON decode errors now precede Service/Context/lookup preparation. No client wire change is needed. Non-owner events and access snapshots remain unavailable until S7; this candidate slice is not the complete non-owner release closure.
+
 ## Candidate Remote identities and resources, 2026-10-23
 
 Create Peers inside the owning Context's execution domain. The ordinary `TypertHostConnection(owner, gateway)` still selects the local owner with event answering enabled. A passive owner connection is explicit:

@@ -99,7 +99,8 @@ public sealed record TypertRemoteResult(bool Ok, JsonElement? Value, TypertRemot
 
 /// <summary>Carrier-independent Remote dispatch over live Cordis services and generated Typert contracts.</summary>
 /// <remarks>
-/// Preparation admits the Service and binding before starting all parameter resolvers. It returns the first
+/// Preparation validates ordinary JSON and authorizes resources before resolving Context and admitting the Service.
+/// It then starts all lookup resolvers and returns the first
 /// observed resolution failure without cancelling other started resolvers; their late failures remain observed.
 /// Pending resolvers can retain their provider until they settle, including after a failed request has returned.
 /// </remarks>
@@ -156,7 +157,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
                     return;
                 }
 
-                var prepared = await PrepareAsync(endpoint, arguments);
+                var prepared = await PrepareAsync(endpoint, arguments, peer, cancellationToken);
                 if (prepared.Descriptor.IsStream)
                     throw Fault("gateway/signature-invalid", endpoint, "A stream method requires the stream carrier.");
                 if (!prepared.Binding.Methods.TryGetValue(prepared.Descriptor.Method, out var invoke))
@@ -280,7 +281,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
             await caller.RunAsync(async _ =>
             {
                 AdmitPeer(peer, endpoint);
-                prepared = await PrepareAsync(endpoint, arguments);
+                prepared = await PrepareAsync(endpoint, arguments, peer, cancellationToken);
                 if (!prepared.Descriptor.IsStream ||
                     !prepared.Binding.Streams.TryGetValue(prepared.Descriptor.Method, out var invoke))
                     throw Fault("gateway/signature-invalid", endpoint, "This endpoint has no active stream binding.");
@@ -422,8 +423,8 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
     {
         if (peer.CancellationToken.IsCancellationRequested)
             throw Fault("gateway/peer-disposed", endpoint, "The calling Peer has been disposed.");
-        // S5 establishes identity; non-owner dispatch requires the S6/S7 authorization closure.
-        if (peer.Principal.Kind != "owner")
+        // Event authorization and answer ownership remain closed until the S7 slice.
+        if (peer.Principal.Kind != "owner" && endpoint is TypertEventProtocol.Stream or TypertEventProtocol.Result)
         {
             using var details = JsonDocument.Parse(
                 "{\"action\":" + JsonSerializer.Serialize(endpoint, TypertJson.Default.String) +
@@ -460,7 +461,11 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         yield break;
     }
 
-    private async Task<Prepared> PrepareAsync(string endpoint, JsonElement arguments)
+    private async Task<Prepared> PrepareAsync(
+        string endpoint,
+        JsonElement arguments,
+        TypertPeer peer,
+        CancellationToken cancellationToken)
     {
         var descriptor = registry.GetLocal(endpoint) ?? throw Fault(
             registry.HasSeenLocal(endpoint) ? "gateway/definition-unavailable" : "gateway/invocation-unavailable",
@@ -492,6 +497,9 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
             if (!actual.Contains(field) && !descriptor.Parameters.Any(parameter =>
                     parameter.Wire == field && parameter.AcceptsUndefined && parameter.Lookup is null))
                 throw Fault("gateway/arguments-invalid", endpoint, "A required wire field is absent.");
+        var validated = ValidateArguments(descriptor, arguments);
+        if (peer.Principal.Kind != "owner")
+            Authorize(peer, descriptor, validated, cancellationToken);
         Context receiver = caller;
         if (descriptor.Invocation is { } selection)
         {
@@ -544,7 +552,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
         if (service is not ITypertRemoteService remote || remote.TypertRemote.Service != descriptor.Service ||
             remote.TypertRemote.Namespace != descriptor.Namespace)
             throw Fault("gateway/binding-invalid", endpoint, "The service has no matching explicit Remote binding.");
-        var decoded = await ResolveParametersAsync(descriptor, arguments, checks);
+        var decoded = await ResolveParametersAsync(descriptor, validated, checks);
         checks.Add(() =>
         {
             var currentService = receiver.Get<object>(descriptor.Service, strict: false);
@@ -561,7 +569,7 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
 
     private Task<object?[]> ResolveParametersAsync(
         TypertInvocationDescriptor descriptor,
-        JsonElement arguments,
+        IReadOnlyDictionary<string, object?> arguments,
         List<Action> checks)
     {
         var endpoint = descriptor.Endpoint;
@@ -593,15 +601,15 @@ public sealed partial class TypertGateway(Context caller, TypertRegistry registr
 
     private async Task<object?> ResolveParameterAsync(
         TypertInvocationParameter parameter,
-        JsonElement arguments,
+        IReadOnlyDictionary<string, object?> arguments,
         string endpoint,
         List<Action> checks)
     {
-        if (!arguments.TryGetProperty(parameter.Wire, out var raw))
+        if (!arguments.TryGetValue(parameter.Wire, out var validated))
             return Undefined.Value;
-        var value = Decode(parameter.Codec, raw, endpoint, parameter.Wire);
         if (parameter.Lookup is not { } key)
-            return value;
+            return validated;
+        var value = Decode(parameter.Codec, (JsonElement)validated!, endpoint, parameter.Wire);
         var provider = registry.GetLookup(key) ?? throw Fault(
             "gateway/lookup-unavailable",
             endpoint,

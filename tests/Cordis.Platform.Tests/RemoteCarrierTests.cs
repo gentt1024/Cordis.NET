@@ -176,9 +176,10 @@ public sealed class RemoteCarrierTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Carrier_identity_is_host_selected_and_non_owner_never_reaches_lookup(bool guest)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Carrier_identity_and_access_are_host_selected_before_lookup(bool guest, bool grant)
     {
         await using var root = new Context();
         var service = new CarrierService();
@@ -187,6 +188,31 @@ public sealed class RemoteCarrierTests
             root,
             service,
             options: new(guest ? new(identity.RootElement) : TypertPrincipal.Owner));
+        var allowed = !guest || grant;
+        var decisions = 0;
+        EffectHandle? registration = null;
+        if (grant)
+            await root.RunAsync(ctx =>
+            {
+                var access = new TypertRemoteAccess(ctx);
+                ctx.Provide("remoteAccess", access);
+                registration = access.RegisterPolicy(
+                    ctx,
+                    "guest",
+                    new(_ =>
+                    [
+                        new(
+                            new("carrier", "global", ["carrier/read", "carrier/watch"]),
+                            TypertAccessResource.Global,
+                            request =>
+                            {
+                                decisions++;
+                                Assert.Equal(1, Assert.IsType<JsonElement>(request.Arguments!["id"]).GetInt32());
+                                return TypertAccessDecision.Allowed;
+                            })
+                    ]));
+                return Task.CompletedTask;
+            });
         await using var app = Server(connection);
         await app.StartAsync();
         using var http = new HttpClient
@@ -210,8 +236,8 @@ public sealed class RemoteCarrierTests
         response.EnsureSuccessStatusCode();
         using var unary = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var result = unary.RootElement.GetProperty("result");
-        Assert.Equal(!guest, result.GetProperty("ok").GetBoolean());
-        if (guest)
+        Assert.Equal(allowed, result.GetProperty("ok").GetBoolean());
+        if (!allowed)
             Assert.Equal("remote-access/denied", result.GetProperty("error").GetProperty("code").GetString());
         else
             Assert.Same(connection.Peer, service.LastPeer);
@@ -222,8 +248,8 @@ public sealed class RemoteCarrierTests
             true,
             CancellationToken.None);
         using var frame = await Read(socket).WaitAsync(Limit);
-        Assert.Equal(guest ? "error" : "item", frame.RootElement.GetProperty("type").GetString());
-        if (guest)
+        Assert.Equal(allowed ? "item" : "error", frame.RootElement.GetProperty("type").GetString());
+        if (!allowed)
             Assert.Equal(
                 "remote-access/denied",
                 frame.RootElement.GetProperty("error").GetProperty("code").GetString());
@@ -234,8 +260,26 @@ public sealed class RemoteCarrierTests
             Assert.Same(connection.Peer, service.LastPeer);
         }
 
-        Assert.Equal(guest ? 0 : 2, service.Lookups);
-        Assert.Equal(guest ? 0 : 2, service.Calls);
+        Assert.Equal(allowed ? 2 : 0, service.Lookups);
+        Assert.Equal(allowed ? 2 : 0, service.Calls);
+        Assert.Equal(grant ? 2 : 0, decisions);
+        if (registration is not null)
+        {
+            await registration.DisposeAsync();
+            using var deniedResponse = await http.PostAsync(
+                "/remote/carrier/read",
+                new StringContent(
+                    "{\"type\":\"client-request\",\"rpcId\":\"revoked\",\"method\":\"carrier/read\",\"payload\":{\"args\":{\"id\":1}}}",
+                    Encoding.UTF8,
+                    "application/json"));
+            using var denied = JsonDocument.Parse(await deniedResponse.Content.ReadAsStringAsync());
+            Assert.Equal(
+                "remote-access/denied",
+                denied.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
+            Assert.Equal(2, service.Lookups);
+            Assert.Equal(2, service.Calls);
+        }
+
         await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "done", CancellationToken.None);
     }
 
