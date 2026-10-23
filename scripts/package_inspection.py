@@ -6,7 +6,9 @@ from pathlib import Path, PurePosixPath
 import argparse
 import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import tempfile
 import posixpath
@@ -34,7 +36,7 @@ def inspect_restored_packages(cache: Path, batch: Path) -> dict[str, str]:
     """Require every restored Cordis archive to match the selected package batch."""
     expected = {path.name.casefold(): path for path in batch.glob("*.nupkg")}
     restored = sorted(path for path in cache.rglob("*.nupkg")
-                      if path.name.casefold().startswith("cordis.net."))
+                      if path.name.casefold().startswith("cordis."))
     if not restored:
         raise ValueError("No restored Cordis packages found in the isolated cache")
     result = {}
@@ -47,6 +49,56 @@ def inspect_restored_packages(cache: Path, batch: Path) -> dict[str, str]:
             raise ValueError(f"Restored Cordis package differs from the selected batch: {path.name}")
         result[name] = digest
     return result
+
+
+def prepare_package_consumer(directory: Path, root: Path, batch: Path, dotnet: str) -> dict[str, str]:
+    """Fence an external consumer from ancestor builds and developer package caches."""
+    directory = directory.resolve()
+    if directory.is_relative_to(root.resolve()):
+        raise ValueError("The package consumer must be outside the repository")
+    props = ET.Element("Project")
+    ET.SubElement(ET.SubElement(props, "PropertyGroup"), "RestorePackagesPath").text = str(directory / "cache")
+    ET.ElementTree(props).write(directory / "Directory.Build.props", encoding="utf-8")
+    (directory / "Directory.Build.targets").write_text("<Project />\n", encoding="utf-8")
+    shutil.copyfile(root / "global.json", directory / "global.json")
+    config = ET.Element("configuration")
+    sources = ET.SubElement(config, "packageSources")
+    ET.SubElement(sources, "clear")
+    ET.SubElement(sources, "add", key="local", value=str(batch.resolve()))
+    ET.SubElement(sources, "add", key="nuget.org", value="https://api.nuget.org/v3/index.json")
+    ET.SubElement(ET.SubElement(config, "fallbackPackageFolders"), "clear")
+    mapping = ET.SubElement(config, "packageSourceMapping")
+    for name, pattern in (("local", "Cordis.*"), ("nuget.org", "*")):
+        ET.SubElement(ET.SubElement(mapping, "packageSource", key=name), "package", pattern=pattern)
+    ET.ElementTree(config).write(directory / "NuGet.Config", encoding="utf-8")
+    executable = Path(shutil.which(dotnet) or dotnet).resolve()
+    env = dict(os.environ, DOTNET_ROOT=str(executable.parent), NUGET_PACKAGES=str(directory / "cache"),
+               NUGET_FALLBACK_PACKAGES="", DOTNET_CLI_UI_LANGUAGE="en")
+    env["PATH"] = str(executable.parent) + os.pathsep + env.get("PATH", "")
+    return env
+
+
+def inspect_package_consumer(project: Path, cache: Path, batch: Path, version: str) -> dict:
+    """Bind actual restored package inputs, rather than the intended project text."""
+    assets = json.loads((project.parent / "obj/project.assets.json").read_text(encoding="utf-8-sig"))
+    if any(library.get("type") == "project" for library in assets["libraries"].values()):
+        raise ValueError("The package consumer resolved a project dependency")
+    if {Path(folder).resolve() for folder in assets["packageFolders"]} != {cache.resolve()}:
+        raise ValueError("The package consumer used a shared or fallback package cache")
+    sources = assets["project"]["restore"]["sources"]
+    if not any("://" not in source and Path(source).resolve() == batch.resolve() for source in sources):
+        raise ValueError("The package consumer did not restore with the selected batch source")
+    cordis = [name for name in assets["libraries"] if name.casefold().startswith("cordis.")]
+    if not cordis or any(name.rsplit("/", 1)[1] != version or
+                         assets["libraries"][name].get("type") != "package" for name in cordis):
+        raise ValueError("The package consumer did not resolve the selected Cordis version")
+    restored = inspect_restored_packages(cache, batch)
+    for name in cordis:
+        identity, selected_version = name.rsplit("/", 1)
+        if (identity + "." + selected_version + ".nupkg").casefold() not in restored:
+            raise ValueError("The package consumer lacks its restored Cordis archive: " + name)
+    return {"packageFolders": list(assets["packageFolders"]), "resolvedPackages": cordis,
+            "restoredArchiveSha256": restored, "packageReferencesOnly": True}
 
 
 def inspect_readme_links(readme: str, entries: set[str]) -> None:

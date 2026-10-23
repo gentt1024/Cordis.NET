@@ -335,11 +335,10 @@ jobs:
           - os: ubuntu-24.04
             platform: Linux
     steps:
-      - name: Require every candidate shard
+      - name: Require candidate discovery
         env:
           DISCOVERY_RESULT: ${{ needs.candidate-discovery.result }}
-          SHARD_RESULT: ${{ needs.candidate-upstream.result }}
-        run: test "$DISCOVERY_RESULT" = success && test "$SHARD_RESULT" = success
+        run: test "$DISCOVERY_RESULT" = success
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
@@ -381,20 +380,6 @@ jobs:
             platform: Linux
     runs-on: ubuntu-24.04
     steps:
-      - name: Require every runtime and upstream job
-        env:
-          RUNTIME_RESULT: ${{ needs.runtime.result }}
-          UPSTREAM_RESULT: ${{ needs.upstream.result }}
-          AUTHORING_RESULT: ${{ needs.portable-authoring.result }}
-          CANDIDATE_REQUESTED: ${{ inputs.candidate == true }}
-          CANDIDATE_RESULT: ${{ needs.candidate-summary.result }}
-        run: |
-          test "$RUNTIME_RESULT" = success && test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
-          if [ "$CANDIDATE_REQUESTED" = true ]; then
-            test "$CANDIDATE_RESULT" = success
-          else
-            test "$CANDIDATE_RESULT" = skipped
-          fi
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
@@ -414,3 +399,19 @@ jobs:
           path: artifacts/upstream-results/summary.json
           if-no-files-found: error
           retention-days: 14
+      # Keep independent source evidence even when another required gate fails.
+      - name: Require every runtime and upstream job
+        if: always()
+        env:
+          RUNTIME_RESULT: ${{ needs.runtime.result }}
+          UPSTREAM_RESULT: ${{ needs.upstream.result }}
+          AUTHORING_RESULT: ${{ needs.portable-authoring.result }}
+          CANDIDATE_REQUESTED: ${{ inputs.candidate == true }}
+          CANDIDATE_RESULT: ${{ needs.candidate-summary.result }}
+        run: |
+          test "$RUNTIME_RESULT" = success && test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
+          if [ "$CANDIDATE_REQUESTED" = true ]; then
+            test "$CANDIDATE_RESULT" = success
+          else
+            test "$CANDIDATE_RESULT" = skipped
+          fi

@@ -13,7 +13,7 @@ import time
 import zipfile
 import xml.etree.ElementTree as ET
 
-from package_inspection import inspect_packages
+from package_inspection import inspect_packages, inspect_package_consumer, prepare_package_consumer
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "verification"
@@ -161,16 +161,8 @@ def record_source_results(reports):
 
 def consume_packages(rid, package_dir, version, aot):
     # Outside the repository: no inherited props, project references or developer package cache.
-    directory = Path(tempfile.mkdtemp(prefix="cordis-consumer-"))
-    env = dict(os.environ, NUGET_PACKAGES=str(directory / "cache"))
-    # The tool shim needs the runtime location when the SDK is installed privately
-    # (for example dotnet-install under a user's home rather than /usr/share/dotnet).
-    env.setdefault("DOTNET_ROOT", str(Path(shutil.which("dotnet")).resolve().parent))
-    (directory / "NuGet.Config").write_text(
-        f'<configuration><packageSources><clear/><add key="local" value="{package_dir.as_posix()}"/>'
-        '<add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources>'
-        '<packageSourceMapping><packageSource key="local"><package pattern="Cordis.*"/></packageSource>'
-        '<packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>', encoding="utf-8")
+    directory = Path(tempfile.mkdtemp(prefix="cordis-consumer-")).resolve()
+    env = prepare_package_consumer(directory, ROOT, package_dir, "dotnet")
     (directory / "Consumer.csproj").write_text(f'''<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup>
   <ItemGroup><PackageReference Include="Cordis.Example.Greeting" Version="{version}"/></ItemGroup>
@@ -215,6 +207,7 @@ Console.WriteLine("independent package consumer passed");
 record ConsumerSettings(int Limit, string Label);
 ''', encoding="utf-8")
     run("consumer-restore", ["dotnet", "restore", "Consumer.csproj", "--packages", directory / "cache"], directory, env)
+    inspect_package_consumer(directory / "Consumer.csproj", directory / "cache", package_dir, version)
     run("consumer-publish", ["dotnet", "publish", "Consumer.csproj", "-c", "Release", "-r", rid, "--self-contained", "true", "-o", directory / "publish"], directory, env)
     run("consumer-run", [directory / "publish" / ("Consumer.exe" if os.name == "nt" else "Consumer")], directory / "publish", env)
     if aot:
@@ -249,12 +242,22 @@ catch (KeyNotFoundException) { }
 Console.WriteLine("independent optional adapter packages passed");
 ''', encoding="utf-8")
     run("adapters-restore", ["dotnet", "restore", "Adapters.csproj", "--packages", directory / "cache"], adapters, env)
+    inspect_package_consumer(adapters / "Adapters.csproj", directory / "cache", package_dir, version)
     run("adapters-run", ["dotnet", "run", "--project", "Adapters.csproj", "-c", "Release", "--no-restore"], adapters, env)
     run("tool-install", ["dotnet", "tool", "install", "Cordis.NET.Tool", "--version", version,
                          "--tool-path", directory / "tools", "--configfile", directory / "NuGet.Config"], directory, env)
+    tool_archives = list((directory / "tools").rglob(f"cordis.net.tool.{version}.nupkg"))
+    tool_digest = hashlib.sha256((package_dir / f"Cordis.NET.Tool.{version}.nupkg").read_bytes()).hexdigest()
+    if len(tool_archives) != 1 or hashlib.sha256(tool_archives[0].read_bytes()).hexdigest() != tool_digest:
+        raise RuntimeError("Installed tool archive differs from the selected package batch")
     run("tool-package-preview", [directory / "tools" / ("cordis.exe" if os.name == "nt" else "cordis"),
                                 "preview", OUT / "cli-input.yml", "--json"], directory, env)
     consume_http_package(directory, rid, version, aot, env)
+    isolation = {project.relative_to(directory).as_posix(): inspect_package_consumer(
+        project, directory / "cache", package_dir, version) for project in
+        (directory / "Consumer.csproj", adapters / "Adapters.csproj", directory / "http/HttpConsumer.csproj")}
+    steps.append({"name": "independent-package-consumer-isolation", "exitCode": 0, "projects": isolation,
+                  "toolArchiveSha256": tool_digest})
     steps.append({"name": "independent-consumer-location", "path": str(directory), "exitCode": 0})
 
 

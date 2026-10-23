@@ -15,6 +15,85 @@ from verify_upstream import MATRIX, SKIPPABLE, validate_report
 
 
 class CandidateGateTests(unittest.TestCase):
+    def test_real_timeout_preserves_both_logs_and_reraises_the_original_exception(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            steps, errors = [], []
+            original_run = subprocess.run
+
+            def short_timeout(*args, **kwargs):
+                kwargs['timeout'] = 2
+                try:
+                    return original_run(*args, **kwargs)
+                except subprocess.TimeoutExpired as error:
+                    errors.append(error)
+                    raise
+
+            with patch.object(candidate.subprocess, 'run', side_effect=short_timeout):
+                with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                    candidate.execute(output, steps, 'timeout-probe', [sys.executable, '-c',
+                        "import sys,time;print('stdout before timeout',flush=True);"
+                        "print('stderr before timeout',file=sys.stderr,flush=True);time.sleep(5)"], dict(os.environ))
+            self.assertIs(caught.exception, errors[0])
+            self.assertIn(b'stdout before timeout', (output / 'timeout-probe.stdout.log').read_bytes())
+            self.assertIn(b'stderr before timeout', (output / 'timeout-probe.stderr.log').read_bytes())
+            self.assertEqual(len(steps), 1)
+            self.assertEqual((steps[0]['name'], steps[0]['status'], steps[0]['exitCode'],
+                              steps[0]['timeoutSeconds']), ('timeout-probe', 'timed-out', None, 2))
+
+    def run_observation_fixture(self, root, failed_label=None, drifting=False):
+        frozen, _ = self.fixtures()
+        for suite in ('remote', 'metadata', 'browser'):
+            frozen['inventory'].append([suite, suite + '.spec.ts', 'ordinary', 0])
+        frozen['inventory'].sort()
+        frozen['sourceFiles'] = {}
+        path = root / 'inventory.json'
+        path.write_text(json.dumps(frozen))
+        output = root / 'worker'
+        calls = []
+
+        def execute(directory, steps, label, command, env, cwd):
+            calls.append(label)
+            steps.append({'name': label, 'exitCode': 1 if label == failed_label else 0})
+            Path(env['CORDIS_UPSTREAM_REPORT']).write_text('{"originalReportPreserved":true}')
+            if label == failed_label:
+                raise candidate.SuiteExecutionError(label + ' failed')
+
+        sources = {'source': 'digest'}
+        # Input/report validation has separate counterexample tests. Here external
+        # fixtures isolate the policy for continuing independent process failures.
+        with patch.object(candidate, 'validate_frozen'), \
+             patch.object(candidate, 'fixed_sources', return_value=frozen['sourceTrees']), \
+             patch.object(candidate, 'expected_files', return_value={}), \
+             patch.object(candidate, 'source_hashes', side_effect=lambda: {'source': 'changed'}
+                          if drifting and calls else sources), \
+             patch.object(candidate, 'git', return_value='checkpoint'), \
+             patch.object(candidate, 'collect', return_value=(frozen['inventory'], {})), \
+             patch.object(candidate, 'execute', side_effect=execute), \
+             patch.object(candidate, 'candidate_report', return_value=[]):
+            with self.assertRaises(ValueError):
+                candidate.run_shard(root, root, path, output, 1, 'workflow:1')
+        return calls, json.loads((output / 'result.json').read_text()), output
+
+    def test_independent_suites_continue_after_runtime_failure_but_receipt_stays_failed(self):
+        for failed in ('linked-resolution-matrix', 'original-composition'):
+            with self.subTest(failed=failed), tempfile.TemporaryDirectory() as temporary:
+                calls, result, output = self.run_observation_fixture(Path(temporary), failed)
+                self.assertEqual(calls, ['linked-resolution-matrix', 'original-composition', 'original-remote',
+                                         'original-metadata', 'original-browser', 'original-core'])
+                self.assertEqual(result['status'], 'failed')
+                self.assertEqual([row['name'] for row in result['suiteFailures']], [failed])
+                self.assertEqual(result['outcomes'], [])
+                report = output / ('matrix.json' if failed == 'linked-resolution-matrix' else 'composition.json')
+                self.assertEqual(json.loads(report.read_text()), {'originalReportPreserved': True})
+
+    def test_source_drift_still_stops_before_the_next_independent_suite(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            calls, result, _ = self.run_observation_fixture(Path(temporary), drifting=True)
+            self.assertEqual(calls, ['linked-resolution-matrix'])
+            self.assertEqual(result['status'], 'failed')
+            self.assertFalse(result['sourceUnchanged'])
+
     def test_worker_path_prefers_fixed_tools_without_losing_the_node_path(self):
         with tempfile.TemporaryDirectory() as temporary, patch.dict(os.environ, {'PATH': 'ambient-node-path'}):
             root = Path(temporary)

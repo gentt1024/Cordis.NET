@@ -1,12 +1,13 @@
 """Verify Remote metadata from an isolated NuGet consumer and its installed TypeScript artifact."""
 import argparse
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+
+from package_inspection import inspect_package_consumer, prepare_package_consumer
 
 
 def main():
@@ -22,9 +23,8 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     version = ET.parse(root / "Directory.Build.props").findtext(".//Version")
     assert version
-    source = Path(tempfile.mkdtemp(prefix="cordis-remote-metadata-consumer-"))
-    assert not source.is_relative_to(root)
-    shutil.copyfile(root / "global.json", source / "global.json")
+    source = Path(tempfile.mkdtemp(prefix="cordis-remote-metadata-consumer-")).resolve()
+    env = prepare_package_consumer(source, root, options.packages, options.dotnet)
     shutil.copyfile(root / "tests/fixtures/RemoteMetadataClient/Program.cs", source / "Program.cs")
     project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
     properties = ET.SubElement(project, "PropertyGroup")
@@ -38,21 +38,8 @@ def main():
                   Include="Cordis.NET.Composition", Version=version)
     project_path = source / "Consumer.csproj"
     ET.ElementTree(project).write(project_path, encoding="utf-8")
-    config = ET.Element("configuration")
-    feeds = ET.SubElement(config, "packageSources")
-    ET.SubElement(feeds, "clear")
-    ET.SubElement(feeds, "add", key="candidate", value=str(options.packages.resolve()))
-    ET.SubElement(feeds, "add", key="nuget.org", value="https://api.nuget.org/v3/index.json")
-    ET.SubElement(ET.SubElement(config, "fallbackPackageFolders"), "clear")
-    mapping = ET.SubElement(config, "packageSourceMapping")
-    for name, pattern in (("candidate", "Cordis.NET.*"), ("nuget.org", "*")):
-        ET.SubElement(ET.SubElement(mapping, "packageSource", key=name), "package", pattern=pattern)
-    ET.ElementTree(config).write(source / "NuGet.Config", encoding="utf-8")
     dotnet = Path(shutil.which(options.dotnet) or options.dotnet).resolve()
-    env = dict(os.environ, DOTNET_ROOT=str(dotnet.parent), NUGET_PACKAGES=str(source / "cache"),
-               DOTNET_CLI_UI_LANGUAGE="en")
-    env["PATH"] = str(dotnet.parent) + os.pathsep + env.get("PATH", "")
-    result = {"status": "failed", "packageVersion": version, "packageReferencesOnly": True,
+    result = {"status": "failed", "packageVersion": version, "packageReferencesOnly": False,
               "independentSourceDirectory": str(source), "steps": []}
 
     def run(name, arguments):
@@ -68,10 +55,12 @@ def main():
     try:
         artifacts = output / "generated"
         run("restore", [dotnet, "restore", project_path])
+        result.update(inspect_package_consumer(project_path, source / "cache", options.packages, version))
         run("native-metadata-artifacts", [dotnet, "run", "--project", project_path, "-c", "Release",
                                           "--no-restore", "--", artifacts])
         run("installed-typescript-metadata", ["node", root / "scripts/verify-remote-metadata.mjs",
                                                artifacts, root / "clients/modules/package.json"])
+        result.update(inspect_package_consumer(project_path, source / "cache", options.packages, version))
         result["status"] = "passed"
     finally:
         (output / "results.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
