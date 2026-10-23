@@ -8,13 +8,15 @@ S10 验证汇合后的 S1–S9 实现，不修改 `upstream.lock.json` 或历史
 
 在一个冻结的分支提交上运行现有 `verify` 工作流，并启用 dispatch 输入 `candidate`。Windows x64 和 Ubuntu x64 作业保留正式源码门禁，执行 JIT、Native AOT、包检查、独立作者消费、生成客户端和 CLR 部署。候选发现、分片执行及并集验证是额外必需检查。各分片必须使用相同源码身份、发现的用例及重复次数、workflow run 和 attempt；因分片筛选未运行的用例不计为执行。
 
+候选范围包含 app-boot、plugin-manager 和 HMR 的全部测试文件，仅排除两份明确入账的 DSH 官方产品测试，另执行声明的 Remote、generator、浏览器和 Core/Loader suites。上游禁用的文档 catalog 仍记为 source-skipped。原始源码包含三个仅在 Windows 排除的 POSIX 后代进程夹具及一个文件系统能力排除；门禁只在适用平台接受这些精确身份，绝不计作通过。未进入执行范围的历史记录保留为范围未审查，除非已有明确的逐项排除决定。
+
 Linux 作业生产唯一的包／runtime／作者工具批次。Windows、Ubuntu 和 macOS 消费者在运行前后检查生产者验证收据、源码摘要及制品摘要。可移植调用者和真实浏览器消费这些确切字节。Windows 和 Ubuntu 另执行静态 AOT 调用者与动态 CLR 部署，两者是不同合同。CLR 消费者使用独立 NuGet 缓存、来源映射及相对所选批次的归档摘要检查。macOS 作者消费不代表完整 macOS runtime 或 AOT 支持。
 
 基线晋升要求所有必需矩阵结果通过、候选源码／测试清单和原生映射完成审查、有序差分 traces 一致、API 迁移说明与中英文文档一致，并且包／源码归档保留准确来源和 notices。缺少平台、结果未知和意外跳过都不算通过。仅源码检查不能满足原生行为断言。旧收据保留原有身份。只有这些条件成立，才应以另一个经过审查的改动同步更新锁、reference 断言、源码片段、候选映射及兼容性声明，再对晋升后的提交执行完整验证。
 
 ## 候选浏览器安全与作者增量，2026-10-23
 
-S9 的正式行为锁与历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。限定范围的源码来源记录候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，并单独记录通知重入的本地修正。未修改的候选原始用例共通过 111 项，零失败、零跳过：浏览器 loader 72、entries 35、CSS／图片作者构建 4。这些结果来自外部源码执行环境，不代表完整候选工作区构建或类型检查通过。
+S9 的正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；历史清单保留原有 `ddefc45fbc7f8e46dd73185e68295696d1297887` 身份和处置记录。限定范围的源码来源记录候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，并单独记录通知重入的本地修正。未修改的候选原始用例共通过 111 项，零失败、零跳过：浏览器 loader 72、entries 35、CSS／图片作者构建 4。这些结果来自外部源码执行环境，不代表完整候选工作区构建或类型检查通过。
 
 必跑的 `client-release` 门禁通过公开包装器覆盖：两个版本字段、缺省身份、先准入后解析图、dismiss、retry、已接受的待处理更新、销毁、可观察对象生命周期及同步订阅者重入。管理重连测试使用真实 Connection／events 代码和套接字帧夹具，工厂脚本通过真实回环 HTTP 加载。`ManagementTransportTests` 另通过原生 Kestrel 图端点验证版本传递及缺省字段省略。这些是分开的检查，不宣称已完成原生管理 WebSocket 与浏览器整套部署验证。
 
@@ -85,7 +87,7 @@ python3 scripts/verify-remote-access.py --packages <package-batch> --output <emp
 
 ## 候选资源决策与调用准备，2026-10-23
 
-S6 使用固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的[范围明确例外](compatibility.zh.md#候选资源决策与调用准备2026-10-23)，正式行为锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本地环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
+S6 使用固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的[范围明确例外](compatibility.zh.md#候选资源决策与调用准备2026-10-23)，正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；历史清单保留原有 `ddefc45fbc7f8e46dd73185e68295696d1297887` 身份和处置记录。本地环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
 
 未修改的候选原始测试通过 106 项，无失败或跳过：protocol remote-access 8 项、gateway-access 30 项、gateway host 47 项、RemoteAccess host 21 项。外部精简测试环境使用候选选定的 Vitest 4.1.11、TypeScript 6.0.3 和 Vite 8.2.2，不代表完整候选 workspace 构建或类型检查。部分原始用例覆盖 S7 事件／快照，其通过只提供参考端证据，不代表原生已实现这些后续合同。
 
@@ -118,7 +120,7 @@ S5 消费者首轮发现一项旧错误优先级断言：未声明的 `principal
 
 ## 候选 Remote 身份与资源，2026-10-23
 
-S5 遵循[范围明确的候选例外](compatibility.zh.md#候选-remote-身份与资源分片2026-10-23)。候选源码仍为 `687f282e8625c6b8d11ff58211a90524be2e4317`；正式锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本轮环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
+S5 遵循[范围明确的候选例外](compatibility.zh.md#候选-remote-身份与资源分片2026-10-23)。候选源码仍为 `687f282e8625c6b8d11ff58211a90524be2e4317`；正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；历史清单保留原有 `ddefc45fbc7f8e46dd73185e68295696d1297887` 身份和处置记录。本轮环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0。
 
 未修改的候选原始测试共 65 项通过，无失败或跳过：`packages/typert/protocol/tests/remote-access.spec.ts` 8 项、`packages/typert/registry/tests/typert.spec.ts` 27 项、`packages/api/gateway/tests/gateway-access.host.spec.ts` 30 项。外部精简工具环境使用候选选定的 Vitest 4.1.11、TypeScript 6.0.3、Vite 8.2.2；这不是完整候选 pnpm workspace 构建或 TypeScript 类型检查。这些套件包含 S5 尚未实现的 S6/S7 参考行为，因此原始套件通过只代表参考端证据，不代表原生授权完全等价。
 
@@ -208,7 +210,7 @@ python3 scripts/verify.py --dsh <locked-source-checkout> \
 
 ## engines.dsh 候选准入验证，2026-10-22
 
-第一片的合同见[兼容性说明](compatibility.zh.md#dsh-021-候选准入分片2026-10-22)。候选固定为 `687f282e8625c6b8d11ff58211a90524be2e4317`；`upstream.lock.json` 和历史源测试清单仍固定在 `639ed015397290b3745d163aafe02ffee4aa3f84`。执行环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0 及锁定的 npm 开发依赖。临时目录采用文件系统规范路径，避免 macOS 符号链接别名干扰。机器原始日志不提交。
+第一片的合同见[兼容性说明](compatibility.zh.md#dsh-021-候选准入分片2026-10-22)。候选固定为 `687f282e8625c6b8d11ff58211a90524be2e4317`；`upstream.lock.json` 仍固定在 `639ed015397290b3745d163aafe02ffee4aa3f84`，历史源测试清单保留原有 `ddefc45fbc7f8e46dd73185e68295696d1297887` 身份和处置记录。执行环境为 macOS arm64、.NET SDK 10.0.111/runtime 10.0.11、Node 24.13.0 及锁定的 npm 开发依赖。临时目录采用文件系统规范路径，避免 macOS 符号链接别名干扰。机器原始日志不提交。
 
 完整必需入口已返回 **`requested-checks-passed`**：
 

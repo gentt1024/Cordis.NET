@@ -6,6 +6,8 @@
 
 每行列出实现及负责验证该能力的检查，不宣称每个上游 setup、helper 或断言均已逐项匹配。“已实现”“已执行”“已审查断言”仍遵循各自独立的[兼容性定义](compatibility.zh.md#状态词汇)。不可变的[历史 inventory](upstream-tests.json)及其原有裁决保持不变。原始源码用例通过证明源码执行；native 消费者通过证明该消费者的合同。两者单独都不能证明全部断言等价。
 
+有界的[候选增量审查](candidate-delta-review.json)将变化的合同关联到精确的上游用例身份和具体原生断言，并记录测试准备、辅助函数假设及原生适配。发现门禁在生成映射收据前核对候选源 blob 和原生文件哈希。正式基线的 blob 记录已审查的 Git 比较，发现任务的 checkout 不需要包含较早历史。某项合同审查完成，不代表对应源文件或整个候选清单的全部断言已移植；执行结果另由冻结提交的收据证明。
+
 ## C01–C22 实现与检查索引
 
 | 编号及候选能力 | native 实现与负责的检查 | 适配及保留边界 |
@@ -31,7 +33,7 @@
 | C19 SVG/PNG/WebP watched data URL | [独立安装构建工具](../clients/tools/build.mjs)、[独立安装作者消费者](../scripts/verify-client-author-package.mjs)、[watch 检查](../scripts/verify-client-author-watch.mjs) | S9 验证精确 MIME/base64 字节、实际浏览器图像解码、仅图片变化的 watch 发布及旧代不可变。继续保护输入；发布仍为单 factory script。[S9 合同](compatibility.zh.md#候选浏览器安全与作者增量2026-10-23)。 |
 | C20 Slots `inline` 与 keyed-source `member` 声明 | [Slots 声明](../clients/modules/vendor/slots/index.ts)、[renderer 声明](../clients/modules/vendor/slots/renderer.ts)、[外部 strict TypeScript 消费者](../scripts/verify-client-module-types.mjs) | S9 更新已承诺的声明合同。renderer 执行及 inline DOM 渲染仍由应用提供。类型通过不代表完整上游 React renderer 已移植。[S9 合同](compatibility.zh.md#候选浏览器安全与作者增量2026-10-23)。 |
 | C21 既有 ConfigEditor 及 Settings 语义 | [配置编辑](../src/Cordis.Composition/PluginConfigurationOperations.Edit.cs)、[Settings 操作](../src/Cordis.Composition/PluginConfigurationOperations.Settings.cs)；[ConfigurationEditTests](../tests/Cordis.Composition.Tests/ConfigurationEditTests.cs)、[SettingsControllerTests](../tests/Cordis.Composition.Tests/SettingsControllerTests.cs)、[生成 Settings/管理消费者](../scripts/verify-typert-dotnet.py) | 未发现候选主算法新增变化。重跑受影响载体时保留 numeric revision、expected revision、secret redaction 及操作所有权。保存模型限制仍见 C15。[native 模型/Settings 合同](compatibility.zh.md#独立原生模型与-settings-边界2026-10-10)。 |
-| C22 其他构建、Host、服务及产品变化 | 下表逐项链接保留职责及范围决定。 | C22 不是统一排除项。native 适配、可选服务、尚待决定的展示范围和 DSH 产品行为各自遵循[忠实性要求](compatibility.zh.md#上游忠实性要求)。 |
+| C22 其他构建、Host、服务及产品变化 | 下表逐项链接保留职责及范围决定。 | C22 不是统一排除项。native 适配、可选服务、保留的展示限制和 DSH 产品行为各自遵循[忠实性要求](compatibility.zh.md#上游忠实性要求)。 |
 
 ## C15 保留的后端拒绝
 
@@ -47,7 +49,7 @@
 | 显式作者包目录 | [构建工具](../clients/tools/build.mjs)读取传入目录的 manifest；[独立安装作者消费者](../scripts/verify-client-author-package.mjs)在 checkout 外验证。保留 esbuild 及 native 打包，不复制 pnpm workspace 编排。 | [作者工具适配](compatibility.zh.md#可独立安装的浏览器作者工具2026-10-18)。 |
 | HTTPS 及具体 IP 监听 | [ASP.NET endpoint](../src/Cordis.AspNetCore/CordisRemoteEndpoints.cs)映射到应用的 Kestrel Host；[RemoteCarrierTests](../tests/Cordis.Platform.Tests/RemoteCarrierTests.cs)验证 native 载体。TLS、监听地址及账号/session 准入仍由 Host 配置，不隐含 Node webserver 配置 API。 | [部署边界](compatibility.zh.md#部署边界)、[可信 Host 身份](compatibility.zh.md#候选-remote-身份与资源分片2026-10-23)。 |
 | Credential provider 优先级及 watcher 行为 | Principal JSON 或 Settings 没有实现 DSH managed credential store/provider。它是单独可选的通用服务，需要自己的范围及持久化合同。可信 Host 身份和资源授权仍是必需能力，由 C09–C12 覆盖。 | [忠实性/范围权威](compatibility.zh.md#上游忠实性要求)、[不含凭据的 Principal 合同](compatibility.zh.md#候选-remote-身份与资源分片2026-10-23)。 |
-| Plugin market 及包展示 metadata | 既有[管理 DTO](../src/Cordis.Composition/PluginConfigurationOperations.cs)及[PluginManagerOriginalTests](../tests/Cordis.Composition.Tests/PluginManagerOriginalTests.cs)保留包名、version、description 和 selected/installed 状态。marketplace 服务/UI 属于单独可选范围。现有 DTO 不输出 icon/locale/subpath 展示；需要明确决定所需的 native 表达，不能宣称既有 metadata 不存在或全部范围外。 | [管理适配](compatibility.zh.md#候选管理持久化分片2026-10-22)、[忠实性/范围权威](compatibility.zh.md#上游忠实性要求)。 |
+| Plugin market 及包展示 metadata | 既有[管理 DTO](../src/Cordis.Composition/PluginConfigurationOperations.cs)及[PluginManagerOriginalTests](../tests/Cordis.Composition.Tests/PluginManagerOriginalTests.cs)保留包名、version、description 和 selected/installed 状态。marketplace 服务/UI 属于单独可选范围。原生合同继续输出包名、版本、描述及 selected/installed 状态。图标、locale 和包子路径展示仍是明确的覆盖限制。候选原始测试继续验证这些规则，但不代表原生展示支持；新增此类输出需要单独的公开合同。 | [管理适配](compatibility.zh.md#候选管理持久化分片2026-10-22)、[忠实性/范围权威](compatibility.zh.md#上游忠实性要求)。 |
 | Atomic write、binary 输入及锁等待取消 | [ProfileMaintenance](../src/Cordis.Composition/ProfileMaintenance.cs)及[DshProfilePolicyTests](../tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs)负责精确豁免持久化和取消；[PackageProcessTests](../tests/Cordis.Platform.Tests/PackageProcessTests.cs)负责 SDK 进程结束。native 文件/进程所有权按平台适配，不承诺通用 Node binary-write API。不能靠阅读源码或无关包结果关闭调查中的旧 macOS 失败。 | [S1 持久化/准入](compatibility.zh.md#dsh-021-候选准入分片2026-10-22)、[native 进程/部署合同](compatibility.zh.md#部署边界)。 |
 | Agents home、partial tool JSON 及 Agent idle deadline | 既有[DshHomePaths](../src/Cordis.Composition/DshHomePaths.cs)及[DshHomePathTests](../tests/Cordis.Platform.Tests/DshHomePathTests.cs)保留 native profile/home 合同。Agent 专用目录、partial JSON 消费及工具循环 idle watchdog 是单独产品/SDK 职责；Connection 取消不证明这些行为。 | [已约定通用基础设施范围](compatibility.zh.md#上游忠实性要求)、[native 部署边界](compatibility.zh.md#部署边界)。 |
 | 官方 Agent bundle、模型/搜索/session/workspace 实体、SSH helper、Desktop/Electron 及 React 产品页面 | 这些 DSH 产品实现不纳入本次 native runtime 升级。通用 RemoteAccess、资源授权、诊断、安装及已声明浏览器/renderer 接口仍在范围内。保留历史源码记录，未执行或排除记录绝不算作通过。 | [产品与通用基础设施边界](compatibility.zh.md#部署边界)、[保留的 renderer 合同](compatibility.zh.md#候选浏览器安全与作者增量2026-10-23)。 |
@@ -58,4 +60,4 @@ S10 候选源码门禁从固定 Git blob 发现并记录新的、与本机路径
 
 请求候选验证时，[runtime gate](../scripts/verify.py)直接用同次 native JIT 的内存输出比较候选 established 和 upgrade trace，之后继续验证 JIT/AOT 一致性。[CI](../.github/workflows/ci.yml)同时要求正式锁 runtime/source 门禁及候选源码并集。[Portable runner](../scripts/verify-portable-authoring.py)在 Windows、Linux、macOS 消费 Linux 生产的完全相同包/runtime/tool 字节；Windows/Linux 另运行 CLR deployment/multi-entry 和带 AOT 的静态包 caller。macOS 作者/浏览器/native 消费证据不能变成完整 macOS runtime 或 AOT 验收。
 
-执行结果以最终冻结源码/包 receipt 及[验证记录](validation.zh.md)为准。本索引不把待完成运行记作通过，也不授权发布或改锁。晋升仍需按[行为目标升级流程](updating-baseline.md)审查，包括上述尚未关闭的能力或范围问题。
+执行结果以最终冻结源码/包 receipt 及[验证记录](validation.zh.md)为准。本索引不把待完成运行记作通过，也不授权发布或改锁。晋升仍需按[行为目标升级流程](updating-baseline.md)审查，包括上文保留的能力限制。

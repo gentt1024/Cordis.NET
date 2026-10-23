@@ -12,7 +12,7 @@ S10 增加独立候选门禁，保留正式行为锁和历史测试清单，不�
 
 ## 候选浏览器安全与作者增量，2026-10-23
 
-S9 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，涵盖 factory 样式归属、Host release 准入、图片导入和 Slots 声明。正式行为锁与历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。vendor 适配保留原始来源记录，并单独记录候选源码身份。本片不执行 S10 基线晋升。
+S9 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，涵盖 factory 样式归属、Host release 准入、图片导入和 Slots 声明。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；历史清单保留原有 `ddefc45fbc7f8e46dd73185e68295696d1297887` 身份和处置记录。vendor 适配保留原始来源记录，并单独记录候选源码身份。本片不执行 S10 基线晋升。
 
 factory 只认领自本次执行开始后插入的无标签 style 元素。页面原有样式仍归外壳所有，嵌套 factory 保留各自样式，抛错的 factory 先认领并删除本次新插入的样式，再报告失败。已有显式标签的归属规则继续有效。此规则覆盖同步 factory 求值；应用 effect 仍由其 Cordis 生命周期持有。
 
@@ -26,7 +26,7 @@ Host release 身份是可缺省的 `{version, commit?}`，由应用通过 `Clien
 
 ## 候选元数据投影，2026-10-23
 
-S8 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，涵盖 RemoteInfo、命名输入视图及可选工具 Schema 投影。正式行为锁与历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。S8 不选择新的发布基线。
+S8 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，涵盖 RemoteInfo、命名输入视图及可选工具 Schema 投影。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；历史清单保留原有 `ddefc45fbc7f8e46dd73185e68295696d1297887` 身份和处置记录。S8 不选择新的发布基线。
 
 `TypertRemoteInfo` 提供懒加载的描述符与直接方法索引。命名方法与该 Info 中对应的描述符是同一个对象。仅支持 Context 接收者的方法仍保留为描述符，不进入命名方法索引。原生注册保留既有的防御性快照边界；registry Info 使用实际存储的快照。与候选 registry 不同，原生不承诺跨注册边界的对象身份。通过 `with` 复制的描述符拥有独立的输入和结果元数据缓存。
 
@@ -39,7 +39,7 @@ normal 与 strict 输入视图分别缓存 parser 和投影。两者均拒绝未
 
 ## 候选事件与访问客户端，2026-10-23
 
-S7 对照固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 Gateway 事件、RemoteAccess snapshot/follow 和客户端状态。正式行为锁及历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本节替代 S5/S6 的临时事件拒绝与快照延期说明；S8 元数据投影另行推进。
+S7 对照固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 Gateway 事件、RemoteAccess snapshot/follow 和客户端状态。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；历史清单保留原有 `ddefc45fbc7f8e46dd73185e68295696d1297887` 身份和处置记录。本节替代 S5/S6 的临时事件拒绝与快照延期说明；S8 元数据投影另行推进。
 
 `Interactions=Answer` 允许订阅事件；只有 owner Peer 接收并回答 waterfall。非 owner 订阅者仅在 `event:<name>` 对每个资源都允许时收到完整通知。`TypertRemoteEventDefinition` 和 `TypertRemoteEventFrame` 新增可选 `ResourceReaders`，复用 `TypertResourceReader` 委托；位置参数是已显式编码、装箱的 `JsonElement`。每条通知对所有非 owner 接收者只解析一次资源；没有 reader 时使用 global。reader 返回 null、空列表、非法身份或抛错时，通知不发给非 owner。owner 交付绕过 reader 与策略。这个 wire JSON 边界对应候选的 JSON 事件参数；普通调用 reader 仍接收已解码 CLR 参数。
 
@@ -54,7 +54,7 @@ S7 验证还暴露了既有原生执行上下文在 macOS arm64 上丢失唤醒�
 
 ## 候选资源决策与调用准备，2026-10-23
 
-S6 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 Gateway access/preparation 与 RemoteAccess 决策、列表过滤。正式行为锁和历史清单仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。本节替代 S5 对非 owner 普通调用的临时全面拒绝。非 owner 事件订阅与回答仍拒绝，等待 S7；S5–S7 仍是非 owner 的最小发布闭包。本片不宣称已实现访问快照、follow、事件过滤、回答归属或事件吊销。
+S6 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 Gateway access/preparation 与 RemoteAccess 决策、列表过滤。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；历史清单保留原有 `ddefc45fbc7f8e46dd73185e68295696d1297887` 身份和处置记录。本节替代 S5 对非 owner 普通调用的临时全面拒绝。非 owner 事件订阅与回答仍拒绝，等待 S7；S5–S7 仍是非 owner 的最小发布闭包。本片不宣称已实现访问快照、follow、事件过滤、回答归属或事件吊销。
 
 调用准备依次检查 Peer 活性、活动 descriptor 和精确字段，再对每个实际传入的普通 JSON 参数解码一次。资源提取与授权早于 Context 解析、Service/binding 准入和 lookup 解码解析。业务调用复用已经解码的普通值。因此非法普通 JSON 优先于 Service 缺失或无效、Context 和 lookup 错误，owner 也遵循此顺序。只有 lookup 的准备仍保留 Service 准入和并行首个失败语义。省略的普通参数保持缺省，显式 null 保持存在。这是相对正式基线有意改变的错误优先级。
 
@@ -220,7 +220,7 @@ Cordis.NET 是固定 DSH 基线及仓库已确认通用应用基础设施的忠�
 - **断言已审阅：** 已逐项匹配上游 setup、helper 与断言，或记录明确适配。
 - **不支持：** 行为位于产品或平台边界之外。
 
-不可变的历史清单针对 DSH `ddefc45fbc7f8e46dd73185e68295696d1297887`，包含 631 个上游候选实例，不代表新基线的断言闭合状态。本次升级的范围、行为映射与平台适配见[升级矩阵](upgrade-0.2.0-rc.2.zh.md)。目前 323 项记录为实现完成，其中 36 项完成了断言审阅，287 项尚未完成全部断言审阅；其余 308 项明确为未完成，通常涉及 Cordis.NET 范围之外的 JavaScript 或 DeepSeek Harness 产品行为。这些数字不代表兼容率。
+不可变的历史清单针对 DSH `ddefc45fbc7f8e46dd73185e68295696d1297887`，包含 631 个上游候选实例，不代表新基线的断言闭合状态。本次升级的范围、行为映射与平台适配见[升级矩阵](upgrade-0.2.0-rc.2.zh.md)。目前 322 项记录为实现完成，其中 35 项完成了断言审阅，287 项尚未完成全部断言审阅；其余 309 项明确为未完成，通常涉及 Cordis.NET 范围之外的 JavaScript 或 DeepSeek Harness 产品行为。这些数字不代表兼容率。
 
 ## 部署边界
 

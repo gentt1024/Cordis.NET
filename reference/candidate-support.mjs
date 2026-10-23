@@ -1,6 +1,6 @@
 // The candidate has its own immutable identity; the formal reference remains unchanged.
-import { readFileSync, existsSync, statSync, realpathSync, lstatSync, symlinkSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, existsSync, statSync, realpathSync, lstatSync, symlinkSync, mkdirSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -16,17 +16,25 @@ export function checkout(path, pin) {
   if (git('status', '--porcelain', '--untracked-files=no')) throw new Error('Modified candidate source');
   return root;
 }
-export function bindTools(path) {
-  const root = checkout(path, manifest.dsh);
-  const target = realpathSync(fileURLToPath(new URL('./candidate-tools/node_modules', import.meta.url)));
-  const link = resolve(root, 'node_modules');
+function bindDirectory(link, target) {
   let existing;
   try { existing = lstatSync(link); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   if (existing) {
     if (!existing.isSymbolicLink() || realpathSync(link) !== target) throw new Error('Candidate dependency path already belongs to another tool installation');
   } else {
+    mkdirSync(dirname(link), { recursive: true });
     symlinkSync(target, link, process.platform === 'win32' ? 'junction' : 'dir');
   }
+}
+export function bindTools(path) {
+  const root = checkout(path, manifest.dsh);
+  const target = realpathSync(fileURLToPath(new URL('./candidate-tools/node_modules', import.meta.url)));
+  bindDirectory(resolve(root, 'node_modules'), target);
+  // Original manager tests deliberately invoke the Desktop-bundled pnpm path.
+  const pnpm = realpathSync(fileURLToPath(new URL('./candidate-tools/node_modules/pnpm', import.meta.url)));
+  const expected = JSON.parse(readFileSync(resolve(root, 'apps/desktop/package.json'), 'utf8')).devDependencies.pnpm;
+  if (JSON.parse(readFileSync(resolve(pnpm, 'package.json'), 'utf8')).version !== expected) throw new Error('Candidate bundled pnpm version differs');
+  bindDirectory(resolve(root, 'apps/desktop/node_modules/pnpm'), pnpm);
 }
 export function sourceResolver(root) {
   const config = ts.parseConfigFileTextToJson('tsconfig.base.json', readFileSync(resolve(root, 'tsconfig.base.json'), 'utf8'));

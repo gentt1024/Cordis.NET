@@ -64,7 +64,7 @@ public sealed class DevelopmentBuildProcessTests
         {
             var command = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh";
             string[] arguments = OperatingSystem.IsWindows()
-                ? ["/d", "/c", $"echo tool-output& echo tool-error 1>&2& exit /b {exitCode}"]
+                ? ["/d", "/c", $"echo tool-output& 1>&2 echo tool-error& exit /b {exitCode}"]
                 :
                 [
                     "-c", "printf '%s\\n' \"$1\"; printf 'tool-error\\n' >&2; exit \"$2\"", "tool", "tool-output",

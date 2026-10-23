@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import sys
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape, quoteattr
 
 from package_inspection import inspect_restored_packages
 
@@ -60,7 +61,7 @@ def verify_multi_assembly(options, root, directory, version, project, run):
         folder = directory / name
         references = reference if source not in ("Private.cs", "Bridge.cs") else ""
         if dependency:
-            references += f'<ProjectReference Include="{dependency}"/>'
+            references += f'<ProjectReference Include={quoteattr(str(dependency))}/>'
         path = project(folder, f'<AssemblyName>{assembly}</AssemblyName>' +
             f'<DefineConstants>{constants}</DefineConstants>', references)
         shutil.copyfile(fixture / source, folder / source)
@@ -205,7 +206,8 @@ def main():
         verify_sealed_feed()
         try:
             result = subprocess.run([str(value) for value in arguments], cwd=directory,
-                                    env=dict(os.environ, DOTNET_CLI_UI_LANGUAGE="en", NUGET_PACKAGES=str(directory / "cache")),
+                                    env=dict(os.environ, DOTNET_CLI_UI_LANGUAGE="en", NUGET_PACKAGES=str(directory / "cache"),
+                                             NUGET_FALLBACK_PACKAGES=""),
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                                     encoding="utf-8", errors="replace")
         finally:
@@ -223,7 +225,7 @@ def main():
         path.write_text(
             '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework>' +
             '<ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors>' +
-            '<RestorePackagesPath>' + str(directory / "cache") + '</RestorePackagesPath>' + output +
+            '<RestorePackagesPath>' + escape(str(directory / "cache")) + '</RestorePackagesPath>' + output +
             '</PropertyGroup><ItemGroup>' + references + '</ItemGroup></Project>', encoding="utf-8")
         return path
 

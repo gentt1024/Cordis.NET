@@ -12,7 +12,7 @@ The candidate generator's upstream-disabled Cordis documentation-catalog suite i
 
 ## Candidate browser safety and author increments, 2026-10-23
 
-S9 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317` for factory style ownership, Host release admission, image imports and Slots declarations. The formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. Vendored adaptations retain their original provenance and record candidate source identity separately. This is not S10 baseline promotion.
+S9 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317` for factory style ownership, Host release admission, image imports and Slots declarations. The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`; the historical inventory retains its original `ddefc45fbc7f8e46dd73185e68295696d1297887` identity and dispositions. Vendored adaptations retain their original provenance and record candidate source identity separately. This is not S10 baseline promotion.
 
 A factory claims only untagged style elements inserted since that factory began. Existing page styles remain shell-owned, nested factories retain their own styles, and a throwing factory claims and removes its newly inserted styles before reporting failure. Existing explicitly tagged ownership continues to apply. This covers synchronous factory evaluation; application effects still belong to their Cordis lifecycle.
 
@@ -26,7 +26,7 @@ A local correction captures each incoming frame's release comparison before sync
 
 ## Candidate metadata projection, 2026-10-23
 
-S8 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`: RemoteInfo, named input views and optional tool-schema projection. The formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. S8 does not select a new release baseline.
+S8 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`: RemoteInfo, named input views and optional tool-schema projection. The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`; the historical inventory retains its original `ddefc45fbc7f8e46dd73185e68295696d1297887` identity and dispositions. S8 does not select a new release baseline.
 
 `TypertRemoteInfo` provides a lazy descriptor and direct-method index. Each named method is the same object as its descriptor in that Info. Context-only receivers remain descriptors and are absent from the named index. Native registry registration retains its existing defensive snapshot boundary; registry Info uses the exact stored snapshots. Identity across the registration boundary is not promised, unlike the candidate registry. Descriptor copies made with `with` acquire their own input/result metadata caches.
 
@@ -39,7 +39,7 @@ Generated Host metadata and independent .NET/TypeScript clients consume the exis
 
 ## Candidate events and access clients, 2026-10-23
 
-S7 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, specifically Gateway events, RemoteAccess snapshot/follow and client state. The formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. This section supersedes the temporary event refusal and deferred snapshot statements in S5/S6. S8 metadata projection remains separate.
+S7 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, specifically Gateway events, RemoteAccess snapshot/follow and client state. The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`; the historical inventory retains its original `ddefc45fbc7f8e46dd73185e68295696d1297887` identity and dispositions. This section supersedes the temporary event refusal and deferred snapshot statements in S5/S6. S8 metadata projection remains separate.
 
 `Interactions=Answer` permits event subscription; only owner Peers receive and answer waterfalls. Non-owner subscribers receive a whole emit only when `event:<name>` allows every resource. Optional `ResourceReaders` on `TypertRemoteEventDefinition` and `TypertRemoteEventFrame` use the existing `TypertResourceReader` delegate: positional arguments are boxed, explicitly encoded `JsonElement` values. Readers run once per frame across non-owner recipients; absent readers select global. Null, empty, invalid or throwing readers drop the notification for non-owners. Owner delivery bypasses readers and policies. This wire-JSON reader boundary is the native counterpart of the candidate's JSON event arguments; ordinary call readers still receive decoded CLR arguments.
 
@@ -54,7 +54,7 @@ S7 validation also exposed a pre-existing native execution-context lost wake on 
 
 ## Candidate resource decisions and preparation, 2026-10-23
 
-S6 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, specifically Gateway access/preparation and RemoteAccess decisions/list filtering. The formal behavior lock and historical inventory remain at `639ed015397290b3745d163aafe02ffee4aa3f84`. This section supersedes S5's temporary blanket refusal for ordinary non-owner calls. Non-owner event subscription and answers remain refused until S7; S5–S7 is still the minimum non-owner release closure. Access snapshots, follow, event filtering, answer ownership and event revocation are not claimed here.
+S6 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, specifically Gateway access/preparation and RemoteAccess decisions/list filtering. The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`; the historical inventory retains its original `ddefc45fbc7f8e46dd73185e68295696d1297887` identity and dispositions. This section supersedes S5's temporary blanket refusal for ordinary non-owner calls. Non-owner event subscription and answers remain refused until S7; S5–S7 is still the minimum non-owner release closure. Access snapshots, follow, event filtering, answer ownership and event revocation are not claimed here.
 
 Preparation now checks Peer liveness, the active descriptor and exact fields, then decodes every present ordinary JSON parameter once. Resource extraction and authorization precede Context resolution, Service/binding admission and lookup decoding/resolution. Dispatch reuses the decoded ordinary values. Invalid ordinary JSON therefore wins over missing/invalid Service, Context and lookup errors, for owners too. Lookup-only preparation retains Service admission and parallel first-observed-failure semantics. An omitted ordinary argument stays absent; explicit null remains present. This is an intentional error-priority change from the formal baseline.
 
@@ -220,7 +220,7 @@ Upstream fidelity is a project compatibility requirement. Evaluate changes again
 - **Assertion reviewed:** the upstream setup, helpers, and assertions were individually matched or given an explicit adaptation.
 - **Not supported:** the behavior is outside the product or platform boundary.
 
-The immutable historical inventory targets DSH `ddefc45fbc7f8e46dd73185e68295696d1297887` and contains 631 upstream candidate instances. It does not describe assertion closure for the new baseline. The current upgrade scope, behavior mapping and platform adaptations are recorded in [the upgrade matrix](upgrade-0.2.0-rc.2.md). Current disposition records 323 as implementation complete. Of those, 36 have a complete assertion review and 287 have not received a complete assertion review. The remaining 308 are explicitly non-complete, usually because they concern JavaScript or DeepSeek Harness product behavior outside Cordis.NET. These figures do not claim a compatibility percentage.
+The immutable historical inventory targets DSH `ddefc45fbc7f8e46dd73185e68295696d1297887` and contains 631 upstream candidate instances. It does not describe assertion closure for the new baseline. The current upgrade scope, behavior mapping and platform adaptations are recorded in [the upgrade matrix](upgrade-0.2.0-rc.2.md). Current disposition records 322 as implementation complete. Of those, 35 have a complete assertion review and 287 have not received a complete assertion review. The remaining 309 are explicitly non-complete, usually because they concern JavaScript or DeepSeek Harness product behavior outside Cordis.NET. These figures do not claim a compatibility percentage.
 
 ## Deployment boundaries
 
