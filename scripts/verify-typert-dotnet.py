@@ -264,12 +264,15 @@ def main():
                 "--service", service, "--output", destination])
 
         if os.name != "nt":
-            # Linux source identity is case sensitive; both partial declarations must survive.
+            # Case-sensitive source identity must retain both partial declarations.
             first_part, second_part = projection_author / "CaseParts.cs", projection_author / "caseparts.cs"
             first_part.write_text('using Cordis.Composition; using System.Text.Json.Serialization; '
                 '[RemoteService("caseParts", typeof(CaseJson))] public sealed partial class CaseParts {'
                 '[RemoteMethod("first")] public Task<int> First() => Task.FromResult(1); }'
                 '[JsonSerializable(typeof(int))] public partial class CaseJson : JsonSerializerContext;', encoding="utf-8")
+            if second_part.exists() and first_part.samefile(second_part):
+                raise RuntimeError("The case-only source fixture requires a case-sensitive TMPDIR; "
+                                   "refusing to overwrite CaseParts.cs through caseparts.cs")
             second_part.write_text('public sealed partial class CaseParts {\n#if CORDIS_CASE\n'
                 '[Cordis.Composition.RemoteMethod("selected")] public Task<int> Selected() => Task.FromResult(2);\n'
                 '#else\n[Cordis.Composition.RemoteMethod("wrongBranch")] public Task<int> WrongBranch() => Task.FromResult(3);\n#endif\n}', encoding="utf-8")

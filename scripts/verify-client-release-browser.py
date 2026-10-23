@@ -14,7 +14,7 @@ import time
 import urllib.request
 import xml.etree.ElementTree as ET
 
-from package_inspection import inspect_restored_packages
+from package_inspection import inspect_package_consumer, prepare_package_consumer
 
 
 def hashes(directory):
@@ -38,9 +38,9 @@ def main():
     packages, runtime = options.packages.resolve(), options.runtime.resolve()
     version = options.package_version or ET.parse(root / "Directory.Build.props").findtext(".//Version")
     receipt = {"status": "failed", "platform": platform.system(), "packageVersion": version,
-               "packageReferencesOnly": True, "nativeManagementHttp": True, "nativeWebSocket": True,
+               "packageReferencesOnly": False, "nativeManagementHttp": True, "nativeWebSocket": True,
                "actualChromiumRequired": True, "aotRequested": False, "steps": []}
-    source = Path(tempfile.mkdtemp(prefix="cordis-release-browser-"))
+    source = Path(tempfile.mkdtemp(prefix="cordis-release-browser-")).resolve()
     host = browser = None
     reader = None
     host_log = browser_log = None
@@ -57,9 +57,7 @@ def main():
         if executable is None:
             raise RuntimeError("Set CORDIS_TEST_BROWSER to an installed Chromium browser; this check cannot be skipped.")
         dotnet = Path(shutil.which(options.dotnet) or options.dotnet).resolve()
-        env = dict(os.environ, DOTNET_ROOT=str(dotnet.parent), NUGET_PACKAGES=str(source / "cache"),
-                   DOTNET_CLI_UI_LANGUAGE="en")
-        shutil.copyfile(root / "global.json", source / "global.json")
+        env = prepare_package_consumer(source, root, packages, str(dotnet))
         fixture = root / "tests/fixtures/ClientReleaseBrowser"
         shutil.copyfile(fixture / "Host.cs", source / "Program.cs")
         shutil.copyfile(fixture / "index.html", source / "index.html")
@@ -72,16 +70,6 @@ def main():
         ET.SubElement(references, "PackageReference", Include="Cordis.NET.AspNetCore", Version=version)
         project_path = source / "ReleaseBrowserHost.csproj"
         ET.ElementTree(project).write(project_path, encoding="utf-8")
-        config = ET.Element("configuration")
-        feeds = ET.SubElement(config, "packageSources")
-        ET.SubElement(feeds, "clear")
-        ET.SubElement(feeds, "add", key="candidate", value=str(packages))
-        ET.SubElement(feeds, "add", key="nuget.org", value="https://api.nuget.org/v3/index.json")
-        ET.SubElement(ET.SubElement(config, "fallbackPackageFolders"), "clear")
-        mapping = ET.SubElement(config, "packageSourceMapping")
-        for name, pattern in (("candidate", "Cordis.NET.*"), ("nuget.org", "*")):
-            ET.SubElement(ET.SubElement(mapping, "packageSource", key=name), "package", pattern=pattern)
-        ET.ElementTree(config).write(source / "NuGet.Config", encoding="utf-8")
         for name, command in (("restore", [dotnet, "restore", project_path]),
                               ("build", [dotnet, "build", project_path, "-c", "Release", "--no-restore"])):
             with (output / (name + ".log")).open("wb") as log:
@@ -90,14 +78,7 @@ def main():
             receipt["steps"].append({"name": name, "exitCode": process.returncode})
             if process.returncode:
                 raise RuntimeError(name + " failed; see " + str(output / (name + ".log")))
-        assets = json.loads((source / "obj/project.assets.json").read_text(encoding="utf-8"))
-        if {Path(path).resolve() for path in assets["packageFolders"]} != {(source / "cache").resolve()}:
-            raise RuntimeError("Native Host resolved a shared or fallback package cache.")
-        cordis = {name: library["type"] for name, library in assets["libraries"].items() if name.startswith("Cordis.NET.")}
-        if not cordis or any(name.split("/", 1)[1] != version or kind != "package" for name, kind in cordis.items()):
-            raise RuntimeError("Native Host did not resolve only the selected candidate packages.")
-        receipt["resolvedPackages"] = sorted(cordis)
-        receipt["restoredArchiveSha256"] = inspect_restored_packages(source / "cache", packages)
+        receipt.update(inspect_package_consumer(project_path, source / "cache", packages, version))
         ready = queue.Queue()
         host_log = (output / "native-host.log").open("w", encoding="utf-8")
         host = subprocess.Popen([str(dotnet), str(source / "bin/Release/net10.0/ReleaseBrowserHost.dll"),
@@ -146,6 +127,7 @@ def main():
             raise RuntimeError("Native Host shutdown failed.")
         if supplied != {"packages": hashes(packages), "runtime": hashes(runtime)}:
             raise RuntimeError("The supplied package/runtime batch changed during verification.")
+        receipt.update(inspect_package_consumer(project_path, source / "cache", packages, version))
         receipt["inputUnchanged"] = True
         receipt["status"] = "passed"
         print("PASS packaged native management HTTP/WebSocket release recovery in actual Chromium", flush=True)

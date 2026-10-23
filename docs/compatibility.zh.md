@@ -10,6 +10,8 @@ S10 还修复了包进程记录中的既有 Linux 竞态：短命根进程可能
 
 固定候选已确认存在 Windows 原始测试失败，位于 `package-manifest.spec.ts` 删除 manifest 后继续查找外层作用域的用例。作用域读取器返回普通盘符路径，原断言要求带命名空间前缀的路径。独立 Node 24.12.0 进程在有、无候选解析钩子两种情况下均复现失败；该 Node 版本处于上游声明的支持范围。见[诊断运行](https://github.com/gentt1024/Cordis.NET/actions/runs/39919928667)。另一次 [Windows 补丁对照](https://github.com/gentt1024/Cordis.NET/actions/runs/39920616943) 执行未修改的 39 项测试文件，原始实现有一项失败，隔离副本仅修正 fallback 路径后 39 项全过、零跳过。该补丁未应用到固定候选。门禁中的原始源码、断言和跳过策略保持不变，因此这项失败仍阻断基线晋升。
 
+[3b6364a 验证批次](https://github.com/gentt1024/Cordis.NET/actions/runs/39922002150)还在私有仓库 SSH 回退用例中记录了一次五秒 Git 预检超时，发生在 pnpm 启动之前。[完整 composition 对照](https://github.com/gentt1024/Cordis.NET/actions/runs/39925752082)使用相同的原始用例、文件执行顺序、Git 版本和 runner 镜像，未复现该超时，根因仍未解决。失败批次继续保留，没有放宽超时、断言或跳过策略。
+
 包展示元数据保留明确的原生边界。公开 `BundleConfigurationInfo` 提供包名、版本和描述，不提供 DSH 插件的本地化元数据或图标资源。候选的 package subpath 图标／locale 规则保留在源码清单和原始测试中，但不宣称原生展示支持。这类展示能力大部分在旧基线已存在；这里记录既有覆盖限制，不将其算成本次新增实现，也不据此省略包解析、元数据缓存失效或描述回归。新增原生本地化／图标输出需要单独的公开合同及消费者迁移。
 
 候选 generator 中由上游禁用的 Cordis 文档 catalog 套件明确记录为 source-skipped，位于 Remote 元数据必需执行范围之外。其源码仍入清单，不计为通过。其他必需原始用例的失败和意外跳过仍会使候选门禁失败。DSH 产品专属服务及既有后端拒绝边界继续明确保留，不从清单中抹去。
