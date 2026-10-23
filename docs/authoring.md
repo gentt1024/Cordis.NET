@@ -4,6 +4,23 @@
 
 These optional .NET authoring helpers use the existing Cordis runtime. A package makes code available; module registration maps names to code; patch/profile entries select instances; `Inject` determines when a plugin can activate. Service identity remains its name and realm. None of these helpers adds a second registry or lifecycle.
 
+## Candidate Remote identities and resources, 2026-10-23
+
+Create Peers inside the owning Context's execution domain. The ordinary `TypertHostConnection(owner, gateway)` still selects the local owner with event answering enabled. A passive owner connection is explicit:
+
+```csharp
+var connection = new TypertHostConnection(owner, gateway,
+    new TypertPeerOptions(TypertPrincipal.Owner, TypertPeerInteractions.None));
+```
+
+For another Host-owned lifetime, construct `new TypertPeer(owner, options)` and pass it to `gateway.InvokeAsync(endpoint, arguments, peer, cancellationToken)` or `StreamAsync`. Dispose the Peer when its owner session ends; await active stream cleanup before closing the root. Disposing one Peer leaves siblings and already-running unary calls alone. A disposed mounted Connection does not fall back to a fresh owner. Withdraw its service registration explicitly if the trusted direct-call fallback should become available again.
+
+Identity drivers construct `TypertPrincipal` from their own credential-free JSON object with a `kind` field. The value clones the JSON, so the originating `JsonDocument` may be disposed. Never build it from a request's principal field. Use `TypertPrincipal.PrincipalOf(TypertInvocation.Current)` for non-owner attribution; it returns null for owner and outside a Remote call. S5 stores non-owner identities but refuses their dispatch until the S6/S7 authorization work is complete.
+
+Register a domain-owned default identity field with `registry.RegisterResource(owner, "document", new TypertResourceDeclaration("documentId"))`. Query it with `GetResource` or `ListResources`; observe changes through the existing `Subscribe`. The declaration disappears with its Fiber. Do not register the reserved `global` kind. Set `Resource = "document"` on the relevant `TypertLookupProvider` or `TypertHostContextAdapter`; configuring its resolver preserves the association. Resource registration alone grants no access and does not yet inspect method arguments.
+
+Existing generated business clients need no wire changes for S5. Calls that previously passed a bare third-argument `default` to Gateway should name it `cancellationToken: default` to distinguish the new Peer overload. Host code can adopt the added APIs after rebuilding against this candidate. The [compatibility notes](compatibility.md) separate this foundation from the remaining authorization work.
+
 ## Start with the runnable example
 
 For a first package-only application, start with [getting started](getting-started.md). This guide describes the current selected batch, including generated Remote and model consumers. Choose the exact feed/version from [validation](validation.md#released-version-evidence). The optional examples below use source project references and the SDK in global.json.

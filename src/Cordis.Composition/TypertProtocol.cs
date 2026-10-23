@@ -772,7 +772,15 @@ public sealed record TypertLookupProvider(
     string Wire,
     string HostTypeSymbol,
     string WireTypeSymbol,
-    Func<object?, ValueTask<object?>> Resolve);
+    Func<object?, ValueTask<object?>> Resolve)
+{
+    /// <summary>Gets the optional resource kind represented by this provider's wire identity.</summary>
+    public string? Resource
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>Lookup declaration retained when its provider unloads.</summary>
 public sealed record TypertLookupDefinition(
@@ -786,7 +794,15 @@ public sealed record TypertLookupDefinition(
 public sealed record TypertHostContextAdapter(
     string Wire,
     string WireTypeSymbol,
-    Func<object?, ValueTask<Context?>> Resolve);
+    Func<object?, ValueTask<Context?>> Resolve)
+{
+    /// <summary>Gets the optional resource kind represented by this adapter's wire identity.</summary>
+    public string? Resource
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>Client Context-to-wire and wire-to-Context provider.</summary>
 public sealed record TypertClientContextAdapter(

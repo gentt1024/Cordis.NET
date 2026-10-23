@@ -2,6 +2,22 @@
 
 [中文](compatibility.zh.md)
 
+## Candidate Remote identity and resource slice, 2026-10-23
+
+S5 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`: `packages/typert/protocol/src/principal.ts`, `packages/client/connection/src/peer.ts`, the registry resource store and Gateway Peer admission/lifetime. The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`. The historical source inventory is unchanged. This is a scoped candidate exception, not complete candidate Remote authorization.
+
+`TypertPrincipal` holds a detached JSON identity with one nonempty, case-sensitive `kind`. The native constructor validates this shape and clones the JSON; hosts choose each driver's credential-free fields. `Owner` is the built-in owner identity. `PrincipalOf(invocation)` returns the exact non-owner principal, or null for owner/outside-call attribution. Only trusted Host construction selects a Peer identity. HTTP envelopes, mux frames and method arguments cannot replace it.
+
+`TypertPeer` now exposes `Principal`, `Interactions`, `CancellationToken` and public asynchronous disposal. `TypertPeerOptions` fixes the identity and `Answer`/`None` capacity at construction. `TypertHostConnection` has an explicit-options constructor; its existing constructor creates an owner with `Answer`. Gateway has explicit-Peer unary and stream overloads. The existing trusted in-process convenience overloads remain a native adaptation: they select the current mounted Connection or one Gateway-owned fallback before preparation, then use the same admission path. A stream retains that selected Peer through cleanup.
+
+Closed Peers fail with `gateway/peer-disposed` before descriptor and argument preparation, including both event endpoints. Native HTTP still parses the outer envelope to obtain its correlation ID and applies Host endpoint authorization; Peer liveness precedes nested payload validation. Mux framing and Host authorization remain carrier boundaries. Peer scope cleanup cancels business and event streams, including buffered event forwarding, but does not cancel an already-running unary method's carrier token. Cancellation remains cooperative; a business iterator that does not settle can retain pending cleanup. `None` refuses event subscription and answers with `gateway/interactions-forbidden` while allowing ordinary owner business calls.
+
+This intermediate slice refuses every non-owner Gateway invocation, including events, with `remote-access/denied` and reason `non-owner-unavailable` before provider or business preparation. S6 resource decisions and S7 event policy, answer ownership and revocation are still required before non-owner dispatch is enabled. Host HTTP authorization remains required and does not substitute for that future closure.
+
+`RegisterResource`, `GetResource` and `ListResources` add Fiber-owned resource declarations to the existing `TypertRegistry`; changes use its existing `Subscribe`. One kind has one default wire `Field`, `global` is reserved, and duplicate/invalid registration leaves the registry unchanged. Lists are detached snapshots in insertion order. Withdrawal removes only the exact registration and not a later replacement. `TypertLookupProvider.Resource` and `TypertHostContextAdapter.Resource` are optional provider facts preserved by resolver overrides. Retained lookup wire definitions do not acquire resource metadata. S5 does not yet resolve resources from arguments or make policy decisions.
+
+These are native Host API additions. Generated business DTOs, method schemas and client wire artifacts are unchanged. See [authoring](authoring.md) and [validation](validation.md).
+
 ## Candidate Profile and package reinstall slice, 2026-10-22
 
 S4 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317`, including the app-boot profile-resolution and HMR package-reload suites. The formal behavior lock remains `639ed015397290b3745d163aafe02ffee4aa3f84`; the historical source inventory is unchanged. This is another scoped candidate exception.

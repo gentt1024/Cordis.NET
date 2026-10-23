@@ -2,6 +2,22 @@
 
 [English](compatibility.md)
 
+## 候选 Remote 身份与资源分片，2026-10-23
+
+S5 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317` 的 `packages/typert/protocol/src/principal.ts`、`packages/client/connection/src/peer.ts`、注册表资源存储及 Gateway Peer 准入与寿命。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`，历史源码清单不变。这是范围明确的候选例外，不代表已完成候选 Remote 授权。
+
+`TypertPrincipal` 保存独立的 JSON 身份，其中必须有且仅有一个非空、区分大小写的 `kind`。原生构造函数验证这一形状并克隆 JSON；各驱动的无凭据字段由宿主选择。`Owner` 是内置所有者身份。`PrincipalOf(invocation)` 返回原非 owner 身份，对 owner 或调用外部的归因返回 null。只有可信 Host 构造过程能选择 Peer 身份，HTTP 信封、mux 帧和方法参数都不能替换它。
+
+`TypertPeer` 现在公开 `Principal`、`Interactions`、`CancellationToken` 和异步释放。`TypertPeerOptions` 在创建时固定身份与 `Answer`/`None` 交互资格。`TypertHostConnection` 新增显式选项构造函数，原构造函数创建具有 `Answer` 资格的 owner。Gateway 增加显式 Peer 的 unary 和 stream 重载。原有可信进程内便捷重载作为原生适配保留：准备前选择当前挂载的 Connection，或 Gateway 所有的一个回退 Peer，再进入相同的准入流程。流在清理结束前始终保留最初选择的 Peer。
+
+已关闭 Peer 在描述符和参数准备前返回 `gateway/peer-disposed`，两个事件入口也相同。原生 HTTP 仍先解析外层信封取得关联 ID，并执行宿主端点授权；Peer 存活检查早于内层 payload 验证。mux 帧格式和宿主授权仍属于载体边界。Peer scope 清理会取消业务流和事件流，包括缓冲事件转发，但不取消已运行 unary 方法的载体 token。取消仍是协作式的；不结束的业务迭代器可能继续占有待完成清理。`None` 对事件订阅和回答返回 `gateway/interactions-forbidden`，普通 owner 业务调用仍可执行。
+
+本中间分片在 provider 或业务准备前，以 `remote-access/denied` 和原因 `non-owner-unavailable` 拒绝所有非 owner Gateway 调用，包括事件。开放非 owner 调用前仍须完成 S6 资源决策，以及 S7 事件策略、回答归属和撤销。宿主 HTTP 授权仍然必需，不能替代后续这一完整范围。
+
+`RegisterResource`、`GetResource`、`ListResources` 在现有 `TypertRegistry` 中增加归属 Fiber 的资源声明；变更通过现有 `Subscribe` 通知。一个 kind 只有一个默认 wire `Field`，`global` 为保留名称，重复或非法注册不改变注册表。列表是按插入顺序排列的独立快照。撤销只删除原注册，不会删除后来替换的注册。`TypertLookupProvider.Resource` 和 `TypertHostContextAdapter.Resource` 是可选的 provider 事实，resolver 覆盖会保留它们。保留的 lookup wire 定义不增加资源元数据。S5 尚不从参数解析资源，也不进行策略决策。
+
+这些是原生 Host API 增量，生成的业务 DTO、方法 schema 和客户端 wire 制品不变。参见[作者指南](authoring.zh.md)和[验证记录](validation.zh.md)。
+
 ## 候选 Profile 与包热重装分片，2026-10-22
 
 S4 依据固定候选 `687f282e8625c6b8d11ff58211a90524be2e4317`，包括 app-boot profile-resolution 与 HMR package-reload 套件。正式行为锁仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`，历史原始测试清单不变。这是另一项限定范围的候选例外。
