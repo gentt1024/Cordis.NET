@@ -227,7 +227,10 @@ def run_shard(dsh, origin, frozen_path, output, shard, batch):
     def attempt(label, env, root):
         try:
             execute(output, steps, label, ["node", VITEST, "run", "--config", CONFIG], env, cwd=root)
-        except (SuiteExecutionError, subprocess.TimeoutExpired) as error:
+        except subprocess.TimeoutExpired as error:
+            failures.append({"name": label, "error": str(error)})
+            raise
+        except SuiteExecutionError as error:
             failures.append({"name": label, "error": str(error)})
             completed = False
         else:
