@@ -198,12 +198,19 @@ def aggregate(directory, expected_commit, expected_platform):
     require(len(paths) == SHARDS, f"Expected {SHARDS} shard results; found {len(paths)}")
     reports = [read(path) for path in paths]
     require(sorted(report["shard"] for report in reports) == list(range(1, SHARDS + 1)), "Missing or duplicate shard")
+    return aggregate_reports(reports, expected_commit, expected_platform)
+
+
+def aggregate_reports(reports, expected_commit, expected_platform, *, dsh=DSH, origin=ORIGIN, counts=None):
+    """Shared complete-union validation; explicit candidates keep separate pinned inputs."""
+    require(len(reports) == SHARDS, f"Expected {SHARDS} shard results; found {len(reports)}")
+    require(sorted(report["shard"] for report in reports) == list(range(1, SHARDS + 1)), "Missing or duplicate shard")
     first = reports[0]
     identity = first["identity"]
     require(identity["commit"] == expected_commit and identity["platform"] == expected_platform,
             "Results belong to another commit or platform")
-    require(identity["dsh"] == DSH and identity["origin"] == ORIGIN, "Unpinned result")
-    validate_inventory(first["inventory"], fixed_counts())
+    require(identity["dsh"] == dsh and identity["origin"] == origin, "Unpinned result")
+    validate_inventory(first["inventory"], fixed_counts() if counts is None else counts)
     assignments = plan(first["inventory"])
     observed, outcomes = set(), []
     for report in reports:

@@ -6,10 +6,30 @@ import tempfile
 import unittest
 import zipfile
 
-from scripts.package_inspection import PACKAGE_LAYOUTS, PUBLISHABLE_PACKAGE_IDS, inspect_packages, inspect_symbols, inspect_readme_links
+from scripts.package_inspection import PACKAGE_LAYOUTS, PUBLISHABLE_PACKAGE_IDS, inspect_packages, inspect_symbols, inspect_readme_links, inspect_restored_packages
 
 
 class PackageInspectionTests(unittest.TestCase):
+    def test_restored_cordis_archives_must_match_the_selected_batch(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cache, batch = root / "cache", root / "batch"
+            cache.mkdir()
+            batch.mkdir()
+            name = "Cordis.NET.Core.1.0.0.nupkg"
+            (batch / name).write_bytes(b"selected archive")
+            with self.assertRaisesRegex(ValueError, "No restored Cordis"):
+                inspect_restored_packages(cache, batch)
+            restored = cache / name.lower()
+            restored.write_bytes(b"selected archive")
+            self.assertEqual(list(inspect_restored_packages(cache, batch)), [name.lower()])
+            restored.write_bytes(b"different feed archive")
+            with self.assertRaisesRegex(ValueError, "differs from"):
+                inspect_restored_packages(cache, batch)
+            restored.rename(cache / "cordis.net.core.2.0.0.nupkg")
+            with self.assertRaisesRegex(ValueError, "absent from"):
+                inspect_restored_packages(cache, batch)
+
     def test_readme_links_resolve_from_packaged_location(self):
         for target, message in [
             ("../../docs/authoring.md", "escapes package root"),
@@ -71,7 +91,7 @@ class PackageInspectionTests(unittest.TestCase):
     def test_actual_symbols_bind_dll_and_committed_source_and_reject_broken_artifacts(self):
         dotnet = os.environ.get("CORDIS_TEST_DOTNET", "dotnet")
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
+            root = Path(temporary).resolve()
             def run(*command):
                 subprocess.run(command, cwd=root, check=True, capture_output=True)
             run("git", "init")

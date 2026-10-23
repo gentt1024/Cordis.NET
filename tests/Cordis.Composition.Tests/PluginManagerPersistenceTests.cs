@@ -8,16 +8,19 @@ public sealed partial class PluginManagerOriginalTests
 {
     [Theory]
     [InlineData("# header\n- id: managed\n  disabled: false\n# tail\n", "# header\n[]\n# tail\n")]
-    [InlineData("# header\n- id: managed\n  disabled: true\n# other\n- id: other\n  disabled: true\n",
+    [InlineData(
+        "# header\n- id: managed\n  disabled: true\n# other\n- id: other\n  disabled: true\n",
         "# header\n# other\n- id: other\n  disabled: true\n")]
-    [InlineData("- id: other\n  disabled: true\n# about managed\n- id: managed\n  disabled: true\n# tail\n",
+    [InlineData(
+        "- id: other\n  disabled: true\n# about managed\n- id: managed\n  disabled: true\n# tail\n",
         "- id: other\n  disabled: true\n# about managed\n# tail\n")]
     [InlineData("- id: managed\n  # between fields\n  disabled: true # inline\n", "  # between fields\n[]\n")]
     [InlineData("[{id: managed, disabled: true}]", "[]")]
     [InlineData("[{id: managed, disabled: true}, {id: other, disabled: true}]", "[ {id: other, disabled: true}]")]
     [InlineData("[{id: other, disabled: true}, {id: managed, disabled: true}]", "[{id: other, disabled: true} ]")]
     [InlineData("[{id: other}, {id: managed, disabled: true}, {id: last}]", "[{id: other},  {id: last}]")]
-    [InlineData("[\n# header\n{id: managed, disabled: true}, # comma, comment\n{id: other}\n]",
+    [InlineData(
+        "[\n# header\n{id: managed, disabled: true}, # comma, comment\n{id: other}\n]",
         "[\n# header\n # comma, comment\n{id: other}\n]")]
     public async Task PruningPreservesSurroundingCommentsAndSequenceSyntax(string patch, string expected)
     {
@@ -47,7 +50,8 @@ public sealed partial class PluginManagerOriginalTests
         var result = await f.Manager.SetPluginEnabledAsync("root:managed", true);
         Assert.Null(result.Error);
         var text = await File.ReadAllTextAsync(f.Patch);
-        var expected = patch.Replace("disabled: true", "disabled: false", StringComparison.Ordinal)
+        var expected = patch
+            .Replace("disabled: true", "disabled: false", StringComparison.Ordinal)
             .Replace("disabled: *flag", "disabled: false", StringComparison.Ordinal)
             .Replace("disabled: &flag true", "disabled: &flag false", StringComparison.Ordinal);
         Assert.Equal(expected, text);
@@ -70,7 +74,8 @@ public sealed partial class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         await f.Start();
-        await File.WriteAllTextAsync(Path.Combine(f.Packages["extra"], "patch.yml"),
+        await File.WriteAllTextAsync(
+            Path.Combine(f.Packages["extra"], "patch.yml"),
             "- insert: [{id: managed, name: managed, disabled: " + inherited + "}]\n");
         Assert.Null((await f.Manager.SetPluginEnabledAsync("root:managed", true)).Error);
         Assert.Equal(false, Assert.Single(await Profiles.ReadPatchesAsync(f.Patch)).Disabled);
@@ -82,7 +87,8 @@ public sealed partial class PluginManagerOriginalTests
         await using var f = new Fixture();
         await f.Start();
         await File.WriteAllTextAsync(Path.Combine(f.Packages["extra"], "patch.yml"), "[]\n");
-        const string patch = "- insert: [{id: managed, name: managed}]\n- id: managed\n  name: managed\n  disabled: true\n";
+        const string patch =
+            "- insert: [{id: managed, name: managed}]\n- id: managed\n  name: managed\n  disabled: true\n";
         await File.WriteAllTextAsync(f.Patch, patch + "- id: managed\n  disabled: false\n");
         Assert.Null((await f.Manager.SetPluginEnabledAsync("root:managed", false)).Error);
         Assert.Equal(patch, await File.ReadAllTextAsync(f.Patch));
@@ -97,7 +103,8 @@ public sealed partial class PluginManagerOriginalTests
         await using var f = new Fixture();
         await f.Start();
         File.Delete(f.Patch);
-        await File.WriteAllTextAsync(Path.Combine(f.Launch.Home, "cordis.patch.yml"),
+        await File.WriteAllTextAsync(
+            Path.Combine(f.Launch.Home, "cordis.patch.yml"),
             "- id: managed\n  disabled: true\n");
         var result = await f.Manager.SetPluginEnabledAsync("root:managed", true);
         Assert.Null(result.Error);
@@ -120,8 +127,12 @@ public sealed partial class PluginManagerOriginalTests
         Assert.False(result.Changed);
         Assert.Equal(patch, await File.ReadAllTextAsync(f.Patch));
         Assert.Equal(basis, await File.ReadAllTextAsync(f.Include.Filename));
-        Assert.Equal(true, ConfigurationFile.ParseEntries(await f.Manager.PreviewAsync())
-            .Single(row => row.Id == "managed").Disabled);
+        Assert.Equal(
+            true,
+            ConfigurationFile
+                .ParseEntries(await f.Manager.PreviewAsync())
+                .Single(row => row.Id == "managed")
+                .Disabled);
     }
 
     [Fact]
@@ -129,14 +140,16 @@ public sealed partial class PluginManagerOriginalTests
     {
         await using var f = new Fixture();
         var fail = false;
-        f.Modules.Register("managed", new Plugin<object?>
-        {
-            Apply = (_, _) =>
+        f.Modules.Register(
+            "managed",
+            new Plugin<object?>
             {
-                if (fail)
-                    throw new InvalidOperationException("activation failed");
-            }
-        });
+                Apply = (_, _) =>
+                {
+                    if (fail)
+                        throw new InvalidOperationException("activation failed");
+                }
+            });
         await f.Start();
         Assert.Null((await f.Manager.SetPluginEnabledAsync("root:managed", false)).Error);
         fail = true;
@@ -171,10 +184,15 @@ public sealed partial class PluginManagerOriginalTests
         var text = await File.ReadAllTextAsync(f.Patch);
         Assert.False((await f.Manager.SetPluginEnabledAsync("root:managed", true)).Changed);
         Assert.Equal(text, await File.ReadAllTextAsync(f.Patch));
-        await File.WriteAllTextAsync(Path.Combine(f.Packages["extra"], "patch.yml"),
+        await File.WriteAllTextAsync(
+            Path.Combine(f.Packages["extra"], "patch.yml"),
             "- insert: [{ id: managed, name: managed, disabled: true }]\n");
-        Assert.Equal(true, ConfigurationFile.ParseEntries(await f.Manager.PreviewAsync())
-            .Single(row => row.Id == "managed").Disabled);
+        Assert.Equal(
+            true,
+            ConfigurationFile
+                .ParseEntries(await f.Manager.PreviewAsync())
+                .Single(row => row.Id == "managed")
+                .Disabled);
     }
 
     [Fact]
@@ -245,7 +263,8 @@ public sealed partial class PluginManagerOriginalTests
         var manifest = f.Manifest;
         Assert.IsType<EntryOptions>(manifest.Raw["dependencies"]).Remove("extra");
         manifest.Write(f.ManifestPath);
-        Assert.Equal("management-required",
+        Assert.Equal(
+            "management-required",
             (await f.Manager.ListBundlesAsync()).Single(row => row.Name == "extra").ReadOnlyReason);
         var path = Path.Combine(f.Packages["extra"], "package.json");
         if (missingManifest)
@@ -275,7 +294,8 @@ public sealed partial class PluginManagerOriginalTests
         if (!live)
             f.Manager.RunExclusiveAsync = null;
         else
-            await File.WriteAllTextAsync(Path.Combine(f.Launch.Home, "cordis.patch.yml"),
+            await File.WriteAllTextAsync(
+                Path.Combine(f.Launch.Home, "cordis.patch.yml"),
                 "- insert: [{id: managed, name: managed}]\n");
         var toolchain = new RetainingToolchain();
         var result = await f.Manager.RemovePackageAsync(toolchain, "extra");

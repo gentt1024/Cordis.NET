@@ -17,15 +17,36 @@ public sealed class ModuleIdentityTests
             ctx.Effect(() => (Action)(() => trace.Add("stop:" + id)));
         };
         var resolver = new StaticModuleResolver()
-            .Register("one", new Plugin<string> { Apply = apply })
-            .Register("two", new Plugin<string> { Apply = apply });
+            .Register(
+                "one",
+                new Plugin<string>
+                {
+                    Apply = apply
+                })
+            .Register(
+                "two",
+                new Plugin<string>
+                {
+                    Apply = apply
+                });
         Loader? loader = null;
         await context.RunAsync(async ctx =>
         {
             loader = new Loader(ctx, resolver);
-            await loader.Root.UpdateAsync([
-                new() { Id = "one", Name = "one", Config = "one" },
-                new() { Id = "two", Name = "two", Config = "two" }
+            await loader.Root.UpdateAsync(
+            [
+                new()
+                {
+                    Id = "one",
+                    Name = "one",
+                    Config = "one"
+                },
+                new()
+                {
+                    Id = "two",
+                    Name = "two",
+                    Config = "two"
+                }
             ]);
             await loader.WaitAsync();
         });
@@ -33,16 +54,21 @@ public sealed class ModuleIdentityTests
         var two = loader.Resolve("two").Module!;
         Assert.NotSame(one.Plugin, two.Plugin);
         Assert.Same(one.Plugin.Identity, two.Plugin.Identity);
-        var first = new ResolvedModule(new Plugin<string> { Apply = (_, id) => trace.Add("first:" + id) });
-        var second = new ResolvedModule(new Plugin<string>
-        {
-            Apply = (_, id) =>
+        var first = new ResolvedModule(
+            new Plugin<string>
             {
-                trace.Add("second:" + id);
-                if (fail)
-                    throw new InvalidOperationException("second refused");
-            }
-        });
+                Apply = (_, id) => trace.Add("first:" + id)
+            });
+        var second = new ResolvedModule(
+            new Plugin<string>
+            {
+                Apply = (_, id) =>
+                {
+                    trace.Add("second:" + id);
+                    if (fail)
+                        throw new InvalidOperationException("second refused");
+                }
+            });
         trace.Clear();
         var replacing = loader.ReplacePluginsAsync([new(one, first), new(two, second)]);
         if (fail)
@@ -58,6 +84,7 @@ public sealed class ModuleIdentityTests
             Assert.Same(first, loader.Resolve("one").Module);
             Assert.Same(second, loader.Resolve("two").Module);
         }
+
         Assert.Equal(1, trace.Count(item => item == "stop:one"));
         Assert.Equal(1, trace.Count(item => item == "stop:two"));
         Assert.Equal(1, trace.Count(item => item == "first:one"));

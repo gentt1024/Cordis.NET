@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      candidate:
+        description: Also require the fixed 0.2.1 candidate source matrix without promoting the formal lock
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -102,13 +107,28 @@ jobs:
           npm ci --prefix reference --ignore-scripts
           npm ci --prefix clients/modules --ignore-scripts
           npm ci --prefix clients/tools --ignore-scripts
+      - name: Prepare fixed candidate trace inputs
+        if: ${{ inputs.candidate == true }}
+        shell: bash
+        run: |
+          git init ../dsh-candidate
+          git -C ../dsh-candidate remote add origin https://github.com/deepseek-ai/deepseek-harness.git
+          git -C ../dsh-candidate fetch --depth=1 origin 687f282e8625c6b8d11ff58211a90524be2e4317
+          git -C ../dsh-candidate checkout --detach FETCH_HEAD
+          npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
       - name: Verify package inspector regression
         run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
       - name: Verify
         shell: bash
+        env:
+          CANDIDATE_REQUESTED: ${{ inputs.candidate == true }}
         run: |
           python scripts/check-docs.py
-          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --defer-upstream-source-tests --aot --package --package-output artifacts/ci-packages
+          candidate_args=()
+          if [ "$CANDIDATE_REQUESTED" = true ]; then
+            candidate_args=(--candidate-dsh ../dsh-candidate)
+          fi
+          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --defer-upstream-source-tests --aot --package --package-output artifacts/ci-packages "${candidate_args[@]}"
           python scripts/verify-authoring.py --verification artifacts/verification/verification.json --aot --packages artifacts/ci-packages
       - name: Record same-batch authoring inputs
         if: runner.os == 'Linux'
@@ -122,6 +142,7 @@ jobs:
           name: portable-authoring-inputs
           path: |
             artifacts/portable-authoring-inputs.json
+            artifacts/verification/verification.json
             artifacts/client-modules
             artifacts/verification/client-author-package/*.tgz
           if-no-files-found: error
@@ -212,11 +233,141 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  candidate-discovery:
+    name: candidate source discovery
+    if: ${{ inputs.candidate == true }}
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Fetch fixed candidate and source origin
+        shell: bash
+        run: |
+          git init ../dsh-candidate
+          git -C ../dsh-candidate remote add origin https://github.com/deepseek-ai/deepseek-harness.git
+          git -C ../dsh-candidate fetch --depth=1 origin 687f282e8625c6b8d11ff58211a90524be2e4317
+          git -C ../dsh-candidate checkout --detach FETCH_HEAD
+          git init ../upstream-cordis
+          git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
+          git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
+          git -C ../upstream-cordis checkout --detach FETCH_HEAD
+          npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
+      - name: Discover complete candidate case inventory
+        run: python scripts/verify_candidate_upstream.py discover --dsh ../dsh-candidate --origin ../upstream-cordis --output artifacts/candidate-discovery
+      - name: Preserve candidate instances and historical mapping dispositions
+        run: node reference/inventory-candidate.mjs --inventory=artifacts/candidate-discovery/inventory.json --dsh=../dsh-candidate --origin=../upstream-cordis --output=artifacts/candidate-discovery/candidate-inventory.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-discovery
+          path: artifacts/candidate-discovery
+          if-no-files-found: error
+          retention-days: 30
+
+  candidate-upstream:
+    name: candidate (${{ matrix.os }}, shard ${{ matrix.shard }})
+    needs: candidate-discovery
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+        shard: [1, 2, 3, 4]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: candidate-discovery
+          path: artifacts/candidate-discovery
+      - name: Fetch fixed candidate and source origin
+        shell: bash
+        run: |
+          git init ../dsh-candidate
+          git -C ../dsh-candidate remote add origin https://github.com/deepseek-ai/deepseek-harness.git
+          git -C ../dsh-candidate fetch --depth=1 origin 687f282e8625c6b8d11ff58211a90524be2e4317
+          git -C ../dsh-candidate checkout --detach FETCH_HEAD
+          git init ../upstream-cordis
+          git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
+          git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
+          git -C ../upstream-cordis checkout --detach FETCH_HEAD
+          npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
+      - name: Execute candidate shard
+        run: python scripts/verify_candidate_upstream.py run --dsh ../dsh-candidate --origin ../upstream-cordis --inventory artifacts/candidate-discovery/inventory.json --output artifacts/candidate-shard-${{ matrix.shard }} --shard ${{ matrix.shard }}
+      - name: Preserve candidate shard evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-${{ matrix.os }}-${{ matrix.shard }}
+          path: artifacts/candidate-shard-${{ matrix.shard }}
+          if-no-files-found: error
+          retention-days: 30
+
+  candidate-summary:
+    name: candidate source union (${{ matrix.platform }})
+    if: ${{ always() && inputs.candidate == true }}
+    needs: [candidate-discovery, candidate-upstream]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+          - os: ubuntu-24.04
+            platform: Linux
+    steps:
+      - name: Require every candidate shard
+        env:
+          DISCOVERY_RESULT: ${{ needs.candidate-discovery.result }}
+          SHARD_RESULT: ${{ needs.candidate-upstream.result }}
+        run: test "$DISCOVERY_RESULT" = success && test "$SHARD_RESULT" = success
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: candidate-discovery
+          path: artifacts/candidate-discovery
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: candidate-${{ matrix.os }}-*
+          path: artifacts/candidate-results
+      - name: Require complete fixed candidate case union
+        run: python scripts/verify_candidate_upstream.py aggregate --input artifacts/candidate-results --inventory artifacts/candidate-discovery/inventory.json --platform ${{ matrix.platform }} --output artifacts/candidate-summary.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-summary-${{ matrix.os }}
+          path: artifacts/candidate-summary.json
+          if-no-files-found: error
+          retention-days: 30
+
   # Preserve the required-check names. Runtime success alone cannot satisfy them.
   verify:
     name: verify (${{ matrix.os }})
     if: always()
-    needs: [runtime, upstream, portable-authoring]
+    needs: [runtime, upstream, portable-authoring, candidate-summary]
     strategy:
       fail-fast: false
       matrix:
@@ -232,7 +383,15 @@ jobs:
           RUNTIME_RESULT: ${{ needs.runtime.result }}
           UPSTREAM_RESULT: ${{ needs.upstream.result }}
           AUTHORING_RESULT: ${{ needs.portable-authoring.result }}
-        run: test "$RUNTIME_RESULT" = success && test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
+          CANDIDATE_REQUESTED: ${{ inputs.candidate == true }}
+          CANDIDATE_RESULT: ${{ needs.candidate-summary.result }}
+        run: |
+          test "$RUNTIME_RESULT" = success && test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
+          if [ "$CANDIDATE_REQUESTED" = true ]; then
+            test "$CANDIDATE_RESULT" = success
+          else
+            test "$CANDIDATE_RESULT" = skipped
+          fi
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false

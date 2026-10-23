@@ -126,6 +126,7 @@ jobs:
           name: portable-authoring-inputs
           path: |
             artifacts/portable-authoring-inputs.json
+            artifacts/verification/verification.json
             artifacts/client-modules
             artifacts/verification/client-author-package/*.tgz
           if-no-files-found: error

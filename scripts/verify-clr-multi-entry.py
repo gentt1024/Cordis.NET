@@ -2,6 +2,7 @@
 import argparse
 import json
 import glob
+import hashlib
 import os
 import platform
 from pathlib import Path
@@ -10,6 +11,45 @@ import subprocess
 import tempfile
 import sys
 import xml.etree.ElementTree as ET
+
+from package_inspection import inspect_restored_packages
+
+
+def package_feed_snapshot(directory):
+    return {path.relative_to(directory).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(directory.rglob("*")) if path.is_file()}
+
+
+def seal_dependency_feed(cache, batch, feed):
+    restored = inspect_restored_packages(cache, batch)
+    feed.mkdir()
+    # Inner Prepare owns another cache. Give it only copied third-party
+    # archives and the exact Cordis batch, without a public-source fallback.
+    archives = [path for path in cache.rglob("*.nupkg")
+                if not path.name.casefold().startswith(("cordis.net.", "independentmultientry."))]
+    archives.extend(batch.resolve().glob("*.nupkg"))
+    copied = {}
+    for source in sorted(archives):
+        name = source.name.casefold()
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        if name in copied:
+            if copied[name] != digest:
+                raise ValueError("Conflicting archives in the sealed dependency feed: " + source.name)
+            continue
+        shutil.copyfile(source, feed / name)
+        copied[name] = digest
+    snapshot = package_feed_snapshot(feed)
+    if snapshot != copied:
+        raise ValueError("The dependency feed differs from the verified archive copies")
+    if not restored.keys() <= snapshot.keys():
+        raise ValueError("The sealed dependency feed omitted a restored Cordis archive")
+    for name, digest in restored.items():
+        if snapshot[name] != digest:
+            raise ValueError("The sealed feed contains a different Cordis package: " + name)
+    return {
+        "meaning": "Inner Prepare/Publish uses only this unchanged local dependency feed and the independent author feed.",
+        "restoredCordisSha256": restored, "packagesSha256": snapshot,
+    }
 
 
 def verify_multi_assembly(options, root, directory, version, project, run):
@@ -134,18 +174,42 @@ def main():
     author_packages.mkdir()
     options.output.mkdir(parents=True, exist_ok=True)
     outcomes = []
+    dependency_feed = directory / "sealed-dependency-feed"
+    sealed_packages = None
+    sealed_authors = None
     (directory / "global.json").write_bytes((root / "global.json").read_bytes())
-    (directory / "NuGet.Config").write_text(
-        '<configuration><packageSources><clear/><add key="local" value="' +
-        str(options.packages.resolve()) + '"/><add key="author" value="' + str(author_packages) +
-        '"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/>' +
-        '</packageSources></configuration>', encoding="utf-8")
+    config = ET.Element("configuration")
+    sources = ET.SubElement(config, "packageSources")
+    ET.SubElement(sources, "clear")
+    for key, value in (("local", str(options.packages.resolve())), ("author", str(author_packages)),
+                       ("nuget.org", "https://api.nuget.org/v3/index.json")):
+        ET.SubElement(sources, "add", key=key, value=value)
+    ET.SubElement(ET.SubElement(config, "fallbackPackageFolders"), "clear")
+    mapping = ET.SubElement(config, "packageSourceMapping")
+    for key, pattern in (("local", "Cordis.NET.*"), ("author", "IndependentMultiEntry"), ("nuget.org", "*")):
+        ET.SubElement(ET.SubElement(mapping, "packageSource", key=key), "package", pattern=pattern)
+    ET.ElementTree(config).write(directory / "NuGet.Config", encoding="utf-8")
+
+    def verify_package_origin():
+        restored = inspect_restored_packages(directory / "cache", options.packages)
+        (options.output / "package-origin.json").write_text(json.dumps(restored, indent=2) + "\n", encoding="utf-8")
+
+    def verify_sealed_feed():
+        if sealed_packages is not None:
+            if package_feed_snapshot(dependency_feed) != sealed_packages:
+                raise ValueError("The sealed dependency feed changed during the independent package consumer")
+            if package_feed_snapshot(author_packages) != sealed_authors:
+                raise ValueError("The independent author feed changed during Prepare/Publish")
 
     def run(label, arguments):
-        result = subprocess.run([str(value) for value in arguments], cwd=directory,
-                                env=dict(os.environ, DOTNET_CLI_UI_LANGUAGE="en"),
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                                encoding="utf-8", errors="replace")
+        verify_sealed_feed()
+        try:
+            result = subprocess.run([str(value) for value in arguments], cwd=directory,
+                                    env=dict(os.environ, DOTNET_CLI_UI_LANGUAGE="en", NUGET_PACKAGES=str(directory / "cache")),
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                                    encoding="utf-8", errors="replace")
+        finally:
+            verify_sealed_feed()
         (options.output / (label + ".log")).write_text(result.stdout, encoding="utf-8")
         outcomes.append({"label": label, "exitCode": result.returncode})
         print(label, "exit", result.returncode, flush=True)
@@ -167,6 +231,7 @@ def main():
         if not options.stable_publication_only:
             verify_multi_assembly(options, root, directory, version, project, run)
         if options.multi_assembly_only:
+            verify_package_origin()
             return 0
         author = directory / "Author"
         author_project = project(author,
@@ -223,15 +288,28 @@ def main():
                 f'<PackageReference Include="Cordis.NET.AspNetCore" Version="{version}"/>' +
                 '<FrameworkReference Include="Microsoft.AspNetCore.App"/>')
             shutil.copyfile(root / "tests/fixtures/ClrMultiEntry/Consumer.cs", consumer / "Program.cs")
-            run("consumer-run", [options.dotnet, "run", "--project", consumer_project, "-c", "Release", "--", *bundles,
-                author_packages, options.packages.resolve(), options.dotnet, options.node,
-                root / "scripts/multi-entry-client-consumer.mjs", tsc.resolve()])
+            run("consumer-build", [options.dotnet, "build", consumer_project, "-c", "Release"])
         stable = directory / "StableConsumer"
         stable_project = project(stable, '<OutputType>Exe</OutputType>',
             f'<PackageReference Include="Cordis.NET.Clr" Version="{version}"/>')
         shutil.copyfile(root / "tests/fixtures/ClrMultiEntry/StableConsumer.cs", stable / "Program.cs")
-        run("stable-publication-worker", [options.dotnet, "run", "--project", stable_project, "-c", "Release", "--",
-            author_packages, options.packages.resolve(), options.dotnet])
+        run("stable-consumer-build", [options.dotnet, "build", stable_project, "-c", "Release"])
+        feed_receipt = seal_dependency_feed(directory / "cache", options.packages, dependency_feed)
+        sealed_packages = feed_receipt["packagesSha256"]
+        sealed_authors = package_feed_snapshot(author_packages)
+        feed_receipt["authorPackagesSha256"] = sealed_authors
+        (options.output / "sealed-feed.json").write_text(json.dumps(feed_receipt, indent=2) + "\n", encoding="utf-8")
+        if not options.stable_publication_only:
+            run("consumer-run", [options.dotnet, "run", "--project", consumer_project, "-c", "Release",
+                "--no-build", "--no-restore", "--", *bundles, author_packages, dependency_feed, options.dotnet, options.node,
+                root / "scripts/multi-entry-client-consumer.mjs", tsc.resolve()])
+        run("stable-publication-worker", [options.dotnet, "run", "--project", stable_project, "-c", "Release",
+            "--no-build", "--no-restore", "--", author_packages, dependency_feed, options.dotnet])
+        verify_sealed_feed()
+        feed_receipt["packagesAfterSha256"] = package_feed_snapshot(dependency_feed)
+        feed_receipt["authorPackagesAfterSha256"] = package_feed_snapshot(author_packages)
+        (options.output / "sealed-feed.json").write_text(json.dumps(feed_receipt, indent=2) + "\n", encoding="utf-8")
+        verify_package_origin()
     finally:
         (options.output / "results.json").write_text(json.dumps(outcomes, indent=2) + "\n", encoding="utf-8")
     return 0

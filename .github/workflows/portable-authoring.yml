@@ -16,7 +16,7 @@ permissions:
 jobs:
   consume:
     name: same-batch authoring (${{ matrix.os }})
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +54,17 @@ jobs:
           path: artifacts/portable-inputs
       - name: Install consumer verification dependencies
         run: npm ci --prefix clients/modules --ignore-scripts
-      - name: Consume exact Linux packages and installed author tool
+      - name: Install Native AOT prerequisites
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang zlib1g-dev
+      - name: Consume exact Linux packages with JIT and Native AOT
+        if: runner.os != 'macOS'
+        run: python scripts/verify-portable-authoring.py --packages artifacts/portable-packages --inputs artifacts/portable-inputs --output artifacts/portable-results --aot
+      - name: Consume exact Linux packages on macOS
+        if: runner.os == 'macOS'
         run: python scripts/verify-portable-authoring.py --packages artifacts/portable-packages --inputs artifacts/portable-inputs --output artifacts/portable-results
       - name: Preserve consumer evidence
         if: always()

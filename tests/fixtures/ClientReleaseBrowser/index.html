@@ -1,0 +1,100 @@
+<!doctype html><meta charset="utf-8"><title>Native management release recovery</title>
+<style id="shell-style">body { --shell: retained; }</style>
+<pre id="result">Running native management release recovery</pre>
+<script type="module">
+import { bootClientModules, createManagementClient } from '/runtime/client.mjs'
+import { createEvents } from '/native/events.mjs'
+import { TypertConnection } from '/native/cordis-remote.mjs'
+const checks = [], phases = [], notifications = []
+const check = (condition, message) => { if (!condition) throw new Error(message); checks.push(message) }
+const same = (value, expected, message) => check(JSON.stringify(value) === JSON.stringify(expected), message)
+const observations = async () => (await fetch('/test/observations')).json()
+async function post(path) {
+  const response = await fetch(path, {method:'POST'})
+  if (!response.ok) throw new Error(path + ' HTTP ' + response.status)
+}
+async function until(predicate, message) {
+  const deadline = Date.now() + 12000
+  while (!predicate()) {
+    if (Date.now() > deadline) throw new Error('Timed out: ' + message)
+    await new Promise(done => setTimeout(done, 10))
+  }
+}
+let modules, management, events, connection, stopState, stopEvents
+globalThis.releaseStarts = []; globalThis.releaseStops = []
+try {
+  const response = await fetch('/cordis/client/graph')
+  check(response.ok, 'initial graph is served by native management')
+  modules = await bootClientModules({graph:await response.json()})
+  connection = new TypertConnection(location.origin + '/remote')
+  events = createEvents(modules.context, connection)
+  management = createManagementClient({modules, events,
+    recovery:{backoffBaseMs:20,backoffMaxMs:50,generationReadyWarnMs:2000,generationReadyTimeoutMs:5000}})
+  stopState = management.connection.subscribe(() => phases.push(management.connection.getSnapshot().phase))
+  stopEvents = management.subscribe(event => notifications.push(event.event))
+  await until(() => management.connection.getSnapshot().phase === 'connected', 'native notification ready and HTTP handshake')
+  const initial = await observations()
+  check(initial.socketOpens >= 1 && initial.graphReads >= 2, 'generated client uses native WebSocket and native management HTTP')
+  const instance = modules.context.get('release-panel')
+  instance.draft = 'unsaved text'
+  const panel = document.querySelector('#release-panel'), style = document.querySelector('#release-style')
+  const shell = document.querySelector('#shell-style'), releaseChange = modules.releaseChange
+  const intact = () => modules.context.get('release-panel') === instance && instance.draft === 'unsaved text' &&
+    document.querySelector('#release-panel') === panel && document.querySelector('#release-style') === style &&
+    getComputedStyle(document.body).getPropertyValue('--release').trim() === 'a'
+  async function loseCarrier() {
+    const before = await observations(); phases.length = 0
+    await post('/test/loss')
+    await until(() => phases.includes('disconnected') && management.connection.getSnapshot().phase === 'connected', 'physical WebSocket reconnect')
+    const after = await observations()
+    check(after.socketOpens > before.socketOpens && after.graphReads > before.graphReads,
+      'physical carrier loss opens a new native WebSocket and rereads native graph')
+  }
+  await loseCarrier()
+  check(intact(), 'ordinary reconnect preserves context, draft, DOM node, style node and computed CSS')
+  await post('/test/catalog/b')
+  await until(() => releaseChange.getSnapshot()?.host?.version === 'application-2' && notifications.includes('client-modules/changed'), 'foreign Host notification')
+  same(releaseChange.getSnapshot(), {page:{version:'application-1',commit:'build-a'},previous:{version:'application-1',commit:'build-a'},
+    host:{version:'application-2',commit:'build-b'}}, 'native foreign release publishes its exact identity')
+  check(intact(), 'foreign notification retains the accepted plugin and its resources')
+  await loseCarrier()
+  check(intact(), 'foreign release remains blocked after native WebSocket recovery')
+  modules.dismissRelease()
+  await loseCarrier()
+  check(releaseChange.getSnapshot() === undefined && intact(), 'dismissal hides the notice and still refuses the foreign catalog after reconnect')
+  const foreign = await observations()
+  check(!foreign.artifactRequests.includes(foreign.revisions.b), 'foreign factory bytes are never requested from native artifact endpoint')
+  same(globalThis.releaseStarts, ['a'], 'foreign updates and reconnects never activate another factory')
+  same(globalThis.releaseStops, [], 'retained page plugin has no premature cleanup')
+  notifications.length = 0
+  await post('/test/catalog/a2')
+  await until(() => document.querySelector('#release-panel')?.textContent === 'a2' && notifications.includes('client-modules/changed'), 'boot release returns through native event')
+  check(modules.releaseChange === releaseChange && releaseChange.getSnapshot() === undefined, 'boot release return clears the stable release observable')
+  check(!panel.isConnected && !style.isConnected && modules.context.get('release-panel') !== instance,
+    'accepted replacement releases the old context value and exact DOM/style nodes')
+  check(getComputedStyle(document.body).getPropertyValue('--release').trim() === 'a2', 'accepted replacement applies new factory CSS')
+  same(globalThis.releaseStarts, ['a','a2'], 'return to boot release activates exactly one new factory')
+  same(globalThis.releaseStops, ['a'], 'return to boot release disposes the previous factory once')
+  const final = await observations()
+  check(final.artifactRequests.includes(final.revisions.a2), 'accepted replacement downloads native captured artifact bytes')
+  await management.close()
+  check(!document.querySelector('#release-panel') && !document.querySelector('#release-style') && modules.context.get('release-panel') === undefined,
+    'management close withdraws plugin context, DOM and style resources')
+  same(globalThis.releaseStops, ['a','a2'], 'final withdrawal disposes every activated factory exactly once')
+  check(shell.isConnected && !shell.hasAttribute('data-plugin') && getComputedStyle(document.body).getPropertyValue('--shell').trim() === 'retained',
+    'native release transitions retain shell style identity and computed CSS')
+  await modules.dispose(); await events.dispose(); await connection.dispose()
+  check(globalThis.__ModuleLoader__ === undefined, 'disposal withdraws the global module loader')
+  const result = {status:'passed',checks,observations:final}
+  document.querySelector('#result').textContent = JSON.stringify(result,null,2)
+  await fetch('/test/result',{method:'POST',body:JSON.stringify(result)})
+} catch (error) {
+  await management?.close().catch(() => {})
+  await modules?.dispose().catch(() => {})
+  await events?.dispose().catch(() => {})
+  await connection?.dispose().catch(() => {})
+  const result = {status:'failed',error:String(error),checks}
+  document.querySelector('#result').textContent = JSON.stringify(result,null,2)
+  await fetch('/test/result',{method:'POST',body:JSON.stringify(result)})
+} finally { stopState?.(); stopEvents?.() }
+</script>

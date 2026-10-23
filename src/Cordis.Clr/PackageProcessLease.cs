@@ -100,6 +100,7 @@ internal sealed class PackageProcessLease(string path)
                 return false;
             await Task.Delay(20);
         }
+
         return true;
     }
 

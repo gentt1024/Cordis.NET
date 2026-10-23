@@ -60,7 +60,8 @@ public sealed class ClrAdmissionTests
                     await active!.DisposeAsync();
                     await root.RunAsync(async context =>
                     {
-                        active = context.Plugin(pairs.Single(pair => ReferenceEquals(pair.Previous, old)).Replacement.Plugin);
+                        active = context.Plugin(
+                            pairs.Single(pair => ReferenceEquals(pair.Previous, old)).Replacement.Plugin);
                         await active.WaitAsync();
                     });
                 },

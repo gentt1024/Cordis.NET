@@ -29,7 +29,8 @@ public static partial class DshProfilePolicy
         var mismatches = UnmetRequirements(manifest, runtime);
         if (mismatches.Count == 0)
             return null;
-        if (manifest.Raw.GetValueOrDefault("name") is not string packageName || string.IsNullOrWhiteSpace(packageName) ||
+        if (manifest.Raw.GetValueOrDefault("name") is not string packageName ||
+            string.IsNullOrWhiteSpace(packageName) ||
             manifest.Raw.GetValueOrDefault("version") is not string version || string.IsNullOrWhiteSpace(version))
             throw new FormatException("An incompatible plugin manifest must have a nonempty name and version.");
         var grantName = compatibilityPackageName?.Invoke(packageName) ?? packageName;

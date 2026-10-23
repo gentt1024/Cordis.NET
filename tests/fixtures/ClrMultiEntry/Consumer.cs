@@ -114,7 +114,8 @@ hmr.RegisterModule(
             async pairs =>
             {
                 if (pairs.Count != 3)
-                    throw new InvalidOperationException("Loaded aliases were not retained as separate import identities.");
+                    throw new InvalidOperationException(
+                        "Loaded aliases were not retained as separate import identities.");
                 await loader!.ReplacePluginsAsync(pairs);
             })
         .AsTask());
@@ -178,7 +179,7 @@ await using var installedResolver = new ClrModuleResolver(Path.Combine(profile, 
 using var toolchain = new DotnetPluginToolchain(
     profile,
     installedResolver,
-    [args[3], args[4], "https://api.nuget.org/v3/index.json"],
+    [args[3], args[4]],
     args[5]);
 var inspection = await toolchain.InspectAsync(new("IndependentMultiEntry", "1.0.0-alpha", args[3]));
 var prepared = await toolchain.PrepareAsync(

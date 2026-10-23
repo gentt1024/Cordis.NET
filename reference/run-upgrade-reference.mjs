@@ -2,7 +2,7 @@
 // binds each loaded file even when the reference is an exported tree without .git.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
 import { resolve, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -16,9 +16,13 @@ import { runTimerProbes } from './timer-probes.mjs';
 const arg = process.argv.find(a => a.startsWith('--dsh='));
 if (!arg) throw new Error('Usage: node --experimental-transform-types reference/run-upgrade-reference.mjs --dsh=/fixed/source');
 assert.ok(Number(process.versions.node.split('.')[0]) >= 24, 'Use Node >=24 for the fixed source');
-const root = resolve(arg.slice(6));
-const inventory = JSON.parse(readFileSync(new URL('./upgrade-source.json', import.meta.url), 'utf8'));
-assert.equal(inventory.commit, '639ed015397290b3745d163aafe02ffee4aa3f84');
+const candidate = process.argv.includes('--candidate');
+const root = candidate ? realpathSync(resolve(arg.slice(6))) : resolve(arg.slice(6));
+const inventory = JSON.parse(readFileSync(new URL(candidate ? './candidate-source.json' : './upgrade-source.json', import.meta.url), 'utf8'));
+assert.equal(inventory.commit, candidate ? '687f282e8625c6b8d11ff58211a90524be2e4317' : '639ed015397290b3745d163aafe02ffee4aa3f84');
+const candidateSupport = candidate ? await import('./candidate-support.mjs') : undefined;
+if (candidate) candidateSupport.bindTools(root);
+const candidateSource = candidateSupport?.sourceResolver(root);
 const local = {
   '@deepseek-ai/cordis': 'vendor/cordis/src/index.ts',
   '@deepseek-ai/cosmokit': 'vendor/cosmokit/src/index.ts',
@@ -36,9 +40,11 @@ const local = {
 };
 const loaded = new Set();
 const require = createRequire(pathToFileURL(resolve(root, 'package.json')));
-const hostRequire = createRequire(import.meta.url);
+const hostRequire = candidateSupport?.toolRequire ?? createRequire(import.meta.url);
 const hooks = registerHooks({
   resolve(specifier, context, nextResolve) {
+    const filename = candidateSource?.(specifier);
+    if (filename) return { url: pathToFileURL(filename).href, shortCircuit: true };
     if (local[specifier]) return { url: pathToFileURL(resolve(root, local[specifier])).href, shortCircuit: true };
     try { return nextResolve(specifier, context); }
     catch (error) {

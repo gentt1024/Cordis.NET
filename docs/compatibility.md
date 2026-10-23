@@ -2,6 +2,14 @@
 
 [中文](compatibility.zh.md)
 
+## Candidate S10 validation scope, 2026-10-23
+
+S10 adds independent candidate gates while preserving the formal behavior lock and historical test inventory. It introduces no application API. Candidate source passes, native assertion results and platform/package receipts remain separate evidence; the candidate capability index does not assert one-to-one porting of every upstream assertion.
+
+Package display metadata remains a recorded native boundary. The public `BundleConfigurationInfo` exposes package name, version and description; it does not expose DSH localized plugin metadata or icon resources. The candidate's package-subpath icon/locale rules are retained in the source inventory and original tests, but are not claimed as native display support. Most of that display capability already existed at the old baseline; this is an existing coverage limitation, not a newly implemented feature or a reason to omit package resolution, metadata-cache invalidation or description regressions. Adding native localized/icon output would require a separate public contract and consumer migration.
+
+The candidate generator's upstream-disabled Cordis documentation-catalog suite is recorded explicitly as source-skipped and outside the required Remote metadata execution scope. Its source remains inventoried; it is not counted as passed. Other required original failures and unexpected skips continue to fail the candidate gate. Product-specific DSH services and the existing backend refusal boundaries remain explicit rather than being removed from the inventory.
+
 ## Candidate browser safety and author increments, 2026-10-23
 
 S9 follows fixed candidate `687f282e8625c6b8d11ff58211a90524be2e4317` for factory style ownership, Host release admission, image imports and Slots declarations. The formal behavior lock and historical inventory remain `639ed015397290b3745d163aafe02ffee4aa3f84`. Vendored adaptations retain their original provenance and record candidate source identity separately. This is not S10 baseline promotion.
