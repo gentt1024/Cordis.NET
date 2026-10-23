@@ -23,18 +23,29 @@ jobs:
           git -C ../dsh-candidate checkout --detach FETCH_HEAD
           npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
           node reference/candidate-bind-tools.mjs ../dsh-candidate
-      - name: Compare independent native and hook processes
+      - name: Prepare isolated patched source
+        shell: bash
+        run: |
+          git clone --no-hardlinks ../dsh-candidate ../dsh-manifest-patched
+          git -C ../dsh-manifest-patched checkout --detach 687f282e8625c6b8d11ff58211a90524be2e4317
+          node reference/candidate-bind-tools.mjs ../dsh-manifest-patched
+          git -C ../dsh-manifest-patched apply "$GITHUB_WORKSPACE/upstream-manifest-scope.patch"
+      - name: Execute unchanged original test file before and after the isolated patch
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
-          node --experimental-transform-types reference/diagnose-candidate-manifest-scope.mjs --dsh=../dsh-candidate --reference=reference --output=artifacts/manifest-native-control.json
-          $nativeExit = $LASTEXITCODE
-          node --experimental-transform-types reference/diagnose-candidate-manifest-scope.mjs --dsh=../dsh-candidate --reference=reference --output=artifacts/manifest-hook-control.json --with-candidate-hook
-          $hookExit = $LASTEXITCODE
-          @{nativeExit=$nativeExit;hookExit=$hookExit;commit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT} | ConvertTo-Json | Set-Content artifacts/exits.json
-          if ($nativeExit -ne 0 -or $hookExit -ne 0) { throw 'One or both original assertions failed; inspect diagnostic evidence.' }
+          New-Item -ItemType Directory -Path artifacts/original,artifacts/patched -Force | Out-Null
+          $env:CORDIS_MANIFEST_DIAGNOSTIC_SOURCE = (Resolve-Path ../dsh-candidate).Path
+          $env:CORDIS_MANIFEST_DIAGNOSTIC_OUTPUT = (Resolve-Path artifacts/original).Path
+          node reference/candidate-tools/node_modules/vitest/vitest.mjs run --config reference/vitest-manifest-diagnostic.config.mjs
+          $originalExit = $LASTEXITCODE
+          $env:CORDIS_MANIFEST_DIAGNOSTIC_SOURCE = (Resolve-Path ../dsh-manifest-patched).Path
+          $env:CORDIS_MANIFEST_DIAGNOSTIC_OUTPUT = (Resolve-Path artifacts/patched).Path
+          node reference/candidate-tools/node_modules/vitest/vitest.mjs run --config reference/vitest-manifest-diagnostic.config.mjs
+          $patchedExit = $LASTEXITCODE
+          @{originalExit=$originalExit;patchedExit=$patchedExit;commit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;patchSha256=(Get-FileHash upstream-manifest-scope.patch -Algorithm SHA256).Hash} | ConvertTo-Json | Set-Content artifacts/exits.json
+          if ($originalExit -ne 0 -or $patchedExit -ne 0) { throw 'Original or patched assertions failed; this diagnostic is not candidate acceptance.' }
       - name: Preserve diagnostic observations
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
