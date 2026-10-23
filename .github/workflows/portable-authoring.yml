@@ -92,8 +92,9 @@ jobs:
         if: always() && runner.os == 'macOS'
         shell: bash
         run: |
-          export TMPDIR="$RUNNER_TEMP"
-          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
           if mount | grep -Fq " on $RUNNER_TEMP/cordis-consumer-volume ("; then
+            dotnet build-server shutdown
+            export TMPDIR="$RUNNER_TEMP"
+            echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
             hdiutil detach "$RUNNER_TEMP/cordis-consumer-volume"
           fi
