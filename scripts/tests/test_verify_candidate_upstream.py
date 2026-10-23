@@ -41,7 +41,7 @@ class CandidateGateTests(unittest.TestCase):
             self.assertEqual((steps[0]['name'], steps[0]['status'], steps[0]['exitCode'],
                               steps[0]['timeoutSeconds']), ('timeout-probe', 'timed-out', None, 2))
 
-    def run_observation_fixture(self, root, failed_label=None, drifting=False):
+    def run_observation_fixture(self, root, failed_label=None, drifting=False, timeout=None):
         frozen, _ = self.fixtures()
         for suite in ('remote', 'metadata', 'browser'):
             frozen['inventory'].append([suite, suite + '.spec.ts', 'ordinary', 0])
@@ -57,6 +57,9 @@ class CandidateGateTests(unittest.TestCase):
             steps.append({'name': label, 'exitCode': 1 if label == failed_label else 0})
             Path(env['CORDIS_UPSTREAM_REPORT']).write_text('{"originalReportPreserved":true}')
             if label == failed_label:
+                if timeout is not None:
+                    steps[-1].update(exitCode=None, status='timed-out')
+                    raise timeout
                 raise candidate.SuiteExecutionError(label + ' failed')
 
         sources = {'source': 'digest'}
@@ -71,8 +74,10 @@ class CandidateGateTests(unittest.TestCase):
              patch.object(candidate, 'collect', return_value=(frozen['inventory'], {})), \
              patch.object(candidate, 'execute', side_effect=execute), \
              patch.object(candidate, 'candidate_report', return_value=[]):
-            with self.assertRaises(ValueError):
+            with self.assertRaises(subprocess.TimeoutExpired if timeout is not None else ValueError) as caught:
                 candidate.run_shard(root, root, path, output, 1, 'workflow:1')
+            if timeout is not None:
+                self.assertIs(caught.exception, timeout)
         return calls, json.loads((output / 'result.json').read_text()), output
 
     def test_independent_suites_continue_after_runtime_failure_but_receipt_stays_failed(self):
@@ -93,6 +98,21 @@ class CandidateGateTests(unittest.TestCase):
             self.assertEqual(calls, ['linked-resolution-matrix'])
             self.assertEqual(result['status'], 'failed')
             self.assertFalse(result['sourceUnchanged'])
+
+    def test_timeout_stops_before_later_suites_and_retains_failed_receipt(self):
+        for failed in ('linked-resolution-matrix', 'original-composition'):
+            with self.subTest(failed=failed), tempfile.TemporaryDirectory() as temporary:
+                timeout = subprocess.TimeoutExpired('fixture-vitest', 2400)
+                calls, result, _ = self.run_observation_fixture(Path(temporary), failed, timeout=timeout)
+                expected = ['linked-resolution-matrix']
+                if failed == 'original-composition':
+                    expected.append('original-composition')
+                self.assertEqual(calls, expected)
+                self.assertEqual(result['status'], 'failed')
+                self.assertTrue(result['sourceUnchanged'])
+                self.assertEqual(result['suiteFailures'], [{'name': failed, 'error': str(timeout)}])
+                self.assertEqual(result['steps'][-1], {'name': failed, 'exitCode': None, 'status': 'timed-out'})
+                self.assertEqual(result['outcomes'], [])
 
     def test_worker_path_prefers_fixed_tools_without_losing_the_node_path(self):
         with tempfile.TemporaryDirectory() as temporary, patch.dict(os.environ, {'PATH': 'ambient-node-path'}):
