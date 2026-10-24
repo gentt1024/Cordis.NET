@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -18,7 +19,206 @@ public sealed partial class PrimitiveService
 
     [RemoteMethod("values")]
     public Task<int[]> Values() => Task.FromResult(new[] { 1, 2 });
+
+    [RemoteMethod("immutable")]
+    public Task<ImmutablePayload> Immutable(ImmutablePayload input) => Task.FromResult(input);
+
+    [RemoteMethod("timestamp")]
+    public Task<DateTimeOffset?> Timestamp(DateTimeOffset? input) => Task.FromResult(input);
+
+    [RemoteMethod("mode")]
+    public Task<WireMode> Mode(WireMode input) => Task.FromResult(input);
+
+    [RemoteMethod("plainMode")]
+    public Task<PlainMode> PlainMode(PlainMode input) => Task.FromResult(input);
+
+    [RemoteMethod("genericInt")]
+    public Task<WireEnvelope<int>> GenericInt(WireEnvelope<int> input) => Task.FromResult(input);
+
+    [RemoteMethod("genericText")]
+    public Task<WireEnvelope<string>> GenericText(WireEnvelope<string> input) => Task.FromResult(input);
+
+    [RemoteMethod("genericNullable")]
+    public Task<WireEnvelope<int?>> GenericNullable(WireEnvelope<int?> input) => Task.FromResult(input);
+
+    [RemoteMethod("genericArray")]
+    public Task<WireEnvelope<ImmutableArray<string?>>> GenericArray(WireEnvelope<ImmutableArray<string?>> input) =>
+        Task.FromResult(input);
+
+    [RemoteMethod("seed")]
+    public Task<RuntimeDefault> Seed() => Task.FromResult(new RuntimeDefault());
+
+    [RemoteMethod("passiveDefault")]
+    public Task<PassiveSnapshot> PassiveDefault(PassiveSnapshot input) => Task.FromResult(input);
 }
+
+public sealed record PassiveSnapshot(int Id)
+{
+    public PassivePolicy Policy
+    {
+        get;
+        init;
+    } = new(false, []);
+
+    public byte[] Bytes
+    {
+        get;
+        init;
+    } = [];
+
+    public System.Collections.Generic.List<string> Names
+    {
+        get;
+        init;
+    } = [];
+}
+
+public sealed record PassivePolicy(bool Enabled, ImmutableArray<string> Overrides)
+{
+    public int? Detail
+    {
+        get;
+        init;
+    }
+}
+
+public sealed record BehavioralPolicy(string Text)
+{
+    public string Normalized
+    {
+        get;
+        init;
+    } = Text.ToUpperInvariant();
+}
+
+public sealed class BehavioralSnapshot
+{
+    public BehavioralPolicy Policy
+    {
+        get;
+        init;
+    } = new("input");
+}
+
+[RemoteService("behaviorInitializerInput", typeof(BehavioralJson))]
+public sealed partial class BehavioralInputService
+{
+    [RemoteMethod("edit")]
+    public Task<int> Edit(BehavioralSnapshot input) => Task.FromResult(input.Policy.Normalized.Length);
+}
+
+[JsonSerializable(typeof(BehavioralSnapshot))]
+public partial class BehavioralJson : JsonSerializerContext;
+
+public sealed class RuntimeDefault
+{
+    public string Text
+    {
+        get;
+        init;
+    } = string.Empty;
+}
+
+[RemoteService("initializerInput", typeof(RuntimeDefaultJson))]
+public sealed partial class InitializerInputService
+{
+    [RemoteMethod("edit")]
+    public Task<int> Edit(RuntimeDefault input) => Task.FromResult(input.Text.Length);
+}
+
+[JsonSerializable(typeof(RuntimeDefault))]
+public partial class RuntimeDefaultJson : JsonSerializerContext;
+
+public sealed class ConverterSnapshot
+{
+    [JsonConverter(typeof(PolicyConverter))]
+    public PassivePolicy Policy
+    {
+        get;
+        init;
+    } = new(false, []);
+}
+
+public sealed class PolicyConverter : JsonConverter<PassivePolicy>
+{
+    public override PassivePolicy Read(
+        ref System.Text.Json.Utf8JsonReader reader,
+        System.Type typeToConvert,
+        System.Text.Json.JsonSerializerOptions options) =>
+        throw new System.NotSupportedException("Author converter owns its input.");
+
+    public override void Write(
+        System.Text.Json.Utf8JsonWriter writer,
+        PassivePolicy value,
+        System.Text.Json.JsonSerializerOptions options) => writer.WriteStringValue("author-policy");
+}
+
+[RemoteService("converterInitializerInput", typeof(ConverterJson))]
+public sealed partial class ConverterInputService
+{
+    [RemoteMethod("edit")]
+    public Task<int> Edit(ConverterSnapshot input) => Task.FromResult(input.Policy.Overrides.Length);
+}
+
+[JsonSerializable(typeof(ConverterSnapshot))]
+public partial class ConverterJson : JsonSerializerContext;
+
+public sealed record WireEnvelope<T>(T? Value)
+{
+    public bool Accepted => Value is not null;
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<PlainMode>))]
+public enum PlainMode
+{
+    Known = 1,
+    Alias = 1
+}
+
+[Flags, JsonConverter(typeof(JsonStringEnumConverter<WireMode>))]
+public enum WireMode
+{
+    Read = 1,
+    Write = 2,
+
+    [JsonStringEnumMemberName("wire-special")]
+    Special = 4
+}
+
+public sealed class ImmutablePayload
+{
+    public ImmutableArray<ImmutableItem?> Items
+    {
+        get;
+        init;
+    } = [];
+
+    public ImmutableArray<string?> Labels
+    {
+        get;
+        init;
+    } = [];
+
+    public ImmutableArray<string> StrictLabels
+    {
+        get;
+        init;
+    } = [];
+
+    public ImmutableArray<ImmutableItem?>? OptionalItems
+    {
+        get;
+        init;
+    }
+
+    public ImmutableArray<string>? OptionalStrictLabels
+    {
+        get;
+        init;
+    }
+}
+
+public sealed record ImmutableItem(string? Name, ImmutableArray<int> Values);
 
 [JsonSourceGenerationOptions(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
@@ -26,6 +226,16 @@ public sealed partial class PrimitiveService
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(int[]))]
+[JsonSerializable(typeof(ImmutablePayload))]
+[JsonSerializable(typeof(DateTimeOffset?))]
+[JsonSerializable(typeof(WireMode))]
+[JsonSerializable(typeof(PlainMode))]
+[JsonSerializable(typeof(WireEnvelope<int>))]
+[JsonSerializable(typeof(WireEnvelope<string>))]
+[JsonSerializable(typeof(WireEnvelope<int?>))]
+[JsonSerializable(typeof(WireEnvelope<ImmutableArray<string?>>))]
+[JsonSerializable(typeof(RuntimeDefault))]
+[JsonSerializable(typeof(PassiveSnapshot))]
 public partial class PrimitiveJson : JsonSerializerContext;
 
 [RemoteService("nullable", typeof(NullableJson), Namespace = "nullable")]
