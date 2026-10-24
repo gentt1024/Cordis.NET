@@ -48,7 +48,8 @@ internal sealed class DeclarationModelComposition
         if (sources.Select(SourceFacts).Distinct(StringComparer.Ordinal).Skip(1).Any())
             throw Refuse(id, "Conflicting source definitions were supplied for the same declaration identity.");
         if (candidates.Any(type => type.Name != selected.Name ||
-                type.Kind != selected.Kind && (type.Provenance == "source" || MetadataKind(type.Kind) != MetadataKind(selected.Kind)) ||
+                type.Kind != selected.Kind && (type.Provenance == "source" ||
+                    MetadataKind(type.Kind) != MetadataKind(selected.Kind)) ||
                 type.TypeParameters.Length != selected.TypeParameters.Length ||
                 type.Accessibility != selected.Accessibility))
             throw Refuse(id, "Referenced source definition contradicts the recorded declaration shape.");

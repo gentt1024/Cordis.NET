@@ -29,7 +29,10 @@ public delegate TypertNullabilityInfo? TypertNullability(ReadOnlySpan<string> sc
 
 /// <summary>Gets a statically declared default for an absent input member at an object Schema path.</summary>
 /// <remarks>Null means no default; a JSON null element is an explicit default. Values must use wire member names.
-/// Required members are never defaulted. This query does not change output decoding or execute author code.</remarks>
+/// Required members are never defaulted. The query supplies deterministic declaration metadata, not per-request
+/// policy. Returned elements must remain valid for the codec lifetime. Generated queries read immutable JSON
+/// facts without executing author initializers; a manually supplied delegate is caller code. This query does
+/// not change output decoding.</remarks>
 public delegate JsonElement? TypertInputDefault(ReadOnlySpan<string> objectPath, string member);
 
 public abstract partial class TypertCodec
@@ -54,7 +57,10 @@ public abstract partial class TypertCodec
             inputDefault);
     }
 
-    private static JsonNode ProjectNullability(JsonNode root, TypertNullability query, TypertInputDefault? inputDefault = null)
+    private static JsonNode ProjectNullability(
+        JsonNode root,
+        TypertNullability query,
+        TypertInputDefault? inputDefault = null)
     {
         var projected = new Dictionary<(string Source, int? Declaration, bool? Nullable), string>();
         return Visit(root, "#", "#", []);
@@ -118,6 +124,7 @@ public abstract partial class TypertCodec
                             memberSchema["default"] = JsonNode.Parse(defaultValue.GetRawText());
                         children[member.Key] = child;
                     }
+
                     copy[field.Key] = children;
                 }
                 else if (field.Key is "items" or "additionalProperties" or "not" && field.Value is { } child)

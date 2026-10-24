@@ -17,10 +17,12 @@ internal sealed record NativeCompilation(
 
 internal sealed record NativeConstant(string Kind, string Type, string Json)
 {
-    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    [System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public DeclarationConstruction? Construction
     {
-        get; init;
+        get;
+        init;
     }
 }
 

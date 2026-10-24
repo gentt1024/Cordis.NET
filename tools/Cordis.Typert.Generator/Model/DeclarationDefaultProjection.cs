@@ -27,11 +27,16 @@ internal static class DeclarationDefaultProjection
         return value.Kind switch
         {
             "emptyCollection" when value.Type.TrimEnd('?') is "byte[]" or "System.Byte[]" => "\"\"",
-            "emptyCollection" when value.Type.StartsWith("System.Collections.Generic.Dictionary<", StringComparison.Ordinal) ||
+            "emptyCollection" when value.Type.StartsWith(
+                    "System.Collections.Generic.Dictionary<",
+                    StringComparison.Ordinal) ||
                 value.Type.StartsWith("System.Collections.Generic.IDictionary<", StringComparison.Ordinal) ||
-                value.Type.StartsWith("System.Collections.Generic.IReadOnlyDictionary<", StringComparison.Ordinal) => "{}",
+                value.Type.StartsWith(
+                    "System.Collections.Generic.IReadOnlyDictionary<",
+                    StringComparison.Ordinal) => "{}",
             "emptyCollection" => "[]",
-            "value" when value.Type == "System.Guid" && value.Json == "null" => "\"00000000-0000-0000-0000-000000000000\"",
+            "value" when value.Type == "System.Guid" && value.Json == "null" =>
+                "\"00000000-0000-0000-0000-000000000000\"",
             "value" or "enum" => value.Json,
             _ => null
         };

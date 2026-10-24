@@ -18,9 +18,11 @@ internal static class DeclarationEnumProjection
                 "ProjectionUnsupported TYPM117: Numeric enum projection requires a public top-level source enum with an integral underlying type: " +
                 type.Id);
         var converter = DeclarationAttributeProjection.Attribute(
-            type.Attributes, DeclarationAttributeProjection.JsonPrefix + "JsonConverterAttribute");
-        var stringEnum = converter is
-        { Arguments: [{ Kind: "type", Reference: { Kind: "named", Arguments: [var target] } factory }], NamedArguments.Length: 0 } &&
+            type.Attributes,
+            DeclarationAttributeProjection.JsonPrefix + "JsonConverterAttribute");
+        var stringEnum = converter?.Arguments is
+                [{ Kind: "type", Reference: { Kind: "named", Arguments: [var target] } factory }] &&
+            converter.NamedArguments.Length == 0 &&
             factory.Name.StartsWith("System.Text.Json, ", StringComparison.Ordinal) &&
             factory.Name.EndsWith(
                 ", Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51:System.Text.Json.Serialization.JsonStringEnumConverter`1",
@@ -49,19 +51,32 @@ internal static class DeclarationEnumProjection
                 return new NativeEnumMember(member.Name, constant.Json, member.Documentation, attributes);
             })
             .ToArray();
-        if (stringEnum && members.GroupBy(member => member.Value, StringComparer.Ordinal).Any(group => group.Count() > 1) &&
-            (fields.Any(member => member.Location is null) || !fields.SequenceEqual(fields
-                .OrderBy(member => member.Location!.Line).ThenBy(member => member.Location!.Column))))
+        if (stringEnum &&
+            members.GroupBy(member => member.Value, StringComparer.Ordinal).Any(group => group.Count() > 1) &&
+            (fields.Any(member => member.Location is null) || !fields.SequenceEqual(
+                fields
+                    .OrderBy(member => member.Location!.Line)
+                    .ThenBy(member => member.Location!.Column))))
             throw new InvalidDataException(
-                "ProjectionUnsupported TYPM109: String enum aliases require declaration-ordered fields; re-extract the source model: " + type.Id);
+                "ProjectionUnsupported TYPM109: String enum aliases require declaration-ordered fields; re-extract the source model: " +
+                type.Id);
         var separator = type.MetadataName.LastIndexOf('.');
         var typeAttributes = DeclarationAttributeProjection.Native(
             type.Attributes.Where(attribute => attribute.Name == "System.FlagsAttribute").ToArray());
         if (stringEnum)
-            typeAttributes = [.. typeAttributes, new(
-                DeclarationAttributeProjection.JsonPrefix + "JsonConverterAttribute",
-                [new("type", "System.Type", JsonSerializer.Serialize(
-                    "global::System.Text.Json.Serialization.JsonStringEnumConverter<@" + type.Name + ">"))], [])];
+            typeAttributes =
+            [
+                .. typeAttributes, new(
+                    DeclarationAttributeProjection.JsonPrefix + "JsonConverterAttribute",
+                    [
+                        new(
+                            "type",
+                            "System.Type",
+                            JsonSerializer.Serialize(
+                                "global::System.Text.Json.Serialization.JsonStringEnumConverter<@" + type.Name + ">"))
+                    ],
+                    [])
+            ];
         return new(
             type.Id,
             type.Name,

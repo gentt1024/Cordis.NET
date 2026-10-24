@@ -48,6 +48,7 @@ public abstract partial class TypertCodec
                 : new JsonArray("string", "integer");
             return enumSchema;
         }
+
         var unsigned = type == typeof(byte) || type == typeof(ushort) || type == typeof(uint) || type == typeof(ulong);
         var integer = unsigned || type == typeof(sbyte) || type == typeof(short) || type == typeof(int) ||
             type == typeof(long);

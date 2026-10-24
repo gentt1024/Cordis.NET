@@ -219,8 +219,9 @@ internal sealed class DeclarationRemoteProjection
         }
 
         if (reference.Kind == "parameter" && reference.Owner == parameterOwner && parameterOwner is not null &&
-            reference.Ordinal is { } ordinal && Resolve(parameterOwner).TypeParameters.Any(parameter =>
-                parameter.Ordinal == ordinal && parameter.Name == reference.Name))
+            reference.Ordinal is { } ordinal && Resolve(parameterOwner)
+                .TypeParameters.Any(parameter =>
+                    parameter.Ordinal == ordinal && parameter.Name == reference.Name))
             return new("parameter", reference.Name, reference.Nullability, []);
         if (reference.Kind != "named")
         {
@@ -233,7 +234,10 @@ internal sealed class DeclarationRemoteProjection
         }
 
         var type = Resolve(reference.Name);
-        if (DeclarationWireProjection.FrameworkReference(type, reference, value => Reference(value, depth + 1, parameterOwner)) is
+        if (DeclarationWireProjection.FrameworkReference(
+                type,
+                reference,
+                value => Reference(value, depth + 1, parameterOwner)) is
             { } framework)
             return framework;
         if (type.Provenance != "source")
@@ -272,9 +276,15 @@ internal sealed class DeclarationRemoteProjection
                 "TYPM105",
                 "Only ordinary non-ref-like data classes, records and structs are projected.",
                 type.Id);
-        if (type.TypeParameters.Any(parameter => parameter.ReferenceType || parameter.ValueType || parameter.Unmanaged ||
-                parameter.NotNull || parameter.Constructor || parameter.AllowsRefLikeType || parameter.Constraints.Length != 0))
-            Diagnose("ProjectionUnsupported", "TYPM119", "Constrained generic data declarations require a further projection.", type.Id);
+        if (type.TypeParameters.Any(parameter => parameter.ReferenceType || parameter.ValueType ||
+                parameter.Unmanaged ||
+                parameter.NotNull || parameter.Constructor || parameter.AllowsRefLikeType ||
+                parameter.Constraints.Length != 0))
+            Diagnose(
+                "ProjectionUnsupported",
+                "TYPM119",
+                "Constrained generic data declarations require a further projection.",
+                type.Id);
         if (type.ContainingType is not null)
             Diagnose(
                 "ProjectionUnsupported",
@@ -301,7 +311,8 @@ internal sealed class DeclarationRemoteProjection
             Diagnose("ProjectionUnsupported", "TYPM108", "Serialized member names collide.", type.Id);
         var constructors = type
             .Members.Where(member => member.Kind == "Constructor" &&
-                (!member.Implicit || member.Parameters.Length == 0 && type.Kind is not ("struct" or "recordStruct")) && !(type.Kind == "record" &&
+                (!member.Implicit || member.Parameters.Length == 0 && type.Kind is not ("struct" or "recordStruct")) &&
+                !(type.Kind == "record" &&
                     member.Parameters.Length == 1 && member.Parameters[0].Type.Name == type.Id))
             .Select(member => new NativeConstructor(
                 member.Accessibility,
@@ -338,7 +349,9 @@ internal sealed class DeclarationRemoteProjection
             type.Kind,
             type.Provenance != "source",
             baseType,
-            type.TypeParameters.Select(parameter => new NativeTypeReference("parameter", parameter.Name, "None", [])).ToArray(),
+            type
+                .TypeParameters.Select(parameter => new NativeTypeReference("parameter", parameter.Name, "None", []))
+                .ToArray(),
             members,
             constructors,
             attributes,
@@ -360,8 +373,12 @@ internal sealed class DeclarationRemoteProjection
             if (JsonSerializer.Deserialize<string>(initializer.Json) == "[]")
             {
                 var collection = Reference(facts.Type!, parameterOwner: owner);
-                initializer = new("emptyCollection", collection.Kind == "array" && collection.Arguments[0].Name == "System_Byte"
-                    ? "byte[]" : collection.Name, "[]");
+                initializer = new(
+                    "emptyCollection",
+                    collection.Kind == "array" && collection.Arguments[0].Name == "System_Byte"
+                        ? "byte[]"
+                        : collection.Name,
+                    "[]");
             }
             else
             {

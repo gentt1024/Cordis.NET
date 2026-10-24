@@ -2,7 +2,9 @@ namespace Cordis.Typert.Generator.Model;
 
 internal static class TypeSubstitution
 {
-    internal static bool ValueType(NativeTypeReference type, IReadOnlyDictionary<string, NativeTypeDeclaration> types) =>
+    internal static bool ValueType(
+        NativeTypeReference type,
+        IReadOnlyDictionary<string, NativeTypeDeclaration> types) =>
         type.Kind is "guid" or "dateTimeOffset" or "nullable" ||
         type.Kind == "primitive" && type.Name != "System_String" ||
         type.Kind == "collection" && type.Name == "System.Collections.Immutable.ImmutableArray<T>" ||
@@ -10,11 +12,14 @@ internal static class TypeSubstitution
         declaration.Kind is "enum" or "struct" or "recordStruct";
 
     internal static IReadOnlyDictionary<string, NativeTypeReference> Bind(
-        NativeTypeDeclaration declaration, NativeTypeReference reference)
+        NativeTypeDeclaration declaration,
+        NativeTypeReference reference)
     {
         if (declaration.TypeParameters.Length != reference.Arguments.Length)
-            throw new InvalidDataException("Closed data reference has the wrong type argument count: " + reference.Name);
-        return declaration.TypeParameters.Select((parameter, index) => (parameter.Name, reference.Arguments[index]))
+            throw new InvalidDataException(
+                "Closed data reference has the wrong type argument count: " + reference.Name);
+        return declaration
+            .TypeParameters.Select((parameter, index) => (parameter.Name, reference.Arguments[index]))
             .ToDictionary(pair => pair.Name, pair => pair.Item2, StringComparer.Ordinal);
     }
 
@@ -34,6 +39,7 @@ internal static class TypeSubstitution
                 }
                 : argument;
         }
+
         return reference with
         {
             Arguments = reference.Arguments.Select(value => Apply(value, bindings, types)).ToArray()
@@ -47,7 +53,8 @@ internal static class TypeSubstitution
         IReadOnlyDictionary<string, DeclarationType> types)
     {
         if (definition.TypeParameters.Length != arguments.Length)
-            throw new InvalidDataException("Closed declaration reference has the wrong type argument count: " + definition.Id);
+            throw new InvalidDataException(
+                "Closed declaration reference has the wrong type argument count: " + definition.Id);
         if (reference.Kind == "parameter" && reference.Owner == definition.Id && reference.Ordinal is { } ordinal)
         {
             var argument = arguments[ordinal];
@@ -61,11 +68,13 @@ internal static class TypeSubstitution
                 }
                 : argument;
         }
+
         return reference with
         {
             Arguments = reference.Arguments.Select(value => Apply(value, definition, arguments, types)).ToArray(),
             ContainingType = reference.ContainingType is { } containing
-                ? Apply(containing, definition, arguments, types) : null
+                ? Apply(containing, definition, arguments, types)
+                : null
         };
     }
 }

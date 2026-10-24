@@ -18,13 +18,14 @@ if (!emptyImmutable.Items.IsEmpty || emptyImmutable.Items.IsDefault ||
     !emptyImmutable.Labels.IsEmpty || emptyImmutable.Labels.IsDefault ||
     !emptyImmutable.StrictLabels.IsEmpty || emptyImmutable.OptionalItems is not null)
     throw new Exception("Empty immutable collections changed in the generated call.");
-var immutable = (await client.ImmutableAsync(new ImmutablePayload
-{
-    Items = [new ImmutableItem("input", [1, 2]), null],
-    Labels = ["input", null],
-    StrictLabels = ["input"],
-    OptionalItems = [null]
-})).Value;
+var immutable = (await client.ImmutableAsync(
+    new ImmutablePayload
+    {
+        Items = [new ImmutableItem("input", [1, 2]), null],
+        Labels = ["input", null],
+        StrictLabels = ["input"],
+        OptionalItems = [null]
+    })).Value;
 if (immutable.Items.Length != 2 || immutable.Items[0] is not { Name: null } nested ||
     !nested.Values.SequenceEqual(new[] { 3, 4 }) || immutable.Items[1] is not null ||
     !immutable.Labels.SequenceEqual(new string?[] { "result", null }) ||
@@ -33,7 +34,8 @@ if (immutable.Items.Length != 2 || immutable.Items[0] is not { Name: null } nest
     throw new Exception("Immutable collection elements or nested DTO results changed.");
 Console.WriteLine("GREEN immutable arrays: empty collections, nullable elements and nested DTO calls");
 
-var defaultCodec = PrimitivesClient.Info.Descriptors.Single(value => value.Method == "passiveDefault").Parameters[0].Codec;
+var defaultCodec =
+    PrimitivesClient.Info.Descriptors.Single(value => value.Method == "passiveDefault").Parameters[0].Codec;
 using var missingDefault = JsonDocument.Parse("{\"Id\":7}");
 var defaultSnapshot = (PassiveSnapshot)defaultCodec.Decode(missingDefault.RootElement)!;
 if (defaultSnapshot.Bytes is not { Length: 0 } || defaultSnapshot.Names is not { Count: 0 } ||
@@ -49,7 +51,10 @@ try
     defaultCodec.Decode(nullDefault.RootElement);
     throw new Exception("Explicit null was defaulted.");
 }
-catch (JsonException) { }
+catch (JsonException)
+{
+}
+
 var optionalOutput = (PassiveSnapshot)defaultCodec.DecodeOutput(missingDefault.RootElement)!;
 if (optionalOutput.Policy is not null)
     throw new Exception("An input default leaked into output decoding.");
@@ -60,15 +65,21 @@ Console.WriteLine("GREEN independent input defaults: omission, explicit value, n
 foreach (var invalidVariant in new[] { 1, 2 })
 {
     using var invalidCollectionHttp = new HttpClient(new Replies(invalidCollectionOutput: invalidVariant));
-    await using var invalidCollectionConnection = new TypertConnection(invalidCollectionHttp, new Uri("https://test.invalid/remote"));
+    await using var invalidCollectionConnection = new TypertConnection(
+        invalidCollectionHttp,
+        new Uri("https://test.invalid/remote"));
     await using var invalidCollectionClient = new PrimitivesClient(invalidCollectionConnection);
     var invalidCollection = await invalidCollectionClient.ImmutableAsync(new ImmutablePayload());
     if (invalidCollection.Ok || invalidCollection.Error.InnerException is not JsonException)
         throw new Exception("A null non-nullable immutable collection element was accepted, variant " + invalidVariant);
 }
-var timestamp = DateTimeOffset.Parse("2026-10-24T08:09:10.7654321-02:00", System.Globalization.CultureInfo.InvariantCulture);
+
+var timestamp = DateTimeOffset.Parse(
+    "2026-10-24T08:09:10.7654321-02:00",
+    System.Globalization.CultureInfo.InvariantCulture);
 var timestampResult = (await client.TimestampAsync(timestamp)).Value;
-if (timestampResult?.ToString("O", System.Globalization.CultureInfo.InvariantCulture) != "2026-10-24T12:34:56.1234567+05:30" ||
+if (timestampResult?.ToString("O", System.Globalization.CultureInfo.InvariantCulture) !=
+    "2026-10-24T12:34:56.1234567+05:30" ||
     (await client.TimestampAsync(null)).Value is not null)
     throw new Exception("DateTimeOffset precision, offset or null changed.");
 foreach (var mode in new[] { WireMode.Read, WireMode.Read | WireMode.Write, WireMode.Special, (WireMode)17 })
@@ -78,9 +89,11 @@ foreach (var mode in new[] { PlainMode.Known, (PlainMode)7 })
 {
     var result = await client.PlainModeAsync(mode);
     if (!result.Ok || result.Value != mode)
-        throw new Exception("Plain string enum casing, alias or integer fallback changed: " +
+        throw new Exception(
+            "Plain string enum casing, alias or integer fallback changed: " +
             (result.Ok ? "unexpected value" : result.Error.Message));
 }
+
 using var invalidEnumHttp = new HttpClient(new Replies(invalidEnumOutput: true));
 await using var invalidEnumConnection = new TypertConnection(invalidEnumHttp, new Uri("https://test.invalid/remote"));
 await using var invalidEnumClient = new PrimitivesClient(invalidEnumConnection);
@@ -93,7 +106,10 @@ if ((await readonlyClient.ValueAsync()).Value.Applies != "received")
     throw new Exception("Readonly output was recomputed instead of received from the wire.");
 await using var structClient = new RecordstructClient(connection);
 var valueRecord = (await structClient.ValueAsync()).Value;
-var changedRecord = valueRecord with { Count = 19 };
+var changedRecord = valueRecord with
+{
+    Count = 19
+};
 if (!typeof(ValueRecord).IsValueType || valueRecord.Count != 7 || changedRecord.Count != 19)
     throw new Exception("Record struct value semantics changed.");
 var genericInt = (await client.GenericIntAsync(new WireEnvelope<int>(3))).Value;
@@ -102,11 +118,13 @@ if (genericInt.Value != 7 || genericInt.Accepted)
 if ((await client.GenericTextAsync(new WireEnvelope<string>(null))).Value.Value is not null ||
     (await client.GenericNullableAsync(new WireEnvelope<int?>(null))).Value.Value is not null)
     throw new Exception("Generic reference/value argument nullability changed.");
-var genericArray = (await client.GenericArrayAsync(new WireEnvelope<System.Collections.Immutable.ImmutableArray<string?>>([null, "request"]))).Value;
+var genericArray = (await client.GenericArrayAsync(
+    new WireEnvelope<System.Collections.Immutable.ImmutableArray<string?>>([null, "request"]))).Value;
 if (genericArray.Value.Length != 2 || genericArray.Value[0] is not null || genericArray.Value[1] != "wire")
     throw new Exception("Nested generic collection element nullability changed.");
 using var invalidGenericHttp = new HttpClient(new Replies(invalidGenericOutput: true));
-await using var invalidGenericConnection = new TypertConnection(invalidGenericHttp, new Uri("https://test.invalid/remote"));
+await using var invalidGenericConnection =
+    new TypertConnection(invalidGenericHttp, new Uri("https://test.invalid/remote"));
 await using var invalidGenericClient = new PrimitivesClient(invalidGenericConnection);
 var invalidGeneric = await invalidGenericClient.GenericIntAsync(new WireEnvelope<int>(3));
 if (invalidGeneric.Ok || invalidGeneric.Error.InnerException is not JsonException)
@@ -188,7 +206,11 @@ if (missingReadonly.Ok || missingReadonly.Error.InnerException is not JsonExcept
 Console.WriteLine(
     "GREEN primitive/string/collection roots; null/default named arguments and legal colliding names; DisallowNull decode; nullable numeric absent/null/explicit values; readonly wire values; changed nullable policy changes identity; stale output removed on SDK/options failure.");
 
-sealed class Replies(bool incompleteOutput = false, int invalidCollectionOutput = 0, bool invalidEnumOutput = false, bool invalidGenericOutput = false) : HttpMessageHandler
+sealed class Replies(
+    bool incompleteOutput = false,
+    int invalidCollectionOutput = 0,
+    bool invalidEnumOutput = false,
+    bool invalidGenericOutput = false) : HttpMessageHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
@@ -258,7 +280,8 @@ sealed class Replies(bool incompleteOutput = false, int invalidCollectionOutput 
     private static string CheckGenericArray(JsonElement input)
     {
         var values = input.GetProperty("Value");
-        if (values.GetArrayLength() != 2 || values[0].ValueKind != JsonValueKind.Null || values[1].GetString() != "request")
+        if (values.GetArrayLength() != 2 || values[0].ValueKind != JsonValueKind.Null ||
+            values[1].GetString() != "request")
             throw new Exception("Nested generic array request changed.");
         return "{\"Value\":[null,\"wire\"],\"Accepted\":false}";
     }
@@ -291,6 +314,7 @@ sealed class Replies(bool incompleteOutput = false, int invalidCollectionOutput 
                 _ => "{\"Items\":[],\"Labels\":[],\"StrictLabels\":[]}"
             };
         }
+
         if (items.GetArrayLength() != 2 || items[0].GetProperty("Name").GetString() != "input" ||
             !items[0].GetProperty("Values").EnumerateArray().Select(x => x.GetInt32()).SequenceEqual(new[] { 1, 2 }) ||
             items[1].ValueKind != JsonValueKind.Null || labels.GetArrayLength() != 2 ||
@@ -298,7 +322,8 @@ sealed class Replies(bool incompleteOutput = false, int invalidCollectionOutput 
             strictLabels.GetArrayLength() != 1 || strictLabels[0].GetString() != "input" ||
             optionalItems.GetArrayLength() != 1 || optionalItems[0].ValueKind != JsonValueKind.Null)
             throw new Exception("Immutable request elements or nested DTO values changed.");
-        return "{\"Items\":[{\"Name\":null,\"Values\":[3,4]},null],\"Labels\":[\"result\",null],\"StrictLabels\":[\"result\"],\"OptionalItems\":[null]}";
+        return
+            "{\"Items\":[{\"Name\":null,\"Values\":[3,4]},null],\"Labels\":[\"result\",null],\"StrictLabels\":[\"result\"],\"OptionalItems\":[null]}";
     }
 
     private static string CheckTimestamp(JsonElement input)

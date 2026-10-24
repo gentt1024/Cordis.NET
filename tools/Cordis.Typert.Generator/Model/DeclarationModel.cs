@@ -229,7 +229,8 @@ internal static class DeclarationModelJson
             if (value.Kind == "construction")
             {
                 var construction = value.Construction ??
-                    throw new InvalidDataException("Static construction lacks its declaration facts. Re-extract the model.");
+                    throw new InvalidDataException(
+                        "Static construction lacks its declaration facts. Re-extract the model.");
                 Reference(construction.Type);
                 if (construction.Arguments.Select(argument => argument.Name).Distinct(StringComparer.Ordinal).Count() !=
                     construction.Arguments.Length)

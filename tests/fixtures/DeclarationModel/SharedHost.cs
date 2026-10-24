@@ -53,7 +53,8 @@ await context.RunAsync(owner =>
                 throw new Exception("Generated Host codec lost a static default or overwrote an explicit value.");
         }
     }
-    var custom = ConverterInputServiceTypert.Contribution("IndependentProjection.Provider.Custom").Invocations.Single().Parameters[0].Codec;
+    var custom =
+ ConverterInputServiceTypert.Contribution("IndependentProjection.Provider.Custom").Invocations.Single().Parameters[0].Codec;
     if (custom.Schema.GetProperty("properties").GetProperty("Policy").TryGetProperty("default", out _))
         throw new Exception("A custom converter received a guessed static wire default.");
     owner.Provide("readonly", new ReadonlyService());

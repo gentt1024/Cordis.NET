@@ -175,7 +175,7 @@ NuGet `cordis.plugin.json` 的 engines 和 peers 在检查元数据及部署的 
 
 固定 DSH 的 analyzer 保留枚举声明，但其 [Zod emitter](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/typert/generator/src/emitter.ts)明确拒绝枚举投影。因此数值 CLR 枚举支持属于 .NET 平台适配，不能称为上游已有的 Schema 保证。现有共同模型已经保存底层类型及成员常量；独立 Remote、事件和普通数据投影复用这些事实，不加载提供者程序集，也不新增保存格式。
 
-默认 [.NET 10 STJ 枚举转换器](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Converters/Value/EnumConverter.cs)读写底层整数，包括未命名值，并导出 integer Schema。保存模型 Web 输出通过共享客户端 emitter 使用同样的 Schema，不添加成员白名单。生成的 .NET 声明保留名称、常量、底层宽度及 Flags；原生反序列化检查范围。可空枚举保留 null 分支，枚举默认值引用生成后的类型。字符串枚举策略及作者枚举 converter 仍由静态投影明确拒绝。JavaScript number 的既有精度限制不变，本次不引入无损 64 位传输。
+默认 [.NET 10 STJ 枚举转换器](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Converters/Value/EnumConverter.cs)读写底层整数，包括未命名值，并导出 integer Schema。保存模型 Web 输出通过共享客户端 emitter 使用同样的 Schema，不添加成员白名单。生成的 .NET 声明保留名称、常量、底层宽度及 Flags；原生反序列化检查范围。可空枚举保留 null 分支，枚举默认值引用生成后的类型。保存模型 Web 投影仍拒绝字符串枚举策略。独立 .NET 客户端支持下文所述的已知默认泛型 STJ 字符串枚举 converter；未知作者 converter 仍拒绝。JavaScript number 的既有精度限制不变，本次不引入无损 64 位传输。
 
 ## Linux 包进程完成边界，2026-10-16
 
@@ -427,7 +427,7 @@ STJ 运行时元数据丢失泛型引用参数的空性。生成式 Host、事�
 
 固定 `packages/api/gateway/src/client/index.ts` 的 `invokeMethod`、`prepareInvocation`、`RemoteNamespaceService` 决定 scoped 选择：通过 Cordis tracing 取得消费方 Context，查询当前 adapter，区分 undefined 与 null，仅在本来具有直接 descriptor 时允许直接 fallback。原生生成浏览器挂载现在从已有 invocation descriptor 取得接收方与 lookup 两种投影。类型化 `getRemote(ctx, namespace)` 只是 `ctx.get('remote.' + namespace)` 的声明便利入口；命名参数对象保留现有 .NET 生成 wire 命名和省略语义。不增加身份 registry、传输、模型格式或兼容分支。此前只挂载普通 endpoint 函数、没有消费方 Context 投影，是未完成切片，不是目标合同。
 
-普通数据后端的框架集合接口现在复用共同声明中的框架投影。有序 JSON 数组表示、元素空性及引用事实与 Remote 后端共用；具体 .NET 接口选择属于 STJ 数据载体适配。两个后端也将框架 `ImmutableArray<T>` 投影为有序 JSON 数组，保留这个具体 .NET 类型及其声明的元素类型。这项有限映射不推定其他不可变集合也受支持。生成式 .NET 客户端现在向既有结果 codec 传入共同声明的空性查询，用于普通返回值与流元素，在保留 STJ 解码的同时拒绝声明不允许的 null 元素，包括可空的不可变集合。`DateTimeOffset` 保留 STJ 原有的字符串表示、offset 和精度。已知的默认 `JsonStringEnumConverter<TEnum>` 会投影到对应的生成枚举，保留 flags 和显式成员名称；任意 converter 执行仍被拒绝。枚举最终由 STJ 解析，其 Schema exporter 的已命名值列表不能完整描述大小写变体、flags 和整数回退。因此 codec 导出保守的 string/integer 形状，解码仍拒绝无效名称。独立 Web 后端仍明确拒绝带字符串转换器的枚举。执行任意 enumerable、作者泛型类和其他被拒绝的数据形状仍是独立工作。
+普通数据后端的框架集合接口现在复用共同声明中的框架投影。有序 JSON 数组表示、元素空性及引用事实与 Remote 后端共用；具体 .NET 接口选择属于 STJ 数据载体适配。两个后端也将框架 `ImmutableArray<T>` 投影为有序 JSON 数组，保留这个具体 .NET 类型及其声明的元素类型。这项有限映射不推定其他不可变集合也受支持。生成式 .NET 客户端现在向既有结果 codec 传入共同声明的空性查询，用于普通返回值与流元素，在保留 STJ 解码的同时拒绝声明不允许的 null 元素，包括可空的不可变集合。`DateTimeOffset` 保留 STJ 原有的字符串表示、offset 和精度。已知的默认 `JsonStringEnumConverter<TEnum>` 会投影到对应的生成枚举，保留 flags 和显式成员名称；任意 converter 执行仍被拒绝。枚举最终由 STJ 解析，其 Schema exporter 的已命名值列表不能完整描述大小写变体、flags 和整数回退。因此 codec 导出保守的 string/integer 形状，解码仍拒绝无效名称。独立 Web 后端仍明确拒绝带字符串转换器的枚举。闭合泛型数据载体采用下文说明的声明替换；执行任意 enumerable 或任意泛型作者行为仍不在该投影范围内。
 
 ### 选定 Client 调用的准备边界，2026-10-12
 
@@ -501,8 +501,12 @@ WriteAsString、AllowNamedFloatingPointLiterals 和未支持组合在影响投�
 
 ## Remote 静态数据输入默认值
 
-固定 DSH 生成器的公开 codec 工厂通过可执行 Schema 解码，依据为 `639ed015397290b3745d163aafe02ffee4aa3f84` 的 `packages/typert/generator/src/emitter.ts`。.NET 适配继续让 codec 承担输入解析。把静态可证明的 C# 数据初始化器映射为省略成员的输入默认值，是本平台的明确适配判断，不宣称 DSH 规定了 C# 初始化方式，也不把 STJ 当前行为当作 port 规范。
+固定 DSH 生成器的公开 codec 工厂通过可执行 Schema 解码，依据为 `639ed015397290b3745d163aafe02ffee4aa3f84` 的 `packages/typert/generator/src/emitter.ts`。其对象 Schema emitter 保留类型和可选性，不把普通成员初始化器转换成默认值。analyzer 拒绝带默认值的 Remote 方法参数，这与 DTO 成员初始化是不同问题。.NET 适配继续让 codec 承担输入解析。把静态可证明的 C# 数据初始化器映射为省略成员的输入默认值，是本平台的明确判断，不是 DSH 的直接要求或 STJ 惯例的自动结果。
 
 源码生成器和独立 .NET emitter 共用声明图及其参数／成员事实，为 `CreateDeclared` 提供静态 wire 默认值。输入 Schema 描述这些默认值，输入解码在 STJ 前应用它们；显式 null、必需字段和显式值保持各自含义。输出解码不使用输入默认值。编译器不会加载作者程序集执行构造器来完成投影。支持范围限于[作者说明](authoring.zh.md#remote-输入的静态数据默认值)中的被动 primary record 子集；未知行为继续作为分析事实保留，在独立输入投影确实需要时拒绝。
 
 本适配纠正了已观察到的 STJ 源生成省略路径：record 的 init 成员丢失 `new(false, [])`，最终变成 null。它不改写任意应用序列化，不新增自动业务校验或第二个 Gateway。已有显式 reflection metadata 集成仍可用于其他作者行为的 JIT 场景，但这些静态默认值不要求它。重提取直接更新当前事实，不建立版本化模型兼容路线。
+
+公共 `TypertInputDefault` 委托跨生成程序集边界提供稳定的声明 metadata，不承担请求政策。其寿命、JSON 所有权和工厂签名变更后的重建要求见[作者说明](authoring.zh.md#remote-输入的静态数据默认值)。提取阶段与生成查询不执行作者初始化器；手写委托仍是调用方代码。DateTimeOffset、有限枚举策略、ImmutableArray、闭合数据泛型、record struct 和方向性只读／空性投影补齐的是其他既有 .NET 后端缺口，继续在已说明的边界内支持。
+
+空性／默认图现在只对递归遍历路径中同一泛型声明的活动使用点计预算，上限为 256。总图大小与兄弟实例不消耗该预算；已访问身份使普通递归终止。这项保护约束生成过程中的泛型递归展开，超过同一资源预算的有限路径仍会拒绝，不声称进行数学意义的终止判定。既有后端声明数量／深度预算和运行时默认遍历保护不变。

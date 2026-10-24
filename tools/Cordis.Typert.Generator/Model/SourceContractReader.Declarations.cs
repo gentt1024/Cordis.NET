@@ -362,7 +362,9 @@ internal sealed partial class SourceContractReader
             operation.Type is { } collection && EmptyCollection(collection) is { } empty)
             return empty;
         if (operation is not Microsoft.CodeAnalysis.Operations.IObjectCreationOperation
-            { Constructor: { } constructor, Initializer: null } creation || !PassiveConstructor(constructor))
+            {
+                Constructor: { } constructor, Initializer: null
+            } creation || !PassiveConstructor(constructor))
             return null;
         var arguments = new List<NativeNamedConstant>();
         foreach (var parameter in constructor.Parameters)
@@ -385,17 +387,19 @@ internal sealed partial class SourceContractReader
         {
             IArrayTypeSymbol { Rank: 1, ElementType.SpecialType: SpecialType.System_Byte } => "\"\"",
             IArrayTypeSymbol { Rank: 1 } => "[]",
-            INamedTypeSymbol named when named.ContainingAssembly.Identity.ToString().EndsWith(
-                ", Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", StringComparison.Ordinal) =>
+            INamedTypeSymbol named when named
+                    .ContainingAssembly.Identity.ToString()
+                    .EndsWith(", Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", StringComparison.Ordinal) =>
                 named.OriginalDefinition.ToDisplayString() switch
                 {
                     "System.Collections.Generic.List<T>" or "System.Collections.Generic.IList<T>" or
-                    "System.Collections.Generic.ICollection<T>" or "System.Collections.Generic.IEnumerable<T>" or
-                    "System.Collections.Generic.IReadOnlyList<T>" or "System.Collections.Generic.IReadOnlyCollection<T>" or
-                    "System.Collections.Immutable.ImmutableArray<T>" => "[]",
+                        "System.Collections.Generic.ICollection<T>" or "System.Collections.Generic.IEnumerable<T>" or
+                        "System.Collections.Generic.IReadOnlyList<T>"
+                        or "System.Collections.Generic.IReadOnlyCollection<T>" or
+                        "System.Collections.Immutable.ImmutableArray<T>" => "[]",
                     "System.Collections.Generic.Dictionary<TKey, TValue>" or
-                    "System.Collections.Generic.IDictionary<TKey, TValue>" or
-                    "System.Collections.Generic.IReadOnlyDictionary<TKey, TValue>" when
+                        "System.Collections.Generic.IDictionary<TKey, TValue>" or
+                        "System.Collections.Generic.IReadOnlyDictionary<TKey, TValue>" when
                         named.TypeArguments[0].SpecialType == SpecialType.System_String => "{}",
                     _ => null
                 },
@@ -409,11 +413,16 @@ internal sealed partial class SourceContractReader
         var type = constructor.ContainingType;
         if (!type.IsRecord || type.TypeKind != TypeKind.Class || type.TypeParameters.Length != 0 ||
             type.ContainingType is not null || type.BaseType?.SpecialType != SpecialType.System_Object ||
-            type.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() is
-                JsonPrefix + "JsonConverterAttribute" or JsonPrefix + "JsonPolymorphicAttribute" or JsonPrefix + "JsonDerivedTypeAttribute") ||
+            type
+                .GetAttributes()
+                .Any(attribute => attribute.AttributeClass?.ToDisplayString() is
+                    JsonPrefix + "JsonConverterAttribute" or JsonPrefix + "JsonPolymorphicAttribute"
+                    or JsonPrefix + "JsonDerivedTypeAttribute") ||
             constructor.DeclaredAccessibility != Accessibility.Public ||
             constructor.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is not RecordDeclarationSyntax
-            { ParameterList: not null, BaseList: null })
+            {
+                ParameterList: not null, BaseList: null
+            })
             return false;
         foreach (var member in type.GetMembers().Where(member => !member.IsImplicitlyDeclared))
         {
@@ -429,30 +438,49 @@ internal sealed partial class SourceContractReader
 
             if (member is not IPropertySymbol { IsStatic: false, DeclaredAccessibility: Accessibility.Public } property)
                 return false;
-            if (property.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() is
-                    JsonPrefix + "JsonConverterAttribute" or JsonPrefix + "JsonExtensionDataAttribute") ||
-                property.Type.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonConverterAttribute"))
+            if (property
+                    .GetAttributes()
+                    .Any(attribute => attribute.AttributeClass?.ToDisplayString() is
+                        JsonPrefix + "JsonConverterAttribute" or JsonPrefix + "JsonExtensionDataAttribute") ||
+                property
+                    .Type.GetAttributes()
+                    .Any(attribute =>
+                        attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonConverterAttribute"))
                 return false;
             var syntax = property.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
             if (syntax is ParameterSyntax)
             {
-                if (property.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonIgnoreAttribute"))
+                if (property
+                    .GetAttributes()
+                    .Any(attribute =>
+                        attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonIgnoreAttribute"))
                     return false;
                 if (!constructor.Parameters.Any(parameter => parameter.Name == property.Name &&
                         SymbolEqualityComparer.Default.Equals(parameter.Type, property.Type)))
                     return false;
             }
-            else if (syntax is not PropertyDeclarationSyntax
-            { Initializer: null, ExpressionBody: null, AccessorList: { } accessors } ||
-                accessors.Accessors.Any(accessor => accessor.Body is not null || accessor.ExpressionBody is not null) ||
-                property.IsRequired || property.GetAttributes().Any(attribute =>
-                    attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonRequiredAttribute"))
-                return false;
+            else
+            {
+                if (syntax is not PropertyDeclarationSyntax
+                    {
+                        Initializer: null, ExpressionBody: null, AccessorList: { } accessors
+                    } ||
+                    accessors.Accessors.Any(accessor =>
+                        accessor.Body is not null || accessor.ExpressionBody is not null) ||
+                    property.IsRequired || property
+                        .GetAttributes()
+                        .Any(attribute =>
+                            attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonRequiredAttribute"))
+                    return false;
+            }
         }
 
         return constructor.Parameters.All(parameter => parameter.RefKind == RefKind.None &&
-            type.GetMembers(parameter.Name).OfType<IPropertySymbol>().Any(property =>
-                property.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is ParameterSyntax));
+            type
+                .GetMembers(parameter.Name)
+                .OfType<IPropertySymbol>()
+                .Any(property =>
+                    property.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is ParameterSyntax));
     }
 
     private static bool PublicDeclarationMember(ISymbol member)

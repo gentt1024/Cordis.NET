@@ -54,27 +54,50 @@ public sealed partial class PrimitiveService
 
 public sealed record PassiveSnapshot(int Id)
 {
-    public PassivePolicy Policy { get; init; } = new(false, []);
-    public byte[] Bytes { get; init; } = [];
-    public System.Collections.Generic.List<string> Names { get; init; } = [];
+    public PassivePolicy Policy
+    {
+        get;
+        init;
+    } = new(false, []);
+
+    public byte[] Bytes
+    {
+        get;
+        init;
+    } = [];
+
+    public System.Collections.Generic.List<string> Names
+    {
+        get;
+        init;
+    } = [];
 }
 
 public sealed record PassivePolicy(bool Enabled, ImmutableArray<string> Overrides)
 {
     public int? Detail
     {
-        get; init;
+        get;
+        init;
     }
 }
 
 public sealed record BehavioralPolicy(string Text)
 {
-    public string Normalized { get; init; } = Text.ToUpperInvariant();
+    public string Normalized
+    {
+        get;
+        init;
+    } = Text.ToUpperInvariant();
 }
 
 public sealed class BehavioralSnapshot
 {
-    public BehavioralPolicy Policy { get; init; } = new("input");
+    public BehavioralPolicy Policy
+    {
+        get;
+        init;
+    } = new("input");
 }
 
 [RemoteService("behaviorInitializerInput", typeof(BehavioralJson))]
@@ -109,14 +132,24 @@ public partial class RuntimeDefaultJson : JsonSerializerContext;
 public sealed class ConverterSnapshot
 {
     [JsonConverter(typeof(PolicyConverter))]
-    public PassivePolicy Policy { get; init; } = new(false, []);
+    public PassivePolicy Policy
+    {
+        get;
+        init;
+    } = new(false, []);
 }
 
 public sealed class PolicyConverter : JsonConverter<PassivePolicy>
 {
-    public override PassivePolicy Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert,
-        System.Text.Json.JsonSerializerOptions options) => throw new System.NotSupportedException("Author converter owns its input.");
-    public override void Write(System.Text.Json.Utf8JsonWriter writer, PassivePolicy value,
+    public override PassivePolicy Read(
+        ref System.Text.Json.Utf8JsonReader reader,
+        System.Type typeToConvert,
+        System.Text.Json.JsonSerializerOptions options) =>
+        throw new System.NotSupportedException("Author converter owns its input.");
+
+    public override void Write(
+        System.Text.Json.Utf8JsonWriter writer,
+        PassivePolicy value,
         System.Text.Json.JsonSerializerOptions options) => writer.WriteStringValue("author-policy");
 }
 
@@ -147,6 +180,7 @@ public enum WireMode
 {
     Read = 1,
     Write = 2,
+
     [JsonStringEnumMemberName("wire-special")]
     Special = 4
 }
