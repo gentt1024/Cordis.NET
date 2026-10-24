@@ -15,7 +15,16 @@ internal sealed record NativeCompilation(
     string Platform,
     string Optimization);
 
-internal sealed record NativeConstant(string Kind, string Type, string Json);
+internal sealed record NativeConstant(string Kind, string Type, string Json)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public DeclarationConstruction? Construction
+    {
+        get; init;
+    }
+}
+
+internal sealed record DeclarationConstruction(DeclarationReference Type, NativeNamedConstant[] Arguments);
 
 internal sealed record NativeNamedConstant(string Name, NativeConstant Value);
 
@@ -65,13 +74,19 @@ internal sealed record NativeTypeDeclaration(
     string Kind,
     bool External,
     NativeTypeReference? BaseType,
-    NativeTypeReference[] TypeArguments,
+    NativeTypeReference[] TypeParameters,
     NativeMember[] Members,
     NativeConstructor[] Constructors,
     NativeAttribute[] Attributes,
     string Documentation,
     NativeLocation? Location)
 {
+    internal bool ReadOnly
+    {
+        get;
+        init;
+    }
+
     internal NativeEnum? Enumeration
     {
         get;
@@ -81,7 +96,7 @@ internal sealed record NativeTypeDeclaration(
 
 internal sealed record NativeEnum(NativeTypeReference UnderlyingType, NativeEnumMember[] Members);
 
-internal sealed record NativeEnumMember(string Name, string Value, string Documentation);
+internal sealed record NativeEnumMember(string Name, string Value, string Documentation, NativeAttribute[] Attributes);
 
 internal sealed record NativeParameter(
     string Name,

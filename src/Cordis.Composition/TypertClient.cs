@@ -19,7 +19,7 @@ public abstract class TypertClient : IAsyncDisposable
         Func<Task<TArgs>> prepare,
         JsonTypeInfo<TArgs> argumentsType,
         JsonTypeInfo<T> resultType,
-        bool nullableResult,
+        TypertNullability resultNullability,
         CancellationToken cancellationToken) => InvokeCoreAsync(
         endpoint,
         prepare,
@@ -28,9 +28,7 @@ public abstract class TypertClient : IAsyncDisposable
         {
             if (raw is not { } value)
                 throw new JsonException("Remote result is missing its declared value.");
-            if (!nullableResult && value.ValueKind == JsonValueKind.Null)
-                throw new JsonException("Non-null Remote result cannot be null.");
-            return value.Deserialize(TypertJsonMetadata.ReadOutput(resultType))!;
+            return (T)TypertCodec.CreateDeclared(resultType, resultNullability).DecodeOutput(value)!;
         },
         cancellationToken);
 
@@ -106,7 +104,7 @@ public abstract class TypertClient : IAsyncDisposable
         Func<Task<TArgs>> prepare,
         JsonTypeInfo<TArgs> argumentsType,
         JsonTypeInfo<T> resultType,
-        bool nullableResult,
+        TypertNullability resultNullability,
         CancellationToken cancellationToken)
     {
         var call = lifetime.Enter() ?? throw new InvalidOperationException("The Remote contribution was withdrawn.");
@@ -118,6 +116,7 @@ public abstract class TypertClient : IAsyncDisposable
                 throw new InvalidOperationException("Remote " + endpoint + " has no active Connection.");
             var signal = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, call.Token);
             owner = new StreamOwner(call, signal);
+            var resultCodec = TypertCodec.CreateDeclared(resultType, resultNullability);
             var stream = connection.Open(
                 endpoint,
                 () => JsonSerializer.SerializeToElement(
@@ -131,9 +130,7 @@ public abstract class TypertClient : IAsyncDisposable
                 {
                     if (value.ValueKind == JsonValueKind.Undefined)
                         throw new JsonException("Remote stream item is missing its declared value.");
-                    if (!nullableResult && value.ValueKind == JsonValueKind.Null)
-                        throw new JsonException("Non-null Remote stream item cannot be null.");
-                    return value.Deserialize(TypertJsonMetadata.ReadOutput(resultType))!;
+                    return (T)resultCodec.DecodeOutput(value)!;
                 },
                 () => lifetime.Active);
         }
@@ -153,14 +150,14 @@ public abstract class TypertClient : IAsyncDisposable
         Func<Task<TArgs>> prepare,
         JsonTypeInfo<TArgs> argumentsType,
         JsonTypeInfo<TOutput> resultType,
-        bool nullableResult,
+        TypertNullability resultNullability,
         TypertCodec input,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
         _ = input.Schema;
         return new(
-            await OpenStreamAsync(endpoint, prepare, argumentsType, resultType, nullableResult, cancellationToken)
+            await OpenStreamAsync(endpoint, prepare, argumentsType, resultType, resultNullability, cancellationToken)
                 .ConfigureAwait(false),
             input);
     }

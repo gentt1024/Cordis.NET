@@ -359,7 +359,7 @@ Service 有效性使用既有 Core 注册身份及未经 tracing 的原始 provi
 
 运行 descriptor 与 `TypertTypeModel` 是派生输出，不是反推声明的来源。当前合同只有一份公开制品 `cordis/typert/$(AssemblyName).cordis.model.json`，由同一 `extract-model` 入口合并普通根与 service 选择。所选 service 的漂移检查继续保留，独立 wire 制品及其 conformance 桥退出。内部投影必须可从声明事实和明确后端政策重新计算，不是第二份保存作者模型。所有者和退出路径见[阶段合同](development.zh.md#模型管线合同)。
 
-.NET emitter 当前投影直接 unary 方法、downlink 流及选定普通数据 record/class。实际覆盖包含 bool、string、integer、array、只读 list 接口、JsonElement、可空成员、必需构造器/init 成员、命名/ignore 策略和选定空状态注解。只读数据成员、record struct、数据继承、多态/自定义 converter 和更丰富 Remote 形状保留事实或诊断后被该投影拒绝；不宣称完整 C# 或 TS 类型系统等价。JSON 策略不能省略必填 carrier 参数字段，包括显式 null 和默认值。
+.NET emitter 当前投影直接 unary 方法、downlink 流及选定普通数据 record/class。实际覆盖包含 bool、string、integer、array、只读 list 接口、JsonElement、可空成员、必需构造器/init 成员、命名/ignore 策略和选定空状态注解。独立 .NET Remote 投影还保留 struct／readonly record struct 及无约束泛型数据声明的闭合使用。只读输出通过数据构造器接收实际值，不重放作者 getter；来源合并区分 metadata 丢失的 record 语法与真正的 class／struct 矛盾。数据继承、带约束或开放的泛型根、任意自定义 converter，以及输入数据中不支持的默认表达式仍明确拒绝；不宣称完整 C# 或 TS 类型系统等价。JSON 策略不能省略必填 carrier 参数字段，包括显式 null 和默认值。
 
 常量投影保留可空基本数值初始化值，包括 float/decimal 字面量后缀和显式 null，不改变模型格式。写入调用者源码前，emitter 检查目标 namespace 中全部投影 DTO、生成 client、JSON context、failure 和逐方法 envelope 的类型名。冲突明确标出双方来源后拒绝；拒绝时删除拥有的旧输出，不把冲突推迟到 C# 编译。
 
@@ -427,7 +427,7 @@ STJ 运行时元数据丢失泛型引用参数的空性。生成式 Host、事�
 
 固定 `packages/api/gateway/src/client/index.ts` 的 `invokeMethod`、`prepareInvocation`、`RemoteNamespaceService` 决定 scoped 选择：通过 Cordis tracing 取得消费方 Context，查询当前 adapter，区分 undefined 与 null，仅在本来具有直接 descriptor 时允许直接 fallback。原生生成浏览器挂载现在从已有 invocation descriptor 取得接收方与 lookup 两种投影。类型化 `getRemote(ctx, namespace)` 只是 `ctx.get('remote.' + namespace)` 的声明便利入口；命名参数对象保留现有 .NET 生成 wire 命名和省略语义。不增加身份 registry、传输、模型格式或兼容分支。此前只挂载普通 endpoint 函数、没有消费方 Context 投影，是未完成切片，不是目标合同。
 
-普通数据后端的框架集合接口现在复用共同声明中的框架投影。有序 JSON 数组表示、元素空性及引用事实与 Remote 后端共用；具体 .NET 接口选择属于 STJ 数据载体适配。执行任意 enumerable、作者泛型类和其他被拒绝的数据形状仍是独立工作。
+普通数据后端的框架集合接口现在复用共同声明中的框架投影。有序 JSON 数组表示、元素空性及引用事实与 Remote 后端共用；具体 .NET 接口选择属于 STJ 数据载体适配。两个后端也将框架 `ImmutableArray<T>` 投影为有序 JSON 数组，保留这个具体 .NET 类型及其声明的元素类型。这项有限映射不推定其他不可变集合也受支持。生成式 .NET 客户端现在向既有结果 codec 传入共同声明的空性查询，用于普通返回值与流元素，在保留 STJ 解码的同时拒绝声明不允许的 null 元素，包括可空的不可变集合。`DateTimeOffset` 保留 STJ 原有的字符串表示、offset 和精度。已知的默认 `JsonStringEnumConverter<TEnum>` 会投影到对应的生成枚举，保留 flags 和显式成员名称；任意 converter 执行仍被拒绝。枚举最终由 STJ 解析，其 Schema exporter 的已命名值列表不能完整描述大小写变体、flags 和整数回退。因此 codec 导出保守的 string/integer 形状，解码仍拒绝无效名称。独立 Web 后端仍明确拒绝带字符串转换器的枚举。执行任意 enumerable、作者泛型类和其他被拒绝的数据形状仍是独立工作。
 
 ### 选定 Client 调用的准备边界，2026-10-12
 
@@ -498,3 +498,11 @@ ScopedLayers 从传入的注册 Context 获取可见性和清理所有权。读�
 .NET 10 exporter 合并读取与写出形状，提供的三个数字 pattern 比原生读取范围窄。输入投影保留有限数值的原生语法，包括有符号数的前导加号、前导零和 decimal 指数；无符号文本不带正负号。实现只识别这三个 exporter 模式及其有限原生模式投影，使用 BCL 非回溯匹配器；未知 pattern 继续拒绝。整数位宽、decimal 范围和转换由原生 STJ 负责。float/double 检查拒绝非有限结果，包括原生读取可能接受的字符串 NaN/Infinity。这是有界 STJ 适配，不是任意 JSON Schema 或 converter 执行。
 
 WriteAsString、AllowNamedFloatingPointLiterals 和未支持组合在影响投影时明确拒绝。显式 reflection metadata Context 可以在 JIT Host 中保留 init-only 初始化值，并导出运行描述符；这不表示保存模型生成或 Native AOT 能执行任意作者 Context。Web 命名保留，但 Schema 准入仍要求声明的 wire 字段名；PropertyNameCaseInsensitive 不意味着当前 JSON Schema 接受原生读取的所有大小写形式。本次数值工作不证明全部 Web 默认行为等价。
+
+## Remote 静态数据输入默认值
+
+固定 DSH 生成器的公开 codec 工厂通过可执行 Schema 解码，依据为 `639ed015397290b3745d163aafe02ffee4aa3f84` 的 `packages/typert/generator/src/emitter.ts`。.NET 适配继续让 codec 承担输入解析。把静态可证明的 C# 数据初始化器映射为省略成员的输入默认值，是本平台的明确适配判断，不宣称 DSH 规定了 C# 初始化方式，也不把 STJ 当前行为当作 port 规范。
+
+源码生成器和独立 .NET emitter 共用声明图及其参数／成员事实，为 `CreateDeclared` 提供静态 wire 默认值。输入 Schema 描述这些默认值，输入解码在 STJ 前应用它们；显式 null、必需字段和显式值保持各自含义。输出解码不使用输入默认值。编译器不会加载作者程序集执行构造器来完成投影。支持范围限于[作者说明](authoring.zh.md#remote-输入的静态数据默认值)中的被动 primary record 子集；未知行为继续作为分析事实保留，在独立输入投影确实需要时拒绝。
+
+本适配纠正了已观察到的 STJ 源生成省略路径：record 的 init 成员丢失 `new(false, [])`，最终变成 null。它不改写任意应用序列化，不新增自动业务校验或第二个 Gateway。已有显式 reflection metadata 集成仍可用于其他作者行为的 JIT 场景，但这些静态默认值不要求它。重提取直接更新当前事实，不建立版本化模型兼容路线。

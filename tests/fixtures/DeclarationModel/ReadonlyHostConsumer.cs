@@ -22,4 +22,4 @@ if (!result.RootElement.GetProperty("result").GetProperty("ok").GetBoolean() ||
     throw new Exception("Generated Host binding did not call the authored getter and STJ metadata.");
 using (var stopped = await http.PostAsync("/control/stop", null))
     stopped.EnsureSuccessStatusCode();
-Console.WriteLine("read-only Host succeeds while standalone client projection refuses");
+Console.WriteLine("read-only Host uses authored getter and exports its output contract");

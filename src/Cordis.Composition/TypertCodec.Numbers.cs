@@ -35,6 +35,19 @@ public abstract partial class TypertCodec
         var handling = context.PropertyInfo?.NumberHandling ?? context.TypeInfo.NumberHandling ??
             context.TypeInfo.Options.NumberHandling;
         var type = Nullable.GetUnderlyingType(context.TypeInfo.Type) ?? context.TypeInfo.Type;
+        if (type.IsEnum && node is JsonObject enumSchema && enumSchema["enum"] is JsonArray names &&
+            names.Any(value => value is JsonValue name && name.TryGetValue<string>(out _)) &&
+            (context.PropertyInfo?.CustomConverter ?? context.TypeInfo.Converter).GetType().Assembly ==
+            typeof(JsonSerializer).Assembly)
+        {
+            // STJ's named-value list omits legal casing, flags and integer representations.
+            // Its built-in converter remains the authority for admitting strings and enum values.
+            enumSchema.Remove("enum");
+            enumSchema["type"] = names.Any(value => value is null)
+                ? new JsonArray("string", "integer", "null")
+                : new JsonArray("string", "integer");
+            return enumSchema;
+        }
         var unsigned = type == typeof(byte) || type == typeof(ushort) || type == typeof(uint) || type == typeof(ulong);
         var integer = unsigned || type == typeof(sbyte) || type == typeof(short) || type == typeof(int) ||
             type == typeof(long);

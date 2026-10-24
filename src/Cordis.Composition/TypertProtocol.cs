@@ -337,7 +337,8 @@ public abstract partial class TypertCodec
         JsonTypeInfo<T> metadata,
         string symbol,
         JsonElement? explicitSchema,
-        TypertNullability? nullability = null)
+        TypertNullability? nullability = null,
+        TypertInputDefault? inputDefault = null)
         : TypertCodec
     {
         private JsonElement? schema;
@@ -347,6 +348,8 @@ public abstract partial class TypertCodec
 
         public override object? Decode(JsonElement value)
         {
+            if (inputDefault is not null)
+                value = ApplyInputDefaults(value, Schema, metadata.Options.PropertyNameCaseInsensitive);
             Validate(value, Schema, Schema, 0);
             return JsonSerializer.Deserialize(value, metadata);
         }
@@ -386,7 +389,7 @@ public abstract partial class TypertCodec
             if (output)
                 node = ProjectNullability(node, path => OutputNullability(metadata, nullability, path));
             else if (nullability is not null)
-                node = ProjectNullability(node, nullability);
+                node = ProjectNullability(node, nullability, inputDefault);
             using var document = JsonDocument.Parse(node.ToJsonString());
             return document.RootElement.Clone();
         }

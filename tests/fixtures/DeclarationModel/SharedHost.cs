@@ -3,6 +3,7 @@ using Cordis.AspNetCore;
 using Cordis.Composition;
 #if CORDIS_READONLY_HOST
 using Author;
+using System.Collections.Immutable;
 #else
 using IndependentDeclarations;
 #endif
@@ -21,6 +22,40 @@ EffectHandle receiverAdapter = null!;
 await context.RunAsync(owner =>
 {
 #if CORDIS_READONLY_HOST
+    var generic = PrimitiveServiceTypert.Contribution("IndependentProjection.Provider.Generic").Invocations
+        .Single(method => method.Method == "genericArray").Parameters[0].Codec;
+    using (var input = System.Text.Json.JsonDocument.Parse("""{"Value":[null,"host"],"Accepted":false}"""))
+    {
+        var decoded = (WireEnvelope<ImmutableArray<string?>>)generic.Decode(input.RootElement)!;
+        if (decoded.Value.Length != 2 || decoded.Value[0] is not null || decoded.Value[1] != "host")
+            throw new Exception("Generated Host codec lost the closed generic element nullability.");
+    }
+    var defaults = PrimitiveServiceTypert.Contribution("IndependentProjection.Provider.Defaults").Invocations
+        .Single(method => method.Method == "passiveDefault").Parameters[0].Codec;
+    foreach (var (json, enabled) in new (string, bool?)[]
+    {
+        ("""{"Id":7}""", false),
+        ("""{"Id":8,"Policy":{"Enabled":true,"Overrides":[]}}""", true),
+        ("""{"Id":9,"Policy":null}""", null)
+    })
+    {
+        using var input = System.Text.Json.JsonDocument.Parse(json);
+        if (enabled is null)
+        {
+            try { defaults.Decode(input.RootElement); throw new Exception("Host defaulted explicit null."); }
+            catch (System.Text.Json.JsonException) { }
+        }
+        else
+        {
+            var decoded = (PassiveSnapshot)defaults.Decode(input.RootElement)!;
+            if (decoded.Bytes is not { Length: 0 } || decoded.Names is not { Count: 0 } ||
+                decoded.Policy.Enabled != enabled || !decoded.Policy.Overrides.IsEmpty || decoded.Policy.Overrides.IsDefault)
+                throw new Exception("Generated Host codec lost a static default or overwrote an explicit value.");
+        }
+    }
+    var custom = ConverterInputServiceTypert.Contribution("IndependentProjection.Provider.Custom").Invocations.Single().Parameters[0].Codec;
+    if (custom.Schema.GetProperty("properties").GetProperty("Policy").TryGetProperty("default", out _))
+        throw new Exception("A custom converter received a guessed static wire default.");
     owner.Provide("readonly", new ReadonlyService());
     var contribution = ReadonlyServiceTypert.Contribution("IndependentProjection.Provider");
     var resultCodec = contribution.Invocations.Single(method => method.Endpoint == "readonly/value").Result;
