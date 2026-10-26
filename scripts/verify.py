@@ -14,7 +14,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 
 from package_inspection import inspect_packages, inspect_package_consumer, prepare_package_consumer
-from candidate_source import identity as candidate_source_identity
+from candidate_source import locked_identity
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "verification"
@@ -297,18 +297,16 @@ def consume_http_package(directory, rid, version, aot, env):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dsh", type=Path)
-    parser.add_argument("--candidate-dsh", type=Path, help="Also compare fixed candidate traces with this same JIT run; does not change the formal lock")
     parser.add_argument("--origin", type=Path, help="Pinned Cordis source checkout containing the original Core/Loader tests")
-    parser.add_argument("--upstream-test", action="append", default=[], help="Select a relevant original DSH test file; repeat for multiple files. Default retains the original suite.")
     parser.add_argument("--defer-upstream-source-tests", action="store_true",
                         help="CI only: require a separate upstream shard gate; keep the current .NET/DSH trace comparisons")
     parser.add_argument("--aot", action="store_true")
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--package-output", type=Path, help="Write and validate the exact package batch in this directory")
     options = parser.parse_args()
-    candidate_identity = candidate_source_identity() if options.candidate_dsh else None
-    if options.defer_upstream_source_tests and (not options.dsh or options.upstream_test):
-        parser.error("Deferred source tests require --dsh and cannot select --upstream-test")
+    source_identity = locked_identity() if options.dsh else None
+    if options.defer_upstream_source_tests and not options.dsh:
+        parser.error("Deferred source tests require --dsh")
     rid = ("win" if os.name == "nt" else "linux" if sys.platform.startswith("linux") else "osx") + ("-arm64" if platform.machine().lower() in ("aarch64", "arm64") else "-x64")
     status = "failed"
     initial_hashes = source_hashes()
@@ -378,49 +376,30 @@ def main():
         run("typert-optional", [sys.executable, "scripts/verify-typert-optional.py", "--dotnet", shutil.which("dotnet"),
                                "--output", OUT / "typert-optional"])
         if options.dsh:
-            target = json.loads((ROOT / "upstream.lock.json").read_text(encoding="utf-8"))["harness"]["commit"]
-            upgrade = target == "639ed015397290b3745d163aafe02ffee4aa3f84"
-            runner = "reference/run-upgrade-reference.mjs" if upgrade else "reference/run-reference.mjs"
-            reference = run("dsh-core", ["node", "--experimental-transform-types", runner, *(["--established"] if upgrade else []), f"--dsh={options.dsh.resolve()}"])
+            runner = ["node", "--experimental-transform-types", "reference/run-upgrade-reference.mjs",
+                      f"--dsh={options.dsh.resolve()}"]
+            reference = run("dsh-core", [*runner, "--established"])
             compare("dsh-core-differential", reference, jit)
-            if upgrade:
-                reference = run("dsh-upgrade", ["node", "--experimental-transform-types", runner, f"--dsh={options.dsh.resolve()}"])
-                compare("dsh-upgrade-differential", reference, upgrade_jit)
+            reference = run("dsh-upgrade", runner)
+            compare("dsh-upgrade-differential", reference, upgrade_jit)
             if options.defer_upstream_source_tests:
                 steps.append({"name": "upstream-source-tests", "status": "deferred-to-required-shard-gate"})
             else:
-                reference_temp = ROOT / "artifacts/reference-temp"
-                reference_temp.mkdir(exist_ok=True)
-                reference_env = dict(os.environ, CORDIS_DSH_REFERENCE=str(options.dsh.resolve()),
-                                     TEMP=str(reference_temp), TMP=str(reference_temp), TMPDIR=str(reference_temp))
-                for name in ("CORDIS_UPSTREAM_SELECTION", "CORDIS_UPSTREAM_REPORT"):
-                    reference_env.pop(name, None)
-                if not upgrade:
-                    run("source-excerpt-probes", ["node", "--test", "reference/probes/effects.test.mjs",
-                                                   "reference/probes/acceptance-contracts.test.mjs"], env=reference_env)
-                run("original-composition", ["node", "reference/node_modules/vitest/vitest.mjs", "run", *options.upstream_test, "--config", "reference/vitest-composition.config.mjs"], env=reference_env)
-                source_reports = [(OUT / "original-composition-reference.json", options.dsh.resolve())]
-                origin = options.origin or ROOT.parent / "upstream-cordis"
-                if origin.is_dir():
-                    env = dict(os.environ, CORDIS_DSH_REFERENCE=str(options.dsh.resolve()), CORDIS_ORIGIN_REFERENCE=str(origin.resolve()))
-                    for name in ("CORDIS_UPSTREAM_SELECTION", "CORDIS_UPSTREAM_REPORT"):
-                        env.pop(name, None)
-                    run("original-core-loader", ["node", "reference/node_modules/vitest/vitest.mjs", "run", "--config", "reference/vitest.config.mjs"], env=env)
-                    source_reports.append((OUT / "original-core-reference.json", origin.resolve()))
-                elif options.origin:
-                    raise FileNotFoundError(origin)
-                else:
-                    print("NOT RUN: original Core/Loader tests; supply --origin with the pinned test-source checkout.")
-                record_source_results(source_reports)
+                source_output = OUT / "upstream"
+                origin = (options.origin or ROOT.parent / "upstream-cordis").resolve()
+                batch = os.environ.get("GITHUB_RUN_ID")
+                batch = batch + ":" + os.environ["GITHUB_RUN_ATTEMPT"] if batch else "local-" + str(time.time_ns())
+                command = [sys.executable, "scripts/verify_candidate_upstream.py"]
+                inputs = ["--dsh", options.dsh.resolve(), "--origin", origin, "--run-id", batch]
+                inventory = source_output / "discovery/inventory.json"
+                run("source-discovery", [*command, "discover", *inputs, "--output", source_output / "discovery"])
+                for shard in range(1, 5):
+                    run(f"source-shard-{shard}", [*command, "run", *inputs, "--inventory", inventory,
+                        "--shard", str(shard), "--output", source_output / f"shard-{shard}"])
+                run("source-union", [*command, "aggregate", "--input", source_output, "--inventory", inventory,
+                    "--platform", platform.system(), "--run-id", batch, "--output", source_output / "summary.json"])
         else:
             print("LOCAL-ONLY: DSH differential not requested; no upstream-conformance claim.")
-        if options.candidate_dsh:
-            candidate_runner = ["node", "--experimental-transform-types", "reference/run-upgrade-reference.mjs",
-                                "--candidate", f"--dsh={options.candidate_dsh.resolve()}"]
-            candidate_core = run("candidate-core", [*candidate_runner, "--established"])
-            compare("candidate-core-differential", candidate_core, jit)
-            candidate_upgrade = run("candidate-upgrade", candidate_runner)
-            compare("candidate-upgrade-differential", candidate_upgrade, upgrade_jit)
         if options.aot:
             run("aot-publish", ["dotnet", "publish", "tests/Cordis.Conformance", "-c", "Release", "-r", rid,
                                 "-p:PublishAot=true", "-p:NuGetLockFilePath=obj/aot.packages.lock.json", "-o", ROOT / "artifacts/aot"])
@@ -491,7 +470,7 @@ def main():
         (OUT / "verification.json").write_text(json.dumps({"status": status, "commit": commit, "workingTree": dirty,
             "platform": platform.platform(), "rid": rid, "sdkVersion": sdk_version,
             "runId": os.environ.get("GITHUB_RUN_ID"), "runAttempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
-            "candidateSourceAdaptation": candidate_identity,
+            "sourceAdaptation": source_identity,
             "checkoutRoot": str(ROOT.resolve()),
             "testResults": {"directory": str(test_results.resolve()), "sha256": {
                 path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(test_results.glob("*.trx"))

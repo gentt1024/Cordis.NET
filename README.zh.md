@@ -4,7 +4,7 @@
 
 Cordis.NET 是固定 DSH 所维护 Cordis 运行时及通用应用基础设施的忠实、地道 .NET port。可以编写普通 C# 插件和服务、组合应用，或向 .NET／Web 客户端开放选定服务。Remote 是可选边界；普通插件开发不需要 Node。
 
-Cordis.NET 独立维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。行为基线为 deepseek-ai/deepseek-harness 的 639ed015397290b3745d163aafe02ffee4aa3f84，其中 vendored Cordis 版本为 4.0.4；任意 TypeScript 插件不是支持的部署格式。
+Cordis.NET 独立维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。行为基线为 deepseek-ai/deepseek-harness 的 687f282e8625c6b8d11ff58211a90524be2e4317，其中 vendored Cordis 版本为 4.0.4；任意 TypeScript 插件不是支持的部署格式。
 
 ## 从任务开始
 
@@ -18,7 +18,7 @@ Cordis.NET 独立维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方�
 
 ## 选择包批次
 
-从 NuGet 安装 `0.2.0-alpha.5.2`。[发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2)同时提供浏览器运行时和作者工具归档。[当前支持](docs/development.zh.md#当前支持与发行状态)说明能力限制，[发行证据](docs/validation.zh.md#已发行版本证据)标明验证批次。
+当前源码准备 `0.2.1-alpha.1`，尚未发布。体验当前合同时请使用其验证后的本地 feed 和匹配生成工具。上一公开批次是 [0.2.0-alpha.5.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2)，不能与当前生成代码混用。能力限制见[当前支持](docs/development.zh.md#当前支持与发行状态)，批次身份见[发行证据](docs/validation.zh.md#已发行版本证据)。
 
 按[入门指南](docs/getting-started.zh.md)安装选定批次，无需 clone 即可运行。若要从源码探索相同的组合流程，使用 global.json 指定 SDK：
 

@@ -66,7 +66,8 @@ const history = historical.tests.map(record => {
 const reviewBytes = readFileSync(new URL('../docs/candidate-delta-review.json', import.meta.url));
 const review = JSON.parse(reviewBytes);
 const formal = JSON.parse(readFileSync(new URL('../upstream.lock.json', import.meta.url), 'utf8'));
-if (review.formal !== formal.harness.commit) throw new Error('Candidate review has a different formal baseline');
+const previous = JSON.parse(readFileSync(new URL('./upgrade-source.json', import.meta.url), 'utf8'));
+if (review.formal !== previous.commit || formal.harness.commit !== adaptation.upstreamCommit) throw new Error('Review ancestry or formal source differs');
 const nativeDeltaReview = validateCandidateReview(review, frozen, {
   blobFor: file => gitBlob(dsh, manifest.dsh, file),
   readNative: file => { const bytes = readFileSync(new URL('../' + file, import.meta.url));
@@ -92,7 +93,7 @@ const tests = frozen.inventory.map(([suite, file, name, ordinal]) => {
 });
 if (new Set(tests.map(test => test.id)).size !== tests.length) throw new Error('Duplicate candidate stable identity');
 writeFileSync(target, JSON.stringify({ format: 'cordis-candidate-inventory/v1', targetCommit: manifest.dsh,
-  sourceAdaptation: adaptation, formalBaselineUnchanged: true, discoverySha256: sha256(readFileSync(options.inventory)), runId: frozen.runId,
+  sourceAdaptation: adaptation, formalBaseline: formal.harness.commit, discoverySha256: sha256(readFileSync(options.inventory)), runId: frozen.runId,
   meaning: 'Runtime instance discovery and retained historical scope. Execution receipts and native assertion correspondence remain separate.',
   tests, historicalTests: history, excludedSourceTests: manifest.excludedSourceTests,
   nativeDeltaReview: { sha256: sha256(reviewBytes), ...nativeDeltaReview },

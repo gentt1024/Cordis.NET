@@ -1,4 +1,4 @@
-// The candidate has its own immutable identity; the formal reference remains unchanged.
+// The reviewed source assembly and original suites are selected by the formal lock.
 import { readFileSync, existsSync, statSync, realpathSync, lstatSync, symlinkSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -8,6 +8,9 @@ import ts from './candidate-tools/node_modules/typescript/lib/typescript.js';
 export const manifest = JSON.parse(readFileSync(new URL('./candidate-manifest.json', import.meta.url), 'utf8'));
 if (manifest.dsh !== 'fba488001a6c2d37787d800beeab54a770c826a1' ||
     manifest.origin !== '56b3d4f725681cf4556c1a8695a709cc3b6eed74') throw new Error('Unreviewed candidate identity');
+const lock = JSON.parse(readFileSync(new URL('../upstream.lock.json', import.meta.url), 'utf8'));
+if (manifest.upstreamDsh !== lock.harness.commit ||
+    lock.harness.sourceAdaptation !== 'reference/' + manifest.sourceAdaptation) throw new Error('Source manifest differs from formal lock');
 export const toolRequire = createRequire(new URL('./candidate-tools/package.json', import.meta.url));
 export function checkout(path, pin) {
   const root = realpathSync(resolve(path));

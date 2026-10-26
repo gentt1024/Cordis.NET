@@ -2,12 +2,14 @@
 
 [English](upstream.md)
 
+锁定的上游提交与本地装配的验证提交是不同身份。`harness.sourceAdaptation` 选择[已审补丁记录](../reference/candidate-adaptation.json)，绑定上游树、唯一改动的实现文件、补丁摘要及可重建的派生提交。上游原始测试未改。文件名沿用 S10 发现阶段的名称，正式锁现选择该记录。native 适配见[兼容性](compatibility.zh.md)，限定范围见[能力覆盖](candidate-coverage.zh.md)。
+
 ## 锁定基线
 
 | 角色 | 仓库 | 修订或版本 |
 |---|---|---|
-| 行为目标 | `deepseek-ai/deepseek-harness` | `639ed015397290b3745d163aafe02ffee4aa3f84` |
-| Harness 发布标签 | DeepSeek Harness | `0.2.0-rc.2` |
+| 行为目标 | `deepseek-ai/deepseek-harness` | `687f282e8625c6b8d11ff58211a90524be2e4317` |
+| Harness 发布标签 | DeepSeek Harness | `0.2.1-rc.2` |
 | Vendored 包 | `@deepseek-ai/cordis` | `4.0.4` |
 | Core 与 loader 来源 | `cordiverse/cordis` | `56b3d4f725681cf4556c1a8695a709cc3b6eed74` |
 | 上游记录的扩展来源 | `deepseek-harness/cordis` | `abb0a307cb1d3b0947f455d590cf5ba922d4caa4` |

@@ -2,7 +2,7 @@
 
 [English](candidate-coverage.md)
 
-本索引沿用 2026-10-22 升级调查的 C01–C22 能力编号。上游候选固定为 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`；当前验证使用派生候选 `fba488001a6c2d37787d800beeab54a770c826a1`，包含[明确记录的 Windows manifest 修复](compatibility.zh.md#候选-windows-manifest-路径适配2026-10-23)；Core/Loader 原始来源为 `56b3d4f725681cf4556c1a8695a709cc3b6eed74`。正式[行为锁](../upstream.lock.json)仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`。S1–S9 是明确限定的候选适配，不构成基线晋升。
+本索引保留升级调查的 C01–C22 编号及 S1–S10 审查记录。正式[行为锁](../upstream.lock.json)现选择 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`（`0.2.1-rc.2`）和已记录的 Windows 源码适配，执行身份为 `fba488001a6c2d37787d800beeab54a770c826a1`。Core/Loader 来源仍为 `56b3d4f725681cf4556c1a8695a709cc3b6eed74`。晋升保留具名 native 适配与支持边界，不宣称覆盖全部 DSH 产品。
 
 每行列出实现及负责验证该能力的检查，不宣称每个上游 setup、helper 或断言均已逐项匹配。“已实现”“已执行”“已审查断言”仍遵循各自独立的[兼容性定义](compatibility.zh.md#状态词汇)。不可变的[历史 inventory](upstream-tests.json)及其原有裁决保持不变。原始源码用例通过证明源码执行；native 消费者通过证明该消费者的合同。两者单独都不能证明全部断言等价。
 

@@ -16,13 +16,15 @@ import { runTimerProbes } from './timer-probes.mjs';
 const arg = process.argv.find(a => a.startsWith('--dsh='));
 if (!arg) throw new Error('Usage: node --experimental-transform-types reference/run-upgrade-reference.mjs --dsh=/fixed/source');
 assert.ok(Number(process.versions.node.split('.')[0]) >= 24, 'Use Node >=24 for the fixed source');
-const candidate = process.argv.includes('--candidate');
-const root = candidate ? realpathSync(resolve(arg.slice(6))) : resolve(arg.slice(6));
-const inventory = JSON.parse(readFileSync(new URL(candidate ? './candidate-source.json' : './upgrade-source.json', import.meta.url), 'utf8'));
-assert.equal(inventory.commit, candidate ? 'fba488001a6c2d37787d800beeab54a770c826a1' : '639ed015397290b3745d163aafe02ffee4aa3f84');
-const candidateSupport = candidate ? await import('./candidate-support.mjs') : undefined;
-if (candidate) candidateSupport.bindTools(root);
-const candidateSource = candidateSupport?.sourceResolver(root);
+const root = realpathSync(resolve(arg.slice(6)));
+const inventory = JSON.parse(readFileSync(new URL('./candidate-source.json', import.meta.url), 'utf8'));
+const lock = JSON.parse(readFileSync(new URL('../upstream.lock.json', import.meta.url), 'utf8'));
+const adaptation = JSON.parse(readFileSync(new URL('../' + lock.harness.sourceAdaptation, import.meta.url), 'utf8'));
+assert.equal(lock.harness.commit, adaptation.upstreamCommit);
+assert.equal(inventory.commit, adaptation.commit);
+const candidateSupport = await import('./candidate-support.mjs');
+candidateSupport.bindTools(root);
+const candidateSource = candidateSupport.sourceResolver(root);
 const local = {
   '@deepseek-ai/cordis': 'vendor/cordis/src/index.ts',
   '@deepseek-ai/cosmokit': 'vendor/cosmokit/src/index.ts',
@@ -40,10 +42,10 @@ const local = {
 };
 const loaded = new Set();
 const require = createRequire(pathToFileURL(resolve(root, 'package.json')));
-const hostRequire = candidateSupport?.toolRequire ?? createRequire(import.meta.url);
+const hostRequire = candidateSupport.toolRequire;
 const hooks = registerHooks({
   resolve(specifier, context, nextResolve) {
-    const filename = candidateSource?.(specifier);
+    const filename = candidateSource(specifier);
     if (filename) return { url: pathToFileURL(filename).href, shortCircuit: true };
     if (local[specifier]) return { url: pathToFileURL(resolve(root, local[specifier])).href, shortCircuit: true };
     try { return nextResolve(specifier, context); }

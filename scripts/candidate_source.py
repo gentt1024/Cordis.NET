@@ -1,4 +1,4 @@
-"""Rebuild the reviewed candidate adaptation without changing its upstream checkout."""
+"""Rebuild the locked source adaptation without changing its upstream checkout."""
 import argparse
 import hashlib
 import json
@@ -28,6 +28,15 @@ def identity():
             "Candidate commit object changed")
     require(value["commitObject"].startswith(f'tree {value["tree"]}\nparent {UPSTREAM}\n'),
             "Candidate ancestry changed")
+    return value
+
+
+def locked_identity():
+    value = identity()
+    lock = json.loads((ROOT / "upstream.lock.json").read_text(encoding="utf8"))["harness"]
+    require(lock["commit"] == value["upstreamCommit"] and
+            (ROOT / lock["sourceAdaptation"]).resolve() == RECORD.resolve(),
+            "Source adaptation differs from the formal behavior lock")
     return value
 
 
@@ -68,5 +77,6 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True, help="New checkout directory")
     parser.add_argument("--source", type=Path, help="Existing local upstream repository; fetched at the same fixed SHA")
     args = parser.parse_args()
+    locked_identity()
     value = prepare(args.output.resolve(), args.source.resolve() if args.source else None)
     print(f'Prepared candidate {value["commit"]} from upstream {value["upstreamCommit"]}')

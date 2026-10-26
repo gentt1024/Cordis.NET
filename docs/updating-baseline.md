@@ -16,3 +16,11 @@
 7. Commit lock, source, mappings and evidence together. Record platform limits. Generate the
    source ZIP with `python scripts/source-archive.py`; it requires a clean committed tree and
    validates extracted paths, project references and every tracked file's SHA-256.
+
+The 0.2.1-rc.2 promotion reuses the reviewed source assembly in
+`reference/candidate-adaptation.json`. `harness.commit` is the real upstream
+commit; `harness.sourceAdaptation` selects its exact local patch. The derived
+commit is reconstructed, never fetched as an upstream ref. Current CI and
+release share the discovery/shard/union workflow. Preserve the original
+commit object, old source inventory and dated failures when preparing a later
+baseline; do not relabel them as new validation.

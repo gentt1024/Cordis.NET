@@ -4,7 +4,7 @@
 
 ## 当前支持与发行状态
 
-当前源码对应 `0.2.0-alpha.5.2`，[匹配发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2)记录分发与发布结果。原 alpha.5 封存保留为历史记录，不再作为发布候选。[验证索引](validation.zh.md#已发行版本证据)记录验过的源码与包；[发行准备](publication-readiness.zh.md)负责发行门禁。历史决定通过下方固定提交链接追溯。
+当前源码基于已晋升的 DSH 0.2.1-rc.2 及已记录的 Windows 适配，准备 `0.2.1-alpha.1`。PR 通过本身不选定 tag 或公开包。[验证记录](validation.zh.md)区分历史结果与当前候选，[发行准备](publication-readiness.zh.md)负责发行门禁。已发布 alpha.5.2 及更早制品保持不变。
 
 | 范围 | 当前用法与边界 |
 |---|---|
@@ -21,7 +21,7 @@
 
 | 职责 | 固定上游／.NET 适配 | 源码所有者 | 主要检查与独立消费 |
 |---|---|---|---|
-| 执行与服务视图 | [vendor/cordis/src](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84/vendor/cordis/src)；类型化视图替代上下文 JS 重绑定 | [Core](../src/Cordis.Core)：Context、Fiber、ReflectService | [CoreTests](../tests/Cordis.Core.Tests/CoreTests.cs)；隔离包消费 |
+| 执行与服务视图 | [vendor/cordis/src](https://github.com/deepseek-ai/deepseek-harness/tree/687f282e8625c6b8d11ff58211a90524be2e4317/vendor/cordis/src)；类型化视图替代上下文 JS 重绑定 | [Core](../src/Cordis.Core)：Context、Fiber、ReflectService | [CoreTests](../tests/Cordis.Core.Tests/CoreTests.cs)；隔离包消费 |
 | 配置／Settings | packages/boot、packages/api；typed 字段和 STJ 复用现有写入者 | [Composition](../src/Cordis.Composition)：配置操作、SettingsForms | [ConfigurationEditTests](../tests/Cordis.Composition.Tests/ConfigurationEditTests.cs)；[Settings 调用方](../scripts/verify-typert-dotnet.py) |
 | 安装 | packages/boot；NuGet／SDK 准备保留操作／任务所有权 | [Extensions](../src/Cordis.Extensions)、[Clr](../src/Cordis.Clr) 工具链 | [ConfigurationSessionTests](../tests/Cordis.Extensions.Tests/ConfigurationSessionTests.cs)；[部署](../scripts/verify-clr-deployment.py) |
 | 模型／后端 | packages/typert/generator；Roslyn 和 STJ 替代 TS 分析／codec | [Model](../tools/Cordis.Typert.Generator/Model)、[Generation](../src/Cordis.Composition/Generation)、MSBuild targets | [独立调用方](../scripts/verify-typert-dotnet.py)，含构建／打包／design-time 接线 |
@@ -192,8 +192,8 @@ python scripts/test-map.py
 
 运行时、打包、兼容性或发布改动应运行 `python scripts/verify.py`。纯文档改动只需运行文档检查并进行针对性审阅，不要求执行全部 Windows、Linux 或 AOT 门禁。
 
-PR 和主分支 CI 在两个平台分别并行运行 .NET 验证与固定上游源码测试。四个隔离任务分担 4,800 个 linked-resolution 矩阵用例，每组内仍串行执行，第一个任务还执行其余原始套件。每个任务都发现完整的原始用例清单。最终的 `verify (windows-latest)` 和 `verify (ubuntu-24.04)` 检查要求所有运行时任务及分片成功，同平台分片的源码和工具链身份一致，且执行用例的并集与发现清单精确匹配。缺失、重复、失败或意外跳过均使门禁失败。已知的上游文件系统能力跳过仍单独记录；被分片过滤排除的矩阵用例不计作已执行。
+PR 和主分支 CI 在两个平台分别并行运行 .NET 验证与固定上游源码测试。四个隔离任务分担 4,800 个 linked-resolution 矩阵用例，每组内仍串行执行，第一个任务还执行其余原始套件。每个任务都发现完整的原始用例清单。最终的 `verify (windows-latest)` 和 `verify (ubuntu-24.04)` 检查要求所有运行时任务及分片成功，同平台分片的源码和工具链身份一致，且执行用例的并集与发现清单精确匹配。缺失、重复、失败或意外跳过均使门禁失败。只接受锁定源码清单中明确记录的平台跳过，其余跳过均使门禁失败；被分片过滤排除的矩阵用例不计作已执行。
 
-CI 仅在配合上述必需分片门禁时使用 `verify.py --defer-upstream-source-tests`。此选项保留当次 .NET/DSH 轨迹差分，但自身不能证明原始源码测试覆盖。默认本地命令和发布流程仍执行完整原始套件，不跨 CI 运行复用测试结果。在新检出中可用 `python scripts/verify_upstream.py run --dsh <fixed-dsh> --origin <fixed-cordis> --shard 1 --run-id <batch-id>` 复现分片，编号为 1 至 4；保留各任务 `artifacts/upstream-shard-*` 下的 JSON 和日志以供汇总。本地四个分片及 `aggregate` 必须使用同一个唯一的 `--run-id`。托管任务自动绑定 workflow run 和 attempt，聚合会拒绝其他批次或源码字节不同的收据。
+CI 与 release 均调用 `.github/workflows/upstream.yml`，执行锁定源码发现、每平台四个分片及严格并集。既有 `verify (windows-latest)` 与 `verify (ubuntu-24.04)` 检查要求 native/runtime、可移植作者消费和源码门禁全部成功。`verify.py --defer-upstream-source-tests` 保留 native/源码轨迹差分，只与这个独立必需门禁配合使用。不延后时，`verify.py --dsh ... --origin ...` 在本地发现并执行相同的完整四分片源码范围。不跨运行复用收据。定向复现使用既有 `scripts/verify_candidate_upstream.py` 的 discover/run/aggregate 命令，共用固定 inventory 与 `--run-id`；文件名沿用 S10，源码身份现须匹配正式锁。
 
 验证脚本回归套件也实际运行候选收集器。执行 `python -m unittest discover -s scripts/tests` 前，先用 `npm ci --prefix reference/candidate-tools --ignore-scripts` 安装固定工具依赖；安装工具不会切换行为基线。

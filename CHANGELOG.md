@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1-alpha.1] - Unreleased
+
+- Promotes the fixed DSH 0.2.1-rc.2 source and reviewed Windows manifest adaptation. CI and release use one complete source discovery/shard/union gate; historical inventories and platform exclusions remain explicit.
+- Includes the reviewed S1–S9 native management, readiness, Remote access/events/metadata and browser release coordination contracts. See the paired capability and compatibility documentation for supported scope and platform adaptations.
+- Shares proven static C# input defaults and finite projections across generated Host and independent saved-model consumers. Omission remains distinct from null; output decoding does not apply input defaults. Re-extract models and rebuild providers/clients with matching packages.
+- Limits generic expansion along the active recursive path rather than total graph size. Arbitrary author converter execution remains unsupported; built-in .NET string-enum projection is consumed independently and unsupported Web projection is explicitly refused.
+- No public package or tag has been created for this version.
+
 ## [0.2.0-alpha.5.2]
 
 Publication and exact artifact identities are recorded in the matching GitHub release.

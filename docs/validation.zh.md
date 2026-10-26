@@ -2,6 +2,10 @@
 
 [English](validation.md)
 
+## 0.2.1-alpha.1 准备
+
+PR #26 已 squash 合入为 `19abc55163eb415de3d261a8f153453413d789ca`，源码树与 [CI 40288031108](https://github.com/gentt1024/Cordis.NET/actions/runs/40288031108) 验过的候选相同。该运行有 15 个成功作业和 3 个可选 candidate 跳过，不是本次新版本或正式锁的验证。发行分支晋升已审 S10 源码装配，使用 CI 与 release 共用的工作流将既定范围设为必需。新版本批次证据待完成，尚未创建发行 tag 或公开包。下方带日期的章节保留原始证据与晋升前范围。
+
 ## 候选 S10 同批门禁，晋升前验证
 
 S10 验证汇合后的 S1–S9 实现，不修改 `upstream.lock.json` 或历史 `docs/upstream-tests.json`。正式基线仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`；候选证据独立固定到派生提交 `fba488001a6c2d37787d800beeab54a770c826a1`，其上游基础为 `687f282e8625c6b8d11ff58211a90524be2e4317`。本验证片不引入新的应用公开 API。

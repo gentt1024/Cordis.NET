@@ -1,7 +1,6 @@
 """Discover and execute the separately pinned S10 candidate original-suite union.
 
-The reviewed candidate scope and per-file counts are independent of the formal
-behavior lock. Discovery is not a pass and never changes historical mappings.
+The reviewed scope and per-file counts are bound to the formal behavior lock. Discovery is not a pass and never changes historical mappings.
 """
 import argparse
 from collections import Counter
@@ -14,8 +13,8 @@ import platform
 import subprocess
 import time
 
-from verify import ROOT, source_hashes
-from candidate_source import COMMIT as DSH, identity as source_adaptation
+from verify import ROOT, source_hashes, git_checkout, archive_manifest
+from candidate_source import COMMIT as DSH, locked_identity as source_adaptation
 from verify_upstream import (SHARDS, MATRIX, aggregate_reports, matrix_selection, plan, read, require, run_identity,
                              validate_inventory, validate_report, write)
 
@@ -37,6 +36,10 @@ def digest(path):
 
 def git(root, *args):
     return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
+
+
+def native_commit():
+    return git(ROOT, "rev-parse", "HEAD") if git_checkout() else archive_manifest()["commit"]
 
 
 def manifest():
@@ -217,7 +220,7 @@ def run_shard(dsh, origin, frozen_path, output, shard, batch):
     trees = fixed_sources(dsh, origin)
     require(trees == frozen["sourceTrees"], "Candidate source trees differ from discovery")
     require(expected_files(dsh, origin) == frozen["sourceFiles"], "Candidate test source differs from discovery")
-    identity = {"commit": git(ROOT, "rev-parse", "HEAD"), "platform": platform.system(),
+    identity = {"commit": native_commit(), "platform": platform.system(),
                 "architecture": platform.machine(), "dsh": DSH, "origin": ORIGIN,
                 "sourceSha256": before, "tools": tool_identity(), "runId": batch,
                 "inventorySha256": digest(frozen_path), "sourceTrees": trees, "sourceAdaptation": source_adaptation()}
@@ -295,7 +298,7 @@ def aggregate(directory, frozen_path, expected_commit, expected_platform, batch)
     result = aggregate_reports(reports, expected_commit, expected_platform, dsh=DSH, origin=ORIGIN,
                                counts=approved_counts(), skippable=rules)
     result["sourceAdaptation"] = source_adaptation()
-    result["meaning"] = "Complete frozen derived candidate original-suite union for this batch and platform. Does not promote the formal baseline or prove native assertion equivalence."
+    result["meaning"] = "Complete locked derived-source original-suite union for this batch and platform. Does not prove native assertion equivalence."
     return result
 
 
@@ -324,7 +327,7 @@ def main():
     elif args.command == "run":
         run_shard(args.dsh.resolve(), args.origin.resolve(), args.inventory.resolve(), args.output.resolve(), args.shard, batch)
     else:
-        value = aggregate(args.input, args.inventory, git(ROOT, "rev-parse", "HEAD"), args.platform, batch)
+        value = aggregate(args.input, args.inventory, native_commit(), args.platform, batch)
         require(not args.output.exists(), "Do not overwrite candidate union evidence")
         write(args.output, value)
         print(f"PASS complete candidate union: {value['passed']} passed, {len(value['skipped'])} explicit skips")

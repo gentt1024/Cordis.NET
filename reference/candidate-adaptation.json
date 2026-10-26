@@ -14,5 +14,5 @@
       "afterBlob": "39050136aeb434b528d9cecb68daea1c68c23919"
     }
   },
-  "testPolicy": "Original test files, assertions and platform skips are unchanged. This derived commit is not an upstream release or a formal baseline promotion."
+  "testPolicy": "Original test files, assertions and platform skips are unchanged. The formal lock selects the upstream source and this exact local adaptation. The derived commit remains a local source assembly, not an upstream release."
 }

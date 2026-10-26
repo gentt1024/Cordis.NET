@@ -67,6 +67,20 @@ class CandidateSourceTests(unittest.TestCase):
         self.assertEqual(candidate.git(self.source, "status", "--porcelain"), before)
         self.assertEqual(candidate.git(self.source, "rev-parse", "HEAD"), self.value["upstreamCommit"])
 
+    def test_formal_lock_selects_the_recorded_source_before_preparation(self):
+        lock = {"harness": {"commit": self.value["upstreamCommit"], "sourceAdaptation": "adaptation.json"}}
+        path = self.root / "upstream.lock.json"
+        path.write_text(json.dumps(lock), encoding="utf8")
+        with patch.object(candidate, "ROOT", self.root):
+            self.assertEqual(candidate.locked_identity()["commit"], self.value["commit"])
+            for field, wrong in (("commit", "0" * 40), ("sourceAdaptation", "unselected.json")):
+                original = lock["harness"][field]
+                lock["harness"][field] = wrong
+                path.write_text(json.dumps(lock), encoding="utf8")
+                with self.assertRaisesRegex(ValueError, "formal behavior lock"):
+                    candidate.locked_identity()
+                lock["harness"][field] = original
+
     def test_existing_output_is_never_reset(self):
         output = self.root / "existing"
         output.mkdir()

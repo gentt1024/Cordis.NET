@@ -1,6 +1,6 @@
 {
   "format": "cordis-candidate-scope/v1",
-  "purpose": "Candidate validation only; does not change upstream.lock.json or promote a baseline.",
+  "purpose": "Fixed 0.2.1-rc.2 original-suite scope selected by upstream.lock.json, including the recorded local source adaptation. Source execution does not imply complete native assertion equivalence.",
   "dsh": "fba488001a6c2d37787d800beeab54a770c826a1",
   "origin": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
   "extensionOrigin": "abb0a307cb1d3b0947f455d590cf5ba922d4caa4",

@@ -4,7 +4,7 @@
 
 Cordis.NET is a faithful, idiomatic .NET port of the fixed DSH-maintained Cordis runtime and generic application infrastructure. Build ordinary C# plugins and services, compose applications, or expose selected services to .NET and Web clients. Remote is optional; ordinary plugin development does not require Node.
 
-Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft. The behavior baseline is deepseek-ai/deepseek-harness at 639ed015397290b3745d163aafe02ffee4aa3f84, whose vendored Cordis reports 4.0.4; arbitrary TypeScript plugins are not a supported deployment format.
+Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft. The behavior baseline is deepseek-ai/deepseek-harness at 687f282e8625c6b8d11ff58211a90524be2e4317, whose vendored Cordis reports 4.0.4; arbitrary TypeScript plugins are not a supported deployment format.
 
 ## Start with your task
 
@@ -18,7 +18,7 @@ Optional Hosting integrates Microsoft Generic Host. Extensions provides selected
 
 ## Select a package batch
 
-Install `0.2.0-alpha.5.2` from NuGet. The [release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2) also provides browser runtime and author-tool archives. See [current support](docs/development.md#current-support-and-release-status) for capability limits and [release evidence](docs/validation.md#released-version-evidence) for the verified batch.
+This source prepares `0.2.1-alpha.1`; it is not yet published. Use its validated local feed and matching generated tools to try the current contracts. The previous published batch is [0.2.0-alpha.5.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2). Do not mix that batch with current generated code. See [current support](docs/development.md#current-support-and-release-status) and [release evidence](docs/validation.md#released-version-evidence).
 
 Follow [getting started](docs/getting-started.md) to install the selected batch and run without cloning the repository. To explore the same composition workflow from source with the SDK in global.json:
 

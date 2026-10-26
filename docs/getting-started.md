@@ -2,6 +2,8 @@
 
 [中文](getting-started.zh.md)
 
+The current source prepares `0.2.1-alpha.1`, which requires a supplied validated feed until publication. The older published batch below retains its own contracts; rebuild generated consumers when changing batches.
+
 ## Choose the batch and SDK
 
 Use .NET 10 and the SDK selected by the chosen batch's global.json. This source checkout uses 10.0.111. Pick an exact Cordis.NET package version and feed from its release or [validation receipt](validation.md#released-version-evidence). For `0.2.0-alpha.5.2`, check the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2) for NuGet availability and the browser client archive. Keep all packages and tools from one validated batch. Do not substitute the original alpha.5 archive or same-version CI packages.
