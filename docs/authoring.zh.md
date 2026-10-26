@@ -535,6 +535,10 @@ await events.run(signal, host => onReady(host.home))
 
 Host 仍须明确选择生成的 forwarder；模型包含声明不会自动公开事件。普通参数和 waterfall request 描述 Host 输出，handler reply 描述 Host 输入，`next()` 描述后续链的输出。因此，条件省略可能使 reply 与 continuation 类型不同。`undefined`、显式 `null` 和调用 `next()` 仍是独立选择。事件 Schema 目录使用 `<event>/args/<index>`、`request`、`reply` 和 `next` key。JSON Schema 描述实际存在的 JSON 值；可选 `undefined` 保留在生成的 TypeScript 合同中。
 
+独立 .NET Remote 后端保留 struct／readonly record struct 的值类型形状，以及 `Response<T>` 等泛型定义，并按实际闭合参数展开 JSON 根和空性查询。当前支持无约束的数据类型参数，不支持任意开放泛型端点或带约束类型执行。只读成员保持 getter-only，由生成的 JSON 构造参数接收 wire 值，不复制 getter 或作者构造器体。只有纯输出载体可以省去未知初始化表达式，其数据来自实际返回值；输入和双向载体仍拒绝这些表达式，包括 `new(false, [])`，不会静默改成 null 或 `default`。普通 `emit-dotnet-data` 仍遵守其单独列出的较窄支持范围。
+
+.NET 声明投影还识别 BCL `ImmutableArray<T>`、`DateTimeOffset`，以及施加于源码枚举的默认泛型 `JsonStringEnumConverter<TEnum>`。生成 DTO 保留这些原生类型和已知转换器，不需要 BCL 来源模型或影子 DTO。枚举别名、flags 和显式 `JsonStringEnumMemberName` 名称保留 STJ 行为；共同模型保留源码枚举的字段声明顺序，别名顺序改变也会改变模型身份。没有保留声明顺序的带别名模型需重新提取，不增加另一代模型格式或转换路径。任意 converter 实现仍被拒绝。生成式 Remote 结果解码使用平台 codec 和共同声明空性，包括 STJ metadata 丢失的集合元素注解。生成调用合同时，客户端需重新生成并使用匹配的运行包。独立 Web 后端仍拒绝带字符串转换器的枚举。
+
 当前后端接受普通闭合公开 DTO class/record、受支持的标量、递归引用、数组、框架集合接口和 string-key 字典，保留 wire 名称、required/nullable 字段及受支持的序列化包含选项。不支持的 serializer policy、自定义 converter、多态、数据继承、应用泛型 DTO、非 string 字典 key、多维数组和 binary attachment metadata 会明确拒绝。拒绝不等于完成；运行绑定及既有运行时制品发射器保留已成立的支持面。[后端处置表](development.zh.md#alpha5-独立后端处置)按事实与实际用途区分这些限制。
 
 使用当前 compiler 重新提取声明模型，并重新构建受维护消费者。缺失必需结构化引用或来源事实的输入，以及旧模型输入，直接拒绝，不进行转换。保存制品的身份只验证已保存事实，不能补回遗漏、证明所有作者 JSON 配置或建立与任意 DLL 的对应关系。当前只有一个合同，不保留历史格式 reader 或版本化 Remote 兼容路线。
@@ -651,7 +655,7 @@ public Task<Item> EchoAsync(Item value) => Task.FromResult(value);
 
 ### 保存模型客户端中的数值枚举
 
-Remote 和普通数据声明可以继续使用数值 C# 枚举，在作者的 JsonSerializerContext 中注册 DTO，并沿用现有 build/pack 与引用模型输入。独立 .NET 合同生成自己的枚举声明，保留底层整数类型、具名常量、别名、Flags 和常量默认值。Web 消费者使用 number：没有具名成员的 `(MotionStatus)37` 仍表示为 `37`。可空与数组用法沿用相同声明引用，独立消费者无需提供者 DLL。静态投影支持具有显式源事实的顶层公开枚举，拒绝字符串枚举策略、自定义枚举 converter 和嵌套声明。Host 实际元数据仍保留自身支持的 converter 行为。上游区别与数值精度边界见[兼容说明](compatibility.zh.md#数值枚举投影2026-10-16)。
+Remote 和普通数据声明可以继续使用数值 C# 枚举，在作者的 JsonSerializerContext 中注册 DTO，并沿用现有 build/pack 与引用模型输入。独立 .NET 合同生成自己的枚举声明，保留底层整数类型、具名常量、别名、Flags 和常量默认值。Web 消费者使用 number：没有具名成员的 `(MotionStatus)37` 仍表示为 `37`。可空与数组用法沿用相同声明引用，独立消费者无需提供者 DLL。静态投影支持具有显式源事实的顶层公开枚举。独立 .NET 客户端另支持内置的默认 `JsonStringEnumConverter<TEnum>` 策略及其整数回退；这不表示每个 Web 后端都支持字符串枚举。未知自定义 converter 和嵌套声明仍拒绝。Host 实际元数据仍保留自身支持的 converter 行为。上游区别与数值精度边界见[兼容说明](compatibility.zh.md#数值枚举投影2026-10-16)。
 
 ```csharp
 public enum MotionStatus { Unavailable = -1, Succeeded = 4 }
@@ -718,6 +722,32 @@ const result = await settings['settings/openSettingsDocument']({})
 | AllowReadingFromString | JSON number 或有限数值的原生数字字符串 | JSON number |
 | WriteAsString／AllowNamedFloatingPointLiterals／其他组合 | 拒绝受影响的 metadata 投影 | 拒绝受影响的 metadata 投影 |
 
-支持 byte/sbyte、short/ushort、int/uint、long/ulong、float/double 和 decimal，以及现有 nullable 与容器组合。数字字符串语法区分类型，原生解析仍检查位宽和溢出；未知 pattern 拒绝。省略成员保留实际 serializer 的默认行为，显式零和 false 保持存在。使用声明的 wire 字段名；当前 Schema 准入没有完整实现底层 Web serializer 的大小写不敏感行为。[兼容说明](compatibility.zh.md#metadata-数值方向2026-10-15)记录该边界及 exporter 与原生解析器的差异。
+支持 byte/sbyte、short/ushort、int/uint、long/ulong、float/double 和 decimal，以及现有 nullable 与容器组合。数字字符串语法区分类型，原生解析仍检查位宽和溢出；未知 pattern 拒绝。支持的 Remote 静态默认值之外，省略成员保留实际 serializer 的行为，显式零和 false 保持存在。使用声明的 wire 字段名；当前 Schema 准入没有完整实现底层 Web serializer 的大小写不敏感行为。[兼容说明](compatibility.zh.md#metadata-数值方向2026-10-15)记录该边界及 exporter 与原生解析器的差异。
 
 生成 JS unary 失败继续由 `result.error.code` 分类；本地捕获的传输错误同时原样保存在 `result.error.cause`，包括非 Error 值。取消原因保留对应固定 DSH，普通 carrier 原因保留是 Cordis.NET 的明确扩展。远端业务错误只按 code/message/details 重建。cause 不是 wire 数据或自动日志政策，调用不会自动重放。应用可以在生成调用和 Connection 寿命内判别自己拥有的原因，不应无限期保留承载资源的错误对象。
+
+## Remote 输入的静态数据默认值
+
+静态数据默认值沿普通声明与生成 codec 使用：
+
+```csharp
+public sealed record Snapshot(int Id)
+{
+    public Policy Policy { get; init; } = new(false, []);
+}
+public sealed record Policy(bool Enabled, ImmutableArray<string> Overrides);
+```
+
+提取器保留精确构造类型、参数绑定和静态参数。支持范围为常量、null、空数组和后端已映射的有限 BCL 集合形状，以及由顶层、非泛型 primary record class 递归组合的数据值，其构造器只将参数赋给自动数据属性。没有自定义初始化器或必需 wire 字段约束的额外自动属性可保留 CLR 默认状态。空 byte 数组投影为原生 base64 字符串，普通序列投影为数组，受支持的字符串键字典投影为对象。不会重放自定义构造器／accessor 体、带行为的成员初始化器、可变静态状态、工厂或任意集合 builder。不支持的独立输入初始化器继续明确拒绝。旧模型若只保存了表达式，应正常重提取其所属源码模型，使用匹配 compiler/runtime 并重建生成式 provider 和客户端；不新增模型代际或 legacy 表达式解释器。
+
+生成 Host 绑定和独立 C# 客户端 metadata 使用同一声明事实。`CreateDeclared` 可接收 `TypertInputDefault` 查询，将其值体现为输入 Schema 的 `default` 注解。输入解码仅补齐省略且非必需的字段，然后执行正常 Schema 校验和 STJ 反序列化。显式 null 按声明空性处理；显式零、false 或对象值保持存在，必需字段仍须提供。查询返回 null 表示没有默认值，返回 JSON null 元素表示实际 null 默认值。
+
+独立客户端可从 `Client.Info.Descriptors` 取得方法，再使用 `method.Parameters[index].Input().Parse(json)` 或 strict 变体，将得到的 CLR 值正常交给生成方法。Host 参数 codec 在调用真实 Service 前应用相同默认值。codec 之外的普通 `JsonSerializer.Deserialize` 不是这套 Remote 输入解析器；单独的生成 JSON metadata 不会修复 STJ 在参数化构造器与 init 成员组合中的省略行为。
+
+输入默认值不填补缺失输出。`ResultSchema`、条件输出省略和必需结果检查仍使用自己的规则。普通纯数据后端和保存模型的 Web Schema 目录保留已说明的支持边界；共同声明事实不表示每个后端都执行每种默认值。
+
+这项省略规则是明确的 .NET 适配。固定 DSH 的对象 Schema emitter 保留成员类型和可选性，但不会把普通属性初始化器转换成默认值。它对 Remote 参数默认值的拒绝针对方法参数，不是 DTO 成员。上述 C# 规则让作者与独立 Remote 输入 codec 保持一致，提取阶段不执行初始化器。
+
+`TypertInputDefault` 公开是因为消费程序集中的生成代码需要把这项 metadata 交给 `CreateDeclared`。手写查询必须在 codec 寿命内保持确定性，返回有效、不可变的 wire JSON，不承担随请求变化的政策。必须保证 `JsonElement` 的有效期，例如从临时 document 克隆值。Schema 准备可能缓存查询结果，因此它不是逐请求工厂。生成查询读取提取事实，不执行作者初始化器；任意调用方提供的委托仍然是调用方代码。查询不承载应用 Context、服务查找或业务校验。新增工厂参数改变了 CLR 签名，生成式 provider 和客户端须使用匹配包重新构建。
+
+空性／默认查询图不再设总计 256 节点限制。已经访问的声明使用点直接复用，普通递归也如此；兄弟分支不累计到递归预算。为约束不断展开的泛型递归，同一遍历路径中同一泛型声明的活动使用点超过 256 个时拒绝。这是资源预算，不是无限展开的证明；超过预算的有限路径也会拒绝。其他后端的声明数量／深度限制、运行时输入默认遍历的深度保护仍各自保留。本次保留已成立的有限投影能力，不承诺任意 C# 图或任意初始化器执行。

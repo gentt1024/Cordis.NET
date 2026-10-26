@@ -12,10 +12,26 @@ internal sealed class NullabilityProjection
         bool? Getter = null,
         bool? Setter = null,
         int? Item = null,
-        string? ItemKey = null);
+        string? ItemKey = null)
+    {
+        internal Dictionary<string, string> Defaults
+        {
+            get;
+        } = new(StringComparer.Ordinal);
+    }
 
     private readonly Dictionary<string, int> ids = new(StringComparer.Ordinal);
     private readonly List<Node?> nodes = [];
+    private readonly Dictionary<string, int> activeInstantiations = new(StringComparer.Ordinal);
+
+    private void EnterInstantiation(string name)
+    {
+        activeInstantiations.TryGetValue(name, out var count);
+        if (count >= 256)
+            throw new InvalidDataException(
+                "Recursive generic nullability projection exceeds 256 active instantiations of " + name + ".");
+        activeInstantiations[name] = count + 1;
+    }
 
     internal static string Declaration(
         DeclarationReference root,
@@ -38,9 +54,34 @@ internal sealed class NullabilityProjection
 
         int Read(DeclarationReference reference, bool? getter = null, bool? setter = null)
         {
+            if (reference.Kind == "named" && types.TryGetValue(reference.Name, out var nullableType) &&
+                DeclarationWireProjection.Framework(nullableType) && nullableType.MetadataName == "System.Nullable`1")
+                return Read(
+                    reference.Arguments.Single() with
+                    {
+                        Nullability = "Annotated"
+                    },
+                    getter,
+                    setter);
             var key = JsonSerializer.Serialize(reference) + ":" + getter + ":" + setter;
             if (graph.ids.TryGetValue(key, out var found))
                 return found;
+            var instantiation = reference.Kind == "named" && reference.Arguments.Length > 0 ? reference.Name : null;
+            if (instantiation is not null)
+                graph.EnterInstantiation(instantiation);
+            try
+            {
+                return Populate(reference, getter, setter, key);
+            }
+            finally
+            {
+                if (instantiation is not null)
+                    graph.activeInstantiations[instantiation]--;
+            }
+        }
+
+        int Populate(DeclarationReference reference, bool? getter, bool? setter, string key)
+        {
             var id = graph.nodes.Count;
             graph.ids.Add(key, id);
             graph.nodes.Add(null);
@@ -62,7 +103,8 @@ internal sealed class NullabilityProjection
                         {
                             Nullable = true
                         };
-                    else if (type.MetadataName.StartsWith("System.Collections.Generic.", StringComparison.Ordinal))
+                    else if (type.MetadataName.StartsWith("System.Collections.Generic.", StringComparison.Ordinal) ||
+                             type.MetadataName == "System.Collections.Immutable.ImmutableArray`1")
                         node = node with
                         {
                             Item = Read(reference.Arguments[^1]),
@@ -98,7 +140,7 @@ internal sealed class NullabilityProjection
                                         DeclarationAttributeProjection.JsonPrefix + "JsonPropertyNameAttribute")
                                     .ToArray()),
                             naming);
-                        var value = member.Type!;
+                        var value = TypeSubstitution.Apply(member.Type!, type, reference.Arguments, types);
                         if (attributes.Any(attribute =>
                                 attribute.Name == "System.Diagnostics.CodeAnalysis.AllowNullAttribute"))
                             value = value with
@@ -111,6 +153,32 @@ internal sealed class NullabilityProjection
                             {
                                 Nullability = "NotAnnotated"
                             };
+                        var defaultTypeSupported = member.Type!.Kind != "named" ||
+                            !types.TryGetValue(member.Type.Name, out var defaultType) ||
+                            !defaultType.Attributes.Any(attribute => attribute.Name ==
+                                DeclarationAttributeProjection.JsonPrefix + "JsonConverterAttribute") ||
+                            defaultType.Kind == "enum" && KnownEnum(defaultType);
+                        if (defaultTypeSupported &&
+                            DeclarationAttributeProjection.Named(options, "Converters") is null &&
+                            !member.Required && !attributes.Any(attribute => attribute.Name is
+                                DeclarationAttributeProjection.JsonPrefix + "JsonRequiredAttribute" or
+                                DeclarationAttributeProjection.JsonPrefix + "JsonConverterAttribute") &&
+                            DeclarationDefaultProjection.Json(
+                                member.Initializer,
+                                (target, argument) =>
+                                {
+                                    if (!types.TryGetValue(target.Name, out var targetType))
+                                        return null;
+                                    var targetMember = targetType.Members.FirstOrDefault(value =>
+                                        value.Name == argument && value.Kind == "property");
+                                    return targetMember is null
+                                        ? null
+                                        : DeclarationWireProjection.MemberName(
+                                            argument,
+                                            DeclarationAttributeProjection.MemberWire(targetMember),
+                                            naming);
+                                }) is { } defaultJson)
+                            node.Defaults.Add(name, defaultJson);
                         AddProperty(
                             properties,
                             ambiguous,
@@ -128,6 +196,19 @@ internal sealed class NullabilityProjection
         }
     }
 
+    private static bool KnownEnum(DeclarationType type)
+    {
+        try
+        {
+            _ = DeclarationEnumProjection.Project(type);
+            return true;
+        }
+        catch (InvalidDataException)
+        {
+            return false;
+        }
+    }
+
     internal static string Native(
         NativeTypeReference root,
         IReadOnlyDictionary<string, NativeTypeDeclaration> types,
@@ -139,9 +220,33 @@ internal sealed class NullabilityProjection
 
         int Read(NativeTypeReference reference, bool? getter = null, bool? setter = null)
         {
+            if (reference.Kind == "nullable")
+                return Read(
+                    reference.Arguments.Single() with
+                    {
+                        Nullability = "Annotated"
+                    },
+                    getter,
+                    setter);
             var key = JsonSerializer.Serialize(reference) + ":" + getter + ":" + setter;
             if (graph.ids.TryGetValue(key, out var found))
                 return found;
+            var instantiation = reference.Kind == "named" && reference.Arguments.Length > 0 ? reference.Name : null;
+            if (instantiation is not null)
+                graph.EnterInstantiation(instantiation);
+            try
+            {
+                return Populate(reference, getter, setter, key);
+            }
+            finally
+            {
+                if (instantiation is not null)
+                    graph.activeInstantiations[instantiation]--;
+            }
+        }
+
+        int Populate(NativeTypeReference reference, bool? getter, bool? setter, string key)
+        {
             var id = graph.nodes.Count;
             graph.ids.Add(key, id);
             graph.nodes.Add(null);
@@ -159,12 +264,13 @@ internal sealed class NullabilityProjection
                 };
             else if (reference.Kind == "named" && types.TryGetValue(reference.Name, out var type))
             {
+                var bindings = TypeSubstitution.Bind(type, reference);
                 var ambiguous = new HashSet<string>(StringComparer.Ordinal);
                 foreach (var member in type.Members)
                 {
                     if (Ignored(member.Attributes))
                         continue;
-                    var value = member.Type;
+                    var value = TypeSubstitution.Apply(member.Type, bindings, types);
                     if (member.Attributes.Any(attribute =>
                             attribute.Name == "System.Diagnostics.CodeAnalysis.AllowNullAttribute"))
                         value = value with
@@ -177,6 +283,14 @@ internal sealed class NullabilityProjection
                         {
                             Nullability = "NotAnnotated"
                         };
+                    if (!member.Required && !member.JsonRequired &&
+                        DeclarationDefaultProjection.Json(
+                            member.Initializer,
+                            (target, argument) =>
+                                types.TryGetValue(target.Name, out var targetType)
+                                    ? targetType.Members.FirstOrDefault(value => value.Name == argument)?.WireName
+                                    : null) is { } defaultJson)
+                        node.Defaults.Add(member.WireName, defaultJson);
                     AddProperty(
                         properties,
                         ambiguous,
@@ -217,7 +331,52 @@ internal sealed class NullabilityProjection
         }
     }
 
-    private string Emit(string method)
+    private string Emit(string method) => EmitNullability(method) + EmitDefaults(method);
+
+    private string EmitDefaults(string method)
+    {
+        var values = nodes
+            .SelectMany((node, id) => node!.Defaults.Select(pair => (Id: id, Name: pair.Key, Json: pair.Value)))
+            .ToArray();
+        var code = new StringBuilder(
+            "private static global::Cordis.Composition.TypertInputDefault? " + method + "Defaults => ");
+        if (values.Length == 0)
+            return code.Append("null;\n").ToString();
+        code.Append(method).Append("DefaultCore;\nprivate static class ").Append(method).Append("DefaultValues {\n");
+        for (var index = 0;index < values.Length;index++)
+            code
+                .Append("internal static readonly global::System.Text.Json.JsonElement Value")
+                .Append(index)
+                .Append(" = ")
+                .Append(method)
+                .Append("ReadDefault(")
+                .Append(JsonSerializer.Serialize(values[index].Json))
+                .Append(");\n");
+        code
+            .Append("private static global::System.Text.Json.JsonElement ")
+            .Append(method)
+            .Append(
+                "ReadDefault(string json) { using var document = global::System.Text.Json.JsonDocument.Parse(json); return document.RootElement.Clone(); }\n}\n")
+            .Append("private static global::System.Text.Json.JsonElement? ")
+            .Append(method)
+            .Append("DefaultCore(global::System.ReadOnlySpan<string> path, string member) => (")
+            .Append(method)
+            .Append("(path)?.Id, member) switch {\n");
+        for (var index = 0;index < values.Length;index++)
+            code
+                .Append('(')
+                .Append(values[index].Id)
+                .Append(", ")
+                .Append(JsonSerializer.Serialize(values[index].Name))
+                .Append(") => ")
+                .Append(method)
+                .Append("DefaultValues.Value")
+                .Append(index)
+                .Append(",\n");
+        return code.Append("_ => null };\n").ToString();
+    }
+
+    private string EmitNullability(string method)
     {
         if (nodes.All(node => node!.Properties.Count == 0 && node.Item is null))
             return "private static global::Cordis.Composition.TypertNullabilityInfo? " + method +

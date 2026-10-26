@@ -217,8 +217,9 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                 nullabilityHelpers.Append(NullabilityProjection.Declaration(declared, model, contextReference, query));
                 return "global::Cordis.Composition.TypertCodec.CreateDeclared" +
                     "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" + TypeName(symbol) + ">)" +
-                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " + query + ", " +
-                    Literal(symbol.ToDisplayString()) + ")";
+                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + RuntimeTypeName(symbol) + "))!, " + query +
+                    ", " +
+                    Literal(symbol.ToDisplayString()) + ", inputDefault: " + query + "Defaults)";
             }
 
             string UplinkCodec(DeclarationReference reference)
@@ -237,7 +238,7 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                 return "global::Cordis.Composition.TypertCodec." +
                     (dictionary ? "CreateDictionary" : "CreateSequence") +
                     "((global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<" + TypeName(symbol) + ">)" +
-                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + TypeName(symbol) + "))!, " +
+                    TypeName(metadata) + ".Default.GetTypeInfo(typeof(" + RuntimeTypeName(symbol) + "))!, " +
                     UplinkCodec(reference.Arguments[dictionary ? 1 : 0]) + ", nullable: " +
                     (reference.Nullability == "Annotated" ? "true" : "false") + ")";
             }
@@ -463,7 +464,14 @@ public sealed class RemoteGenerator : IIncrementalGenerator
     }
 
     private static string Literal(string value) => SymbolDisplay.FormatLiteral(value, true);
-    private static string TypeName(ITypeSymbol type) => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+    private static string TypeName(ITypeSymbol type) => type.ToDisplayString(
+        SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+            SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions |
+            SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier));
+
+    private static string RuntimeTypeName(ITypeSymbol type) =>
+        type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
     private static string DefaultValue(DeclarationParameter parameter, ITypeSymbol type) =>
         parameter.Default is { } value

@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
 namespace Cordis.Composition;
@@ -26,6 +27,14 @@ public readonly record struct TypertNullabilityInfo(int Id, bool? Nullable)
 /// <summary>Declaration use at a JSON Schema path; null leaves an unmapped serializer contract unchanged.</summary>
 public delegate TypertNullabilityInfo? TypertNullability(ReadOnlySpan<string> schemaPath);
 
+/// <summary>Gets a statically declared default for an absent input member at an object Schema path.</summary>
+/// <remarks>Null means no default; a JSON null element is an explicit default. Values must use wire member names.
+/// Required members are never defaulted. The query supplies deterministic declaration metadata, not per-request
+/// policy. Returned elements must remain valid for the codec lifetime. Generated queries read immutable JSON
+/// facts without executing author initializers; a manually supplied delegate is caller code. This query does
+/// not change output decoding.</remarks>
+public delegate JsonElement? TypertInputDefault(ReadOnlySpan<string> objectPath, string member);
+
 public abstract partial class TypertCodec
 {
     /// <summary>Create a metadata codec retaining declaration and accessor nullability.</summary>
@@ -35,7 +44,8 @@ public abstract partial class TypertCodec
     public static TypertCodec CreateDeclared<T>(
         JsonTypeInfo<T> metadata,
         TypertNullability nullability,
-        string? typeSymbol = null)
+        string? typeSymbol = null,
+        TypertInputDefault? inputDefault = null)
     {
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentNullException.ThrowIfNull(nullability);
@@ -43,10 +53,14 @@ public abstract partial class TypertCodec
             ApplyAccessorNullability(metadata, nullability),
             typeSymbol ?? metadata.Type.FullName ?? metadata.Type.Name,
             null,
-            nullability);
+            nullability,
+            inputDefault);
     }
 
-    private static JsonNode ProjectNullability(JsonNode root, TypertNullability query)
+    private static JsonNode ProjectNullability(
+        JsonNode root,
+        TypertNullability query,
+        TypertInputDefault? inputDefault = null)
     {
         var projected = new Dictionary<(string Source, int? Declaration, bool? Nullable), string>();
         return Visit(root, "#", "#", []);
@@ -99,11 +113,18 @@ public abstract partial class TypertCodec
                 {
                     var children = new JsonObject();
                     foreach (var member in members)
-                        children[member.Key] = Visit(
+                    {
+                        var child = Visit(
                             member.Value!,
                             Pointer(sourceChild, member.Key),
                             Pointer(outputChild, member.Key),
                             childPath.Append(member.Key).ToArray());
+                        if (field.Key == "properties" && child is JsonObject memberSchema &&
+                            inputDefault?.Invoke(path, member.Key) is { } defaultValue)
+                            memberSchema["default"] = JsonNode.Parse(defaultValue.GetRawText());
+                        children[member.Key] = child;
+                    }
+
                     copy[field.Key] = children;
                 }
                 else if (field.Key is "items" or "additionalProperties" or "not" && field.Value is { } child)

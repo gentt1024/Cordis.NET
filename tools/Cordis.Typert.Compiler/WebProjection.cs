@@ -341,6 +341,8 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
 
         JsonObject Object(NativeTypeDeclaration type)
         {
+            if (type.Enumeration is not null && Attribute(type.Attributes, "JsonConverterAttribute") is not null)
+                throw Refuse("String enum converter semantics require a further Web projection: " + type.Id);
             if (type.Enumeration is not null)
                 return new()
                 {

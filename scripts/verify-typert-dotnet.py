@@ -286,12 +286,12 @@ def main():
             assert {method["name"] for method in case_type["members"] if method["kind"] == "Ordinary"} == {"First", "Selected"}
             assert case_facts["compilation"]["defines"] == ["CORDIS_CASE"]
 
-        for service in ("primitives", "nullable", "readonly", "collision", "recordStruct", "optional"):
+        for service in ("primitives", "nullable", "readonly", "collision", "recordStruct", "optional", "initializerInput", "behaviorInitializerInput", "converterInitializerInput"):
             # A source-root output must not filter out the explicitly supplied inputs.
             artifact = projection_author / (service + ".model.json")
             extract_projection(service, artifact)
             target = projection / (service + ".Generated.g.cs")
-            refusal = service in {"readonly", "collision", "recordStruct"}
+            refusal = service in {"collision", "initializerInput", "behaviorInitializerInput", "converterInitializerInput"}
             if refusal:
                 target.write_text("stale generated output", encoding="utf-8")
             emitted = run(service + "-model-project", [dotnet, compiler, "--roslyn-directory", roslyn, "emit-dotnet",
@@ -299,19 +299,13 @@ def main():
                 "--output", target], refusal)
             if refusal:
                 assert not target.exists(), "Refused projection retained a stale source"
-                if service == "readonly":
-                    retained = json.loads(artifact.read_text(encoding="utf-8"))
-                    assert b"TYPM112" in emitted, emitted
-                    readonly_type = next(item for item in retained["declarations"] if item["metadataName"] == "Author.ReadonlyValue")
-                    member = next(item for item in readonly_type["members"] if item["name"] == "Applies" and item["kind"] == "property")
-                    assert member["getter"] == "Public" and member["setter"] is None and member["getterConstant"]["json"] == '"live"'
-                    assert not any(item["code"] == "TYPM112" for item in retained["diagnostics"]), \
-                        "A client projection refusal contaminated declaration analysis"
-                elif service == "collision":
+                if service == "collision":
                     assert b"collide" in emitted
-                elif service == "recordStruct":
-                    assert b"CORDISTYPERT: Caller projection currently supports only non-generic ordinary data records/classes without data inheritance:" in emitted \
-                        and b"Author.ValueRecord" in emitted, emitted
+                elif service == "converterInitializerInput":
+                    assert b"TYPM110" in emitted and b"Author.ConverterSnapshot.Policy" in emitted, emitted
+                else:
+                    symbol = b"Author.BehavioralSnapshot.Policy" if service == "behaviorInitializerInput" else b"Author.RuntimeDefault.Text"
+                    assert b"TYPM111" in emitted and symbol in emitted, emitted
             elif service == "optional":
                 facts = json.loads(artifact.read_text(encoding="utf-8"))
                 optional_type = next(value for value in facts["declarations"] if value["metadataName"] == "Author.OptionalService")
@@ -329,10 +323,11 @@ def main():
         run("readonly-host-caller-build", [dotnet, "build", readonly_caller_project, "-c", "Release"])
         with hosted("readonly-host", [dotnet, readonly_host / "bin/Release/net10.0/ReadonlyRemoteHost.dll"], expect_stop=True) as address:
             result = run("readonly-host-caller", [dotnet, readonly_caller / "bin/Release/net10.0/ReadonlyHostConsumer.dll", address])
-            assert b"read-only Host succeeds while standalone client projection refuses" in result
+            assert b"read-only Host uses authored getter and exports its output contract" in result
         (output / "backend-boundary-evidence.json").write_text(json.dumps({
             "authorScenario": "ReadonlyService/ReadonlyValue", "authoredGetterObservedOverHttp": "live",
-            "standaloneProjectionDiagnostic": "TYPM112", "declarationAnalysisRejected": False,
+            "standaloneProjectionDiagnostic": None, "generatedReadonlyClientSource": True,
+            "declarationAnalysisRejected": False,
             "hostRuntimeBindingRejected": False, "providerImplementationReferencedByCaller": False
         }, indent=2) + "\n", encoding="utf-8")
         helper_model = projection_author / "helper-collision.model.json"

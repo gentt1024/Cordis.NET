@@ -47,13 +47,22 @@ internal sealed class DeclarationModelComposition
         var selected = sources.FirstOrDefault() ?? candidates[0];
         if (sources.Select(SourceFacts).Distinct(StringComparer.Ordinal).Skip(1).Any())
             throw Refuse(id, "Conflicting source definitions were supplied for the same declaration identity.");
-        if (candidates.Any(type => type.Name != selected.Name || type.Kind != selected.Kind ||
+        if (candidates.Any(type => type.Name != selected.Name ||
+                type.Kind != selected.Kind && (type.Provenance == "source" ||
+                    MetadataKind(type.Kind) != MetadataKind(selected.Kind)) ||
                 type.TypeParameters.Length != selected.TypeParameters.Length ||
                 type.Accessibility != selected.Accessibility))
             throw Refuse(id, "Referenced source definition contradicts the recorded declaration shape.");
         resolved.Add(id, selected);
         return selected;
     }
+
+    private static string MetadataKind(string kind) => kind switch
+    {
+        "record" => "class",
+        "recordStruct" => "struct",
+        _ => kind
+    };
 
     private static string SourceFacts(DeclarationType type)
     {

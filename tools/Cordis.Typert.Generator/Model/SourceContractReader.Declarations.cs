@@ -210,7 +210,10 @@ internal sealed partial class SourceContractReader
             ? type
                 .GetMembers()
                 .Where(member => source ? RetainedDeclarationMember(member) : MetadataDataMember(member))
-                .OrderBy(SymbolId, StringComparer.Ordinal)
+                .OrderBy(member => source && type.TypeKind == TypeKind.Enum
+                    ? member.Locations.FirstOrDefault(location => location.IsInSource)?.SourceSpan.Start ?? int.MaxValue
+                    : 0)
+                .ThenBy(SymbolId, StringComparer.Ordinal)
                 .Select(value => ReadDeclarationMember(value, depth + 1))
                 .ToArray()
             : [];
@@ -341,10 +344,143 @@ internal sealed partial class SourceContractReader
             return Constant(nullable, null);
         return constant.HasValue && type is not null
             ? Constant(type, constant.Value)
-            : new(
+            : PassiveValue(semantic.GetOperation(expression), 0) ?? new(
                 "expression",
                 type?.ToDisplayString() ?? "",
                 JsonSerializer.Serialize(expression.WithoutTrivia().ToString()));
+    }
+
+    private NativeConstant? PassiveValue(IOperation? operation, int depth)
+    {
+        if (operation is null || depth > 16)
+            return null;
+        if (operation.ConstantValue.HasValue && operation.Type is { } constantType)
+            return Constant(constantType, operation.ConstantValue.Value);
+        if (operation is Microsoft.CodeAnalysis.Operations.IConversionOperation conversion)
+            return conversion.OperatorMethod is null ? PassiveValue(conversion.Operand, depth + 1) : null;
+        if (operation is Microsoft.CodeAnalysis.Operations.ICollectionExpressionOperation { Elements.Length: 0 } &&
+            operation.Type is { } collection && EmptyCollection(collection) is { } empty)
+            return empty;
+        if (operation is not Microsoft.CodeAnalysis.Operations.IObjectCreationOperation
+            {
+                Constructor: { } constructor, Initializer: null
+            } creation || !PassiveConstructor(constructor))
+            return null;
+        var arguments = new List<NativeNamedConstant>();
+        foreach (var parameter in constructor.Parameters)
+        {
+            var argument = creation.Arguments.SingleOrDefault(value => value.Parameter?.Ordinal == parameter.Ordinal);
+            if (argument is null || PassiveValue(argument.Value, depth + 1) is not { } value)
+                return null;
+            arguments.Add(new(parameter.Name, value));
+        }
+
+        return new("construction", DeclarationId(constructor.ContainingType), "null")
+        {
+            Construction = new(DeclarationReference(constructor.ContainingType), arguments.ToArray())
+        };
+    }
+
+    private static NativeConstant? EmptyCollection(ITypeSymbol type)
+    {
+        var json = type switch
+        {
+            IArrayTypeSymbol { Rank: 1, ElementType.SpecialType: SpecialType.System_Byte } => "\"\"",
+            IArrayTypeSymbol { Rank: 1 } => "[]",
+            INamedTypeSymbol named when named
+                    .ContainingAssembly.Identity.ToString()
+                    .EndsWith(", Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", StringComparison.Ordinal) =>
+                named.OriginalDefinition.ToDisplayString() switch
+                {
+                    "System.Collections.Generic.List<T>" or "System.Collections.Generic.IList<T>" or
+                        "System.Collections.Generic.ICollection<T>" or "System.Collections.Generic.IEnumerable<T>" or
+                        "System.Collections.Generic.IReadOnlyList<T>"
+                        or "System.Collections.Generic.IReadOnlyCollection<T>" or
+                        "System.Collections.Immutable.ImmutableArray<T>" => "[]",
+                    "System.Collections.Generic.Dictionary<TKey, TValue>" or
+                        "System.Collections.Generic.IDictionary<TKey, TValue>" or
+                        "System.Collections.Generic.IReadOnlyDictionary<TKey, TValue>" when
+                        named.TypeArguments[0].SpecialType == SpecialType.System_String => "{}",
+                    _ => null
+                },
+            _ => null
+        };
+        return json is null ? null : new("emptyCollection", type.ToDisplayString(), "[]");
+    }
+
+    private static bool PassiveConstructor(IMethodSymbol constructor)
+    {
+        var type = constructor.ContainingType;
+        if (!type.IsRecord || type.TypeKind != TypeKind.Class || type.TypeParameters.Length != 0 ||
+            type.ContainingType is not null || type.BaseType?.SpecialType != SpecialType.System_Object ||
+            type
+                .GetAttributes()
+                .Any(attribute => attribute.AttributeClass?.ToDisplayString() is
+                    JsonPrefix + "JsonConverterAttribute" or JsonPrefix + "JsonPolymorphicAttribute"
+                    or JsonPrefix + "JsonDerivedTypeAttribute") ||
+            constructor.DeclaredAccessibility != Accessibility.Public ||
+            constructor.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is not RecordDeclarationSyntax
+            {
+                ParameterList: not null, BaseList: null
+            })
+            return false;
+        foreach (var member in type.GetMembers().Where(member => !member.IsImplicitlyDeclared))
+        {
+            if (member is IFieldSymbol { IsConst: true })
+                continue;
+            if (member is IMethodSymbol method)
+            {
+                if (method.MethodKind is MethodKind.PropertyGet or MethodKind.PropertySet ||
+                    SymbolEqualityComparer.Default.Equals(method, constructor))
+                    continue;
+                return false;
+            }
+
+            if (member is not IPropertySymbol { IsStatic: false, DeclaredAccessibility: Accessibility.Public } property)
+                return false;
+            if (property
+                    .GetAttributes()
+                    .Any(attribute => attribute.AttributeClass?.ToDisplayString() is
+                        JsonPrefix + "JsonConverterAttribute" or JsonPrefix + "JsonExtensionDataAttribute") ||
+                property
+                    .Type.GetAttributes()
+                    .Any(attribute =>
+                        attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonConverterAttribute"))
+                return false;
+            var syntax = property.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
+            if (syntax is ParameterSyntax)
+            {
+                if (property
+                    .GetAttributes()
+                    .Any(attribute =>
+                        attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonIgnoreAttribute"))
+                    return false;
+                if (!constructor.Parameters.Any(parameter => parameter.Name == property.Name &&
+                        SymbolEqualityComparer.Default.Equals(parameter.Type, property.Type)))
+                    return false;
+            }
+            else
+            {
+                if (syntax is not PropertyDeclarationSyntax
+                    {
+                        Initializer: null, ExpressionBody: null, AccessorList: { } accessors
+                    } ||
+                    accessors.Accessors.Any(accessor =>
+                        accessor.Body is not null || accessor.ExpressionBody is not null) ||
+                    property.IsRequired || property
+                        .GetAttributes()
+                        .Any(attribute =>
+                            attribute.AttributeClass?.ToDisplayString() == JsonPrefix + "JsonRequiredAttribute"))
+                    return false;
+            }
+        }
+
+        return constructor.Parameters.All(parameter => parameter.RefKind == RefKind.None &&
+            type
+                .GetMembers(parameter.Name)
+                .OfType<IPropertySymbol>()
+                .Any(property =>
+                    property.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is ParameterSyntax));
     }
 
     private static bool PublicDeclarationMember(ISymbol member)

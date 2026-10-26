@@ -188,6 +188,7 @@ internal static class DeclarationModelJson
             foreach (var member in declaration.Members)
             {
                 Reference(member.Type);
+                Initializer(member.Initializer);
                 Parameters(member.TypeParameters);
                 Attributes(member.Attributes);
                 Attributes(member.ReturnAttributes);
@@ -197,6 +198,7 @@ internal static class DeclarationModelJson
                 foreach (var parameter in member.Parameters)
                 {
                     Reference(parameter.Type);
+                    Initializer(parameter.Default);
                     Attributes(parameter.Attributes);
                 }
             }
@@ -218,6 +220,26 @@ internal static class DeclarationModelJson
             foreach (var parameter in parameters)
                 foreach (var constraint in parameter.Constraints)
                     Reference(constraint);
+        }
+
+        void Initializer(NativeConstant? value)
+        {
+            if (value is null)
+                return;
+            if (value.Kind == "construction")
+            {
+                var construction = value.Construction ??
+                    throw new InvalidDataException(
+                        "Static construction lacks its declaration facts. Re-extract the model.");
+                Reference(construction.Type);
+                if (construction.Arguments.Select(argument => argument.Name).Distinct(StringComparer.Ordinal).Count() !=
+                    construction.Arguments.Length)
+                    throw new InvalidDataException("Static construction has duplicate argument bindings.");
+                foreach (var argument in construction.Arguments)
+                    Initializer(argument.Value);
+            }
+            else if (value.Construction is not null)
+                throw new InvalidDataException("Only a static construction may carry constructor facts.");
         }
 
         void Attributes(DeclarationAttribute[] attributes)

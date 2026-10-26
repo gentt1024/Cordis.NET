@@ -192,7 +192,7 @@ internal sealed class DeclarationRemoteProjection
         };
     }
 
-    private NativeTypeReference Reference(DeclarationReference reference, int depth = 0)
+    private NativeTypeReference Reference(DeclarationReference reference, int depth = 0, string? parameterOwner = null)
     {
         if (depth > 64)
             throw Refuse(reference.Name, "Type nesting exceeds 64.");
@@ -201,7 +201,7 @@ internal sealed class DeclarationRemoteProjection
                 "array",
                 "",
                 reference.Nullability,
-                [Reference(reference.Arguments[0], depth + 1)],
+                [Reference(reference.Arguments[0], depth + 1, parameterOwner)],
                 reference.Rank);
         if (reference.Kind == "primitive")
         {
@@ -218,6 +218,11 @@ internal sealed class DeclarationRemoteProjection
             return new("primitive", reference.Name, reference.Nullability, []);
         }
 
+        if (reference.Kind == "parameter" && reference.Owner == parameterOwner && parameterOwner is not null &&
+            reference.Ordinal is { } ordinal && Resolve(parameterOwner)
+                .TypeParameters.Any(parameter =>
+                    parameter.Ordinal == ordinal && parameter.Name == reference.Name))
+            return new("parameter", reference.Name, reference.Nullability, []);
         if (reference.Kind != "named")
         {
             Diagnose(
@@ -229,7 +234,10 @@ internal sealed class DeclarationRemoteProjection
         }
 
         var type = Resolve(reference.Name);
-        if (DeclarationWireProjection.FrameworkReference(type, reference, value => Reference(value, depth + 1)) is
+        if (DeclarationWireProjection.FrameworkReference(
+                type,
+                reference,
+                value => Reference(value, depth + 1, parameterOwner)) is
             { } framework)
             return framework;
         if (type.Provenance != "source")
@@ -250,7 +258,7 @@ internal sealed class DeclarationRemoteProjection
             "named",
             type.Id,
             reference.Nullability,
-            reference.Arguments.Select(value => Reference(value, depth + 1)).ToArray());
+            reference.Arguments.Select(value => Reference(value, depth + 1, parameterOwner)).ToArray());
     }
 
     private void Declaration(DeclarationType type, int depth)
@@ -261,12 +269,21 @@ internal sealed class DeclarationRemoteProjection
             return;
         }
 
-        if (type.Kind is not ("class" or "record") || type.Modifiers.Contains("refLike", StringComparer.Ordinal) ||
-            type.TypeParameters.Length > 0)
+        if (type.Kind is not ("class" or "record" or "struct" or "recordStruct") ||
+            type.Modifiers.Contains("refLike", StringComparer.Ordinal))
             Diagnose(
                 "ProjectionUnsupported",
                 "TYPM105",
-                "Only closed ordinary data records/classes are currently projected.",
+                "Only ordinary non-ref-like data classes, records and structs are projected.",
+                type.Id);
+        if (type.TypeParameters.Any(parameter => parameter.ReferenceType || parameter.ValueType ||
+                parameter.Unmanaged ||
+                parameter.NotNull || parameter.Constructor || parameter.AllowsRefLikeType ||
+                parameter.Constraints.Length != 0))
+            Diagnose(
+                "ProjectionUnsupported",
+                "TYPM119",
+                "Constrained generic data declarations require a further projection.",
                 type.Id);
         if (type.ContainingType is not null)
             Diagnose(
@@ -276,7 +293,7 @@ internal sealed class DeclarationRemoteProjection
                 type.Id);
         var baseType = type.BaseType is { Kind: "primitive", Name: "System_Object" or "System_ValueType" } or null
             ? null
-            : Reference(type.BaseType, depth + 1);
+            : Reference(type.BaseType, depth + 1, type.Id);
         if (baseType is not null)
             Diagnose(
                 "ProjectionUnsupported",
@@ -294,7 +311,8 @@ internal sealed class DeclarationRemoteProjection
             Diagnose("ProjectionUnsupported", "TYPM108", "Serialized member names collide.", type.Id);
         var constructors = type
             .Members.Where(member => member.Kind == "Constructor" &&
-                (!member.Implicit || member.Parameters.Length == 0) && !(type.Kind == "record" &&
+                (!member.Implicit || member.Parameters.Length == 0 && type.Kind is not ("struct" or "recordStruct")) &&
+                !(type.Kind == "record" &&
                     member.Parameters.Length == 1 && member.Parameters[0].Type.Name == type.Id))
             .Select(member => new NativeConstructor(
                 member.Accessibility,
@@ -305,7 +323,7 @@ internal sealed class DeclarationRemoteProjection
                 member
                     .Parameters.Select(parameter => new NativeConstructorParameter(
                         parameter.Name,
-                        Reference(parameter.Type, depth + 1),
+                        Reference(parameter.Type, depth + 1, type.Id),
                         members.FirstOrDefault(value => value.Name.Equals(
                                 parameter.Name,
                                 StringComparison.OrdinalIgnoreCase))
@@ -331,12 +349,17 @@ internal sealed class DeclarationRemoteProjection
             type.Kind,
             type.Provenance != "source",
             baseType,
-            [],
+            type
+                .TypeParameters.Select(parameter => new NativeTypeReference("parameter", parameter.Name, "None", []))
+                .ToArray(),
             members,
             constructors,
             attributes,
             type.Documentation,
-            type.Location);
+            type.Location)
+        {
+            ReadOnly = type.Modifiers.Contains("readonly", StringComparer.Ordinal)
+        };
     }
 
     private NativeMember Member(DeclarationMember facts, string owner)
@@ -348,7 +371,15 @@ internal sealed class DeclarationRemoteProjection
         if (initializer is { Kind: "expression" })
         {
             if (JsonSerializer.Deserialize<string>(initializer.Json) == "[]")
-                initializer = new("emptyCollection", "", "[]");
+            {
+                var collection = Reference(facts.Type!, parameterOwner: owner);
+                initializer = new(
+                    "emptyCollection",
+                    collection.Kind == "array" && collection.Arguments[0].Name == "System_Byte"
+                        ? "byte[]"
+                        : collection.Name,
+                    "[]");
+            }
             else
             {
                 Diagnose(
@@ -360,12 +391,6 @@ internal sealed class DeclarationRemoteProjection
             }
         }
 
-        if (write == "none")
-            Diagnose(
-                "ProjectionUnsupported",
-                "TYPM112",
-                "Read-only wire members require an explicit standalone caller projection.",
-                owner + "." + facts.Name);
         if (attributes.Any(value =>
                 value.Name is JsonPrefix + "JsonConverterAttribute" or JsonPrefix + "JsonExtensionDataAttribute") ||
             facts.Accessibility != "Public")
@@ -376,7 +401,7 @@ internal sealed class DeclarationRemoteProjection
                 owner + "." + facts.Name);
         return DeclarationWireProjection.Member(
             facts,
-            value => Reference(value),
+            value => Reference(value, parameterOwner: owner),
             attributes,
             namingPolicy,
             initializer,

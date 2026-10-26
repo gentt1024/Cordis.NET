@@ -31,7 +31,8 @@ internal static class DeclarationWireProjection
 
     internal static bool Framework(DeclarationType type) =>
         (type.Assembly.StartsWith("System.Runtime, ", StringComparison.Ordinal) ||
-            type.Assembly.StartsWith("System.Collections, ", StringComparison.Ordinal)) &&
+            type.Assembly.StartsWith("System.Collections, ", StringComparison.Ordinal) ||
+            type.Assembly.StartsWith("System.Collections.Immutable, ", StringComparison.Ordinal)) &&
         type.Assembly.EndsWith(", Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", StringComparison.Ordinal) ||
         type.Assembly.StartsWith("System.Text.Json, ", StringComparison.Ordinal) &&
         type.Assembly.EndsWith(", Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51", StringComparison.Ordinal);
@@ -46,12 +47,16 @@ internal static class DeclarationWireProjection
         if (type.Assembly.StartsWith("System.Runtime, ", StringComparison.Ordinal) &&
             type.MetadataName == "System.Guid" && reference.Arguments.Length == 0)
             return new("guid", "System.Guid", reference.Nullability, []);
+        if (type.Assembly.StartsWith("System.Runtime, ", StringComparison.Ordinal) &&
+            type.MetadataName == "System.DateTimeOffset" && reference.Arguments.Length == 0)
+            return new("dateTimeOffset", "System.DateTimeOffset", reference.Nullability, []);
         if (type.MetadataName == "System.Text.Json.JsonElement" && reference.Arguments.Length == 0)
             return new("json", "System.Text.Json.JsonElement", reference.Nullability, []);
         if (type.MetadataName == "System.Nullable`1" && reference.Arguments.Length == 1)
             return new("nullable", "System.Nullable<T>", reference.Nullability, [project(reference.Arguments[0])]);
         var name = type.MetadataName switch
         {
+            "System.Collections.Immutable.ImmutableArray`1" => "System.Collections.Immutable.ImmutableArray<T>",
             "System.Collections.Generic.List`1" => "System.Collections.Generic.List<T>",
             "System.Collections.Generic.IReadOnlyList`1" => "System.Collections.Generic.IReadOnlyList<T>",
             "System.Collections.Generic.IList`1" => "System.Collections.Generic.IList<T>",
