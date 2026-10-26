@@ -4,6 +4,44 @@ using IndependentDeclarations.RemoteReference;
 
 if (JsonSerializer.IsReflectionEnabledByDefault)
     throw new Exception("Referenced Remote caller enabled reflection fallback.");
+if (args is ["string-enum"])
+{
+    var codec = ReferencedClient.Info.Descriptors.Single(method => method.Method == "echo").Parameters[0].Codec;
+    foreach (var (wire, expectedStatus) in new[]
+             {
+                 ("\"sUcCeEdEd\"", NumericStatus.Succeeded),
+                 ("\"Alias\"", NumericStatus.Succeeded),
+                 ("37", (NumericStatus)37)
+             })
+    {
+        using var input = JsonDocument.Parse(
+            "{\"External\":{\"external_name\":\"enum\",\"Code\":null,\"Previous\":null,\"Status\":" + wire + "}}");
+        var decoded = (ReferencedData)codec.Decode(input.RootElement)!;
+        if (decoded.External.Status != expectedStatus || decoded.External.Previous is not null)
+            throw new Exception("Referenced string enum input lost casing, alias, integer fallback or explicit null.");
+        var encoded = codec.EncodeInput(decoded);
+        var status = encoded.GetProperty("External").GetProperty("Status");
+        if (expectedStatus == NumericStatus.Succeeded ? status.GetString() != "Succeeded" : status.GetInt32() != 37)
+            throw new Exception("Referenced string enum writer lost declaration order or integer fallback.");
+        if (((ReferencedData)codec.DecodeOutput(encoded)!).External.Status != expectedStatus)
+            throw new Exception("Referenced string enum result decoding changed the value.");
+    }
+
+    using var invalidEnum = JsonDocument.Parse(
+        """{"External":{"external_name":"enum","Code":null,"Status":"unknown-name"}}""");
+    try
+    {
+        codec.Decode(invalidEnum.RootElement);
+        throw new Exception("Referenced string enum accepted an unknown name.");
+    }
+    catch (JsonException)
+    {
+    }
+
+    Console.WriteLine("referenced string enum generated codec consumer passed");
+    return;
+}
+
 using var http = new HttpClient();
 await using var connection = new TypertConnection(http, new Uri(new Uri(args[0]), "/remote"));
 await using var client = new ReferencedClient(connection);

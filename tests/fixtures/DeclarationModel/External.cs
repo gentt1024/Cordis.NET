@@ -207,8 +207,10 @@ public sealed partial class ImportedHiddenData
     internal partial class HiddenJson : JsonSerializerContext;
 }
 
-#if ENUM_CUSTOM_CONVERTER
+#if ENUM_STRING_CONVERTER
 [JsonConverter(typeof(JsonStringEnumConverter<NumericStatus>))]
+#elif ENUM_CUSTOM_CONVERTER
+[JsonConverter(typeof(CustomStatusConverter))]
 #endif
 public enum NumericStatus
 {
@@ -216,6 +218,17 @@ public enum NumericStatus
     Succeeded = 4,
     Alias = Succeeded
 }
+
+#if ENUM_CUSTOM_CONVERTER
+public sealed class CustomStatusConverter : JsonConverter<NumericStatus>
+{
+    public override NumericStatus Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
+        throw new NotSupportedException("Author converter execution is outside saved-model projection.");
+
+    public override void Write(Utf8JsonWriter writer, NumericStatus value, JsonSerializerOptions options) =>
+        throw new NotSupportedException("Author converter execution is outside saved-model projection.");
+}
+#endif
 
 [Flags]
 public enum NumericFlags : byte

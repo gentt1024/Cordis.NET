@@ -659,15 +659,17 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     assert generated.read_bytes() == changed_projection, "Cold rebuild changed a reference-composed carrier"
     shutil.copyfile(primary_input, output / "referenced-data-main-model.json")
     shutil.copyfile(reference_input, output / "referenced-data-library-model.json")
-    # Static scalar support does not authorize replaying executable converters.
+    # The known built-in enum policy is data; arbitrary author converters remain refused.
     for label, constant, diagnostic in (("guid", "GUID_CUSTOM_CONVERTER", b"TYPM110"),
-            ("enum", "ENUM_CUSTOM_CONVERTER", b"TYPM109")):
+            ("enum", "ENUM_CUSTOM_CONVERTER", b"TYPM109"),
+            ("string-enum", "ENUM_STRING_CONVERTER",
+                b"WebProjectionUnsupported: String enum converter semantics require a further Web projection")):
         run("referenced-" + label + "-converter-build", [dotnet, "build", external_project, "-c", "Release",
             "-p:DefineConstants=" + constant])
         converter_references = remote / "converter-references.rsp"
         converter_references.write_text(str(external_model) + "\n", encoding="utf-8")
         for backend, arguments, owned_output in (
-            ("dotnet", ["--namespace", "IndependentDeclarations.Refused", "--client", "RefusedClient"],
+            ("dotnet", ["--namespace", "IndependentDeclarations.RemoteReference", "--client", "ReferencedClient"],
                 remote / "RefusedClient.g.cs"),
             ("web", [], remote / "refused-web"),
         ):
@@ -676,9 +678,22 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
                 (owned_output / "remote.schema.json").write_text("stale schema", encoding="utf-8")
             else:
                 owned_output.write_text("stale source", encoding="utf-8")
+            supported = label == "string-enum" and backend == "dotnet"
             rejected = run("referenced-" + label + "-converter-" + backend, [dotnet, compiler, "--roslyn-directory", roslyn,
                 "emit-" + backend, "--model", model, "--reference-models", converter_references,
-                "--service", "referencedData", *arguments, "--output", owned_output], True)
+                "--service", "referencedData", *arguments, "--output", owned_output], not supported)
+            if supported:
+                enum_caller, enum_project = project("ReferencedStringEnumConsumer", '<OutputType>Exe</OutputType>', composition)
+                shutil.copyfile(owned_output, enum_caller / "ReferencedClient.g.cs")
+                shutil.copyfile(fixtures / "ReferencedRemoteConsumer.cs", enum_caller / "Program.cs")
+                run("referenced-string-enum-caller-build", [dotnet, "build", enum_project, "-c", "Release"])
+                result = run("referenced-string-enum-caller", [dotnet,
+                    enum_caller / "bin/Release/net10.0/ReferencedStringEnumConsumer.dll", "string-enum"])
+                assert b"referenced string enum generated codec consumer passed" in result
+                assets = json.loads((enum_caller / "obj/project.assets.json").read_text(encoding="utf-8"))
+                assert not any(name.startswith("Independent") for name in assets["libraries"]), \
+                    "String enum caller acquired author implementation packages"
+                continue
             assert diagnostic in rejected, rejected
             assert not (owned_output / "remote.schema.json").exists() if backend == "web" else not owned_output.exists()
             refusals.append({"case": label + "-member-converter-" + backend, "staleOutputRemoved": True})
@@ -691,7 +706,7 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         "remoteBuildPackAndHttpInvocation": True, "remoteMissingReferenceRejected": True, "staticDataAndCallerAot": aot,
         "remoteReferenceChangeConsumedThroughNewPackage": True,
         "firstDesignTimeDataAndRemoteInputs": True, "designTimeReferenceRefreshAndRefusal": True,
-        "cleanAndFailedBuildRemovedOwnedOutputs": True, "refusals": refusals
+        "cleanAndFailedBuildRemovedOwnedOutputs": True, "referencedStringEnumCodecConsumed": True, "refusals": refusals
     }, indent=2) + "\n", encoding="utf-8")
 
 
