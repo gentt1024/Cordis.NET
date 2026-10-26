@@ -1,7 +1,7 @@
 {
   "dsh": "fba488001a6c2d37787d800beeab54a770c826a1",
   "origin": "56b3d4f725681cf4556c1a8695a709cc3b6eed74",
-  "manifestSha256": "3652360c49299c1966f0c553287a350fde0cf0c0749563578f60f078b898c6ef",
+  "manifestSha256": "63f62e52bdd6fae57d9cd838ec69eb7ee3d47e027a718ca7de456a2d5d362ccc",
   "suites": {
     "composition": {
       "packages/boot/app-boot/tests/app-boot.spec.ts": 83,
