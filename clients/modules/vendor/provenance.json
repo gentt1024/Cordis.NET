@@ -97,7 +97,7 @@
     },
     {
       "upstreamPath": "vendor/loader/src/config/entry.ts",
-      "sha256": "4e4f3be8678e74fcb9c5c6566469a26e151c8b43ff477956a5518472cc7edf73",
+      "sha256": "6a061f1d3c2cdaac19409bf8ec6956ec5a0a457c4f1689be658d50af7c9ee294",
       "file": "loader/src/config/entry.ts"
     },
     {
@@ -122,28 +122,22 @@
     },
     {
       "upstreamPath": "packages/client/modules/src/client/system.ts",
-      "sha256": "01ae8f4cac487eecfd5133aaaa045fd531cb21616638f3c694f1ab43c7fba8bf",
-      "file": "modules/system.ts",
-      "localSha256": "0953d346d3a642c3cde2b72b19a23f96d4285c8394a3774d5b64cc24c4d2de84",
-      "adaptation": "S9 candidate 687f282e8625c6b8d11ff58211a90524be2e4317: claim only newly inserted untagged factory styles; preserve nested ownership and clean failed factories.",
-      "candidateCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
-      "candidateSha256": "0953d346d3a642c3cde2b72b19a23f96d4285c8394a3774d5b64cc24c4d2de84"
+      "sha256": "0953d346d3a642c3cde2b72b19a23f96d4285c8394a3774d5b64cc24c4d2de84",
+      "file": "modules/system.ts"
     },
     {
       "upstreamPath": "packages/client/modules/src/client/manifest.ts",
-      "sha256": "2e44bce01dc004fcb6a21b68445dfd3a8cb05fb2b715b1df8e75ed642609686e",
+      "sha256": "dca304d22bda0d467b47dba653d245eaf335f3b225af24decd8a294e91840c6b",
       "file": "modules/manifest.ts",
       "localSha256": "4b89c01fe4eb8386fb397f1ea9d52822e0506d6970350065fe18c11d29721769",
-      "adaptation": "S9 candidate 687f282e8625c6b8d11ff58211a90524be2e4317: preserve optional Host release identity and read it before full graph validation. The supported native wrapper owns release admission.",
-      "candidateCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
-      "candidateSha256": "dca304d22bda0d467b47dba653d245eaf335f3b225af24decd8a294e91840c6b"
+      "adaptation": "The native browser wrapper owns release admission before graph parsing. Local declaration ordering and documentation, and malformed-field diagnostic ordering inside the parser, remain unchanged."
     },
     {
       "upstreamPath": "packages/client/modules/src/client/entries.ts",
-      "sha256": "52b438c9541a470b63e41b8880fd608909117168bfcd76cbe65be6dbff651edc",
+      "sha256": "a0347ea85e10c19669ea83f24e8faa0e9748343038c6671abce950a802276dbb",
       "file": "modules/entries.ts",
       "localSha256": "69fbd1944e1344df56fc5eeeeeed090749c7a0d45542dc39a38eaaef27a7e2ad",
-      "adaptation": "Invalidate installed-code identity with the module cache; record the current replacement Fiber before startup settlement so explicit target sync cannot retry failed newer code. No automatic rollback."
+      "adaptation": "The native browser wrapper owns one release gate shared by sync and management reconnection, rather than adding a second entries gate. Subscriber isolation remains inline. The installed-code recovery correction is retained: invalidate revision with module cache and record the replacement Fiber before startup settlement; no automatic rollback."
     },
     {
       "upstreamPath": "packages/client/modules/src/client/entry-lifecycle.ts",
@@ -157,8 +151,10 @@
     },
     {
       "upstreamPath": "packages/util/package-manifest/src/types.ts",
-      "sha256": "10568c7c456b82b0cb0f932794217bb7860f59a9e2996ec312e9ad5622a436b6",
-      "file": "contracts/package-manifest.ts"
+      "sha256": "2e0d7bfb9e1f94451c684ce1c61d4e640e67f78879514e5baff0a1df620d566e",
+      "file": "contracts/package-manifest.ts",
+      "localSha256": "10568c7c456b82b0cb0f932794217bb7860f59a9e2996ec312e9ad5622a436b6",
+      "adaptation": "Documentation wording differs; the package manifest declaration shape is unchanged."
     },
     {
       "upstreamPath": "apps/web/src/node-module-stub.ts",
@@ -167,12 +163,10 @@
     },
     {
       "upstreamPath": "packages/client/ui-slots/src/index.ts",
-      "sha256": "27a453937cdcc28923c37ad90cd01489e458e205dc03032629183087b5b585d0",
+      "sha256": "43989fb355e1e85316caa70b28de3294f9d6e7b179199a4e429dcd1ef73f2e24",
       "file": "slots/index.ts",
       "localSha256": "273e5148f5e66220edaefa2ccd3302625372802123802400f93af008074473e0",
-      "adaptation": "S9 candidate 687f282e8625c6b8d11ff58211a90524be2e4317: inline true metadata on slot declarations and specs; application owns rendering.",
-      "candidateCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
-      "candidateSha256": "43989fb355e1e85316caa70b28de3294f9d6e7b179199a4e429dcd1ef73f2e24"
+      "adaptation": "Local documentation omits the upstream inline-anchor comment; the declaration shape is unchanged."
     },
     {
       "upstreamPath": "packages/client/ui-slots/src/store.ts",
@@ -181,12 +175,10 @@
     },
     {
       "upstreamPath": "packages/client/ui-slots/src/renderer.ts",
-      "sha256": "ee834aafc19367922c139d41f677233fbdfcc042b4deff9f616aa43220ee09ee",
+      "sha256": "43ba3492fff724ffbe71d0b4bcfca410ab695d019aa2e163d2c8dd56cab1a849",
       "file": "slots/renderer.ts",
       "localSha256": "9b518a8dccdd5955e54a419fec3a8cce9de6b8ba824b0d199bb958a47411d9d9",
-      "adaptation": "S9 candidate 687f282e8625c6b8d11ff58211a90524be2e4317: optional member forwarding in keyed standard sources.",
-      "candidateCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
-      "candidateSha256": "43ba3492fff724ffbe71d0b4bcfca410ab695d019aa2e163d2c8dd56cab1a849"
+      "adaptation": "Local documentation uses the shorter keyed-hook description; optional member forwarding and declaration shape are unchanged."
     },
     {
       "upstreamPath": "packages/client/web/src/boot-client.ts",
@@ -205,7 +197,6 @@
     },
     {
       "upstreamPath": "packages/client/modules/src/client/release-change.ts",
-      "sourceCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
       "sha256": "756a26411ba30c4da16e48c5367a6b941b8f2f381c2e49823bc5fca65e35aada",
       "file": "modules/release-change.ts",
       "localSha256": "3327808c3ca5c8ada4d22ff81572f91e54be32e908c05d3890253ec5992f85fa",
@@ -213,10 +204,9 @@
     },
     {
       "upstreamPath": "packages/client/modules/src/client/notify.ts",
-      "sourceCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
       "sha256": "e1015b1044e66d86ec7d347bf1a441f672b1c2e172682195ad390087d25d0891",
       "file": "modules/notify.ts"
     }
   ],
-  "commit": "639ed015397290b3745d163aafe02ffee4aa3f84"
+  "commit": "687f282e8625c6b8d11ff58211a90524be2e4317"
 }
