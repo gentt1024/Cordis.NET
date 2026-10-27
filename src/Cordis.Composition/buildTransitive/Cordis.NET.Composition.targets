@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+    <_CordisTypertTargets>$(MSBuildThisFileFullPath)</_CordisTypertTargets>
     <CordisTypertCompiler Condition="'$(CordisTypertCompiler)' == ''">$(MSBuildThisFileDirectory)../tools/net10.0/typert/Cordis.Typert.Compiler.dll</CordisTypertCompiler>
     <CordisTypertDotnetHost Condition="'$(CordisTypertDotnetHost)' == '' and '$(DotNetHostPath)' != ''">$(DotNetHostPath)</CordisTypertDotnetHost>
     <CordisTypertDotnetHost Condition="'$(CordisTypertDotnetHost)' == ''">dotnet</CordisTypertDotnetHost>
@@ -30,16 +31,62 @@
   <ItemGroup Condition="'$(CordisTypertWebModel)' != ''">
     <None Include="$(_CordisTypertWebFiles)" Pack="true" PackagePath="cordis/typert/web/" Visible="false" />
   </ItemGroup>
-  <Target Name="CordisTypertEmitWeb" BeforeTargets="CoreCompile"
+  <!-- Hash contents and the evaluated input list; timestamps alone miss deletions and restored files.
+       Only Exec is conditional: Compile, AdditionalFiles and FileWrites must remain registered. -->
+  <Target Name="_CordisTypertIncrementalInputs">
+    <ItemGroup>
+      <_CordisTypertToolInputs Include="$(CordisTypertDotnetHost)" Condition="Exists('$(CordisTypertDotnetHost)')" />
+      <_CordisTypertToolInputs Include="$(CordisTypertCompiler);$([System.IO.Path]::ChangeExtension('$(CordisTypertCompiler)', '.deps.json'));$([System.IO.Path]::ChangeExtension('$(CordisTypertCompiler)', '.runtimeconfig.json'))" />
+      <_CordisTypertToolInputs Include="$([System.IO.Path]::GetDirectoryName('$(CordisTypertCompiler)'))/*.dll" />
+      <_CordisTypertToolInputs Include="$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.dll;$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll;$(_CordisTypertTargets)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="CordisTypertEmitWeb" BeforeTargets="CoreCompile" DependsOnTargets="_CordisTypertIncrementalInputs"
           Condition="'$(CordisTypertWebModel)' != '' and '$(DesignTimeBuild)' != 'true'">
     <MakeDir Directories="$(CordisTypertOutputDirectory)" />
     <WriteLinesToFile File="$(CordisTypertOutputDirectory)web-reference-models.rsp" Lines="@(CordisTypertWebReferenceModel->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <ItemGroup><FileWrites Include="$(_CordisTypertWebFiles);$(CordisTypertOutputDirectory)web-reference-models.rsp" /></ItemGroup>
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-web --model &quot;$(CordisTypertWebModel)&quot; --service &quot;$(CordisTypertService)&quot; --reference-models &quot;$(CordisTypertOutputDirectory)web-reference-models.rsp&quot; --output &quot;$(CordisTypertWebDirectory)&quot;" />
+    <PropertyGroup>
+      <_CordisTypertWebCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-web --model &quot;$(CordisTypertWebModel)&quot; --service &quot;$(CordisTypertService)&quot; --reference-models &quot;$(CordisTypertOutputDirectory)web-reference-models.rsp&quot; --output &quot;$(CordisTypertWebDirectory)&quot;</_CordisTypertWebCommand>
+      <_CordisTypertWebPrevious></_CordisTypertWebPrevious>
+      <_CordisTypertWebPrevious Condition="Exists('$(CordisTypertOutputDirectory)web.incremental')">$([System.IO.File]::ReadAllText('$(CordisTypertOutputDirectory)web.incremental').Trim())</_CordisTypertWebPrevious>
+    </PropertyGroup>
+    <ItemGroup>
+      <_CordisTypertWebInputs Include="@(_CordisTypertToolInputs);$(CordisTypertWebModel);@(CordisTypertWebReferenceModel);$(CordisTypertOutputDirectory)web-reference-models.rsp" />
+      <_CordisTypertWebExistingInputs Include="@(_CordisTypertWebInputs)" Condition="Exists('%(Identity)')" />
+      <_CordisTypertWebOutputs Include="$(_CordisTypertWebFiles)" />
+      <_CordisTypertWebExistingOutputs Include="@(_CordisTypertWebOutputs)" Condition="Exists('%(Identity)')" />
+      <FileWrites Include="$(CordisTypertOutputDirectory)web.incremental;$(CordisTypertOutputDirectory)web.incremental.inputs" />
+    </ItemGroup>
+    <GetFileHash Files="@(_CordisTypertWebExistingInputs)">
+      <Output TaskParameter="Items" ItemName="_CordisTypertWebInputHashes" />
+    </GetFileHash>
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)web.incremental.inputs" Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8"
+        Lines="$(_CordisTypertWebCommand);$(MSBuildProjectDirectory);$(Configuration);$(TargetFramework);$(NETCoreSdkVersion);$(RuntimeFrameworkVersion);$(DesignTimeBuild);@(_CordisTypertWebInputs->'%(FullPath)');@(_CordisTypertWebInputHashes->'%(FullPath)=%(FileHash)');@(_CordisTypertWebOutputs->'%(FullPath)')" />
+    <GetFileHash Files="$(CordisTypertOutputDirectory)web.incremental.inputs">
+      <Output TaskParameter="Hash" PropertyName="_CordisTypertWebInputHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_CordisTypertWebExistingOutputs)">
+      <Output TaskParameter="Items" ItemName="_CordisTypertWebOutputHashes" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_CordisTypertWebCurrent>$(_CordisTypertWebInputHash)|@(_CordisTypertWebOutputHashes->'%(FileHash)', '|')</_CordisTypertWebCurrent>
+      <_CordisTypertWebRequired Condition="'$(_CordisTypertWebCurrent)' != '$(_CordisTypertWebPrevious)'">true</_CordisTypertWebRequired>
+    </PropertyGroup>
+    <Delete Files="$(CordisTypertOutputDirectory)web.incremental" Condition="'$(_CordisTypertWebRequired)' == 'true'" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Condition="'$(_CordisTypertWebRequired)' == 'true'"
+          Command="$(_CordisTypertWebCommand)" />
+    <GetFileHash Files="@(_CordisTypertWebOutputs)" Condition="'$(_CordisTypertWebRequired)' == 'true'">
+      <Output TaskParameter="Items" ItemName="_CordisTypertWebWrittenHashes" />
+    </GetFileHash>
+    <PropertyGroup Condition="'$(_CordisTypertWebRequired)' == 'true'">
+      <_CordisTypertWebWritten>$(_CordisTypertWebInputHash)|@(_CordisTypertWebWrittenHashes->'%(FileHash)', '|')</_CordisTypertWebWritten>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(CordisTypertOutputDirectory)web.incremental" Overwrite="true" Encoding="UTF-8" Condition="'$(_CordisTypertWebRequired)' == 'true'"
+        Lines="$(_CordisTypertWebWritten)" />
   </Target>
   <Target Name="CordisTypertCleanWeb" BeforeTargets="CoreClean">
-    <Delete Files="$(_CordisTypertWebFiles);$(CordisTypertOutputDirectory)web-reference-models.rsp" />
+    <Delete Files="$(CordisTypertOutputDirectory)web.incremental;$(CordisTypertOutputDirectory)web.incremental.inputs;$(_CordisTypertWebFiles);$(CordisTypertOutputDirectory)web-reference-models.rsp" />
   </Target>
   <ItemGroup>
     <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
@@ -60,7 +107,7 @@
   </ItemGroup>
   <!-- The source generator cannot supply STJ input in its own generation round. -->
   <Target Name="CordisTypertExtractModel" BeforeTargets="CoreCompile"
-          DependsOnTargets="ResolveReferences;GenerateGlobalUsings;GenerateAssemblyInfo"
+          DependsOnTargets="ResolveReferences;GenerateGlobalUsings;GenerateAssemblyInfo;_CordisTypertIncrementalInputs"
           Condition="('@(CordisTypertModelRoot)' != '' or '$(_CordisTypertAuthoredService)' != '') and '$(DesignTimeBuild)' != 'true'">
     <MakeDir Directories="$(CordisTypertOutputDirectory)" />
     <ItemGroup>
@@ -71,17 +118,53 @@
     <WriteLinesToFile File="$(CordisTypertOutputDirectory)model-roots.rsp" Lines="@(CordisTypertModelRoot)" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <WriteLinesToFile File="$(CordisTypertOutputDirectory)model-sources.rsp" Lines="@(_CordisTypertSources->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <WriteLinesToFile File="$(CordisTypertOutputDirectory)model-references.rsp" Lines="@(ReferencePath->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; extract-model --project-directory &quot;$(MSBuildProjectDirectory)&quot; --sources &quot;$(CordisTypertOutputDirectory)model-sources.rsp&quot; --references &quot;$(CordisTypertOutputDirectory)model-references.rsp&quot; --assembly-name &quot;$(AssemblyName)&quot; --language-version &quot;$(_CordisTypertLanguageVersion)&quot; --nullable &quot;$(_CordisTypertNullable)&quot; --defines &quot;$(DefineConstants)&quot; --allow-unsafe &quot;$(AllowUnsafeBlocks)&quot; --check-overflow &quot;$(CheckForOverflowUnderflow)&quot; --output-kind &quot;$(OutputType)&quot; --platform &quot;$(PlatformTarget)&quot; --optimize &quot;$(Optimize)&quot; --roots &quot;$(CordisTypertOutputDirectory)model-roots.rsp&quot; --service &quot;$(_CordisTypertAuthoredService)&quot; --output &quot;$(CordisTypertModelPath)&quot;" />
+    <PropertyGroup>
+      <_CordisTypertModelCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; extract-model --project-directory &quot;$(MSBuildProjectDirectory)&quot; --sources &quot;$(CordisTypertOutputDirectory)model-sources.rsp&quot; --references &quot;$(CordisTypertOutputDirectory)model-references.rsp&quot; --assembly-name &quot;$(AssemblyName)&quot; --language-version &quot;$(_CordisTypertLanguageVersion)&quot; --nullable &quot;$(_CordisTypertNullable)&quot; --defines &quot;$(DefineConstants)&quot; --allow-unsafe &quot;$(AllowUnsafeBlocks)&quot; --check-overflow &quot;$(CheckForOverflowUnderflow)&quot; --output-kind &quot;$(OutputType)&quot; --platform &quot;$(PlatformTarget)&quot; --optimize &quot;$(Optimize)&quot; --roots &quot;$(CordisTypertOutputDirectory)model-roots.rsp&quot; --service &quot;$(_CordisTypertAuthoredService)&quot; --output &quot;$(CordisTypertModelPath)&quot;</_CordisTypertModelCommand>
+      <_CordisTypertModelPrevious></_CordisTypertModelPrevious>
+      <_CordisTypertModelPrevious Condition="Exists('$(CordisTypertModelPath).incremental')">$([System.IO.File]::ReadAllText('$(CordisTypertModelPath).incremental').Trim())</_CordisTypertModelPrevious>
+    </PropertyGroup>
+    <ItemGroup>
+      <_CordisTypertModelInputs Include="@(_CordisTypertToolInputs);@(_CordisTypertSources);@(ReferencePath);@(ReferencePath->'%(RootDir)%(Directory)%(Filename).xml');$(CordisTypertOutputDirectory)model-roots.rsp;$(CordisTypertOutputDirectory)model-sources.rsp;$(CordisTypertOutputDirectory)model-references.rsp" />
+      <_CordisTypertModelExistingInputs Include="@(_CordisTypertModelInputs)" Condition="Exists('%(Identity)')" />
+      <_CordisTypertModelOutputs Include="$(CordisTypertModelPath)" />
+      <_CordisTypertModelExistingOutputs Include="@(_CordisTypertModelOutputs)" Condition="Exists('%(Identity)')" />
+      <FileWrites Include="$(CordisTypertModelPath).incremental;$(CordisTypertModelPath).incremental.inputs" />
+    </ItemGroup>
+    <GetFileHash Files="@(_CordisTypertModelExistingInputs)">
+      <Output TaskParameter="Items" ItemName="_CordisTypertModelInputHashes" />
+    </GetFileHash>
+    <WriteLinesToFile File="$(CordisTypertModelPath).incremental.inputs" Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8"
+        Lines="$(_CordisTypertModelCommand);$(MSBuildProjectDirectory);$(Configuration);$(TargetFramework);$(NETCoreSdkVersion);$(RuntimeFrameworkVersion);$(DesignTimeBuild);@(_CordisTypertModelInputs->'%(FullPath)');@(_CordisTypertModelInputHashes->'%(FullPath)=%(FileHash)');@(_CordisTypertModelOutputs->'%(FullPath)')" />
+    <GetFileHash Files="$(CordisTypertModelPath).incremental.inputs">
+      <Output TaskParameter="Hash" PropertyName="_CordisTypertModelInputHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_CordisTypertModelExistingOutputs)">
+      <Output TaskParameter="Items" ItemName="_CordisTypertModelOutputHashes" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_CordisTypertModelCurrent>$(_CordisTypertModelInputHash)|@(_CordisTypertModelOutputHashes->'%(FileHash)', '|')</_CordisTypertModelCurrent>
+      <_CordisTypertModelRequired Condition="'$(_CordisTypertModelCurrent)' != '$(_CordisTypertModelPrevious)'">true</_CordisTypertModelRequired>
+    </PropertyGroup>
+    <Delete Files="$(CordisTypertModelPath).incremental" Condition="'$(_CordisTypertModelRequired)' == 'true'" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Condition="'$(_CordisTypertModelRequired)' == 'true'"
+          Command="$(_CordisTypertModelCommand)" />
+    <GetFileHash Files="@(_CordisTypertModelOutputs)" Condition="'$(_CordisTypertModelRequired)' == 'true'">
+      <Output TaskParameter="Items" ItemName="_CordisTypertModelWrittenHashes" />
+    </GetFileHash>
+    <PropertyGroup Condition="'$(_CordisTypertModelRequired)' == 'true'">
+      <_CordisTypertModelWritten>$(_CordisTypertModelInputHash)|@(_CordisTypertModelWrittenHashes->'%(FileHash)', '|')</_CordisTypertModelWritten>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(CordisTypertModelPath).incremental" Overwrite="true" Encoding="UTF-8" Condition="'$(_CordisTypertModelRequired)' == 'true'"
+        Lines="$(_CordisTypertModelWritten)" />
     <ItemGroup>
       <AdditionalFiles Include="$(CordisTypertModelPath)" />
     </ItemGroup>
   </Target>
   <Target Name="CordisTypertCleanModel" BeforeTargets="CoreClean">
-    <Delete Files="$(_CordisTypertModelFiles)" />
+    <Delete Files="$(CordisTypertModelPath).incremental;$(CordisTypertModelPath).incremental.inputs;$(_CordisTypertModelFiles)" />
   </Target>
   <Target Name="CordisTypertEmitDotnetData" BeforeTargets="CoreCompile"
-          DependsOnTargets="ResolveReferences"
+          DependsOnTargets="ResolveReferences;_CordisTypertIncrementalInputs"
           Condition="'$(CordisTypertDataModel)' != ''">
     <MakeDir Directories="$(_CordisTypertProjectionDirectory)" />
     <WriteLinesToFile File="$(_CordisTypertProjectionDirectory)data-roots.rsp" Lines="@(CordisTypertDataRoot)" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
@@ -89,19 +172,55 @@
     <ItemGroup>
       <FileWrites Include="$(_CordisTypertDataFiles)" />
     </ItemGroup>
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet-data --model &quot;$(CordisTypertDataModel)&quot; --roots &quot;$(_CordisTypertProjectionDirectory)data-roots.rsp&quot; --reference-models &quot;$(_CordisTypertProjectionDirectory)data-reference-models.rsp&quot; --namespace &quot;$(CordisTypertDataNamespace)&quot; --context &quot;$(CordisTypertDataJsonContext)&quot; --output &quot;$(CordisTypertDataSource)&quot;" />
+    <PropertyGroup>
+      <_CordisTypertDataCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet-data --model &quot;$(CordisTypertDataModel)&quot; --roots &quot;$(_CordisTypertProjectionDirectory)data-roots.rsp&quot; --reference-models &quot;$(_CordisTypertProjectionDirectory)data-reference-models.rsp&quot; --namespace &quot;$(CordisTypertDataNamespace)&quot; --context &quot;$(CordisTypertDataJsonContext)&quot; --output &quot;$(CordisTypertDataSource)&quot;</_CordisTypertDataCommand>
+      <_CordisTypertDataPrevious></_CordisTypertDataPrevious>
+      <_CordisTypertDataPrevious Condition="Exists('$(_CordisTypertProjectionDirectory)data.incremental')">$([System.IO.File]::ReadAllText('$(_CordisTypertProjectionDirectory)data.incremental').Trim())</_CordisTypertDataPrevious>
+    </PropertyGroup>
+    <ItemGroup>
+      <_CordisTypertDataInputs Include="@(_CordisTypertToolInputs);$(CordisTypertDataModel);@(CordisTypertDataReferenceModel);$(_CordisTypertProjectionDirectory)data-roots.rsp;$(_CordisTypertProjectionDirectory)data-reference-models.rsp" />
+      <_CordisTypertDataExistingInputs Include="@(_CordisTypertDataInputs)" Condition="Exists('%(Identity)')" />
+      <_CordisTypertDataOutputs Include="$(CordisTypertDataSource)" />
+      <_CordisTypertDataExistingOutputs Include="@(_CordisTypertDataOutputs)" Condition="Exists('%(Identity)')" />
+      <FileWrites Include="$(_CordisTypertProjectionDirectory)data.incremental;$(_CordisTypertProjectionDirectory)data.incremental.inputs" />
+    </ItemGroup>
+    <GetFileHash Files="@(_CordisTypertDataExistingInputs)">
+      <Output TaskParameter="Items" ItemName="_CordisTypertDataInputHashes" />
+    </GetFileHash>
+    <WriteLinesToFile File="$(_CordisTypertProjectionDirectory)data.incremental.inputs" Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8"
+        Lines="$(_CordisTypertDataCommand);$(MSBuildProjectDirectory);$(Configuration);$(TargetFramework);$(NETCoreSdkVersion);$(RuntimeFrameworkVersion);$(DesignTimeBuild);@(_CordisTypertDataInputs->'%(FullPath)');@(_CordisTypertDataInputHashes->'%(FullPath)=%(FileHash)');@(_CordisTypertDataOutputs->'%(FullPath)')" />
+    <GetFileHash Files="$(_CordisTypertProjectionDirectory)data.incremental.inputs">
+      <Output TaskParameter="Hash" PropertyName="_CordisTypertDataInputHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_CordisTypertDataExistingOutputs)">
+      <Output TaskParameter="Items" ItemName="_CordisTypertDataOutputHashes" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_CordisTypertDataCurrent>$(_CordisTypertDataInputHash)|@(_CordisTypertDataOutputHashes->'%(FileHash)', '|')</_CordisTypertDataCurrent>
+      <_CordisTypertDataRequired Condition="'$(_CordisTypertDataCurrent)' != '$(_CordisTypertDataPrevious)'">true</_CordisTypertDataRequired>
+    </PropertyGroup>
+    <Delete Files="$(_CordisTypertProjectionDirectory)data.incremental" Condition="'$(_CordisTypertDataRequired)' == 'true'" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Condition="'$(_CordisTypertDataRequired)' == 'true'"
+          Command="$(_CordisTypertDataCommand)" />
+    <GetFileHash Files="@(_CordisTypertDataOutputs)" Condition="'$(_CordisTypertDataRequired)' == 'true'">
+      <Output TaskParameter="Items" ItemName="_CordisTypertDataWrittenHashes" />
+    </GetFileHash>
+    <PropertyGroup Condition="'$(_CordisTypertDataRequired)' == 'true'">
+      <_CordisTypertDataWritten>$(_CordisTypertDataInputHash)|@(_CordisTypertDataWrittenHashes->'%(FileHash)', '|')</_CordisTypertDataWritten>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_CordisTypertProjectionDirectory)data.incremental" Overwrite="true" Encoding="UTF-8" Condition="'$(_CordisTypertDataRequired)' == 'true'"
+        Lines="$(_CordisTypertDataWritten)" />
     <ItemGroup>
       <Compile Remove="$(CordisTypertDataSource)" />
       <Compile Include="$(CordisTypertDataSource)" />
     </ItemGroup>
   </Target>
   <Target Name="CordisTypertCleanDotnetData" BeforeTargets="CoreClean">
-    <Delete Files="$(_CordisTypertDataFiles)" />
-    <Delete Files="$(_CordisTypertDesignTimeDirectory)$(CordisTypertDataJsonContext).Data.g.cs;$(_CordisTypertDesignTimeDirectory)data-roots.rsp;$(_CordisTypertDesignTimeDirectory)data-reference-models.rsp" />
+    <Delete Files="$(_CordisTypertProjectionDirectory)data.incremental;$(_CordisTypertProjectionDirectory)data.incremental.inputs;$(_CordisTypertDataFiles)" />
+    <Delete Files="$(_CordisTypertDesignTimeDirectory)data.incremental;$(_CordisTypertDesignTimeDirectory)data.incremental.inputs;$(_CordisTypertDesignTimeDirectory)$(CordisTypertDataJsonContext).Data.g.cs;$(_CordisTypertDesignTimeDirectory)data-roots.rsp;$(_CordisTypertDesignTimeDirectory)data-reference-models.rsp" />
   </Target>
   <Target Name="CordisTypertEmitDotnetClient" BeforeTargets="CoreCompile"
-          DependsOnTargets="ResolveReferences"
+          DependsOnTargets="ResolveReferences;_CordisTypertIncrementalInputs"
           Condition="'$(CordisTypertClientModel)' != ''">
     <MakeDir Directories="$(_CordisTypertProjectionDirectory)" />
     <ItemGroup>
@@ -110,15 +229,51 @@
       <FileWrites Include="$(_CordisTypertClientFiles)" />
     </ItemGroup>
     <WriteLinesToFile File="$(_CordisTypertProjectionDirectory)client-reference-models.rsp" Lines="@(CordisTypertClientReferenceModel->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --reference-models &quot;$(_CordisTypertProjectionDirectory)client-reference-models.rsp&quot; --namespace &quot;$(CordisTypertClientNamespace)&quot; --service &quot;$(CordisTypertService)&quot; --client &quot;$(CordisTypertClientName)&quot; --output &quot;$(CordisTypertClientSource)&quot;" />
+    <PropertyGroup>
+      <_CordisTypertClientCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --reference-models &quot;$(_CordisTypertProjectionDirectory)client-reference-models.rsp&quot; --namespace &quot;$(CordisTypertClientNamespace)&quot; --service &quot;$(CordisTypertService)&quot; --client &quot;$(CordisTypertClientName)&quot; --output &quot;$(CordisTypertClientSource)&quot;</_CordisTypertClientCommand>
+      <_CordisTypertClientPrevious></_CordisTypertClientPrevious>
+      <_CordisTypertClientPrevious Condition="Exists('$(_CordisTypertProjectionDirectory)client.incremental')">$([System.IO.File]::ReadAllText('$(_CordisTypertProjectionDirectory)client.incremental').Trim())</_CordisTypertClientPrevious>
+    </PropertyGroup>
+    <ItemGroup>
+      <_CordisTypertClientInputs Include="@(_CordisTypertToolInputs);$(CordisTypertClientModel);@(CordisTypertClientReferenceModel);$(_CordisTypertProjectionDirectory)client-reference-models.rsp" />
+      <_CordisTypertClientExistingInputs Include="@(_CordisTypertClientInputs)" Condition="Exists('%(Identity)')" />
+      <_CordisTypertClientOutputs Include="$(CordisTypertClientSource)" />
+      <_CordisTypertClientExistingOutputs Include="@(_CordisTypertClientOutputs)" Condition="Exists('%(Identity)')" />
+      <FileWrites Include="$(_CordisTypertProjectionDirectory)client.incremental;$(_CordisTypertProjectionDirectory)client.incremental.inputs" />
+    </ItemGroup>
+    <GetFileHash Files="@(_CordisTypertClientExistingInputs)">
+      <Output TaskParameter="Items" ItemName="_CordisTypertClientInputHashes" />
+    </GetFileHash>
+    <WriteLinesToFile File="$(_CordisTypertProjectionDirectory)client.incremental.inputs" Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8"
+        Lines="$(_CordisTypertClientCommand);$(MSBuildProjectDirectory);$(Configuration);$(TargetFramework);$(NETCoreSdkVersion);$(RuntimeFrameworkVersion);$(DesignTimeBuild);@(_CordisTypertClientInputs->'%(FullPath)');@(_CordisTypertClientInputHashes->'%(FullPath)=%(FileHash)');@(_CordisTypertClientOutputs->'%(FullPath)')" />
+    <GetFileHash Files="$(_CordisTypertProjectionDirectory)client.incremental.inputs">
+      <Output TaskParameter="Hash" PropertyName="_CordisTypertClientInputHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_CordisTypertClientExistingOutputs)">
+      <Output TaskParameter="Items" ItemName="_CordisTypertClientOutputHashes" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_CordisTypertClientCurrent>$(_CordisTypertClientInputHash)|@(_CordisTypertClientOutputHashes->'%(FileHash)', '|')</_CordisTypertClientCurrent>
+      <_CordisTypertClientRequired Condition="'$(_CordisTypertClientCurrent)' != '$(_CordisTypertClientPrevious)'">true</_CordisTypertClientRequired>
+    </PropertyGroup>
+    <Delete Files="$(_CordisTypertProjectionDirectory)client.incremental" Condition="'$(_CordisTypertClientRequired)' == 'true'" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Condition="'$(_CordisTypertClientRequired)' == 'true'"
+          Command="$(_CordisTypertClientCommand)" />
+    <GetFileHash Files="@(_CordisTypertClientOutputs)" Condition="'$(_CordisTypertClientRequired)' == 'true'">
+      <Output TaskParameter="Items" ItemName="_CordisTypertClientWrittenHashes" />
+    </GetFileHash>
+    <PropertyGroup Condition="'$(_CordisTypertClientRequired)' == 'true'">
+      <_CordisTypertClientWritten>$(_CordisTypertClientInputHash)|@(_CordisTypertClientWrittenHashes->'%(FileHash)', '|')</_CordisTypertClientWritten>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_CordisTypertProjectionDirectory)client.incremental" Overwrite="true" Encoding="UTF-8" Condition="'$(_CordisTypertClientRequired)' == 'true'"
+        Lines="$(_CordisTypertClientWritten)" />
     <ItemGroup>
       <Compile Remove="$(CordisTypertClientSource)" />
       <Compile Include="$(CordisTypertClientSource)" />
     </ItemGroup>
   </Target>
   <Target Name="CordisTypertCleanDotnetClient" BeforeTargets="CoreClean">
-    <Delete Files="$(_CordisTypertClientFiles)" />
-    <Delete Files="$(_CordisTypertDesignTimeDirectory)$(CordisTypertClientName).Generated.g.cs;$(_CordisTypertDesignTimeDirectory)client-reference-models.rsp" />
+    <Delete Files="$(_CordisTypertProjectionDirectory)client.incremental;$(_CordisTypertProjectionDirectory)client.incremental.inputs;$(_CordisTypertClientFiles)" />
+    <Delete Files="$(_CordisTypertDesignTimeDirectory)client.incremental;$(_CordisTypertDesignTimeDirectory)client.incremental.inputs;$(_CordisTypertDesignTimeDirectory)$(CordisTypertClientName).Generated.g.cs;$(_CordisTypertDesignTimeDirectory)client-reference-models.rsp" />
   </Target>
 </Project>
