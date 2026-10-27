@@ -2,6 +2,8 @@
 
 [English](getting-started.md)
 
+当前源码准备 `0.2.1-alpha.1`，公开发布前需使用随附的已验 feed。下方既有公开批次保留自身合同，切换批次时须重新构建生成消费者。
+
 ## 选择批次与 SDK
 
 使用 .NET 10 和所选批次 global.json 指定的 SDK；当前源码使用 10.0.111。从发行或[验证回执](validation.zh.md#已发行版本证据)选择精确 Cordis.NET 版本与 feed。对于 `0.2.0-alpha.5.2`，请在[匹配发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2)核对 NuGet 可用状态和浏览器客户端归档。所有包及工具须来自同一验收批次，不得用原 alpha.5 封存或同版本文字的 CI 包替代。

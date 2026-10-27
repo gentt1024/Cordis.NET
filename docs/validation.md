@@ -2,6 +2,10 @@
 
 [中文](validation.zh.md)
 
+## 0.2.1-alpha.1 preparation
+
+PR #26 was squash merged as `19abc55163eb415de3d261a8f153453413d789ca`, with the same tree as the candidate verified by [CI 40288031108](https://github.com/gentt1024/Cordis.NET/actions/runs/40288031108). That run had 15 successful jobs and three optional candidate skips; it is not validation of this new version or formal lock. The release branch promotes the previously reviewed S10 source assembly and makes its existing scope mandatory through one workflow shared by CI and release. New versioned evidence is pending. No release tag or public package has been created. The dated sections below preserve the original evidence and pre-promotion scope.
+
 ## Candidate S10 same-batch gate, before promotion
 
 S10 validates the integrated S1–S9 implementation without changing `upstream.lock.json` or the historical `docs/upstream-tests.json`. The formal baseline remains `639ed015397290b3745d163aafe02ffee4aa3f84`; candidate evidence is separately pinned to derived commit `fba488001a6c2d37787d800beeab54a770c826a1`, based on upstream `687f282e8625c6b8d11ff58211a90524be2e4317`. No new application API is introduced by this verification slice.

@@ -2,6 +2,12 @@
 
 [English](compatibility.md)
 
+## 0.2.1-alpha.1 的基线晋升
+
+正式锁现选择 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`（`0.2.1-rc.2`），并指向 `reference/candidate-adaptation.json` 记录的精确 Windows manifest 适配。验证重建派生源码 `fba488001a6c2d37787d800beeab54a770c826a1`，不会从上游获取这个本地提交。补丁与提交对象保持已审 S10 候选的字节。下方带日期的候选条目记录各原检查点的决定，其中“正式锁未变”描述的是当时状态。本次晋升改变源码选择及验证接线，不改变已成立的 S1–S9 native 合同或支持范围。历史 inventory、失败及既有包身份均保留。
+
+浏览器来源记录也绑定到这一上游提交。39 份复制源码的摘要已逐项对照该提交的 Git blob；本地适配继续单列摘要和原因。随包 Loader 现按上游原样记录原始导入命名空间。受支持的浏览器包装仍拥有唯一的 release 准入 gate，并保留显式目标恢复修正；不增加第二个 gate 或自动回滚。
+
 ## 候选 Windows manifest 路径适配，2026-10-23
 
 当前验证候选改为本地派生提交 `fba488001a6c2d37787d800beeab54a770c826a1`，唯一父提交为上游 `687f282e8625c6b8d11ff58211a90524be2e4317`。这是 Cordis.NET 的候选适配，不是上游发布，也不更新正式行为锁。[来源记录](../reference/candidate-adaptation.json)固定上游树、补丁 SHA-256、前后 blob 和可重建的提交对象。原始上游 checkout 与历史收据保留各自身份。

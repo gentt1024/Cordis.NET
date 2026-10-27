@@ -1,0 +1,133 @@
+name: locked upstream source
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: '1'
+
+jobs:
+  candidate-discovery:
+    name: locked source discovery
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Fetch fixed candidate and source origin
+        shell: bash
+        run: |
+          python scripts/candidate_source.py --output ../dsh-candidate
+          git init ../upstream-cordis
+          git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
+          git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
+          git -C ../upstream-cordis checkout --detach FETCH_HEAD
+          npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
+      - name: Discover complete candidate case inventory
+        run: python scripts/verify_candidate_upstream.py discover --dsh ../dsh-candidate --origin ../upstream-cordis --output artifacts/candidate-discovery
+      - name: Preserve candidate instances and historical mapping dispositions
+        run: node reference/inventory-candidate.mjs --inventory=artifacts/candidate-discovery/inventory.json --dsh=../dsh-candidate --origin=../upstream-cordis --output=artifacts/candidate-discovery/candidate-inventory.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-discovery
+          path: artifacts/candidate-discovery
+          if-no-files-found: error
+          retention-days: 30
+
+  candidate-upstream:
+    name: upstream (${{ matrix.os }}, shard ${{ matrix.shard }})
+    needs: candidate-discovery
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+        shard: [1, 2, 3, 4]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: candidate-discovery
+          path: artifacts/candidate-discovery
+      - name: Fetch fixed candidate and source origin
+        shell: bash
+        run: |
+          python scripts/candidate_source.py --output ../dsh-candidate
+          git init ../upstream-cordis
+          git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
+          git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
+          git -C ../upstream-cordis checkout --detach FETCH_HEAD
+          npm ci --prefix reference/candidate-tools --ignore-scripts --no-audit --no-fund
+      - name: Execute candidate shard
+        run: python scripts/verify_candidate_upstream.py run --dsh ../dsh-candidate --origin ../upstream-cordis --inventory artifacts/candidate-discovery/inventory.json --output artifacts/candidate-shard-${{ matrix.shard }} --shard ${{ matrix.shard }}
+      - name: Preserve candidate shard evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-${{ matrix.os }}-${{ matrix.shard }}
+          path: artifacts/candidate-shard-${{ matrix.shard }}
+          if-no-files-found: error
+          retention-days: 30
+
+  candidate-summary:
+    name: locked source union (${{ matrix.platform }})
+    if: always()
+    needs: [candidate-discovery, candidate-upstream]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+          - os: ubuntu-24.04
+            platform: Linux
+    steps:
+      - name: Require candidate discovery
+        env:
+          DISCOVERY_RESULT: ${{ needs.candidate-discovery.result }}
+        run: test "$DISCOVERY_RESULT" = success
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.12.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: candidate-discovery
+          path: artifacts/candidate-discovery
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: candidate-${{ matrix.os }}-*
+          path: artifacts/candidate-results
+      - name: Require complete fixed candidate case union
+        run: python scripts/verify_candidate_upstream.py aggregate --input artifacts/candidate-results --inventory artifacts/candidate-discovery/inventory.json --platform ${{ matrix.platform }} --output artifacts/candidate-summary.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-summary-${{ matrix.os }}
+          path: artifacts/candidate-summary.json
+          if-no-files-found: error
+          retention-days: 30

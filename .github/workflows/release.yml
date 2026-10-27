@@ -98,10 +98,7 @@ jobs:
       - name: Fetch read-only pinned reference
         shell: bash
         run: |
-          git init ../dsh-reference
-          git -C ../dsh-reference remote add origin https://github.com/deepseek-ai/deepseek-harness.git
-          git -C ../dsh-reference fetch --depth=1 origin "$(python -c 'import json; print(json.load(open("upstream.lock.json"))["harness"]["commit"])')"
-          git -C ../dsh-reference checkout --detach FETCH_HEAD
+          python scripts/candidate_source.py --output ../dsh-reference
           git init ../upstream-cordis
           git -C ../upstream-cordis remote add origin https://github.com/cordiverse/cordis.git
           git -C ../upstream-cordis fetch --depth=1 origin 56b3d4f725681cf4556c1a8695a709cc3b6eed74
@@ -115,7 +112,7 @@ jobs:
         shell: bash
         run: |
           python scripts/check-docs.py
-          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --aot --package --package-output artifacts/release-packages
+          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --defer-upstream-source-tests --aot --package --package-output artifacts/release-packages
           python scripts/verify-authoring.py --verification artifacts/verification/verification.json --aot --packages artifacts/release-packages
       - name: Record same-batch authoring inputs
         if: runner.os == 'Linux'
@@ -160,9 +157,12 @@ jobs:
       checkout-ref: ${{ inputs.tag }}
       package-artifact: release-package-batch-${{ inputs.tag }}-${{ github.sha }}
 
+  upstream:
+    uses: ./.github/workflows/upstream.yml
+
   package:
     name: seal publish artifact
-    needs: [validate, portable-authoring]
+    needs: [validate, portable-authoring, upstream]
     timeout-minutes: 10
     runs-on: ubuntu-24.04
     steps:

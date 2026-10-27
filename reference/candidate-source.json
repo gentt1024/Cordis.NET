@@ -1,6 +1,6 @@
 {
   "commit": "fba488001a6c2d37787d800beeab54a770c826a1",
-  "binding": "Derived candidate only. Git blobs bind the reviewed source; candidate-adaptation.json records the original commit and exact patch. Formal behavior lock unchanged.",
+  "binding": "Fixed source assembly selected by upstream.lock.json. Git blobs bind loaded algorithms; candidate-adaptation.json preserves upstream identity and the exact local patch.",
   "files": {
     "packages/boot/app-boot/README.i18n.yaml": "c13fb647d12be61a66e2775cf7e893dbb105b91e",
     "packages/boot/app-boot/README.md": "59c38476da21b74b0bf18e46c4c2298cd2919cf6",

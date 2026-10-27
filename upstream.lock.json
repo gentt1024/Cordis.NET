@@ -3,8 +3,9 @@
   "purpose": "Pinned behavior baseline; not by itself evidence of conformance",
   "harness": {
     "repository": "deepseek-ai/deepseek-harness",
-    "commit": "639ed015397290b3745d163aafe02ffee4aa3f84",
-    "releaseCommitLabel": "0.2.0-rc.2"
+    "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+    "releaseCommitLabel": "0.2.1-rc.2",
+    "sourceAdaptation": "reference/candidate-adaptation.json"
   },
   "cordis": {
     "path": "vendor/cordis",
