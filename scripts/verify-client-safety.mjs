@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { closeSync, existsSync, openSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { release, tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 
 const runtime = resolve(process.argv[2] ?? 'artifacts/client-modules')
@@ -160,8 +160,19 @@ try {
 let browser
 let deadline
 let finished = false
-const diagnostics = { startedAt: new Date().toISOString(), requests: [], progress: [] }
-const saveDiagnostics = () => writeFile(resolve(output, 'browser-diagnostics.json'), JSON.stringify(diagnostics, null, 2) + '\n')
+const diagnostics = { startedAt: new Date().toISOString(), platform: process.platform, osRelease: release(),
+  node: process.version, requests: [], progress: [] }
+const browserVersion = () => {
+  if (process.platform !== 'darwin' || !diagnostics.executable) return undefined
+  try {
+    return execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleShortVersionString',
+      resolve(diagnostics.executable, '../../Info.plist')], { encoding: 'utf8', timeout: 5000 }).trim()
+  } catch (error) { return { error: String(error) } }
+}
+const saveDiagnostics = () => {
+  diagnostics.browserVersionAfter = browserVersion()
+  return writeFile(resolve(output, 'browser-diagnostics.json'), JSON.stringify(diagnostics, null, 2) + '\n')
+}
 const server = createServer(async (request, response) => {
   try {
     const path = new URL(request.url, 'http://localhost').pathname
@@ -212,6 +223,7 @@ server.listen(0, '127.0.0.1', () => {
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(path => path && existsSync(path))
   if (!executable) { server.close(); throw new Error('Set CORDIS_TEST_BROWSER to an installed Chromium browser') }
   diagnostics.executable = executable
+  diagnostics.browserVersionBefore = browserVersion()
   const fail = async error => {
     if (finished) return
     finished = true; clearTimeout(deadline)
