@@ -273,7 +273,7 @@
     "scripts/verify-client-module-types.mjs": "b5e4f47f98ddcd31483a431d5fa5005a6a5b1146f4b4ad33d52113a4d17ef38f",
     "scripts/verify-client-release-browser.py": "4709077bf2d2fe147eb3ea202c792a231aaf446b5dce87c6cafe834825957399",
     "scripts/verify-client-release.mjs": "eee0447eec29c580cb624c1d3f3478e15c7e34c3300f58a6da8a9017aa3a8030",
-    "scripts/verify-client-safety.mjs": "dda5a29f19e878f50dd925e0c0b984b425defe9afa04cd3d3c159d450da99d54",
+    "scripts/verify-client-safety.mjs": "692eeaf6a3321a610501f7cc00458461b2da91875f7cd4951a3e0bda1fd57c51",
     "scripts/verify-remote-access.py": "c6e014c74fed7a8538563d7c5e26a895b2779762555b5ccbb56f70a30c1b133a",
     "scripts/verify-remote-identity.py": "c37fe73f626cf71e8a722f6f738820e9235b8d07a02cf977270d9bb02a172773",
     "scripts/verify-remote-metadata.mjs": "2f69060c52f9ec9f9b63bf313c27cd1c0bf912b14ef2e2a41fbb3e55c796b3d3",

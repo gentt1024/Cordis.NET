@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { closeSync, existsSync, openSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -62,10 +62,17 @@ const requests = []
 const html = `<!doctype html><meta charset="utf-8"><title>Cordis client safety</title>
 <style id="shell-style">body { --shell: retained; }</style>
 <pre id="result">Running real browser checks</pre>
+<script>
+globalThis.reportSafetyProgress = (stage, detail) => navigator.sendBeacon('/diagnostic', JSON.stringify({ stage, detail }))
+addEventListener('error', event => reportSafetyProgress('page-error', event.message || event.target?.src), true)
+addEventListener('unhandledrejection', event => reportSafetyProgress('unhandled-rejection', String(event.reason)))
+reportSafetyProgress('page-script-ready')
+</script>
 <script type="module">
 import { bootClientModules } from '/runtime/client.mjs'
+reportSafetyProgress('module-ready')
 const checks = []; let client
-const check = (condition, message) => { if (!condition) throw new Error(message); checks.push(message) }
+const check = (condition, message) => { if (!condition) throw new Error(message); checks.push(message); reportSafetyProgress('check-passed', message) }
 const equal = (actual, expected, message) => check(JSON.stringify(actual) === JSON.stringify(expected), message + ': ' + JSON.stringify(actual))
 const row = (id, url) => ({ id, rev: 'v1', url: url + '?rev=v1', external: [], inject: [] })
 const graph = entries => ({ rev: 'graph-v1', entries, batches: entries.map(entry => ({ phase: 'application', url: entry.url, rev: entry.rev, entries: [entry.id] })) })
@@ -144,6 +151,7 @@ try {
   document.querySelector('#result').textContent = 'PASS\\n' + checks.join('\\n')
   await fetch('/result', { method: 'POST', body: JSON.stringify({ status: 'passed', checks }) })
 } catch (error) {
+  reportSafetyProgress('caught-error', String(error))
   await client?.dispose().catch(() => {})
   document.querySelector('#result').textContent = 'FAIL ' + String(error)
   await fetch('/result', { method: 'POST', body: JSON.stringify({ status: 'failed', error: String(error), checks }) })
@@ -152,14 +160,24 @@ try {
 let browser
 let deadline
 let finished = false
+const diagnostics = { startedAt: new Date().toISOString(), requests: [], progress: [] }
+const saveDiagnostics = () => writeFile(resolve(output, 'browser-diagnostics.json'), JSON.stringify(diagnostics, null, 2) + '\n')
 const server = createServer(async (request, response) => {
   try {
     const path = new URL(request.url, 'http://localhost').pathname
+    if (path === '/diagnostic' && request.method === 'POST') {
+      let body = ''; for await (const bytes of request) body += bytes
+      if (diagnostics.progress.length < 256) diagnostics.progress.push({ at: new Date().toISOString(), ...JSON.parse(body) })
+      response.end('recorded'); return
+    }
+    if (diagnostics.requests.length < 256) diagnostics.requests.push({ at: new Date().toISOString(), path })
     if (path === '/result' && request.method === 'POST') {
       let body = ''; for await (const bytes of request) body += bytes
       const result = JSON.parse(body)
       assert.ok(['passed', 'failed'].includes(result.status))
       await writeFile(resolve(output, 'browser-result.json'), JSON.stringify(result, null, 2) + '\n')
+      diagnostics.result = result.status
+      await saveDiagnostics()
       finished = true
       response.end('recorded'); console.log(JSON.stringify(result))
       clearTimeout(deadline); server.close(); browser?.kill()
@@ -179,7 +197,10 @@ const server = createServer(async (request, response) => {
       response.setHeader('content-type', 'text/javascript')
       response.end(await readFile(resolve(runtime, path.slice('/runtime/'.length))))
     } else { response.writeHead(404); response.end() }
-  } catch (error) { response.writeHead(500); response.end(String(error)) }
+  } catch (error) {
+    diagnostics.serverError = String(error)
+    response.writeHead(500); response.end(String(error))
+  }
 })
 server.listen(0, '127.0.0.1', () => {
   const url = 'http://127.0.0.1:' + server.address().port + '/'
@@ -190,16 +211,26 @@ server.listen(0, '127.0.0.1', () => {
     'C:/Program Files/Google/Chrome/Application/chrome.exe',
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(path => path && existsSync(path))
   if (!executable) { server.close(); throw new Error('Set CORDIS_TEST_BROWSER to an installed Chromium browser') }
+  diagnostics.executable = executable
   const fail = async error => {
     if (finished) return
     finished = true; clearTimeout(deadline)
     browser?.kill(); server.closeAllConnections(); server.close(); process.exitCode = 1
     await writeFile(resolve(output, 'browser-result.json'), JSON.stringify({ status: 'failed', error }, null, 2) + '\n')
+    diagnostics.failure = error
+    await saveDiagnostics()
     console.error(error)
   }
-  browser = spawn(executable, ['--headless=new', '--no-first-run', '--disable-default-apps',
-    '--user-data-dir=' + resolve(directory, 'browser-profile'), url], { stdio: 'ignore', windowsHide: true })
+  const browserLog = openSync(resolve(output, 'browser-process.log'), 'w')
+  try {
+    browser = spawn(executable, ['--headless=new', '--no-first-run', '--disable-default-apps',
+      '--user-data-dir=' + resolve(directory, 'browser-profile'), url], { stdio: ['ignore', browserLog, browserLog], windowsHide: true })
+  } finally { closeSync(browserLog) }
+  diagnostics.pid = browser.pid
   deadline = setTimeout(() => { void fail('Browser result timed out') }, 60000)
   browser.once('error', error => { void fail(String(error)) })
-  browser.once('exit', (code, signal) => { if (!finished) void fail('Browser exited before reporting a result: ' + code + '/' + signal) })
+  browser.once('exit', (code, signal) => {
+    diagnostics.exit = { code, signal }
+    if (!finished) void fail('Browser exited before reporting a result: ' + code + '/' + signal)
+  })
 })
