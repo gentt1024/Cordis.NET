@@ -34,6 +34,22 @@ internal sealed class DeclarationModelComposition
         get;
     }
 
+    internal static DeclarationModelDocument Compose(
+        DeclarationModelDocument primary,
+        DeclarationModelDocument[] references)
+    {
+        if (references.Length == 0)
+            return primary;
+        var composition = new DeclarationModelComposition(primary, references);
+        return DeclarationModelJson.WithIdentity(
+            primary with
+            {
+                Declarations =
+                composition.declarations.Keys.Order(StringComparer.Ordinal).Select(composition.Resolve).ToArray(),
+                Diagnostics = composition.Diagnostics.Distinct().ToArray()
+            });
+    }
+
     internal DeclarationType Resolve(string id)
     {
         if (resolved.TryGetValue(id, out var previous))

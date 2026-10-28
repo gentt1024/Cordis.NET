@@ -6,6 +6,17 @@ namespace IndependentDeclarations.External;
 
 public interface IExternalMarker;
 
+public sealed record DefaultPolicy(bool Enabled, string[] Modes);
+
+public sealed record DefaultSnapshot(int Id)
+{
+    public DefaultPolicy Policy
+    {
+        get;
+        init;
+    } = new(false, []);
+}
+
 public sealed record GuidItem(Guid Id)
 {
 #if GUID_CUSTOM_CONVERTER

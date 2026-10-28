@@ -742,6 +742,17 @@ The extractor records the exact constructed type, parameter bindings and static 
 
 Both generated Host bindings and independent C# client metadata use the same declaration facts. `CreateDeclared` accepts an optional `TypertInputDefault` query and exposes its values as input Schema `default` annotations. Its input decoder fills only absent, non-required fields before normal schema validation and STJ deserialization. Explicit null follows declared nullability, and explicit zero, false or object values remain present. Required fields remain required. The callback returns null for no default and a JSON null element for an actual null default.
 
+For a generated Service binding whose DTOs come from another assembly, supply that owner's declaration model to the project declaring the Service. Assembly metadata does not contain member initializer facts. Use the existing Roslyn `AdditionalFiles` input, with the `.cordis.model.json` suffix:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="Shared.Contracts" Version="1.0.0" GeneratePathProperty="true" />
+  <AdditionalFiles Include="$(PkgShared_Contracts)/cordis/typert/Shared.Contracts.cordis.model.json" />
+</ItemGroup>
+```
+
+The owner selects its DTOs with `CordisTypertModelRoot` and packs the resulting model with its assembly. For a project reference, include the model from that project's configured `CordisTypertModelPath` instead. The Host generator verifies model identities and retains the current Service's drift check before composing source facts by exact assembly-qualified declaration identity. Conflicting source definitions are refused. Live Service symbols and the actual STJ context still own execution; the generator does not load the referenced DLL to recover initializers. Publish each model with its matching assembly; declared identity checks do not prove correspondence to arbitrary DLL bytes. Without the owner's model, only the metadata-visible facts are available, so no initializer default can be inferred. Model-content changes invalidate the Roslyn generator input even when the assembly signature is unchanged. Clean owns the Host outputs, not the borrowed reference model. Independent client and Web emitters keep their existing explicit reference-model inputs. This does not add a new saved-model format or make ordinary `JsonSerializer.Deserialize` use these defaults.
+
 For an independent client, read the method from `Client.Info.Descriptors`, then use `method.Parameters[index].Input().Parse(json)` or the strict variant. The decoded CLR value can be passed to the generated method normally. Host parameter codecs apply the same defaults before invoking the real Service. Plain `JsonSerializer.Deserialize` outside the codec is not this Remote input parser; generated JSON metadata alone does not repair STJ's parameterized-constructor/init-member omission behavior.
 
 Input defaults do not fill missing outputs. `ResultSchema`, conditional output omission and required-result checks retain their own rules. The ordinary data-only backend and saved Web schema catalog retain their documented support limits; shared declaration facts do not imply that every backend executes every default.

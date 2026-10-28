@@ -7,6 +7,9 @@ namespace IndependentDeclarations;
 [RemoteService("referencedData", typeof(ReferencedRemoteJson))]
 public partial class ReferencedRemote
 {
+    [RemoteMethod("defaults")]
+    public Task<DefaultSnapshot> DefaultsAsync(DefaultSnapshot value) => Task.FromResult(value);
+
     [RemoteMethod("echo")]
     public Task<ReferencedData> EchoAsync(ReferencedData value) => Task.FromResult(value);
 
@@ -22,6 +25,7 @@ public partial class ReferencedRemote
 
 [JsonSourceGenerationOptions(RespectNullableAnnotations = true, RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(ReferencedData))]
+[JsonSerializable(typeof(DefaultSnapshot))]
 [JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(Guid?))]
 [JsonSerializable(typeof(GuidItem))]
