@@ -742,6 +742,17 @@ public sealed record Policy(bool Enabled, ImmutableArray<string> Overrides);
 
 生成 Host 绑定和独立 C# 客户端 metadata 使用同一声明事实。`CreateDeclared` 可接收 `TypertInputDefault` 查询，将其值体现为输入 Schema 的 `default` 注解。输入解码仅补齐省略且非必需的字段，然后执行正常 Schema 校验和 STJ 反序列化。显式 null 按声明空性处理；显式零、false 或对象值保持存在，必需字段仍须提供。查询返回 null 表示没有默认值，返回 JSON null 元素表示实际 null 默认值。
 
+生成式 Service 绑定使用另一程序集的 DTO 时，应向声明 Service 的项目提供 DTO 所属的声明模型。程序集 metadata 不包含成员初始化事实。使用已有 Roslyn `AdditionalFiles` 输入，文件后缀为 `.cordis.model.json`：
+
+```xml
+<ItemGroup>
+  <PackageReference Include="Shared.Contracts" Version="1.0.0" GeneratePathProperty="true" />
+  <AdditionalFiles Include="$(PkgShared_Contracts)/cordis/typert/Shared.Contracts.cordis.model.json" />
+</ItemGroup>
+```
+
+所属项目通过 `CordisTypertModelRoot` 选择 DTO，将生成模型与程序集一起打包。使用项目引用时，改为引用所属项目配置的 `CordisTypertModelPath`。Host 生成器核验模型身份，保留当前 Service 的漂移检查，再按精确程序集限定声明身份组合源码事实；冲突的源码定义明确拒绝。执行仍由 live Service 符号和实际 STJ context 负责，生成器不加载引用 DLL 恢复初始化器。模型须与对应程序集配套交付；声明身份检查不证明它与任意 DLL 字节相符。没有所属模型时只能取得 metadata 可见事实，不能推断初始化默认值。即使程序集签名不变，模型内容变化也会使 Roslyn 生成器输入失效。Clean 只清理 Host 所属输出，不删除借用的引用模型。独立客户端和 Web emitter 继续使用已有的显式引用模型输入。不新增保存模型格式，也不让普通 `JsonSerializer.Deserialize` 自动采用这些默认值。
+
 独立客户端可从 `Client.Info.Descriptors` 取得方法，再使用 `method.Parameters[index].Input().Parse(json)` 或 strict 变体，将得到的 CLR 值正常交给生成方法。Host 参数 codec 在调用真实 Service 前应用相同默认值。codec 之外的普通 `JsonSerializer.Deserialize` 不是这套 Remote 输入解析器；单独的生成 JSON metadata 不会修复 STJ 在参数化构造器与 init 成员组合中的省略行为。
 
 输入默认值不填补缺失输出。`ResultSchema`、条件输出省略和必需结果检查仍使用自己的规则。普通纯数据后端和保存模型的 Web Schema 目录保留已说明的支持边界；共同声明事实不表示每个后端都执行每种默认值。

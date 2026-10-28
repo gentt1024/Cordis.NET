@@ -2,10 +2,41 @@ using Cordis;
 using Cordis.AspNetCore;
 using Cordis.Composition;
 using IndependentDeclarations;
+using IndependentDeclarations.External;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
+var defaultCodec = ReferencedRemoteTypert
+    .Contribution("DefaultsProbe")
+    .Invocations
+    .Single(method => method.Method == "defaults")
+    .Parameters.Single()
+    .Codec;
+foreach (var (json, enabled) in new[]
+         {
+             ("""{"Id":1}""", false), ("""{"Id":1,"Policy":{"Enabled":true,"Modes":[]}}""", true)
+         })
+{
+    using var input = JsonDocument.Parse(json);
+    var value = (DefaultSnapshot)defaultCodec.Decode(input.RootElement)!;
+    if (value.Policy is null || value.Policy.Enabled != enabled || value.Policy.Modes.Length != 0)
+        throw new Exception("Referenced Host input lost the static default or replaced an explicit value.");
+}
+
+using (var input = JsonDocument.Parse("""{"Id":1,"Policy":null}"""))
+{
+    try
+    {
+        defaultCodec.Decode(input.RootElement);
+        throw new Exception("Referenced Host input accepted explicit null for a non-null member.");
+    }
+    catch (JsonException)
+    {
+    }
+}
 
 await using var root = new Context();
 var registry = new TypertRegistry(root);

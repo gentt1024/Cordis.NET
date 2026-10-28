@@ -507,6 +507,8 @@ WriteAsString、AllowNamedFloatingPointLiterals 和未支持组合在影响投�
 
 ## Remote 静态数据输入默认值
 
+生成式 Service 绑定也通过 Roslyn `AdditionalFiles`（`.cordis.model.json`）消费显式提供的所属模型。在当前 Service 漂移检查之后，已有共同声明组合按精确程序集限定身份提供引用源码初始化事实，并拒绝冲突。这补齐跨程序集输入投影接线，不改变默认值政策、不执行引用初始化器，也不验证任意 DLL 与模型的对应关系。见[公开接线](authoring.zh.md#remote-输入的静态数据默认值)。
+
 固定 DSH 生成器的公开 codec 工厂通过可执行 Schema 解码，依据为 `639ed015397290b3745d163aafe02ffee4aa3f84` 的 `packages/typert/generator/src/emitter.ts`。其对象 Schema emitter 保留类型和可选性，不把普通成员初始化器转换成默认值。analyzer 拒绝带默认值的 Remote 方法参数，这与 DTO 成员初始化是不同问题。.NET 适配继续让 codec 承担输入解析。把静态可证明的 C# 数据初始化器映射为省略成员的输入默认值，是本平台的明确判断，不是 DSH 的直接要求或 STJ 惯例的自动结果。
 
 源码生成器和独立 .NET emitter 共用声明图及其参数／成员事实，为 `CreateDeclared` 提供静态 wire 默认值。输入 Schema 描述这些默认值，输入解码在 STJ 前应用它们；显式 null、必需字段和显式值保持各自含义。输出解码不使用输入默认值。编译器不会加载作者程序集执行构造器来完成投影。支持范围限于[作者说明](authoring.zh.md#remote-输入的静态数据默认值)中的被动 primary record 子集；未知行为继续作为分析事实保留，在独立输入投影确实需要时拒绝。

@@ -81,11 +81,13 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                         selector,
                         docs);
                     var contract = DeclarationRemoteContract.Read(authored, selector).Single();
+                    var references = new List<DeclarationModelDocument>();
                     foreach (var json in artifacts)
                     {
                         try
                         {
                             var artifact = DeclarationModelJson.Deserialize(json);
+                            references.Add(artifact);
                             var roots = artifact
                                 .Roots.Select(id => artifact.Declarations.Single(value => value.Id == id))
                                 .Where(value => DeclarationAttributeProjection.Attribute(
@@ -124,7 +126,8 @@ public sealed class RemoteGenerator : IIncrementalGenerator
                         }
                     }
 
-                    Emit(output, service, compilation, authored, contract);
+                    var composed = DeclarationModelComposition.Compose(authored, references.ToArray());
+                    Emit(output, service, compilation, composed, contract);
                 }
                 catch (Exception error)
                 {

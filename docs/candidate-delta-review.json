@@ -265,7 +265,7 @@
     "clients/modules/vendor/slots/index.ts": "273e5148f5e66220edaefa2ccd3302625372802123802400f93af008074473e0",
     "clients/modules/vendor/slots/renderer.ts": "9b518a8dccdd5955e54a419fec3a8cce9de6b8ba824b0d199bb958a47411d9d9",
     "clients/tools/build.mjs": "a2f4d49bc41b7e78dfe09f582d992f8d9a2ee21fd4eddce6cc010b8effefdc0a",
-    "scripts/typert_declaration_consumer.py": "56294a51c096da484559ac660dae99cb6e9be9980893e07c495b66d4aed54255",
+    "scripts/typert_declaration_consumer.py": "076a5a03502662153e96a53fccfdfb81978c903b2a9e68ddc2cad6a71a1afdc5",
     "scripts/verify-access-client.py": "58e9f4752309976527702628b16efb5c6b08e7257edb7f2219ee8396bd0ade11",
     "scripts/verify-client-access.mjs": "f036c6ea2d711870f249e61cbc337bc173d6b59d759882b00e954e5182fed2e2",
     "scripts/verify-client-author-package.mjs": "61cd865b502b6046f07d4bdc0799642c973317beb495c9c679d1c1625944ad6d",

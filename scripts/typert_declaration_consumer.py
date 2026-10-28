@@ -327,7 +327,8 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
 def pack_external_data(fixtures, feed, dotnet, composition, run, project):
     roots = ''.join('<CordisTypertModelRoot Include="IndependentDeclarations.External.' + name + '"/>'
         for name in ("ImportedData", "GuidItem", "UnrelatedData", "ImportedHiddenData", "Envelope`1",
-            "RequiredConstructor", "OptionalConstructor", "SelectedConstructor", "DirectionalData", "EnumData"))
+            "RequiredConstructor", "OptionalConstructor", "SelectedConstructor", "DirectionalData", "EnumData",
+            "DefaultSnapshot"))
     external, external_project = project("DeclarationExternal",
         '<AssemblyName>IndependentDeclarations.External</AssemblyName>'
         '<PackageId>IndependentDeclarations.External</PackageId><Version>1.0.0-alpha</Version>', composition,
@@ -423,11 +424,12 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
         '<AssemblyName>IndependentReferenced.Provider</AssemblyName>'
         '<PackageId>IndependentReferenced.Provider</PackageId><Version>1.0.0-alpha</Version>'
         '<CordisTypertService>referencedData</CordisTypertService>',
-        composition + '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha"/>',
+        composition + '<PackageReference Include="IndependentDeclarations.External" Version="1.0.0-alpha" GeneratePathProperty="true"/>',
         '<ItemGroup><CordisTypertModelRoot Include="IndependentDeclarations.ReferencedData"/>'
         '<CordisTypertModelRoot Include="IndependentDeclarations.ReferencedHiddenData"/>'
         '<CordisTypertModelRoot Include="IndependentDeclarations.NonStringDictionaryData"/>'
-        '<CordisTypertModelRoot Include="IndependentDeclarations.DataExternal"/></ItemGroup>')
+        '<CordisTypertModelRoot Include="IndependentDeclarations.DataExternal"/>'
+        '<AdditionalFiles Include="$(PkgIndependentDeclarations_External)/cordis/typert/IndependentDeclarations.External.cordis.model.json"/></ItemGroup>')
     shutil.copyfile(fixtures / "DataAuthor.cs", author / "DataAuthor.cs")
     shutil.copyfile(fixtures / "ReferencedRemote.cs", author / "ReferencedRemote.cs")
     run("referenced-data-author-pack", [dotnet, "pack", author_project, "-c", "Release", "-o", feed])
