@@ -1,8 +1,20 @@
-# Managed application
+# Run the managed application example
 
-This loopback development example composes the native profile session, package toolchain, ASP.NET management adapter and reusable browser module consumer. Its local policy authorizes loopback requests; applications supply their own identity and approval policy.
+English | [中文](README.zh.md)
 
-This example's feed argument is a local directory. Prepare its complete dependency set from the repository root in PowerShell:
+Build a local plugin feed, start an ASP.NET Core Host, then use its browser page to install a CLR plugin and edit its configuration. This is a loopback development application with native profile, package, Settings and browser-module owners.
+
+## Prepare the environment
+
+Use a source checkout, its `global.json` SDK, the matching ASP.NET Core runtime, and access to the configured NuGet and npm sources. Building the browser assets needs Node 22 or newer. Run all commands below from the repository root.
+
+The application requires a runtime directory and at least one client package directory. The browser assets are not optional for this example; using prebuilt matching directories avoids their local Node build. For a C#-only host, follow the [CLI guide](../../tools/Cordis.Cli/README.md) instead.
+
+Use a fresh local feed and profile for this walkthrough. The paths below are examples; if they already hold another source batch, choose new paths consistently. Main can contain unpublished fixes despite sharing the published version property; see [source status](../../docs/development.md#current-support-and-release-status).
+
+## Build a complete local plugin feed
+
+Run this block in PowerShell. It packs the source Cordis dependencies, the plugin and the exact locked YamlDotNet dependency:
 
 ```powershell
 New-Item -ItemType Directory -Path artifacts/managed-feed -Force | Out-Null
@@ -17,33 +29,57 @@ $managedExampleYaml = $managedExampleLock.dependencies.'net10.0'.YamlDotNet.reso
 Copy-Item -LiteralPath (Join-Path $managedExampleCache "yamldotnet/$managedExampleYaml/yamldotnet.$managedExampleYaml.nupkg") -Destination artifacts/managed-feed
 ```
 
-Build the optional browser runtime and independent client packages:
+The feed must contain `Example.ManagedPlugin` version `1.0.0-alpha.1`, the matching Core/Composition/Clr packages, and the YamlDotNet version from the lock. This example accepts a complete local directory, not a NuGet v3 URL. The package library and CLI have their own explicit source configuration. An incomplete feed fails installation; correct it, inspect again and install with a new request ID.
 
-```sh
-npm ci --prefix clients/modules
+## Prepare the browser directories
+
+To build the runtime and the independent provider/panel examples locally:
+
+```console
+npm ci --prefix reference --ignore-scripts
+npm ci --prefix clients/modules --ignore-scripts
 npm ci --prefix clients/tools
 node scripts/build-client-modules.mjs artifacts/client-runtime
 node clients/tools/build.mjs clients/modules/examples/provider artifacts/client-provider
 node clients/tools/build.mjs clients/modules/examples/panel artifacts/client-panel
+```
+
+Keep the complete output directories, including manifests and licenses. Provider and panel entries are `client.ts`; their packages declare client-only bundles with `dsh.bundle.patch: []`. These outputs are local builds, not a new public release.
+
+## Start the Host and install the plugin
+
+Start the application:
+
+```console
 dotnet run --project examples/ManagedApplication -- artifacts/managed-profile artifacts/managed-feed artifacts/client-runtime artifacts/client-provider artifacts/client-panel
 ```
 
-The selected local feed must include the plugin's transitive dependencies, including its locked YamlDotNet package. The package library and CLI can separately configure an explicit NuGet v3 source; this example command accepts a complete local feed. The Host does not broaden its source mapping to hide an incomplete feed. A preparation failure remains a failed installation; after correcting the feed, repeat normal inspection and installation with a new request id.
+Open `http://127.0.0.1:5187`. For a fresh profile, the supplied client packages become selected bundles. Existing profile selection is retained on later starts. Inspect and install `Example.ManagedPlugin` at exact version `1.0.0-alpha.1`; installation uses the inspection's `contentHash` and a unique request ID. Wait/cancel observe that same task. A lost response is queried through the same generation's active wait operation; an unknown result is not success.
 
-Open `http://127.0.0.1:5187`. The first launch initializes the supplied client packages as selected profile bundles. Existing profile selection remains authoritative. Client-only bundles use `dsh.bundle.patch:[]`; they do not add a second selection store. Disabling a provider withdraws its dependent client contributions. Re-enabling restores the complete selected graph. Artifacts are captured bytes behind revisioned `/cordis/client/artifacts` URLs.
+The example allows loopback requests with its local Host/Origin checks. It supplies no deployed account policy. Applications must define their own identity, authorization and build approval.
 
-The supplied managed plugin package is `Example.ManagedPlugin` version `1.0.0-alpha.1`, matching its prerelease Cordis dependencies. Use that exact version in Inspect and install.
+## Edit configuration and observe lifecycle changes
 
-The page has one management connection owner. Explicit reconnect closes its predecessor and subscriptions before constructing another connection. Temporary connection loss preserves module contributions and drafts; recovery awaits notification readiness before reading full state and graph. Plugin/package operations, Settings and notifications use their generated standard clients. Choose Settings for the filtered settings surface with numeric form revisions, or Configuration for the independently authorized raw configuration and its schemas. Configuration retains its source hash fence and full schema endpoint. Both commit ordered edits through the same profile configuration owner. Settings namespace ids are the profile row ids, while full configuration uses runtime addresses such as `root:example.managedplugin`. Compatibility grants have a separate read and explicit risk-accepting mutation. Installation submits the inspection's `contentHash` and a unique request id. Wait and cancel observe that existing task; a lost response is queried through its active wait operation in the same generation, and an unknown result is not displayed as successful. See [standard management use](../../docs/management-remote-migration.md).
+Use Settings for the filtered live form with numeric revisions. The Settings namespace is the profile row ID, `example.managedplugin`. Use Configuration for separately authorized raw configuration and schemas; its runtime address is `root:example.managedplugin`, with a separate source hash. Both use one ordered configuration writer.
 
-For an explicitly requested frontend development worker, append:
+Change `limit` from 1 to 7: the plugin accepts integer values from 1 through 100 and updates its live reference without ordinary reactivation. Use Configuration to change the ordinary `label`; it is not a live Settings field and follows Loader replacement. `credential` is a live secret: reads expose presence, not its value. Describe again after a write.
 
-```sh
---watch=clients/modules/examples/provider --client-build-script=clients/tools/build.mjs
+Disable the browser provider to withdraw its dependent panel; re-enable it to restore the selected graph. Temporary transport loss preserves plugins and drafts. Recovery subscribes before reading state and graph and never automatically replays writes. [Settings](../../docs/settings.md) and [management](../../docs/management-remote-migration.md) describe the public contracts.
+
+## Run an author watcher when needed
+
+To develop the provider, append the approved worker options to the complete launch command:
+
+```console
+dotnet run --project examples/ManagedApplication -- artifacts/managed-profile artifacts/managed-feed artifacts/client-runtime artifacts/client-provider artifacts/client-panel --watch=clients/modules/examples/provider --client-build-script=clients/tools/build.mjs
 ```
 
-`--node=` optionally names the approved Node executable. Node is only needed for this author toolchain. Each successful watch build supplies a completed immutable generation directory. The Host validates its package identity and captured SHA, then publishes a full catalog inside the profile session's existing queue and emits `client-modules/changed`. Compiler errors retain the previous catalog. A failed output callback, invalid frame, oversized output or unconfirmed process cleanup is a failure, not completion.
+`--node=` can select the Node executable. Successful frames supply complete immutable generations; the Host checks identity/hash, captures the catalog through the profile queue and emits `client-modules/changed`. Compiler errors retain the last catalog. A failed callback, invalid/oversized frame or unconfirmed process cleanup is a failure.
 
-Read development status from the page and use Stop compiler to cancel the selected worker. Stop waits for the existing package process owner's child-process termination and output settlement. Application shutdown and Context disposal close the same worker owner. Changing package identity or external requests requires restarting the author watch. Stopping a compiler retains the last published artifact; profile selection controls contribution withdrawal.
+Use Stop compiler in the page to cancel a worker. It waits for child termination and output settlement. Restart watch after changing package identity or external requests. Stopping compilation retains the last artifact; profile selection controls module withdrawal.
 
-The example keeps prior build directories for inspection. The runtime can be distributed as precompiled bytes without author sources, Node, the local NuGet feed or these development commands. Validate published artifact consumption separately from a source checkout build.
+## Stop and retain the example state
+
+Stop the Host with Ctrl+C and wait for it to exit before reusing the profile or deleting retained files. Shutdown closes the same worker owners and waits for catalog work. Prior build directories are retained. Logical package removal does not delete installed CLR bytes; follow [offline deletion](../../docs/clr-artifacts.md#delete-retained-files-offline).
+
+A deployed application can serve precompiled browser bytes without author sources or Node. This source walkthrough does not establish new packaged, cross-platform, AOT or browser acceptance.

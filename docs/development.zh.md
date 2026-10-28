@@ -1,10 +1,12 @@
 # 开发与验证
 
-[English](development.md)
+[English](development.md) | 中文
 
 ## 当前支持与发行状态
 
-当前源码基于已晋升的 DSH 0.2.1-rc.2 及已记录的 Windows 适配，准备 `0.2.1-alpha.1`。PR 通过本身不选定 tag 或公开包。[验证记录](validation.zh.md)区分历史结果与当前候选，[发行准备](publication-readiness.zh.md)负责发行门禁。已发布 alpha.5.2 及更早制品保持不变。
+已发布的预览版为 [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)，于 2026-10-27 从 tag 提交 `a2728c7e929a01a586fc714d9b397eaf9549e153` 发行，采用固定 DSH 0.2.1-rc.2 基线及已记录的 Windows 适配。[发行证据](validation.zh.md#已发行版本证据)列出正式验证与可下载制品。
+
+当前 main 另有两项**尚未发布**的修正：[PR #28](https://github.com/gentt1024/Cordis.NET/pull/28)跳过未变化的 Typert 生成，并恢复失效输出；[PR #29](https://github.com/gentt1024/Cordis.NET/pull/29)将引用 DTO 所属模型的事实接入生成式 Service 的输入默认值。新版本发布前，如需使用这些修正，应从同一源码提交构建匹配的包与工具。即使源码版本属性尚未变化，已发布的 alpha.1 包也不包含它们。PR 通过不等于新版本发行；发行流程见[发行准备](publication-readiness.zh.md)。
 
 | 范围 | 当前用法与边界 |
 |---|---|
@@ -13,7 +15,7 @@
 | 声明 | 共同模型、显式引用、普通 build／pack 和首次 design-time 生成；下表列出支持和拒绝形状。 |
 | Remote | 共享 unary／multipart 和文本 mux Connection、scoped 客户端、反向 Context／owned value、Peer 路由及固定事件；互通有明确范围，不包含所有 DSH SDK 传输。 |
 | CLR | 准备／发布回执、稳定 LoadDirectory、重启升级、逻辑移除保留文件；要求普通运行时，业务排空／就绪归应用。 |
-| 消费状态 | 实际已准备候选的合同访问、unary 本地 transport cause 和有限 Web 数值 metadata 已在本候选实现。[验证记录](validation.zh.md#已发行版本证据)区分本地消费、完整 CI 与发行状态；外部应用使用一致的包／工具批次验证受影响调用。泛型 DTO／静态后端限制保持明确；具名 UI／平台需要自己的证据。 |
+| 平台与证据 | 已发布版本在 Windows／Ubuntu 有完整运行时、包与 AOT 验证；macOS 覆盖具名作者与浏览器消费者，不代表完整运行时、应用或 AOT 验收。精确源码身份、失败及限制见[验证记录](validation.zh.md)。 |
 
 ## 维护导航
 
@@ -36,7 +38,7 @@ Typert MSBuild targets 核对求值后的源码／模型／引用列表、引用
 
 ## 模型管线合同
 
-普通根与 Remote 根使用同一个声明事实模型。已发布 alpha.5.2 是公共使用基线。修正需明确影响及重新生成指引；历史试验本身不定义目标合同。应用持久数据、Git 历史与已发布包身份分别保全。
+普通根与 Remote 根使用同一个声明事实模型。提取阶段记录作者事实，各后端按自身支持范围解释并生成输出。所需事实变化时，重新提取所属模型，并使用匹配工具重建受影响的提供者与客户端。固定上游行为和已说明的平台适配决定目标合同，历史试验格式不产生额外兼容要求。
 
 | 阶段 | 输入 → 输出 | 所有者 | 拒绝边界 | 退出路径 |
 |---|---|---|---|---|
@@ -53,24 +55,34 @@ MSBuild 按解析得到的完整程序集身份，将引用的 XML 文档作为�
 
 提取、模型读取和 Host 绑定保留 null 数组属性及引用文档事实。
 
-## Alpha5 独立后端处置
+<a id="alpha5-独立后端处置"></a>
 
-固定生成器的声明图与 face/event emitter 确定了保留所选边界的职责；Roslyn 事实和 STJ 元数据是这一职责的 .NET 表达。下表针对保存模型 DTO/STJ 和 Web 生成，不撤销 Host 能力，也不为试验产物创造兼容义务。
+## 生成后端支持范围
 
-| 形状与依据 | 共同事实及实际 Host 行为 | 后端／标准消费者处置 | 公共用法影响 |
-|---|---|---|---|
-| 默认 STJ System.Guid 标量 | 共同事实保留框架身份；Host 读写 JSON string，Schema 为 string/uuid。 | alpha5 必需的 .NET 适配；共享分类供普通数据、Remote 与事件投影使用。Guid?、数组、支持的集合和 string-key 字典值正常组合。 | C# 保留 Guid，Web 使用 string；框架类型不需源模型或映射注解。不扩入自定义 converter、Guid 键或 ID wrapper。 |
-| 参数、结果、省略/null、required/default、方向属性 | 保留注解、构造参数、常量和 JSON 属性；Host 使用实际 STJ 准入与序列化。 | alpha5 普通方法和事件必需，包括 Settings／管理及独立客户端。reply 是输入；request／普通参数／next 是输出。 | 本版纠正已有生成承诺，不用宽泛 `object` 替代。 |
-| 递归 DTO、数组、受支持框架集合、string-key 字典、显式引用定义 | 保留完整身份和元素注解；Host 使用实际注册 codec。 | 必需，当前 .NET/Web 投影及独立引用消费者已覆盖；缺失／冲突引用继续报错。 | 主／引用输入及 build/pack 资产不变；引用不扩大选择根。 |
-| 闭合作者泛型容器，如 `Page<Row>` | 已有定义、实参、类型参数所有者事实。Host 可绑定闭合 STJ 类型；独立替换与生成命名尚未实现。 | DTO/STJ 和 Web 可增量扩展的未支持形状。标准结果／流／optional wrapper 属于协议形状，不代表任意泛型 DTO；当前 Settings／管理／事件路线不要求作者泛型容器。 | 后续替换可沿既有声明及后端入口实现，不必迁移已支持调用方；不能称为泛型发射完成。 |
-| 数据继承与多态 | 保留 base/interface 和 JSON 属性；Host STJ 可处理继承成员或已配置 discriminator。 | 分别未支持：继承成员展开／override 冲突处理，以及多态 discriminator／union 投影。当前标准 DTO 路线不依赖它们。 | 在同一输入上支持当前拒绝的声明，不静默丢失继承字段或只发射基类合同。 |
-| 嵌套 DTO 名称、非 string 字典 key、多维数组 | 已有类型身份、包含类型、key、rank 事实；Host 能力取决于 STJ 具体类型。 | 独立后端可增量扩展的未支持形状；框架集合支持不包含这些形状。 | 已支持声明保持表示；扩展须有具体 codec 与命名证据。 |
-| Binary attachment | Host codec 和 Connection 保留附件元数据及所有权；保存模型 Web JSON 投影仍拒绝 byte-array 附件元数据。 | 现有 Host 生成客户端支持 carrier；独立保存模型 Web 附件发射未支持，标准 Settings／管理／事件 DTO 不需要它。 | 不计划替换 Connection 或作者声明；未来静态发射必须保留既有 carrier 合同，不能据此称所有后端都支持 binary。 |
-| 只读成员、extension data、非公开 JsonInclude、SetsRequiredMembers、非默认序列化策略 | 所选事实保留；Host 使用可执行作者元数据；部分 Schema／数据投影尚未实现并明确拒绝。 | 可增量扩展的静态形状，除非必需标准消费者证明依赖。分析遗漏的非公开包含数据报告诊断，不擦除。 | 不发布丢失字段的生成合同；扩展须保留已支持的方向合同。 |
-| 任意 converter、访问器／构造器业务、非常量初始化器 | 类型／属性名或表达式文本不能证明可执行行为；Host 继续运行实际实现与 STJ 元数据。 | 仅靠保存事实不能重现，独立后端拒绝，不加载 Provider 或编造默认值；已支持常量和空集合默认值保留。 | 不新增 converter registry、重复作者合同或格式代际；未来必需场景先明确实际 wire 合同。 |
-| 仅 metadata 的 serializer context、冲突 JSON policy | metadata 不提供源声明闭包；一个投影类型不能合并不兼容命名。 | 要求显式引用源模型；策略不同则独立选择，保留精确诊断。 | 无反射回退、静默策略选择或实现 DLL 补事实。 |
+按需要的制品选择后端。提取记录共同声明事实，不保证每个后端都能执行作者 serializer 或生成所有 C# 形状。Host 使用实际实现、注册的 STJ metadata 与 codec，独立消费者使用保存事实及显式引用模型。即使 STJ 本身能序列化一个值，运行时 Schema 投影与输入准入仍可能各自报告诊断。
 
-这些是已知后端限制的具体处置，不承诺支持全部 C# 形状。当前未发现 alpha5 标准消费者要求后续替换作者选择、模型／引用入口、Connection 构造、挂载／作用域／释放、结果／错误／流／事件合同、Settings／管理任务所有权或稳定 CLR 制品加载方式。保存模型 Web 事件补齐这条路线缺失的输出。候选包、浏览器、作者体验及 HMR 风险证据仍决定发行就绪状态，本表不能代替验证。
+| 声明或用途 | Host 绑定／运行时导出 | 独立 C# Remote 客户端 | 普通 C# 数据（emit-dotnet-data） | 独立 Web（emit-web） |
+|---|---|---|---|---|
+| 公开 DTO、数组、支持的集合与字符串键字典 | 使用选定 codec 与实际作者 metadata。 | 在声明投影范围内支持。 | 公开顶层非泛型 class，公开可读且有公开 set/init 的属性，无继承／接口或参数化构造器。 | 支持的公开 DTO 形状，保留输入／输出方向。 |
+| 显式引用源码模型 | Host 组合保留 Service 漂移检查，引用初始化事实需要所属源码模型。 | 精确程序集限定身份，缺失／冲突源码事实拒绝生成。 | 相同身份与源码要求，引用不增加根。 | 相同身份与源码要求，不加载提供者 DLL。 |
+| 值类型 struct 与 readonly record struct | 取决于注册 metadata／codec。 | 支持数据载体，包括经构造器接收 wire 值的只读成员。 | 拒绝。 | 当前 DTO 投影拒绝。 |
+| 闭合作者泛型，如 Response<Row> | 在 codec 范围内绑定已注册的闭合类型。 | 支持无约束数据定义及实际闭合参数，不执行任意开放泛型 endpoint 或约束行为。 | 拒绝作者泛型 DTO。 | 拒绝作者泛型 DTO。 |
+| getter-only／readonly 成员 | 输出服从实际 metadata 与方向。 | 生成 JSON 构造参数可接收只读 wire 数据，不复制 accessor 体。 | 要求公开 set/init 属性，拒绝字段／getter-only 载体。 | 仅支持的方向性成员事实，不执行 accessor。 |
+| System.Guid | 默认 STJ UUID 字符串合同。 | 原生 Guid，包括支持的 nullable／容器组合。 | 支持数据子集中的原生 Guid。 | string 与 UUID Schema，不包含任意 ID 包装或 Guid 字典键。 |
+| 公开源码 enum | 使用实际注册 serializer。 | 数值 enum 与识别的默认泛型 JsonStringEnumConverter<TEnum> 政策。 | 数值 enum 与相同的已识别泛型 converter。 | 数值 enum，拒绝字符串转换 enum；核对已说明的数值精度边界。 |
+| 静态 DTO 成员默认值 | 使用声明输入默认值与实际 serializer，输出不应用输入默认值。 | 常量及支持的有限 record／集合数据构造，输入投影拒绝带行为表达式。 | 较窄属性子集中的常量／null／enum 初始化器。 | 不执行作者初始化器或构造器，不从目录推定 C# Host 默认值执行。 |
+| 继承、多态、嵌套 DTO、非字符串字典键和多维数组 | 取决于显式 metadata 与 codec。 | 不属于一般支持的投影形状。 | 拒绝。 | 拒绝。 |
+| 非公开 JsonInclude／缺失必需源码事实 | 实际 metadata 仍归 Host。 | 已分析 included 数据缺失时诊断，不静默丢字段。 | 相同拒绝原则。 | 相同拒绝原则。 |
+| 任意 converter、构造器／accessor 业务、仅 metadata 的 serializer context | codec 允许时执行真实代码，导出仍可拒绝。 | 不重放或加载提供者，不能复现的行为及不足的 context 事实明确拒绝。 | 不重放或通过反射修补。 | 不重放或通过反射修补。 |
+| 二进制附件 metadata | 支持的运行时 carrier／导出路线保留附件与生命周期规则。 | 不从保存 DTO 事实推定任意附件政策。 | 普通 JSON 数据生成不是附件生成。 | 保存 JSON 投影拒绝附件 metadata，普通 byte[] JSON 与附件政策不同。 |
+
+C# Remote 投影还保留已识别的 ImmutableArray<T> 与 DateTimeOffset 映射。已知框架映射不启用任意 BCL 或作者泛型；enum 别名、flags 与声明顺序保留支持的 STJ 行为，任意 converter 实现仍拒绝。
+
+空性／默认值查询图复用普通递归使用点，其 256 预算只统计同一路径上同一泛型声明的活动使用点，不累计所有兄弟节点，有限路径也可能被拒绝。这与后端限制不同：普通数据投影仍将可达定义限制为 256，并有自身遍历／类型限制；任何后端都不承诺任意 C# 图。
+
+静态生成不能复现合同时，运行时 `TypertArtifacts.GenerateClient(contribution)` 可在支持范围内通过共享 emitter 导出实际 Host 描述。这是显式运行时路线，不是自动反射回退或第二种模型格式。保留一个主模型、显式引用和普通 build／pack 输入，事实变化时使用匹配包／工具重新生成。[作者指南](authoring.zh.md#生成模型与独立客户端)说明输入，[兼容记录](compatibility.zh.md)说明平台适配。
+
+上述 C# struct／泛型／默认值投影支持已在 alpha.1 发布；main 后续的增量生成与跨程序集 Host 默认值修正尚未发布，见[发行与源码状态](#当前支持与发行状态)。支持声明不替代[实际验证证据](validation.zh.md)，也不证明完整 DSH 产品／SDK 互通。
 
 ## 快速循环
 

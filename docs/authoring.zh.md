@@ -1,80 +1,31 @@
 # 插件与应用作者指南
 
-[English](authoring.md)
+[English](authoring.md) | 中文
 
-这些可选的 .NET 作者辅助接口复用现有 Cordis 运行时。包使代码可用；模块注册把名称映射到代码；patch/profile 条目选择实例；`Inject` 决定插件何时能够激活。服务身份仍由名称与 realm 决定。这些辅助接口不增加第二套注册表或生命周期。
+本指南涵盖配置、生成式 Remote 合同和浏览器消费者。编写第一个进程内插件时，先读[入门教程](getting-started.zh.md)。包使代码可用，模块注册把名称映射到代码，Profile 条目选择实例，`Inject` 决定插件何时能够激活。生命周期关系见[核心概念](core-concepts.zh.md)。
 
-## 候选浏览器 release 与资源，2026-10-23
+示例对应当前 main。已发布版本为 `0.2.1-alpha.1`，不包含下方的跨程序集 Host 默认值修正。选择包与工具时，核对[发行与源码状态](development.zh.md#当前支持与发行状态)。
 
-捕获 `ClientModuleCatalog` 时传入 `release: new ClientModuleRelease("application-version", "build-commit")`。初始 graph 和后续管理响应应使用同一应用身份。只有应用明确没有 release 身份时才省略。相同 release 内的 graph revision 变化允许正常插件替换；release 变化后必须重载页面，才能运行该 release 的 graph。
+## 按任务查找
 
-订阅 `modules.releaseChange` 并读取其 `getSnapshot()` 来展示重载提示。`modules.dismissRelease()` 只关闭提示。继续遵循既有的 `management.close()`、`modules.dispose()` 归属顺序。SDK 不会自动重载页面。
+| 任务 | 从这里开始 |
+|---|---|
+| 运行完整应用示例 | [可运行示例](#从可运行示例开始)。 |
+| 使用或提供进程内服务 | [消费者插件](#消费者插件)、[服务提供者与配置](#服务提供者与配置)。 |
+| 接入外部回调并清理资源 | [外部回调与所有权](#外部回调与所有权)。 |
+| 声明、注册并调用 Remote 服务 | 先[声明与生成](#声明与生成原生-remote-合同)，再[登记与调用](#登记调用与撤销合同)。 |
+| 从保存模型生成 .NET 客户端 | [项目配置与模型输入](#生成独立-net-客户端)。 |
+| 提取 DTO 声明而不使用 Remote | [普通声明模型](#普通声明模型)。 |
+| 添加浏览器模块、scoped 调用或事件 | [浏览器 release](#浏览器-release-与资源)、[scoped 客户端](#浏览器-scoped-remote-消费)、[Remote 事件](remote-events.zh.md)。 |
+| 保留静态输入默认值，包括引用 DTO | [静态数据默认值](#remote-输入的静态数据默认值)，注意该节的发行可用性说明。 |
 
-作者包可将 `.svg`、`.png`、`.webp` 文件导入为 data URL 字符串。仅图片变化也会参与 `cordis-client-build --watch` 并产生新的不可变 generation。通过 `inline: true` 声明内联 slot；应用 renderer 消费该提示，也可把 member 名传给 keyed standard source。这些增量不会安装 React renderer。
+## 编写进程内插件
 
-## 候选 Remote 元数据，2026-10-23
+插件与服务使用 Core，配置辅助接口使用 Composition。以下 C# 示例基于 .NET 10，不需要浏览器或 Node。
 
-使用生成 Host 的 `Info(package)` 工厂或独立 .NET 调用者的静态 `Info`，无需建立连接即可检查 Remote 方法。独立调用者的 `CreateInfo(package)` 可指定部署包身份；默认 Info 使用保存模型的程序集身份。`Methods` 包含直接端点，`Descriptors` 还包含 Context 接收者。读取已注册事实时，使用 `TypertRegistry.GetLocalInfo(package)` 或 `GetRemoteInfo(package)`。
+### 从可运行示例开始
 
-对选中的描述符调用 `Input()` 或 `Input(strict: true)`，再通过 `Parse(JsonElement)` 解析命名 wire 实参。仅在工具消费者需要投影时读取 `JsonSchema`，并在不可用时处理 `JsonSchemaError`。投影不可用不代表 parser 不可用。`ResultValue` 单独提供结果元数据。单个参数也提供 `Input(strict)`；`UplinkValue` 提供流条目的输入元数据，这些接口同样可用于 Context-only 描述符。`Create()` 返回独立于工具投影缓存的 parser 委托。保留可选缺省与显式 null 的区别。
-
-将解析后的实参传入描述符的 `Invoke(client, arguments, cancellationToken)`。其 `object` 结果是既有生成方法的任务，包括返回双向流句柄的任务。生成客户端实现 `ITypertNamedRemote`，元数据调用路径保留其连接与生命周期检查。编译时已知实参和结果类型时，可继续使用普通类型化方法。浏览器生成模块导出 `info`、命名 `methods`、`input({ strict: true })` 和 `invoke(remote, arguments, signal)`。
-
-
-## 候选事件访问与权限客户端，2026-10-23
-
-在 Host 服务旁登记标准 follow 贡献：
-
-```csharp
-var access = new TypertRemoteAccess(ctx);
-ctx.Provide("remoteAccess", access);
-access.RegisterRemote(ctx, registry);
-```
-
-角色中使用 `event:<所选事件名>` 授权非 owner 通知。通知涉及资源时，在所选事件定义上添加 `ResourceReaders`；将 reader 的位置参数转换为 `JsonElement`。事件 reader 必须返回非空身份；与普通调用 reader 不同，null 不表示移除资源种类。owner 订阅无需 grants。将会话 Peer 生命周期绑定到吊销；只修改策略不会撤回已入队通知。
-
-绑定、过期状态或条件答案变化后调用 `Invalidate()`，也可传入完整受影响 principal，只唤醒身份匹配的跟随者。`SnapshotFor(principal)` 为该可信身份提供显式初始基线。快照是没有调用参数的 UI 提示，不能绕过 Gateway 授权。`remoteAccess/follow` 无需 grant，始终观察调用 Peer 自身。
-
-.NET 端以所属 Context 和借用 Connection 构造 `TypertRemoteAccessClient`，从 `State` 读取权限 source，为每个传输代际运行 `RunAsync`；应用负责重连。浏览器模块从 `@cordis-net/client-modules/access` 导入 `mountAccess`，调用 `mountAccess({ context, connection })`，通过 `source(kind, id, action)` 或 `global(action)` 订阅。可选 `initial` 必须是 Host 选择的基线。先释放 mount，再释放 Context／Connection；新 mount 未给基线时从 false 开始。浏览器 observable 可对接应用已有 UI 框架。
-
-## 候选资源策略，2026-10-23
-
-在 Host 执行域内将一个 `TypertRemoteAccess` 提供为 `remoteAccess`，并在所属 Fiber 中注册策略：
-
-```csharp
-var access = new TypertRemoteAccess(ctx);
-ctx.Provide("remoteAccess", access);
-var read = new TypertAccessRole("document reader", "document", ["documents/read"]);
-access.RegisterPolicy(ctx, "guest", new(principal =>
-    [new(read, TypertAccessResource.Create("document", "document-1"))]));
-```
-
-策略回调应读取当前业务授权，不跨调用缓存决定。condition 对具体调用接收 action、resource 和解码后的命名参数；`Allows` 中的参数为 null。返回 `TypertAccessDecision.Allowed` 或 `new TypertAccessDecision.Deny("reason")`。`Explain` 只解释已经发生的拒绝。在 Remote 方法中调用 `access.Allows(itemResource)` 逐项过滤列表或流，每次都观察当前 bindings。策略注册随 owner 撤销，异常会拒绝访问。
-
-默认资源字段使用 S5 注册声明和 provider 的 `Resource` 事实。方法需要自定义提取时，Host 服务可实现 `ITypertRemoteResourceSource`。`ResourceReaders` 先按导出方法名、再按资源 kind 索引。reader 接收与业务方法相同的已解码 CLR 参数对象，lookup 身份仍为 `JsonElement`，省略的位置为 `Undefined.Value`，调用者取消令牌单独传入。返回 `[id]`、多个 ID，或用 null 移除本 kind；空列表和非法 ID 会拒绝调用。reader 不应自行解析 Context 或 lookup 对象。即使是 scoped Context 调用，元数据也从根服务读取。
-
-只写资源字段、不透明自定义 codec 对象、尚未选定元数据合同的多态值需要显式 reader。不要通过重新序列化已解码值来推导权限，converter 输出和仅供序列化的 getter 可能不同于已接受的输入。普通 JSON 解码错误现优先于 Service/Context/lookup 准备。客户端 wire 无需变化。上文 S7 补齐事件与访问快照闭包。
-
-## 候选 Remote 身份与资源，2026-10-23
-
-在所属 Context 的执行域内创建 Peer。普通 `TypertHostConnection(owner, gateway)` 仍选择允许事件回答的本地 owner。禁用事件交互的 owner 连接需要显式声明：
-
-```csharp
-var connection = new TypertHostConnection(owner, gateway,
-    new TypertPeerOptions(TypertPrincipal.Owner, TypertPeerInteractions.None));
-```
-
-如果需要另一段由 Host 所有的寿命，构造 `new TypertPeer(owner, options)`，传入 `gateway.InvokeAsync(endpoint, arguments, peer, cancellationToken)` 或 `StreamAsync`。所属会话结束时释放 Peer，并在关闭 root 前等待活动流清理。释放一个 Peer 不影响其他 Peer，也不取消已运行的 unary 调用。已释放但仍挂载的 Connection 不会回退到新 owner；若希望可信进程内调用恢复使用回退 Peer，须显式撤销该服务注册。
-
-身份驱动使用自己提供的、具有 `kind` 字段的无凭据 JSON 对象构造 `TypertPrincipal`。该值克隆 JSON，所以可以释放原 `JsonDocument`。不得从请求的 principal 字段构造它。通过 `TypertPrincipal.PrincipalOf(TypertInvocation.Current)` 记录非 owner 调用方；对 owner 和 Remote 调用外部返回 null。S6/S7 现通过资源与事件策略授权非 owner 调用。
-
-通过 `registry.RegisterResource(owner, "document", new TypertResourceDeclaration("documentId"))` 注册领域所有的默认身份字段。通过 `GetResource`、`ListResources` 查询，通过现有 `Subscribe` 观察变更。声明随所属 Fiber 消失。不得注册保留的 `global` kind。在对应 `TypertLookupProvider` 或 `TypertHostContextAdapter` 上设置 `Resource = "document"`；配置 resolver 时会保留这一关联。资源注册本身不授予访问权限，也尚不检查方法参数。
-
-S5 不要求现有生成业务客户端改变 wire 格式。原先向 Gateway 第三个参数直接传入 `default` 的调用，应改为 `cancellationToken: default`，以区分新增的 Peer 重载。Host 代码重新构建后可使用新增 API。[兼容性说明](compatibility.zh.md)区分了本片基础能力与后续授权工作。
-
-## 从可运行示例开始
-
-首个仅依赖包的应用请从[入门指南](getting-started.zh.md)开始。本页描述当前所选批次，包括生成式 Remote 和模型消费者。请从[验证索引](validation.zh.md#已发行版本证据)选择精确 feed／版本。下方可选示例使用源码项目引用和 global.json 的 SDK。
+在仓库根目录使用 `global.json` 固定的 SDK 运行以下源码示例。不克隆仓库、直接使用已发布包的应用，先读[入门教程](getting-started.zh.md)。
 
 [共享契约](../examples/Probes.Contracts/Probes.cs)、[提供者与配置](../examples/Probes.Plugin/ProbeModule.cs)和[包含两个消费者的静态宿主](../examples/Probes/Program.cs)是示例的权威源码。它们展示普通格式化能力、caller-bound 状态探针注册服务、类型化事件、提前撤销、提供者消失和消费者重新激活。
 
@@ -85,21 +36,7 @@ dotnet publish examples/Probes/Probes.csproj -c Release -r win-x64 -p:PublishAot
 
 请使用实际构建并运行可执行文件的机器所对应的运行时标识。发布命令本身不是执行成功的证据；已完成结果记录在[验证记录](validation.zh.md)。[V1](../tests/fixtures/ProbeV1/ProbeV1.csproj) 与 [V2](../tests/fixtures/ProbeV2/ProbeV2.csproj) DLL 夹具通过[显式 CLR 入口](../tests/fixtures/ProbeEntry.cs)编译同一份提供者源码。
 
-### 通过 CLR DLL 替换运行同一份提供者
-
-[CLR 控制台宿主](../examples/Probes.Clr/Program.cs)仅引用共享契约和 `Cordis.Clr`（Composition 通过传递引用可用）。它从两个夹具 bundle 加载同一份提供者源码编译出的实现，没有静态引用 `Probes.Plugin` 或任何夹具项目。在仓库根目录执行：
-
-```console
-dotnet build tests/fixtures/ProbeV1/ProbeV1.csproj -c Release
-dotnet build tests/fixtures/ProbeV2/ProbeV2.csproj -c Release
-dotnet run --project examples/Probes.Clr/Probes.Clr.csproj -c Release -- tests/fixtures/ProbeV1/bin/Release/net10.0 tests/fixtures/ProbeV2/bin/Release/net10.0
-```
-
-两个参数都是包含 `ProbePlugin.dll` 及其依赖的 bundle 目录。宿主将自身实际使用的契约程序集传给 `ClrModuleResolver`，加载 V1、激活两个消费者、用 V2 替换 V1，并验证两个消费者均重新取得 caller-bound 视图。释放一个消费者只移除它自己的贡献；释放另一个后，根停止前注册表为空。显式 `ClrModuleDefinition` 使用 `Cordis.ProbeFixture.Entry`；夹具中的其他入口类型用于负向测试。
-
-宿主直接加载两个完整稳定目录，在生命周期清理和卸载请求后仍保留它们，不强制 GC，也不删除代码目录。退出码零表示贡献断言、生命周期清理和卸载请求成功，回收可以仍在等待。普通发布宿主并传入两个准备好的目录即可，运行时不还原包，也不依赖源码仓库。这条 CLR 路线要求普通运行时，不支持 Native AOT。[制品工作流](clr-artifacts.zh.md)说明库管理的安装与离线删除。[部署测试](../tests/Cordis.Platform.Tests/ProbeDeploymentTests.cs)另外保留显式影子复制覆盖及仅限测试的 GC 观察。
-
-## 选择最小而有用的作者写法
+### 选择最小而有用的作者写法
 
 | 任务 | 现有写法 | 可选便利入口 | 何时更简单的写法已经够用 |
 |---|---|---|---|
@@ -110,9 +47,9 @@ dotnet run --project examples/Probes.Clr/Probes.Clr.csproj -c Release -- tests/f
 | 启动应用 | 显式 `Context` + `Loader` + `MountAsync` | `ApplicationBoot.BootGenericAsync` | 应用已拥有这些对象时可保留显式装配；`BootAsync` 仍是 DSH 兼容入口。 |
 | 读取嵌入 patch | 打开 manifest 流、读取文本、解析条目 | `PatchResources.Read(assembly, resourceName)` | `ReadText` 适合仍需文本的调用方；两者都不激活插件。 |
 
-Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前实现采用普通 C# 扩展属性和手写 `CreateView`，因为剩余服务视图代码很小，所有权也直接可见。更大的契约面可以通过 Attribute/生成器减少重复声明，但会增加生成器包、诊断、生成代码调试、版本管理与兼容检查成本。重复代码或实际错误足以证明收益时，可以采用。现有 System.Text.Json 生成器已经提供有用且受限的元数据契约；它不生成 Cordis 生命周期，也不保证 CLR 可卸载性。
+调用不需要调用方状态时，使用普通共享对象；操作会创建调用方资源或需要其 Context 时，使用 `Service<TState>` 和显式 `CreateView`。[Probes 合同](../examples/Probes.Contracts/Probes.cs)展示两种写法，System.Text.Json 单独提供序列化 metadata。
 
-## 消费者插件
+### 消费者插件
 
 在 `Inject` 中声明服务名称，然后在 `Apply` 中取得能力。示例的 `ctx.Probes` 属性委托给 `Reflect.Read<IProbeRegistry>`，保留依赖继承、拦截、realm 查找和 caller tracing。它不会增加依赖声明。`ctx.Get<T>(name)` 仍是沿现有查找规则进行可选访问的入口；不能用它代替属性式依赖检查。
 
@@ -132,7 +69,7 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 同步的 `Emit`、`Bail` 和 `Waterfall` 不等待任务。`Emit` 立即调用后续监听器；`Bail` 和 `Waterfall` 中未调用 `next` 就返回的监听器会返回原任务对象，不包装任务或提取结果。`Waterfall` 仍要求显式调用 `next`，观察者不会自动继续。需要观察异步错误时使用可等待的分发方式。
 
-## 服务提供者与配置
+### 服务提供者与配置
 
 示例的 `IProbeFormatter` 是通过 `ctx.Provide` 提供的普通共享对象，不需要服务基类、代理或状态容器。`IProbeRegistry.Register` 创建调用方拥有的资源，因此实现采用现有 `Service<TState>` 模型：提供者和视图共享 `State`，每个视图携带其调用方 `Context`，`CreateView` 调用视图构造函数，不重复注册提供者。
 
@@ -148,7 +85,7 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 具有 live 字段的完整 typed 数据对象推荐使用 Composition 的 `ConfigObject<T>.Create(validator).Field(...).Build()`。它将显式键、描述和投影组合为既有配置合同，不推断 POCO 成员，不改变校验或默认值。生成元数据适用时，可将 `ConfigBinding.FromJsonTypeInfo` 作为该 validator，并保持其命名/默认规则与字段声明一致。全部普通字段和保存字段都须声明。参见[配置示例](configuration-description.zh.md)及[实际手写/组合消费者](../examples/Probes/ConfigurationScenario.cs)。特殊转换和嵌套 live 路径继续使用 `ConfigSchema<T>`。此推荐用法需要 `0.2.0-alpha.3`或更高版本，未包含在已发布的 `0.2.0-alpha.1` 包批次中。
 
-## 外部回调与所有权
+### 外部回调与所有权
 
 [`SubscribeExternal`](../src/Cordis.Extensions/ExternalCallbacks.cs) 适配接受 `Action<T>` 并返回 `IDisposable` 的来源；应在 Cordis 回调或 `RunAsync` 内调用。它先登记 effect 所有权，再订阅，因此覆盖订阅期间的同步通知和重入释放。每次注册都有独立的有效标记。清理先关闭准入再退订，进入 `RunAsync` 后执行时再次检查标记。同一 Fiber 重新激活不会使旧的排队回调重新有效。
 
@@ -156,7 +93,33 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 进入执行域、停止新调用、请求取消和等待在途工作结束，是不同职责。带执行租约的应用注册表可以与 Cordis 服务共存：Cordis 控制可见性与激活，租约注册表控制准入和已开始调用的完成。没有明确 owner 和顺序规则时，应避免维护两套重复贡献事实。领域事务、远程权限、UI scope 与 lease/drain 政策属于应用 SDK。不能仅因为两者返回同一接口，就把 lease borrow 换成普通服务查找。
 
-## 宿主装配、资源与诊断
+### 按 Scope 分层的贡献注册表
+
+同时从注册 Context 获取可见性与清理所有权。一个注册表可以在同一层保留多个表：
+
+```csharp
+sealed class MenuLayer : IScopeLayer
+{
+    public NamedEntries<string> Commands { get; } =
+        new(name => new InvalidOperationException($"Duplicate command: {name}"));
+    public AnonymousEntries<string> Hints { get; } = new();
+    public bool IsEmpty => Commands.IsEmpty && Hints.IsEmpty;
+}
+
+var layers = new ScopedLayers<MenuLayer>(_ => new(), NotifyChanged);
+var registration = layers.Effect(caller,
+    layer => layer.Commands.Insert("refresh", "Refresh"), "refresh-command");
+var visible = layers.Merge(Scope.Of(caller), layer => layer.Commands);
+await registration.DisposeAsync();
+```
+
+在所有者的 Cordis 执行域内注册。返回的 EffectHandle 同时归 caller 所有，显式释放可选且幂等。值保持借用。Peek 只读取一个 scope 自己的贡献，ChainLayers 读取继承覆盖层。读取不创建层。具名与匿名视图在非空表代际内保持实时；清空后的代际不跟随后续注册。Remote 方法可以使用当前 Peer Context，无需显式身份参数。
+
+## 启动与配置应用
+
+Loader 与配置使用 Composition，ProfileSession 与 HMR 使用 Extensions；接入 Microsoft Generic Host 时再添加 Hosting。应用负责就绪策略和外部资源。
+
+### 宿主装配、资源与诊断
 
 `BootGenericAsync` 准备 context、挂载配置、等待当前工作、审计失败，并在启动失败时清理。它不提供 DSH home 服务，也不设置默认 required 集合。依赖 Pending 默认合法，除非应用明确要求当前已出现的条目必须激活。required 名称不安装缺失模块、不要求不存在的条目出现，也不无限等待未来提供者。应用 readiness 保持显式。
 
@@ -166,7 +129,7 @@ Attribute 与自定义生成器仍是设计选项，并非一概禁止。当前�
 
 `AuditAsync` 报告模块解析失败、缺失依赖和激活错误。`Fiber.FailurePhase` 根据实际失败操作区分配置与 Apply，不通过异常类型猜测。disabled 表达式诊断保留自己的阶段。原始异常继续用于短期调试。长期保存报告前，对各项 `EntryDiagnostic` 调用 `ToSnapshot()`：快照只包含名称、状态、复制的依赖名称和错误文本。不能因为已经有快照，就继续永久保存原 `StartupException`、日志参数对象或其他插件引用。回调错误使用回调出口，CLR 卸载状态使用 `ClrUnloadObservation`。
 
-## 应用配置与客户端消费
+### 应用配置与客户端消费
 
 完整插件生命周期从 [ManagedPlugin](../examples/ManagedPlugin/README.md) 开始，再按 [ManagedApplication](../examples/ManagedApplication/README.md) 构建本地 feed、安装插件、编辑配置并移除。[CLI 指南](../tools/Cordis.Cli/README.md) 使用同一套宿主操作。下面的 Probes 示例演示较小的客户端消费边界。
 
@@ -189,15 +152,27 @@ node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/ap
 
 最后一条命令在另一终端运行，只修改生成的示例制品，以验证新的内容代。向 `/stop` 发送 POST 可结束示例宿主。制品布局复用上游 web/client 声明，不可变 ESM 交付是原生适配。示例客户端仍是有界消费示例；声明导出和发现是上述独立库 API。既有作者门禁在源码与独立包消费中重复这条真实客户端链，指定时包含 Native AOT。
 
-## 部署与验证边界
+### 打开 Settings 文档
 
-以下 API 已包含于 `0.2.0-alpha.5.2`。使用[发行批次](validation.zh.md#已发行版本证据)中相互匹配的包和工具；标准配置合同见 [Settings 指南](settings.zh.md)。
+在同一 Context 上挂载使用会话 ConfigurationOperations 的 SettingsForms 和 SettingsController。默认 Controller 在宿主桌面打开 provider 的文档。嵌入式宿主可将自己的 `Func<string, CancellationToken, Task>` 作为 Controller 第二个构造器参数。函数收到的是实际 provider 路径，不是脱敏表单数据的副本。
 
-未发布的 S4 分片将 `await session.RefreshAsync()` 改为返回 `ProfileReloadResult`。先检查 `RequiresRestart`，再读取 `RestartReason` 或首个待处理模块的 `Reason`；`Warnings` 提供非活动条目诊断。原有 `RequiresRestart` 与事件仍可使用。即使手动 refresh 与包操作共享 session 队列，自动文件观测仍可关闭。工具链包装器除了转发保留目录查询，还必须转发 `GetLoadedModulesAsync`，使包移除能够发现其所属行之外的 Fiber。[兼容性记录](compatibility.zh.md)列出重启原因与不可变重装边界。此 API 变化不属于已发布的 alpha.5.2 包。
+生成的 .NET 调用为 `await settingsClient.OpenSettingsDocumentAsync(cancellationToken: token)`；标准 TS 调用为：
+
+```ts
+const result = await settings['settings/openSettingsDocument']({})
+```
+
+两者沿普通 RemoteResult 返回已接纳的 `{ opened: true }`。展示操作时检查 `hasDocument`，像其他 Settings 操作一样处理失败。托管应用示例展示此宿主操作，不将文档下载到浏览器。文档打开不绕过 Gateway 授权，也不提供编辑任意路径的权限。
+
+### 部署与验证边界
+
+以下应用与部署 API 已包含在已发布的 `0.2.1-alpha.1` 中，应使用匹配包与工具。[Settings](settings.zh.md)说明实时表单操作，[CLR 制品流程](clr-artifacts.zh.md)说明包准备、发布及保留文件。
+
+`await session.RefreshAsync()` 返回 `ProfileReloadResult`。先检查 `RequiresRestart`，再读取 `RestartReason` 或首个待处理模块的 `Reason`；非激活条目诊断位于 `Warnings`。关闭自动监听后仍可手动刷新，刷新与包操作共用会话队列。toolchain 包装器须转发 `GetLoadedModulesAsync` 和保留目录检查，让移除操作能发现自有条目之外的 Fiber。[兼容说明](compatibility.zh.md)列出重启原因和不可变重装边界。
 
 包与 bundle 选择的产品政策通过 `session.ConfigurationOperations.AdmitProfileAsync` 设置。回调接收 `ProfileCandidate.ManifestJson`（拟保存的确切文本）、`ConfigurationJson`（不执行表达式的有效原始根条目），以及包含来源层和跳过选择的独立 `Composition` 视图。安装时，`Package` 还提供准备目录及计划发布目录，政策可在 Publish 前读取产物；其他操作中它为 null。抛出异常即拒绝。应校验库提供的候选，不再在 `IProfilePackageToolchain.PublishAsync` 中重新读 Profile 并预测另一份候选。准入期间不要重入配置操作。产品自身政策输入须保持稳定直到操作结束；此回调不冻结外部 SDK 或应用状态。`ProfileSession` 自动提供候选应用路径。
 
-若定制 `ReconcileAsync`，应在其后设置 `ReconcileCandidateAsync`，明确提供与该定制对应的候选应用。只替换旧回调会在无准入时保持旧行为；启用准入时不会悄悄批准未绑定候选的应用。删除依赖的准入先于工具链解除运行时映射，拒绝时可以保留已单独批准的取消选择。CLR 制品保留到所有消费者停止后的显式离线删除。
+启用准入并自定义协调时，在自定义 `ReconcileAsync` 后设置 `ReconcileCandidateAsync`。只替换 `ReconcileAsync` 不会让它参与准入。依赖移除准入发生在 toolchain 释放运行时映射之前，拒绝后可能保留另行批准的取消选择结果。
 
 用 `ReadProfileAsync` 读取 metadata 草稿基线，保留返回的 `Revision`，再以 `SaveProfileMetadataAsync(text, revision)` 提交编辑后的 JSON。保存会排在安装之后等待，以 `profile-conflict` 拒绝失效修订；保留用户草稿，由产品决定下一请求。dependencies 和 `dsh` 仍由既有包、选择和兼容操作拥有。这些方法不增加未经认证的传输入口，等待/冲突交互仍需产品接受。
 
@@ -211,7 +186,7 @@ node scripts/application-client-consumer.mjs http://127.0.0.1:17639 artifacts/ap
 
 CLR 路线将宿主实际使用的契约程序集作为 `sharedContracts` 传给 `ClrModuleResolver`。强类型接口仍是强引用。应释放旧视图、回调、binder、异步工作和异常。生命周期结束、新版本激活、Unload 请求、GC 回收及影子文件删除是独立观察；生产不强制 GC。代码替换回滚与普通配置更新失败保持各自现有政策。`!!js` 仍是可选 Jint 路线，不承诺 Native AOT。
 
-作者接口测试是 .NET 适配证据，不增加上游原断言完成审查的数量。重点覆盖见[类型化事件](../tests/Cordis.Core.Tests/TypedEventTests.cs)、[配置绑定](../tests/Cordis.Composition.Tests/ConfigBindingTests.cs)及[启动/资源](../tests/Cordis.Composition.Tests/AuthoringBootTests.cs)，并配合既有生命周期、宿主与 CLR 测试。作者接口验证命令覆盖示例、负向编译和部署路线；运行时/包变更仍须执行完整 gate：
+作者接口变更使用下方既有验证入口，覆盖示例、负向编译与部署；运行时或包变更还要求完整验证命令。定向检查见[开发指南](development.zh.md)，已完成结果见[验证记录](validation.zh.md)：
 
 ```console
 python scripts/verify-authoring.py
@@ -220,39 +195,11 @@ python scripts/verify.py
 
 已执行环境与限制见[验证记录](validation.zh.md)，固定 DSH 目标与证据术语见[兼容性](compatibility.zh.md)。列出测试或部署命令本身不表示最新一次执行已完成。
 
-## 2026-10-09 模块导出与生成式 Remote 合同
+<a id="2026-10-09-模块导出与生成式-remote-合同"></a>
 
-这些工作流复用[架构文档](architecture.md)中的职责及上方已发布包批次。
+## 声明并提供 Remote 服务
 
-### 一个作者包中的多个 CLR 入口
-
-保留 `cordis.plugin.json` 中既有单入口的 `assembly` 和 `entryType` 字段。可选 `exports` 对象声明同一程序集中的其他显式子路径。[独立作者 fixture](../tests/fixtures/ClrMultiEntry/Plugin.cs) 的声明如下：
-
-```json
-{
-  "assembly": "IndependentMultiEntry.dll",
-  "entryType": "IndependentMultiEntry.First",
-  "exports": {
-    "./second": "IndependentMultiEntry.Second"
-  }
-}
-```
-
-`DotnetPluginToolchain` 将包根登记为 `nuget:independentmultientry`，额外入口登记为 `nuget:independentmultientry/second`。单入口作者无需声明空导出表。静态宿主仍可通过既有 resolver 登记精确请求。模块选择与 Cordis 服务 `Provide` 是两项操作；不要求 Core 新增 `Exports` 成员，也不要求应用提供 `ApiCatalog`。
-
-`ClrModuleResolver` 将归一化 bundle 目录相同的导出装入同一可收集的程序集加载上下文。StableDirectory 就地加载保留的文件；显式 ShadowCopy 共享一个开发副本。已加载 bundle 的所有入口须使用相同模式。同一程序集/入口类型的别名复用插件实例，不同入口类型保留各自插件。Loader Entry 仍分别拥有 raw 配置、Fiber 激活与 effect 清理。移除一个 resolver 租约保留其他导出；最后一个租约才请求 bundle 卸载。移除 resolver 映射前应先停止相关 Fiber。卸载请求、收集与 shadow 删除仍是分别观察的结果。
-
-Resolver 默认与宿主共享 Core、Clr、Composition 合同程序集。其他合同通过 `sharedContracts` 传入宿主的精确程序集；插件私有依赖留在 bundle 内。这一身份边界也覆盖生成的 `ITypertRemoteService` 绑定及 `IClrTypertModule` 贡献。
-
-显式 resolver 登记可以选择同一 bundle 目录下不同的主程序集。每个主程序集在加载前登记自身依赖 resolver 与目录，私有 managed/native 查询全部已登记根。同一路径或字节完全相同的副本复用一个依赖；同一依赖名称的不同 binary 会被拒绝，包括新增入口本可直接复用已加载程序集的情况。这是保守的原生 bundle 规则，不是 ABI 或程序集版本兼容算法。依赖 resolver 未定位的 native 库保留 CLR/OS 查找行为。[多程序集 fixture](../tests/fixtures/ClrMultiAssembly/Consumer.cs) 检查两个入口顺序和实际私有 native 调用。
-
-登记依赖根前，resolver 读取 managed 引用与 P/Invoke 声明，递归沿 resolver 定位的 managed 文件检查候选路径，不执行工厂。因此即使原入口尚未调用依赖，也能检查已声明且可定位的冲突；已选择过的依赖也会检查。任意动态加载与工厂副作用不构成可回滚事务。
-
-替换包含不同导出的 bundle 时，使用 `ClrModuleResolver.ReplaceAsync` 的字典重载，提供所有已登记请求，包括尚未加载的导出和别名。回调可以使用 `Loader.ReplacePluginsAsync` 转移既有 raw 配置并共同切换相关 Fiber。单入口重载继续支持一个导出及其别名。候选准备与路由发布保持单一 bundle 代际；回调副作用和产品状态不构成事务。激活失败沿用既有 Loader 恢复路径，已稳定的 Pending Fiber 仍合法。
-
-两个 CLR 替换重载的回调现在都接收 `IReadOnlyList<ModuleReplacement>`。每项包含 `ResolvedModule Previous` 和 `Replacement`；不要将列表压缩成以 `IPlugin` 为键的字典。不同导入可以共享旧插件，再分裂到不同后继。`IModuleResolver.ResolveAsync` 及 static、deployment、CLR 实现返回 `ResolvedModule`，直接运行插件的调用方使用 `module.Plugin`。自定义 resolver 必须为同一运行代的同一导入保留同一模块引用；deployment 适配器必须原样转发。
-
-`Entry.Module` 记录实际支撑该 Entry 的导入。名称映射改变不会重写它；禁用后重新启用才解析新映射。替换会将其更新为已准备的后继，激活失败则在候选清理完成后恢复旧身份。direct Fiber 没有 Entry 身份：同一旧插件对应多个不同后继时，在拆卸前拒绝；多个别名仍指向同一后继时没有歧义。通用 `Loader.ReplacePluginAsync(IPlugin, IPlugin)` 继续执行统一的一对一替换。HMR 跟踪优先使用 `Entry.Module.Filename`，缺失时才调用宿主 locator。模块引用会保留导出的插件，期待 collectible 卸载前需释放调用方持有的引用。
+Service 项目添加 Composition，HTTP／WebSocket Host 添加 AspNetCore。提供显式 STJ metadata、实际服务和生成贡献注册；声明本身不会启动或暴露提供者。下方 Host 接线是集成片段，完整可运行项目见该节所链接的消费者。
 
 ### 声明与生成原生 Remote 合同
 
@@ -360,104 +307,76 @@ await connection.dispose();
 
 共享运行时支持 unary 结果、unary multipart 附件恢复、下行及 typed uplink mux，并供生成式 .NET/TS 客户端消费。[验证记录](https://github.com/gentt1024/Cordis.NET/blob/1ed99e39c44c8f7ecbd064b365b8ebb31530f3c4/docs/validation.zh.md#共享-remote-connection-包门禁2026-10-12)区分冻结包门禁、固定 DSH 互通及 Native AOT 证据。选定的反向 Context／owned-value 和固定事件转发见[Remote 事件](remote-events.zh.md)。原 base64 线格式与每方法 NDJSON 路径已退出。
 
+### Remote 元数据
+
+使用生成 Host 的 `Info(package)` 工厂或独立 .NET 调用者的静态 `Info`，无需建立连接即可检查 Remote 方法。独立调用者的 `CreateInfo(package)` 可指定部署包身份；默认 Info 使用保存模型的程序集身份。`Methods` 包含直接端点，`Descriptors` 还包含 Context 接收者。读取已注册事实时，使用 `TypertRegistry.GetLocalInfo(package)` 或 `GetRemoteInfo(package)`。
+
+对选中的描述符调用 `Input()` 或 `Input(strict: true)`，再通过 `Parse(JsonElement)` 解析命名 wire 实参。仅在工具消费者需要投影时读取 `JsonSchema`，并在不可用时处理 `JsonSchemaError`。投影不可用不代表 parser 不可用。`ResultValue` 单独提供结果元数据。单个参数也提供 `Input(strict)`；`UplinkValue` 提供流条目的输入元数据，这些接口同样可用于 Context-only 描述符。`Create()` 返回独立于工具投影缓存的 parser 委托。保留可选缺省与显式 null 的区别。
+
+将解析后的实参传入描述符的 `Invoke(client, arguments, cancellationToken)`。其 `object` 结果是既有生成方法的任务，包括返回双向流句柄的任务。生成客户端实现 `ITypertNamedRemote`，元数据调用路径保留其连接与生命周期检查。编译时已知实参和结果类型时，可继续使用普通类型化方法。浏览器生成模块导出 `info`、命名 `methods`、`input({ strict: true })` 和 `invoke(remote, arguments, signal)`。
+
+### Remote 身份与资源
+
+在所属 Context 的执行域内创建 Peer。普通 `TypertHostConnection(owner, gateway)` 仍选择允许事件回答的本地 owner。禁用事件交互的 owner 连接需要显式声明：
+
+```csharp
+var connection = new TypertHostConnection(owner, gateway,
+    new TypertPeerOptions(TypertPrincipal.Owner, TypertPeerInteractions.None));
+```
+
+如果需要另一段由 Host 所有的寿命，构造 `new TypertPeer(owner, options)`，传入 `gateway.InvokeAsync(endpoint, arguments, peer, cancellationToken)` 或 `StreamAsync`。所属会话结束时释放 Peer，并在关闭 root 前等待活动流清理。释放一个 Peer 不影响其他 Peer，也不取消已运行的 unary 调用。已释放但仍挂载的 Connection 不会回退到新 owner；若希望可信进程内调用恢复使用回退 Peer，须显式撤销该服务注册。
+
+Host 身份适配器从可信、不含凭据且带有 `kind` 字段的 JSON 构造 `TypertPrincipal`。该值克隆 JSON，原 document 随后可以释放。不能把请求载荷中的 principal 字段直接作为可信身份。`TypertPrincipal.PrincipalOf(TypertInvocation.Current)` 返回非 owner 身份，在 owner 调用或 Remote 调用之外返回 null。资源与事件策略控制非 owner 分发。
+
+通过 `registry.RegisterResource(owner, "document", new TypertResourceDeclaration("documentId"))` 注册领域所有的默认身份字段。通过 `GetResource`、`ListResources` 查询，通过现有 `Subscribe` 观察变更。声明随所属 Fiber 消失。不得注册保留的 `global` kind。在对应 `TypertLookupProvider` 或 `TypertHostContextAdapter` 上设置 `Resource = "document"`；配置 resolver 时会保留这一关联。资源注册本身不授予访问权限，也尚不检查方法参数。
+
+不显式提供 Peer 而直接调用 Gateway 时，使用命名取消参数，例如 `cancellationToken: default`，避免与 Peer 重载混淆。生成客户端提供既定 wire 参数，可信身份和 Peer 构造仍由 Host 负责。
+
+### 资源策略
+
+在 Host 执行域内将一个 `TypertRemoteAccess` 提供为 `remoteAccess`，并在所属 Fiber 中注册策略：
+
+```csharp
+var access = new TypertRemoteAccess(ctx);
+ctx.Provide("remoteAccess", access);
+var read = new TypertAccessRole("document reader", "document", ["documents/read"]);
+access.RegisterPolicy(ctx, "guest", new(principal =>
+    [new(read, TypertAccessResource.Create("document", "document-1"))]));
+```
+
+策略回调应读取当前业务授权，不跨调用缓存决定。condition 对具体调用接收 action、resource 和解码后的命名参数；`Allows` 中的参数为 null。返回 `TypertAccessDecision.Allowed` 或 `new TypertAccessDecision.Deny("reason")`。`Explain` 只解释已经发生的拒绝。在 Remote 方法中调用 `access.Allows(itemResource)` 逐项过滤列表或流，每次都观察当前 bindings。策略注册随 owner 撤销，异常会拒绝访问。
+
+默认资源字段使用注册表中的资源声明和提供者的 `Resource` 事实。自定义提取时实现 `ITypertRemoteResourceSource`。`ResourceReaders` 按导出方法名、资源 kind 索引；reader 接收已解码的 CLR 参数、以 `JsonElement` 表示的 lookup 身份、以 `Undefined.Value` 表示的省略槽，以及单独的取消令牌。返回一个或多个 ID，或用 null 移除该 kind；空 ID 列表或非法 ID 拒绝调用。Context scoped 调用也从根服务读取 metadata；reader 不解析 Context 或 lookup 对象。
+
+setter-only 字段、不透明自定义 codec 对象，或缺少选定 metadata 的多态值，需要显式 reader。不要通过重新序列化已解码值推断权限：converter 输出和只参与序列化的 getter 可能与接受的输入不同。普通 JSON 解码错误先于 Service、Context 或 lookup 准备报告；通知授权使用事件专属的 reader 规则。
+
+### 事件访问与权限客户端
+
+在 Host 服务旁登记标准 follow 贡献：
+
+```csharp
+var access = new TypertRemoteAccess(ctx);
+ctx.Provide("remoteAccess", access);
+access.RegisterRemote(ctx, registry);
+```
+
+角色中使用 `event:<所选事件名>` 授权非 owner 通知。通知涉及资源时，在所选事件定义上添加 `ResourceReaders`；将 reader 的位置参数转换为 `JsonElement`。事件 reader 必须返回非空身份；与普通调用 reader 不同，null 不表示移除资源种类。owner 订阅无需 grants。将会话 Peer 生命周期绑定到吊销；只修改策略不会撤回已入队通知。
+
+绑定、过期状态或条件答案变化后调用 `Invalidate()`，也可传入完整受影响 principal，只唤醒身份匹配的跟随者。`SnapshotFor(principal)` 为该可信身份提供显式初始基线。快照是没有调用参数的 UI 提示，不能绕过 Gateway 授权。`remoteAccess/follow` 无需 grant，始终观察调用 Peer 自身。
+
+.NET 端以所属 Context 和借用 Connection 构造 `TypertRemoteAccessClient`，从 `State` 读取权限 source，为每个传输代际运行 `RunAsync`；应用负责重连。浏览器模块从 `@cordis-net/client-modules/access` 导入 `mountAccess`，调用 `mountAccess({ context, connection })`，通过 `source(kind, id, action)` 或 `global(action)` 订阅。可选 `initial` 必须是 Host 选择的基线。先释放 mount，再释放 Context／Connection；新 mount 未给基线时从 false 开始。浏览器 observable 可对接应用已有 UI 框架。
+
 ### 消费者证据与剩余范围
 
 [多入口门禁](../scripts/verify-clr-multi-entry.py) 独立打包作者 NuGet，通过 `PackageReference` 消费，安装包根/子路径入口，并验证共享身份、独立配置、成功与失败替换、撤销、真实 HTTP 上的生成 TypeScript 调用及错误参数。独立的 [Remote 门禁](../scripts/verify-typert.py) 覆盖原生 Remote 作者链。使用最新本地包批次及所需 Node/TypeScript 依赖。平台验收以[验证记录](validation.zh.md)中已完成结果为准；这些示例本身不能证明 Windows/Linux 或 Native AOT 闭环。动态 CLR 加载要求普通运行时。
 
-选定的固定事件工作流、反向 Context 和 owned-value 处理使用[Remote 事件](remote-events.zh.md)所述共同声明。浏览器出站 scoped 调用、原生 Peer 路由及 Scope store/layer 已有有界消费证据；当前支持与拒绝形状见[后端支持表](development.zh.md#alpha5-独立后端处置)，剩余具名集成见[剩余支持边界](development.zh.md#剩余支持边界)；历史候选及证据通过[验证记录](validation.zh.md#历史证据)追溯。operator Peer 所有权、typed uplink 和 unary multipart 也已有实现。这些结果不证明任意类型图或所有 Peer 工作流均已完成。Settings、PluginManager 与选定宿主 emit 通知通过既有 profile owner 使用生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
+选定的固定事件工作流、反向 Context 和 owned-value 处理使用[Remote 事件](remote-events.zh.md)所述共同声明。浏览器出站 scoped 调用、原生 Peer 路由及 Scope store/layer 已有有界消费证据；当前支持与拒绝形状见[后端支持表](development.zh.md#生成后端支持范围)，剩余具名集成见[剩余支持边界](development.zh.md#剩余支持边界)；历史候选及证据通过[验证记录](validation.zh.md#历史证据)追溯。operator Peer 所有权、typed uplink 和 unary multipart 也已有实现。这些结果不证明任意类型图或所有 Peer 工作流均已完成。Settings、PluginManager 与选定宿主 emit 通知通过既有 profile owner 使用生成合同，见[管理迁移](management-remote-migration.zh.md)。原生完整配置、宿主状态和制品交付保留各自独立职责。应用自定义 `MapCordisService` endpoint 不能据此关闭剩余 wire 缺口。产品替换准入、权限与业务退休/排空政策仍由产品承担。
 
-## 原生作者模型与 .NET 消费者，2026-10-10
+## 生成模型与独立客户端
 
-普通声明和 Remote 使用共同模型及各用途投影。[当前支持表](development.zh.md#当前支持与发行状态)与后端处置区分运行 metadata 和独立生成。
+作者项目提取声明事实，消费者项目选择输出后端和显式引用模型。独立消费者不加载提供者实现。先选后端，再核对该后端的类型与 serializer 限制。
 
-普通 Plugin、Service 与 Config 继续在进程内使用。Remote 是面向其他环境消费者的可选边界。C# 作者继续使用现有 Remote 标记和显式 STJ context；设置 `CordisTypertService` 后，该项目才启用源模型提取。Composition 提供 SDK compiler 工具与构建 target；这条路径不需要 Node 或 TypeScript。
-
-```xml
-<PropertyGroup>
-  <CordisTypertService>settingsController</CordisTypertService>
-</PropertyGroup>
-```
-
-构建在作者包内发布 `cordis/typert/$(AssemblyName).cordis.model.json`。service 选择与普通根进入同一 `extract-model` 入口和声明图。若作者程序集名为 `Example`，文件即 `Example.cordis.model.json`。Remote generator 将所选 service 事实与当前编译比较，以 `CORDISREMOTE002` 拒绝漂移；无关声明不成为第二份 service 合同。引用声明保留 CLR metadata 来源及相邻 XML 文档，不从 metadata 重建缺失的源 initializer 或实现。引用源码定义通过下方显式 reference-model 输入组合。
-
-独立合同包可以消费该制品的副本，无需引用提供者实现：
-
-```xml
-<PropertyGroup>
-  <CordisTypertService>settingsController</CordisTypertService>
-  <CordisTypertClientModel>Example.cordis.model.json</CordisTypertClientModel>
-  <CordisTypertClientNamespace>IndependentSettings.Client</CordisTypertClientNamespace>
-  <CordisTypertClientName>SettingsClient</CordisTypertClientName>
-  <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
-</PropertyGroup>
-```
-
-外部 DTO 声明通过客户端项目的显式引用模型提供：
-
-```xml
-<ItemGroup>
-  <CordisTypertClientReferenceModel Include="Shared.cordis.model.json" />
-</ItemGroup>
-```
-
-CLI 对应 `emit-dotnet --reference-models references.rsp`，响应文件每行一个模型路径。Remote 选择仍限于主模型；外部源声明按完整 assembly-qualified 身份解析，复用普通数据发射的 composition。metadata 签名不保留初始化值，不能替代源模型。定义缺失或冲突时拒绝生成并删除旧客户端输出。引用是构建输入，响应文件和生成源码均归 `Clean` 管理。独立调用者消费生成的合同包，不加载 Provider 程序集。
-
-target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。同一组属性也在 restore 后首次设计时构建中生成语言服务输入，无需先跑普通 build。设计时投影写入 `CordisTypertOutputDirectory` 的 `design-time` 子目录，普通 build/pack 使用常规输出；两者消费相同的显式模型和引用输入。`Clean` 清理两组生成文件；相同输入的增量输出保持字节和时间戳。供打包使用的源码模型提取仍属于普通构建；实时 source generator 读取当前作者 compilation。MSBuild 设计时输入与实际编译器检查不等于实际 IDE 交互或具名 UI 平台验收。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
-
-可空 float/decimal 常量初始化值保留作者类型与默认值。缺少 JSON 成员时保留初始化值，显式 null 则替换它。调用者 DTO 与生成的辅助类型共享所选目标 namespace。名称冲突会在编译前被拒绝，诊断标明双方来源，例如 `CordisTypertClientName` 为 `DemoClient` 时的 `DemoClient`。应选择不同的 DTO 或 client 名称；emitter 不会静默重命名公开类型，拒绝投影时会删除其此前生成的输出。
-
-```csharp
-using var http = new HttpClient();
-await using var connection = new TypertConnection(http, new Uri("http://localhost:5000/remote"));
-await using var remote = new SettingsClient(connection);
-var reply = await remote.DescribeAsync();
-if (!reply.Ok) throw reply.Error;
-var view = reply.Value;
-```
-
-调用者拥有 HttpClient 与共享的 `TypertConnection`。普通调用返回 `Task<RemoteResult<T>>`，先检查 `Ok`，再读取 `Value` 或 `Error`。无值作者返回 `Task`，投影为 `Task<RemoteResult>`，无值成功与显式 null 保持区分。缺失 adapter 或 Connection 是本地装配异常。远端失败保留任意所有者 code 与独立 JSON details；传输失败和取消成为 unary 结果。下行调用在异步准备后返回立即开始打开的 `RemoteStreamHandle<T>`，单次枚举直接读取业务项，并等待释放。流的远端错误、carrier 故障、本地误用和外部取消分别以对应异常表达。客户端释放等待自身调用与清理，不释放借用资源。
-
-生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsProvider`。将 `SettingsForms` 挂在会话已有 `ConfigurationOperations` 之上；它根据作者的 live Config 声明推导 active、唯一可寻址的表单。数值 revision 观察 Fiber 身份、完整 schema 和原始配置。层级脱敏读取、完整候选校验和写入都归同一个 profile 队列。describe/update/replace/mutate 使用唯一生成合同。公开调用与退出的 Settings hash 路径见[Settings 合同迁移](settings.zh.md)。
-
-[独立 .NET Settings 门禁](../scripts/verify-typert-dotnet.py) 打包作者与合同包，再于仓库外构建仅依赖包的调用者。调用者不引用提供者实现，关闭 reflection fallback 并使用静态 metadata。门禁覆盖类型化 describe、脱敏、provider 缺失/失败、重试、已持视图失效重读、definition 撤销/重注册、局部 suspend 和借用客户端所有权；基础类型根、null/default 参数、空状态注解及拒绝不支持投影另有用例。`--aot` 验证静态调用者；动态 CLR Host 仍属于普通运行时边界。正式平台结果以[验证记录](validation.zh.md)中的确切完成检查点为准。
-
-此路线覆盖受支持的 unary／stream、Settings、PluginManager 和事件消费者。拒绝形状见[后端处置](development.zh.md#alpha5-独立后端处置)，具名平台证据见[验证索引](validation.zh.md#已发行版本证据)。
-
-## 类型化 Remote 上行
-
-在作者方法中声明上行，普通 wire 参数仍独立存在：
-
-```csharp
-[RemoteMethod("exchange", Stream = true)]
-public async IAsyncEnumerable<string> Exchange(
-    string prefix,
-    [RemoteUplink] IAsyncEnumerable<string?> input,
-    [EnumeratorCancellation] CancellationToken cancellationToken = default)
-{
-    await foreach (var item in input.WithCancellation(cancellationToken))
-        yield return prefix + (item ?? "null");
-    yield return "complete";
-}
-```
-
-在作者 STJ context 中登记输入值类型，此例为 `typeof(string)`。普通参数继续进入 args，输入序列由 Invocation 提供。共同声明模型保留输入的根空性和受支持集合的元素空性；单独的 `typeof(T)` 无法表达可空引用输入。需要允许缺值的 item 时使用 `IAsyncEnumerable<RemoteOptional<string?>>`，通过 `HasValue` 区分缺失与存在的 null，不增加 wire 对象包装。
-
-```csharp
-await using var stream = await client.ExchangeAsync("prefix:", cancellationToken);
-stream.Send(null);
-stream.Send("first");
-stream.End();
-await foreach (var item in stream.WithCancellation(cancellationToken))
-    Console.WriteLine(item);
-```
-
-`Send` 在本地校验并入队，首次读取前即可调用，不代表 Host 已确认；`End` 在队列发送后半关闭上行，下行仍可继续读取。生成返回类型为 `Task<RemoteStreamHandle<string, string?>>`。只有下行的方法保留不具备 send/end 能力的 `RemoteStreamHandle<T>`；两者都只有一个下行消费者。`End` 幂等，终止后也不报错；半关闭或退休后的发送在本地拒绝。`DisposeAsync` 取消本逻辑调用并等待自己拥有的本地工作，不确认远端业务退休。Host 输入 codec 失败会终止逻辑流，即使作者捕获输入异常；同连接的其他流仍可继续。
-
-生成的 TypeScript 返回带 `send`、`end` 和可等待 `dispose` 的 `RemoteDuplexHandle<Output, Input>`，可缺失项使用 `undefined`，与 `null` 独立。其发送边界校验无损 JSON，Host 校验声明 codec；.NET 在入队前还会校验生成的输入 codec。文本 mux 传原始 item 值，缺失时省略 `value`，不增加 binary 帧或对象包装。原始类型、可空值类型、受支持集合／字典及既有有界 DTO codec 仍受各后端实际限制。选定的反向 Context／事件投递与 owned-value 结算复用同一 Connection，见[Remote 事件](remote-events.zh.md)。
-
-Composition 包会把自身声明模型接入 MSBuild 客户端引用集合。其他源模型继续显式使用 `CordisTypertClientReferenceModel`；直接调用编译器时须通过 `--reference-models` 提供对应模型，不能从程序集元数据恢复作者默认值。
-
-## 普通声明模型
+### 普通声明模型
 
 在引用 Composition 的项目中，按精确 CLR metadata name 选择普通 Plugin、Service、Config 和 object 声明：
 
@@ -484,7 +403,7 @@ dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-mod
 
 目录保留分析诊断，不生成 binding、Remote 注册、DTO serializer 或可执行 Service。语法错误和重复声明身份会拒绝提取，并清除拥有的旧输出；其他 pre-generator 编译错误明确记录，因为合法构建可能依赖邻近 generator 输出。源图限 256 个具名定义、64 层嵌套引用；未解析类型/function-pointer 签名作为分析缺口诊断。这不是完整 C# 编译器或反射覆盖。既有 .NET Typert 门禁验证仅包引用消费、增量时间戳、包括首次提取失败在内的 Clean、冷重建、引用身份和拒绝输入。
 
-`CordisTypertService=*` 将作者 service 选入同一声明制品；`CordisTypertModelRoot` 添加显式根。CLI 入口是 `extract-model`，`--roots` 指向根响应文件，`--service` 选择 service；两者可单独或共同提供根。保留所选 service 的可达图。源码及保存输入共享 service、method、DTO、构造器、命名及默认值解释。共享 DTO 的 JSON 命名策略冲突（包括嵌套及递归引用）在受影响投影以 `TYPM113` 拒绝。旧 `extract` 入口、`.cordis.typert.json` 制品及 `CordisTypertDeclarationModelPath` 退出，不构成兼容路线。
+`CordisTypertService=*` 将作者 service 选入同一声明制品；`CordisTypertModelRoot` 添加显式根。CLI 入口是 `extract-model`，`--roots` 指向根响应文件，`--service` 选择 service；两者可单独或共同提供根。保留所选 service 的可达图。源码及保存输入共享 service、method、DTO、构造器、命名及默认值解释。共享 DTO 的 JSON 命名策略冲突（包括嵌套及递归引用）在受影响投影以 `TYPM113` 拒绝。
 
 选定普通 class 可从保存制品生成 DTO 及静态 STJ context，不要求 Remote 声明或引用 provider 程序集：
 
@@ -502,7 +421,9 @@ dotnet <compiler> --roslyn-directory <selected-sdk-Roslyn-directory> inspect-mod
 
 可选的 `CordisTypertDataReferenceModel` items 为所选根可达的外部数据定义提供保存模型。每个输入都按模型身份校验。解析要求完整的 assembly-qualified 声明身份精确匹配，包括程序集版本和公钥 token；只同名不会匹配。引用模型为自己的声明提供源事实，仅有 metadata 占位仍不足以投影。引用项不增加公开根：`CordisTypertDataRoot` 仍只能选择主模型发布的 roots。
 
-对应 CLI 接受 `emit-dotnet-data ... --reference-models reference-models.rsp`。响应文件每行列出一个模型路径，相对路径以响应文件所在目录为基准。不需要引用模型时可省略此选项。所有显式引用输入的身份按确定顺序记录在生成源码中。同身份的源定义冲突会被拒绝；多个输入可含相同定义，仅源码位置不同不构成冲突。缺失定义、不一致的声明形状及生成类型名称冲突也会被拒绝。这验证声明身份与制品内容，不证明模型与任意实现 DLL 的对应关系；应将模型与产生它的源码构建一起发布。
+等价 CLI 使用 `emit-dotnet-data ... --reference-models reference-models.rsp`，每行一个模型路径，相对路径以响应文件目录为基准；无需引用模型时省略该选项。生成源码按确定顺序记录提供的身份。冲突源码定义、缺失定义、不兼容形状和生成名称冲突均拒绝；相同定义可来自多个输入，仅源码位置不同不构成冲突。这些检查验证声明身份与保存事实，不核实任意 DLL 字节；模型应与生成它的构建配套交付。
+
+普通 DTO/STJ 后端也接收共同 wire 模型已识别的框架 `IEnumerable<T>`、`ICollection<T>`、`IReadOnlyCollection<T>`、`IList<T>`，与已有 list、数组和字符串键字典共用投影。引用元素声明保留默认值与空性。这些是由 STJ 序列化的数据载体，不执行作者自己的 enumerable 实现，也不表示支持任意泛型类。
 
 target 在 `CoreCompile` 前调用 `emit-dotnet-data`，复用 Remote caller 支持的 JSON 投影。每次构建读取主模型与引用模型内容；生成结果不变时保持字节和时间戳。生成失败删除旧源码，`Clean` 删除生成源码及所属响应文件。成员省略保留受支持的常量默认值；显式 null 仍有独立含义。生成的数据 carrier 不重放作者构造器或 accessor 行为。引用 DTO 与本地 DTO 使用相同的有界公开 class/property 子集；组合不开放泛型 DTO、继承、自定义 converter 或其他已拒绝形状。若源类型的非公开实例数据成员显式标记 `JsonInclude`，却不在公开分析范围内，提取器会为所属类型记录 `TYPM202`。投影拒绝该类型，包括从引用模型到达它的情况，不再静默丢弃 JSON 成员；无关声明仍可使用。
 
@@ -535,13 +456,13 @@ await events.run(signal, host => onReady(host.home))
 
 Host 仍须明确选择生成的 forwarder；模型包含声明不会自动公开事件。普通参数和 waterfall request 描述 Host 输出，handler reply 描述 Host 输入，`next()` 描述后续链的输出。因此，条件省略可能使 reply 与 continuation 类型不同。`undefined`、显式 `null` 和调用 `next()` 仍是独立选择。事件 Schema 目录使用 `<event>/args/<index>`、`request`、`reply` 和 `next` key。JSON Schema 描述实际存在的 JSON 值；可选 `undefined` 保留在生成的 TypeScript 合同中。
 
-独立 .NET Remote 后端保留 struct／readonly record struct 的值类型形状，以及 `Response<T>` 等泛型定义，并按实际闭合参数展开 JSON 根和空性查询。当前支持无约束的数据类型参数，不支持任意开放泛型端点或带约束类型执行。只读成员保持 getter-only，由生成的 JSON 构造参数接收 wire 值，不复制 getter 或作者构造器体。只有纯输出载体可以省去未知初始化表达式，其数据来自实际返回值；输入和双向载体仍拒绝这些表达式，包括 `new(false, [])`，不会静默改成 null 或 `default`。普通 `emit-dotnet-data` 仍遵守其单独列出的较窄支持范围。
+独立 .NET Remote 后端支持值类型 struct、readonly record struct，以及 `Response<T>` 等泛型定义，为 JSON 根和空性展开实际闭合参数。支持无约束数据参数，不执行任意开放泛型 endpoint 或约束类型行为。getter-only 成员通过生成 JSON 构造参数接收 wire 值，不复制作者 getter 或构造器体。纯输出数据载体可省去未知初始化表达式，因为值来自 wire；输入和双向载体要求支持的静态默认值，拒绝带行为的表达式。`new(false, [])` 等受支持的数据构造遵循[静态输入默认值](#remote-输入的静态数据默认值)。普通 `emit-dotnet-data` 的支持范围更窄。
 
 .NET 声明投影还识别 BCL `ImmutableArray<T>`、`DateTimeOffset`，以及施加于源码枚举的默认泛型 `JsonStringEnumConverter<TEnum>`。生成 DTO 保留这些原生类型和已知转换器，不需要 BCL 来源模型或影子 DTO。枚举别名、flags 和显式 `JsonStringEnumMemberName` 名称保留 STJ 行为；共同模型保留源码枚举的字段声明顺序，别名顺序改变也会改变模型身份。没有保留声明顺序的带别名模型需重新提取，不增加另一代模型格式或转换路径。任意 converter 实现仍被拒绝。生成式 Remote 结果解码使用平台 codec 和共同声明空性，包括 STJ metadata 丢失的集合元素注解。生成调用合同时，客户端需重新生成并使用匹配的运行包。独立 Web 后端仍拒绝带字符串转换器的枚举。
 
-当前后端接受普通闭合公开 DTO class/record、受支持的标量、递归引用、数组、框架集合接口和 string-key 字典，保留 wire 名称、required/nullable 字段及受支持的序列化包含选项。不支持的 serializer policy、自定义 converter、多态、数据继承、应用泛型 DTO、非 string 字典 key、多维数组和 binary attachment metadata 会明确拒绝。拒绝不等于完成；运行绑定及既有运行时制品发射器保留已成立的支持面。[后端处置表](development.zh.md#alpha5-独立后端处置)按事实与实际用途区分这些限制。
+独立 Web 后端接受闭合的公开 DTO class／record、支持的标量、递归引用、数组、框架集合接口和字符串键字典，保留 wire 名称、必需／可空字段及支持的 serializer inclusion 选项。它拒绝不支持的 serializer 政策、自定义 converter、多态、数据继承、已应用的泛型 DTO、非字符串字典键、多维数组和二进制附件 metadata。运行时绑定与运行合同导出各有支持边界，按所选后端查阅[支持表](development.zh.md#生成后端支持范围)。
 
-使用当前 compiler 重新提取声明模型，并重新构建受维护消费者。缺失必需结构化引用或来源事实的输入，以及旧模型输入，直接拒绝，不进行转换。保存制品的身份只验证已保存事实，不能补回遗漏、证明所有作者 JSON 配置或建立与任意 DLL 的对应关系。当前只有一个合同，不保留历史格式 reader 或版本化 Remote 兼容路线。
+使用与选定源码或包版本匹配的 compiler 和 runtime。模型缺少必需结构化引用或来源事实时，重新提取所属源码并重建消费者。保存身份验证的是已记录事实，不恢复缺失作者行为，也不证明与任意 DLL 字节对应。
 
 要从同一声明制品生成直接 unary 客户端，在作者项目中同时选择 DTO 和其标记的 service：
 
@@ -597,46 +518,64 @@ await scoped.ReadAsync();
 
 独立消费者将作者 DTO 同时用于普通 root 和 Remote 参数／结果，通过真实 HTTP Host 与仅包调用方消费。数据消费者负责 DTO 行为，此路线检查模型和传输接线。后端限制与具名 IDE／UI 证据以当前支持和验证记录为准。
 
-## 浏览器 scoped Remote 消费
+<a id="原生作者模型与-net-消费者2026-10-10"></a>
 
-在所属 Cordis Fiber 中挂载一次生成贡献，通过消费方 Context 读取生成的类型化 namespace：
+### 生成独立 .NET 客户端
 
-```typescript
-import { mountRemote, getRemote } from './shared.mjs'
+普通声明和 Remote 使用共同模型及各用途投影。[当前支持表](development.zh.md#当前支持与发行状态)与后端处置区分运行 metadata 和独立生成。
 
-const mounted = await mountRemote(owner, connection, contextAdapters)
-const remote = getRemote(agentContext, 'sharedData')
-const result = await remote.scopedRead({ text: 'hello' })
-const document = await remote.read({ suffix: '!' })
-await mounted.dispose()
+普通 Plugin、Service 与 Config 继续在进程内使用。Remote 是面向其他环境消费者的可选边界。C# 作者继续使用现有 Remote 标记和显式 STJ context；设置 `CordisTypertService` 后，该项目才启用源模型提取。Composition 提供 SDK compiler 工具与构建 target；这条路径不需要 Node 或 TypeScript。
+
+```xml
+<PropertyGroup>
+  <CordisTypertService>settingsController</CordisTypertService>
+</PropertyGroup>
 ```
 
-`getRemote` 读取已有 `remote.sharedData` service，不创建 Connection、registry 或 owner。Cordis tracing 保留消费方 Context，取出方法作为回调也保持该归属。借用的 adapter 来源提供 `getClient(key)`，adapter 提供同步的 `identity(caller)`；每次调用重新读取 adapter 和身份。若现有 Context adapter 所有者同时提供 identity 与 resolve 操作，可以与反向事件复用它。
+构建在作者包内发布 `cordis/typert/$(AssemblyName).cordis.model.json`。service 选择与普通根进入同一 `extract-model` 入口和声明图。若作者程序集名为 `Example`，文件即 `Example.cordis.model.json`。Remote generator 将所选 service 事实与当前编译比较，以 `CORDISREMOTE002` 拒绝漂移；无关声明不成为第二份 service 合同。引用声明保留 CLR metadata 来源及相邻 XML 文档，不从 metadata 重建缺失的源 initializer 或实现。引用源码定义通过下方显式 reference-model 输入组合。
 
-接收方 scoped 方法填入声明的身份字段，用来选择 Host Context。lookup scoped 方法填入声明的 lookup 参数，不改变接收方。已定义的身份（包括 null）选择 scoped 路线。undefined 或缺少 adapter 只有在方法本来存在直接调用路线时才允许回到直接 lookup；仅接收方 scoped 的方法报告装配失败。直接 lookup 重载仍要求 wire 身份。普通调用和流保留各自的错误合同，生成参数对象保留省略与显式 null 的区别。
+独立合同包可以消费该制品的副本，无需引用提供者实现：
 
-挂载贡献拥有方法和取消职责。释放它会拒绝留存回调并结束自己的工作，借用的 Context、adapter 与 Connection 保留各自所有者。namespace 登记继续沿现有挂载队列组合与退役。`ctx` 成员保留给 Cordis tracing。显式 endpoint client 仍用于直接 wire 调用；scoped 应用代码使用上面的 Context service。
+```xml
+<PropertyGroup>
+  <CordisTypertService>settingsController</CordisTypertService>
+  <CordisTypertClientModel>Example.cordis.model.json</CordisTypertClientModel>
+  <CordisTypertClientNamespace>IndependentSettings.Client</CordisTypertClientNamespace>
+  <CordisTypertClientName>SettingsClient</CordisTypertClientName>
+  <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+</PropertyGroup>
+```
 
-普通 DTO/STJ 后端也接收共同 wire 模型已识别的框架 `IEnumerable<T>`、`ICollection<T>`、`IReadOnlyCollection<T>`、`IList<T>`，与已有 list、数组和字符串键字典共用投影。引用元素声明保留默认值与空性。这些是由 STJ 序列化的数据载体，不执行作者自己的 enumerable 实现，也不表示支持任意泛型类。
+外部 DTO 声明通过客户端项目的显式引用模型提供：
 
-## 注册 scope 与 Peer 事件路由
+```xml
+<ItemGroup>
+  <CordisTypertClientReferenceModel Include="Shared.cordis.model.json" />
+</ItemGroup>
+```
 
-在所有者的 Cordis 执行域内创建注册 scope，并向其不透明 key 分发事件：
+CLI 对应 `emit-dotnet --reference-models references.rsp`，响应文件每行一个模型路径。Remote 选择仍限于主模型；外部源声明按完整 assembly-qualified 身份解析，复用普通数据发射的 composition。metadata 签名不保留初始化值，不能替代源模型。定义缺失或冲突时拒绝生成并删除旧客户端输出。引用是构建输入，响应文件和生成源码均归 `Clean` 管理。独立调用者消费生成的合同包，不加载 Provider 程序集。
+
+target 在 `CoreCompile` 前写入普通 DTO/client 源码，因此 STJ 能在同一次编译中看到它。同轮 source-generator 输出不能充当 STJ 输入。同一组属性也在 restore 后首次设计时构建中生成语言服务输入，无需先跑普通 build。设计时投影写入 `CordisTypertOutputDirectory` 的 `design-time` 子目录，普通 build/pack 使用常规输出；两者消费相同的显式模型和引用输入。`Clean` 清理两组生成文件；相同输入的增量输出保持字节和时间戳。供打包使用的源码模型提取仍属于普通构建；实时 source generator 读取当前作者 compilation。MSBuild 设计时输入与实际编译器检查不等于实际 IDE 交互或具名 UI 平台验收。所选 SDK 必须提供匹配的 Roslyn 程序集，包本身不重新分发它们。
+
+可空 float/decimal 常量初始化值保留作者类型与默认值。缺少 JSON 成员时保留初始化值，显式 null 则替换它。调用者 DTO 与生成的辅助类型共享所选目标 namespace。名称冲突会在编译前被拒绝，诊断标明双方来源，例如 `CordisTypertClientName` 为 `DemoClient` 时的 `DemoClient`。应选择不同的 DTO 或 client 名称；emitter 不会静默重命名公开类型，拒绝投影时会删除其此前生成的输出。
 
 ```csharp
-await using var scoped = Scope.Create(owner, subject);
-scoped.Context.On("app/changed", (_, args) => {
-    Observe(args[0]);
-    return Undefined.Value;
-});
-owner.Events.EmitWith(Scope.Target(subject, subject), "app/changed", change);
+using var http = new HttpClient();
+await using var connection = new TypertConnection(http, new Uri("http://localhost:5000/remote"));
+await using var remote = new SettingsClient(connection);
+var reply = await remote.DescribeAsync();
+if (!reply.Ok) throw reply.Error;
+var view = reply.Value;
 ```
 
-subject 可以实现 `IEventFilter`，载体保留其过滤器。载体不暴露 subject 属性；监听者需要真实 subject 时，将它放入事件参数。生成的 Remote waterfall helper 自动处理这一点，公开调用签名不变。
+调用者拥有 HttpClient 与共享的 `TypertConnection`。普通调用返回 `Task<RemoteResult<T>>`，先检查 `Ok`，再读取 `Value` 或 `Error`。无值作者返回 `Task`，投影为 `Task<RemoteResult>`，无值成功与显式 null 保持区分。缺失 adapter 或 Connection 是本地装配异常。远端失败保留任意所有者 code 与独立 JSON details；传输失败和取消成为 unary 结果。下行调用在异步准备后返回立即开始打开的 `RemoteStreamHandle<T>`，单次枚举直接读取业务项，并等待释放。流的远端错误、carrier 故障、本地误用和外部取消分别以对应异常表达。客户端释放等待自身调用与清理，不释放借用资源。
 
-`Scope.Of(context)` 读取最近的继承标签。向 `Scope.Create` 提供 `parent` 可以绑定路由祖先；需要受控重绑时，保留 `Scope.BindParent(key, parent)` 返回的句柄。路由父链不转移所有权。`DisposeAsync` 等待所属清理，包括有序复合 effect 先前通过 `DisposeRawAsync` 启动的清理。
+生产 `SettingsController` 每次调用重新解析名为 `settings` 的可选普通 `ISettingsProvider`。将 `SettingsForms` 挂在会话已有 `ConfigurationOperations` 之上；它根据作者的 live Config 声明推导 active、唯一可寻址的表单。数值 revision 观察 Fiber 身份、完整 schema 和原始配置。层级脱敏读取、完整候选校验和写入都归同一个 profile 队列。describe/update/replace/mutate 使用唯一生成合同。公开调用与退出的 Settings hash 路径见[Settings 合同迁移](settings.zh.md)。
 
-Remote 方法通过 `TypertInvocation.Current!.Peer!` 取得准入后的 Peer，并通过 `peer.Context` 注册。以 `parent: peer` 创建的子 scope 会向上路由到这些 Peer 监听者。不要释放借用的 Peer Context。socket、逻辑流和调用方都不拥有共享 Connection 的 Peer，也不需要用请求参数指定它。直接 Gateway 调用中由所有者持有的 fallback 使用同一机制。
+包消费 [Settings 示例](../scripts/verify-typert-dotnet.py)包含作者、生成合同包和独立调用方。调用方使用静态 metadata 并关闭反射回退，可发布为 Native AOT；动态 CLR Host 仍需要普通运行时。公共表单操作见 [Settings](settings.zh.md)，平台验收见[验证记录](validation.zh.md)。
+
+此路线覆盖受支持的 unary／stream、Settings、PluginManager 和事件消费者。拒绝形状见[后端处置](development.zh.md#生成后端支持范围)，具名平台证据见[验证索引](validation.zh.md#已发行版本证据)。
 
 ### 保存模型客户端中的 Guid
 
@@ -678,55 +617,7 @@ public sealed class MotionResult
 
 可选 JsonElement 字段在作者声明条件省略时，可以用 Undefined 表示省略。显式 JSON null 是已提供的值。例如 Settings unset 操作不赋值 Value；set 操作则赋予 JSON 值，并继续接受现有表单校验。
 
-### 按 Scope 分层的贡献注册表
-
-同时从注册 Context 获取可见性与清理所有权。一个注册表可以在同一层保留多个表：
-
-```csharp
-sealed class MenuLayer : IScopeLayer
-{
-    public NamedEntries<string> Commands { get; } =
-        new(name => new InvalidOperationException($"Duplicate command: {name}"));
-    public AnonymousEntries<string> Hints { get; } = new();
-    public bool IsEmpty => Commands.IsEmpty && Hints.IsEmpty;
-}
-
-var layers = new ScopedLayers<MenuLayer>(_ => new(), NotifyChanged);
-var registration = layers.Effect(caller,
-    layer => layer.Commands.Insert("refresh", "Refresh"), "refresh-command");
-var visible = layers.Merge(Scope.Of(caller), layer => layer.Commands);
-await registration.DisposeAsync();
-```
-
-在所有者的 Cordis 执行域内注册。返回的 EffectHandle 同时归 caller 所有，显式释放可选且幂等。值保持借用。Peek 只读取一个 scope 自己的贡献，ChainLayers 读取继承覆盖层。读取不创建层。具名与匿名视图在非空表代际内保持实时；清空后的代际不跟随后续注册。Remote 方法可以使用当前 Peer Context，无需显式身份参数。
-
-### 打开 Settings 文档
-
-在同一 Context 上挂载使用会话 ConfigurationOperations 的 SettingsForms 和 SettingsController。默认 Controller 在宿主桌面打开 provider 的文档。嵌入式宿主可将自己的 `Func<string, CancellationToken, Task>` 作为 Controller 第二个构造器参数。函数收到的是实际 provider 路径，不是脱敏表单数据的副本。
-
-生成的 .NET 调用为 `await settingsClient.OpenSettingsDocumentAsync(cancellationToken: token)`；标准 TS 调用为：
-
-```ts
-const result = await settings['settings/openSettingsDocument']({})
-```
-
-两者沿普通 RemoteResult 返回已接纳的 `{ opened: true }`。展示操作时检查 `hasDocument`，像其他 Settings 操作一样处理失败。托管应用示例展示此宿主操作，不将文档下载到浏览器。文档打开不绕过 Gateway 授权，也不提供编辑任意路径的权限。
-
-## 运行数值 metadata 与本地原因
-
-如果 JIT 作者需要 reflection metadata 的初始化值语义，可以显式实现 `JsonSerializerContext.GetTypeInfo`，返回应用实际配置的 `DefaultJsonTypeInfoResolver` metadata。声明的命名／空性事实须与之对应。生成绑定继续使用同一 codec 和 Gateway；`TypertArtifacts.GenerateClient(contribution)` 经共享 emitter 导出运行合同。这条路线不在保存模型客户端中重放任意反射逻辑，也不承诺 Native AOT。
-
-| 数值政策 | 输入 | 结果及事件输出 |
-|---|---|---|
-| Strict | JSON number，再由原生类型／范围准入 | JSON number |
-| AllowReadingFromString | JSON number 或有限数值的原生数字字符串 | JSON number |
-| WriteAsString／AllowNamedFloatingPointLiterals／其他组合 | 拒绝受影响的 metadata 投影 | 拒绝受影响的 metadata 投影 |
-
-支持 byte/sbyte、short/ushort、int/uint、long/ulong、float/double 和 decimal，以及现有 nullable 与容器组合。数字字符串语法区分类型，原生解析仍检查位宽和溢出；未知 pattern 拒绝。支持的 Remote 静态默认值之外，省略成员保留实际 serializer 的行为，显式零和 false 保持存在。使用声明的 wire 字段名；当前 Schema 准入没有完整实现底层 Web serializer 的大小写不敏感行为。[兼容说明](compatibility.zh.md#metadata-数值方向2026-10-15)记录该边界及 exporter 与原生解析器的差异。
-
-生成 JS unary 失败继续由 `result.error.code` 分类；本地捕获的传输错误同时原样保存在 `result.error.cause`，包括非 Error 值。取消原因保留对应固定 DSH，普通 carrier 原因保留是 Cordis.NET 的明确扩展。远端业务错误只按 code/message/details 重建。cause 不是 wire 数据或自动日志政策，调用不会自动重放。应用可以在生成调用和 Connection 寿命内判别自己拥有的原因，不应无限期保留承载资源的错误对象。
-
-## Remote 输入的静态数据默认值
+### Remote 输入的静态数据默认值
 
 静态数据默认值沿普通声明与生成 codec 使用：
 
@@ -738,9 +629,11 @@ public sealed record Snapshot(int Id)
 public sealed record Policy(bool Enabled, ImmutableArray<string> Overrides);
 ```
 
-提取器保留精确构造类型、参数绑定和静态参数。支持范围为常量、null、空数组和后端已映射的有限 BCL 集合形状，以及由顶层、非泛型 primary record class 递归组合的数据值，其构造器只将参数赋给自动数据属性。没有自定义初始化器或必需 wire 字段约束的额外自动属性可保留 CLR 默认状态。空 byte 数组投影为原生 base64 字符串，普通序列投影为数组，受支持的字符串键字典投影为对象。不会重放自定义构造器／accessor 体、带行为的成员初始化器、可变静态状态、工厂或任意集合 builder。不支持的独立输入初始化器继续明确拒绝。旧模型若只保存了表达式，应正常重提取其所属源码模型，使用匹配 compiler/runtime 并重建生成式 provider 和客户端；不新增模型代际或 legacy 表达式解释器。
+提取器保留精确构造类型、参数绑定和静态参数。支持范围为常量、null、空数组和后端已映射的有限 BCL 集合形状，以及由顶层、非泛型 primary record class 递归组合的数据值，其构造器只将参数赋给自动数据属性。没有自定义初始化器或必需 wire 字段约束的额外自动属性可保留 CLR 默认状态。空 byte 数组投影为原生 base64 字符串，普通序列投影为数组，受支持的字符串键字典投影为对象。不会重放自定义构造器／accessor 体、带行为的成员初始化器、可变静态状态、工厂或任意集合 builder。不支持的独立输入初始化器继续明确拒绝。不完整的源码模型须重新提取，并使用匹配工具重建生成式提供者和客户端。
 
 生成 Host 绑定和独立 C# 客户端 metadata 使用同一声明事实。`CreateDeclared` 可接收 `TypertInputDefault` 查询，将其值体现为输入 Schema 的 `default` 注解。输入解码仅补齐省略且非必需的字段，然后执行正常 Schema 校验和 STJ 反序列化。显式 null 按声明空性处理；显式零、false 或对象值保持存在，必需字段仍须提供。查询返回 null 表示没有默认值，返回 JSON null 元素表示实际 null 默认值。
+
+下述 Host 组合需要 [PR #29](https://github.com/gentt1024/Cordis.NET/pull/29) 中尚未发布的修正；已发布的 `0.2.1-alpha.1` 不会将这些所属模型默认值接入 Service 绑定。
 
 生成式 Service 绑定使用另一程序集的 DTO 时，应向声明 Service 的项目提供 DTO 所属的声明模型。程序集 metadata 不包含成员初始化事实。使用已有 Roslyn `AdditionalFiles` 输入，文件后缀为 `.cordis.model.json`：
 
@@ -759,6 +652,159 @@ public sealed record Policy(bool Enabled, ImmutableArray<string> Overrides);
 
 这项省略规则是明确的 .NET 适配。固定 DSH 的对象 Schema emitter 保留成员类型和可选性，但不会把普通属性初始化器转换成默认值。它对 Remote 参数默认值的拒绝针对方法参数，不是 DTO 成员。上述 C# 规则让作者与独立 Remote 输入 codec 保持一致，提取阶段不执行初始化器。
 
-`TypertInputDefault` 公开是因为消费程序集中的生成代码需要把这项 metadata 交给 `CreateDeclared`。手写查询必须在 codec 寿命内保持确定性，返回有效、不可变的 wire JSON，不承担随请求变化的政策。必须保证 `JsonElement` 的有效期，例如从临时 document 克隆值。Schema 准备可能缓存查询结果，因此它不是逐请求工厂。生成查询读取提取事实，不执行作者初始化器；任意调用方提供的委托仍然是调用方代码。查询不承载应用 Context、服务查找或业务校验。新增工厂参数改变了 CLR 签名，生成式 provider 和客户端须使用匹配包重新构建。
+`TypertInputDefault` 公开是因为消费程序集中的生成代码需要把这项 metadata 交给 `CreateDeclared`。手写查询必须在 codec 寿命内保持确定性，返回有效、不可变的 wire JSON，不承担随请求变化的政策。必须保证 `JsonElement` 的有效期，例如从临时 document 克隆值。Schema 准备可能缓存查询结果，因此它不是逐请求工厂。生成查询读取提取事实，不执行作者初始化器；任意调用方提供的委托仍然是调用方代码。查询不承载应用 Context、服务查找或业务校验。生成式提供者、客户端与 runtime 使用匹配版本。
 
-空性／默认查询图不再设总计 256 节点限制。已经访问的声明使用点直接复用，普通递归也如此；兄弟分支不累计到递归预算。为约束不断展开的泛型递归，同一遍历路径中同一泛型声明的活动使用点超过 256 个时拒绝。这是资源预算，不是无限展开的证明；超过预算的有限路径也会拒绝。其他后端的声明数量／深度限制、运行时输入默认遍历的深度保护仍各自保留。本次保留已成立的有限投影能力，不承诺任意 C# 图或任意初始化器执行。
+空性／默认值投影复用已访问的声明使用点，包括普通递归；兄弟分支不累计总节点预算。为限制扩张泛型递归，同一遍历路径上同一泛型声明的活动使用点超过 256 时拒绝投影。有限路径也可能超过这项资源预算，它不检测数学意义的无限扩张。后端类型／深度限制与输入默认值的运行时遍历保护分别生效。
+
+## 使用 scoped 调用、流与事件
+
+Connection 由 Host 所属生命周期创建一次，生成客户端与 scoped 视图借用它。分别处理 unary 结果、流异常和取消。完整类型化监听与反向 Context 接线见 [Remote 事件](remote-events.zh.md)。
+
+### 浏览器 scoped Remote 消费
+
+在所属 Cordis Fiber 中挂载一次生成贡献，通过消费方 Context 读取生成的类型化 namespace：
+
+```typescript
+import { mountRemote, getRemote } from './shared.mjs'
+
+const mounted = await mountRemote(owner, connection, contextAdapters)
+const remote = getRemote(agentContext, 'sharedData')
+const result = await remote.scopedRead({ text: 'hello' })
+const document = await remote.read({ suffix: '!' })
+await mounted.dispose()
+```
+
+`getRemote` 读取已有 `remote.sharedData` service，不创建 Connection、registry 或 owner。Cordis tracing 保留消费方 Context，取出方法作为回调也保持该归属。借用的 adapter 来源提供 `getClient(key)`，adapter 提供同步的 `identity(caller)`；每次调用重新读取 adapter 和身份。若现有 Context adapter 所有者同时提供 identity 与 resolve 操作，可以与反向事件复用它。
+
+接收方 scoped 方法填入声明的身份字段，用来选择 Host Context。lookup scoped 方法填入声明的 lookup 参数，不改变接收方。已定义的身份（包括 null）选择 scoped 路线。undefined 或缺少 adapter 只有在方法本来存在直接调用路线时才允许回到直接 lookup；仅接收方 scoped 的方法报告装配失败。直接 lookup 重载仍要求 wire 身份。普通调用和流保留各自的错误合同，生成参数对象保留省略与显式 null 的区别。
+
+挂载贡献拥有方法和取消职责。释放它会拒绝留存回调并结束自己的工作，借用的 Context、adapter 与 Connection 保留各自所有者。namespace 登记继续沿现有挂载队列组合与退役。`ctx` 成员保留给 Cordis tracing。显式 endpoint client 仍用于直接 wire 调用；scoped 应用代码使用上面的 Context service。
+
+
+
+### 类型化 Remote 上行
+
+在作者方法中声明上行，普通 wire 参数仍独立存在：
+
+```csharp
+[RemoteMethod("exchange", Stream = true)]
+public async IAsyncEnumerable<string> Exchange(
+    string prefix,
+    [RemoteUplink] IAsyncEnumerable<string?> input,
+    [EnumeratorCancellation] CancellationToken cancellationToken = default)
+{
+    await foreach (var item in input.WithCancellation(cancellationToken))
+        yield return prefix + (item ?? "null");
+    yield return "complete";
+}
+```
+
+在作者 STJ context 中登记输入值类型，此例为 `typeof(string)`。普通参数继续进入 args，输入序列由 Invocation 提供。共同声明模型保留输入的根空性和受支持集合的元素空性；单独的 `typeof(T)` 无法表达可空引用输入。需要允许缺值的 item 时使用 `IAsyncEnumerable<RemoteOptional<string?>>`，通过 `HasValue` 区分缺失与存在的 null，不增加 wire 对象包装。
+
+```csharp
+await using var stream = await client.ExchangeAsync("prefix:", cancellationToken);
+stream.Send(null);
+stream.Send("first");
+stream.End();
+await foreach (var item in stream.WithCancellation(cancellationToken))
+    Console.WriteLine(item);
+```
+
+`Send` 在本地校验并入队，首次读取前即可调用，不代表 Host 已确认；`End` 在队列发送后半关闭上行，下行仍可继续读取。生成返回类型为 `Task<RemoteStreamHandle<string, string?>>`。只有下行的方法保留不具备 send/end 能力的 `RemoteStreamHandle<T>`；两者都只有一个下行消费者。`End` 幂等，终止后也不报错；半关闭或退休后的发送在本地拒绝。`DisposeAsync` 取消本逻辑调用并等待自己拥有的本地工作，不确认远端业务退休。Host 输入 codec 失败会终止逻辑流，即使作者捕获输入异常；同连接的其他流仍可继续。
+
+生成的 TypeScript 返回带 `send`、`end` 和可等待 `dispose` 的 `RemoteDuplexHandle<Output, Input>`，可缺失项使用 `undefined`，与 `null` 独立。其发送边界校验无损 JSON，Host 校验声明 codec；.NET 在入队前还会校验生成的输入 codec。文本 mux 传原始 item 值，缺失时省略 `value`，不增加 binary 帧或对象包装。原始类型、可空值类型、受支持集合／字典及既有有界 DTO codec 仍受各后端实际限制。选定的反向 Context／事件投递与 owned-value 结算复用同一 Connection，见[Remote 事件](remote-events.zh.md)。
+
+Composition 包会把自身声明模型接入 MSBuild 客户端引用集合。其他源模型继续显式使用 `CordisTypertClientReferenceModel`；直接调用编译器时须通过 `--reference-models` 提供对应模型，不能从程序集元数据恢复作者默认值。
+
+### 注册 scope 与 Peer 事件路由
+
+在所有者的 Cordis 执行域内创建注册 scope，并向其不透明 key 分发事件：
+
+```csharp
+await using var scoped = Scope.Create(owner, subject);
+scoped.Context.On("app/changed", (_, args) => {
+    Observe(args[0]);
+    return Undefined.Value;
+});
+owner.Events.EmitWith(Scope.Target(subject, subject), "app/changed", change);
+```
+
+subject 可以实现 `IEventFilter`，载体保留其过滤器。载体不暴露 subject 属性；监听者需要真实 subject 时，将它放入事件参数。生成的 Remote waterfall helper 自动处理这一点，公开调用签名不变。
+
+`Scope.Of(context)` 读取最近的继承标签。向 `Scope.Create` 提供 `parent` 可以绑定路由祖先；需要受控重绑时，保留 `Scope.BindParent(key, parent)` 返回的句柄。路由父链不转移所有权。`DisposeAsync` 等待所属清理，包括有序复合 effect 先前通过 `DisposeRawAsync` 启动的清理。
+
+Remote 方法通过 `TypertInvocation.Current!.Peer!` 取得准入后的 Peer，并通过 `peer.Context` 注册。以 `parent: peer` 创建的子 scope 会向上路由到这些 Peer 监听者。不要释放借用的 Peer Context。socket、逻辑流和调用方都不拥有共享 Connection 的 Peer，也不需要用请求参数指定它。直接 Gateway 调用中由所有者持有的 fallback 使用同一机制。
+
+### 运行数值 metadata 与本地原因
+
+如果 JIT 作者需要 reflection metadata 的初始化值语义，可以显式实现 `JsonSerializerContext.GetTypeInfo`，返回应用实际配置的 `DefaultJsonTypeInfoResolver` metadata。声明的命名／空性事实须与之对应。生成绑定继续使用同一 codec 和 Gateway；`TypertArtifacts.GenerateClient(contribution)` 经共享 emitter 导出运行合同。这条路线不在保存模型客户端中重放任意反射逻辑，也不承诺 Native AOT。
+
+| 数值政策 | 输入 | 结果及事件输出 |
+|---|---|---|
+| Strict | JSON number，再由原生类型／范围准入 | JSON number |
+| AllowReadingFromString | JSON number 或有限数值的原生数字字符串 | JSON number |
+| WriteAsString／AllowNamedFloatingPointLiterals／其他组合 | 拒绝受影响的 metadata 投影 | 拒绝受影响的 metadata 投影 |
+
+支持 byte/sbyte、short/ushort、int/uint、long/ulong、float/double 和 decimal，以及现有 nullable 与容器组合。数字字符串语法区分类型，原生解析仍检查位宽和溢出；未知 pattern 拒绝。支持的 Remote 静态默认值之外，省略成员保留实际 serializer 的行为，显式零和 false 保持存在。使用声明的 wire 字段名；当前 Schema 准入没有完整实现底层 Web serializer 的大小写不敏感行为。[兼容说明](compatibility.zh.md#metadata-数值方向2026-10-15)记录该边界及 exporter 与原生解析器的差异。
+
+生成 JS unary 失败继续由 `result.error.code` 分类；本地捕获的传输错误同时原样保存在 `result.error.cause`，包括非 Error 值。取消原因保留对应固定 DSH，普通 carrier 原因保留是 Cordis.NET 的明确扩展。远端业务错误只按 code/message/details 重建。cause 不是 wire 数据或自动日志政策，调用不会自动重放。应用可以在生成调用和 Connection 寿命内判别自己拥有的原因，不应无限期保留承载资源的错误对象。
+
+## 交付 CLR 插件
+
+动态加载需要普通 .NET 运行时、显式共享合同和完整稳定的 bundle 目录。安装与保留文件操作见 [CLR 制品流程](clr-artifacts.zh.md)，代码替换使用以下示例。
+
+### 通过 CLR DLL 替换运行同一份提供者
+
+[CLR 控制台宿主](../examples/Probes.Clr/Program.cs)仅引用共享契约和 `Cordis.Clr`（Composition 通过传递引用可用）。它从两个夹具 bundle 加载同一份提供者源码编译出的实现，没有静态引用 `Probes.Plugin` 或任何夹具项目。在仓库根目录执行：
+
+```console
+dotnet build tests/fixtures/ProbeV1/ProbeV1.csproj -c Release
+dotnet build tests/fixtures/ProbeV2/ProbeV2.csproj -c Release
+dotnet run --project examples/Probes.Clr/Probes.Clr.csproj -c Release -- tests/fixtures/ProbeV1/bin/Release/net10.0 tests/fixtures/ProbeV2/bin/Release/net10.0
+```
+
+两个参数都是包含 `ProbePlugin.dll` 及其依赖的 bundle 目录。宿主将自身实际使用的契约程序集传给 `ClrModuleResolver`，加载 V1、激活两个消费者、用 V2 替换 V1，并验证两个消费者均重新取得 caller-bound 视图。释放一个消费者只移除它自己的贡献；释放另一个后，根停止前注册表为空。显式 `ClrModuleDefinition` 使用 `Cordis.ProbeFixture.Entry`；夹具中的其他入口类型用于负向测试。
+
+宿主直接加载两个完整稳定目录，在生命周期清理和卸载请求后仍保留它们，不强制 GC，也不删除代码目录。退出码零表示贡献断言、生命周期清理和卸载请求成功，回收可以仍在等待。普通发布宿主并传入两个准备好的目录即可，运行时不还原包，也不依赖源码仓库。这条 CLR 路线要求普通运行时，不支持 Native AOT。[制品工作流](clr-artifacts.zh.md)说明库管理的安装与离线删除。[部署测试](../tests/Cordis.Platform.Tests/ProbeDeploymentTests.cs)另外保留显式影子复制覆盖及仅限测试的 GC 观察。
+
+### 一个作者包中的多个 CLR 入口
+
+保留 `cordis.plugin.json` 中既有单入口的 `assembly` 和 `entryType` 字段。可选 `exports` 对象声明同一程序集中的其他显式子路径。[独立作者 fixture](../tests/fixtures/ClrMultiEntry/Plugin.cs) 的声明如下：
+
+```json
+{
+  "assembly": "IndependentMultiEntry.dll",
+  "entryType": "IndependentMultiEntry.First",
+  "exports": {
+    "./second": "IndependentMultiEntry.Second"
+  }
+}
+```
+
+`DotnetPluginToolchain` 将包根登记为 `nuget:independentmultientry`，额外入口登记为 `nuget:independentmultientry/second`。单入口作者无需声明空导出表。静态宿主仍可通过既有 resolver 登记精确请求。模块选择与 Cordis 服务 `Provide` 是两项操作；不要求 Core 新增 `Exports` 成员，也不要求应用提供 `ApiCatalog`。
+
+`ClrModuleResolver` 将归一化 bundle 目录相同的导出装入同一可收集的程序集加载上下文。StableDirectory 就地加载保留的文件；显式 ShadowCopy 共享一个开发副本。已加载 bundle 的所有入口须使用相同模式。同一程序集/入口类型的别名复用插件实例，不同入口类型保留各自插件。Loader Entry 仍分别拥有 raw 配置、Fiber 激活与 effect 清理。移除一个 resolver 租约保留其他导出；最后一个租约才请求 bundle 卸载。移除 resolver 映射前应先停止相关 Fiber。卸载请求、收集与 shadow 删除仍是分别观察的结果。
+
+Resolver 默认与宿主共享 Core、Clr、Composition 合同程序集。其他合同通过 `sharedContracts` 传入宿主的精确程序集；插件私有依赖留在 bundle 内。这一身份边界也覆盖生成的 `ITypertRemoteService` 绑定及 `IClrTypertModule` 贡献。
+
+显式 resolver 登记可以选择同一 bundle 目录下不同的主程序集。每个主程序集在加载前登记自身依赖 resolver 与目录，私有 managed/native 查询全部已登记根。同一路径或字节完全相同的副本复用一个依赖；同一依赖名称的不同 binary 会被拒绝，包括新增入口本可直接复用已加载程序集的情况。这是保守的原生 bundle 规则，不是 ABI 或程序集版本兼容算法。依赖 resolver 未定位的 native 库保留 CLR/OS 查找行为。[多程序集 fixture](../tests/fixtures/ClrMultiAssembly/Consumer.cs) 检查两个入口顺序和实际私有 native 调用。
+
+登记依赖根前，resolver 读取 managed 引用与 P/Invoke 声明，递归沿 resolver 定位的 managed 文件检查候选路径，不执行工厂。因此即使原入口尚未调用依赖，也能检查已声明且可定位的冲突；已选择过的依赖也会检查。任意动态加载与工厂副作用不构成可回滚事务。
+
+替换包含不同导出的 bundle 时，使用 `ClrModuleResolver.ReplaceAsync` 的字典重载，提供所有已登记请求，包括尚未加载的导出和别名。回调可以使用 `Loader.ReplacePluginsAsync` 转移既有 raw 配置并共同切换相关 Fiber。单入口重载继续支持一个导出及其别名。候选准备与路由发布保持单一 bundle 代际；回调副作用和产品状态不构成事务。激活失败沿用既有 Loader 恢复路径，已稳定的 Pending Fiber 仍合法。
+
+CLR 替换回调接收 `IReadOnlyList<ModuleReplacement>`，每对包含 `ResolvedModule Previous` 和 `Replacement`。应保留列表：不同 import 可能共享旧插件，却切换到不同后继。`IModuleResolver.ResolveAsync` 返回 `ResolvedModule`，直接调用方使用 `module.Plugin`。自定义解析器在每一代中为每个 import 保留一个模块引用，部署适配器原样转发该引用。
+
+`Entry.Module` 记录实际支撑该 Entry 的导入。名称映射改变不会重写它；禁用后重新启用才解析新映射。替换会将其更新为已准备的后继，激活失败则在候选清理完成后恢复旧身份。direct Fiber 没有 Entry 身份：同一旧插件对应多个不同后继时，在拆卸前拒绝；多个别名仍指向同一后继时没有歧义。通用 `Loader.ReplacePluginAsync(IPlugin, IPlugin)` 继续执行统一的一对一替换。HMR 跟踪优先使用 `Entry.Module.Filename`，缺失时才调用宿主 locator。模块引用会保留导出的插件，期待 collectible 卸载前需释放调用方持有的引用。
+
+## 构建浏览器模块
+
+使用 [浏览器作者工具](../clients/tools/README.zh.md)和 Node 22 或更新版本编译独立插件。在页面同源位置提供完整[浏览器运行时](../clients/modules/README.zh.md)，接入 Host 的 ClientModuleCatalog。浏览器运行时不需要 Node，构建工具需要。应用提供渲染器与认证策略。
+
+### 浏览器 release 与资源
+
+捕获 `ClientModuleCatalog` 时传入 `release: new ClientModuleRelease("application-version", "build-commit")`。初始 graph 和后续管理响应应使用同一应用身份。只有应用明确没有 release 身份时才省略。相同 release 内的 graph revision 变化允许正常插件替换；release 变化后必须重载页面，才能运行该 release 的 graph。
+
+订阅 `modules.releaseChange` 并读取其 `getSnapshot()` 来展示重载提示。`modules.dismissRelease()` 只关闭提示。继续遵循既有的 `management.close()`、`modules.dispose()` 归属顺序。SDK 不会自动重载页面。
+
+作者包可将 `.svg`、`.png`、`.webp` 文件导入为 data URL 字符串。仅图片变化也会参与 `cordis-client-build --watch` 并产生新的不可变 generation。通过 `inline: true` 声明内联 slot；应用 renderer 消费该提示，也可把 member 名传给 keyed standard source。这些增量不会安装 React renderer。

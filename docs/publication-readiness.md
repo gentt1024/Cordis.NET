@@ -1,36 +1,59 @@
-# Publication readiness
+# Release procedure
 
-[中文](publication-readiness.zh.md)
+English | [中文](publication-readiness.zh.md)
 
-The prepared release is `0.2.1-alpha.1`, based on the merged upgrade and static-default/projection work. Preparation and CI are authorized; a tag and public publication are not yet authorized. CI and release share the locked S10 source discovery, shards and strict per-platform union. Both platforms also run native JIT/AOT and package validation; three platforms consume the same Linux-produced authoring batch. A future authorized tag must pass its own gates before sealing and publishing through `nuget-production`. Old tags, published packages and archives remain unchanged.
+Use this guide to prepare and publish a new Cordis.NET preview. For what is already published, see [release evidence](validation.md#released-version-evidence); for unpublished main changes, see [current support](development.md#current-support-and-release-status). Completing local preparation does not publish a release.
 
-The current tree is prepared as a reviewable public source snapshot. Documentation, package metadata, package-specific readmes, community templates, public validation evidence, license material, and local release checks are present.
+## Select the release identity
 
-The repository identity and package metadata are fixed to `gentt1024/Cordis.NET`. Published packages and tags remain immutable. The source version is `0.2.1-alpha.1`; this selects a new validation identity without claiming NuGet availability. Earlier same-version CI artifacts must not replace a published package or be renamed into the new release. Cordis.NET versions are independent of the pinned DSH tag. The final version commit, tag and validated package/symbol hashes must agree.
+Choose a new Cordis.NET version and commit its metadata, internal package references, locks and release notes. Cordis.NET versions are independent of the DSH version pinned in `upstream.lock.json`. Record any baseline promotion separately from earlier validation that used another lock.
 
-The coordinated installation implementation passed [PR #9 verification](https://github.com/gentt1024/Cordis.NET/actions/runs/37601516995) on Windows and Linux, including authoring and package checks. Those alpha.3-versioned validation packages prove that implementation, not any later release batch. Current source evidence is recorded in [validation](validation.md); each future versioned candidate must produce its own packages and matching symbols. Release notes and callback migration guidance are in [the changelog](../CHANGELOG.md), and the direct numeric Settings correction has a [consumer migration guide](settings.md).
+The repository and package metadata identify `gentt1024/Cordis.NET`. The final version commit, tag and validated package/symbol hashes must agree. Keep published tags, packages and archives unchanged. A same-version CI artifact cannot replace a published package, and renaming an older artifact does not make it a new release.
 
-The release whitelist contains Core, Composition, Extensions, Clr, Hosting, AspNetCore, JavaScript and Tool under `Cordis.NET.*`, with matching symbol packages. `Cordis.Example.Greeting` is validated but never selected for publication.
+Describe affected public usage in [the changelog](../CHANGELOG.md) and the relevant guide. Keep English and Chinese documentation synchronized. Preserve licenses and third-party provenance.
 
-Before selecting a release batch, run the existing native, fixed-source, JIT/Native AOT and isolated package-consumer checks on the final source. Also inspect the actual nupkg/snupkg batch and execute its offline debug consumer:
+## Validate the final source and packages
+
+Run the existing CI on the final candidate and require its configured checks. CI and release share the locked source discovery, shards and strict per-platform union. Windows and Ubuntu also run native JIT/AOT, authoring and package validation; three platforms consume the same Linux-produced authoring batch. A PR result validates that candidate, while a release tag must produce its own formal evidence.
+
+The publication whitelist contains Core, Composition, Extensions, Clr, Hosting, AspNetCore, JavaScript and Tool under `Cordis.NET.*`, with matching symbol packages. `Cordis.Example.Greeting` is validated but excluded from publication.
+
+Inspect the actual nupkg/snupkg batch and execute its offline debug consumer:
 
 ```sh
 python scripts/package_inspection.py --directory artifacts/release-packages --version "$RELEASE_VERSION" --symbols --debug-consumer
 ```
 
-Set `RELEASE_VERSION` to the separately approved new version of that batch. The optional `--dotnet` selects the SDK executable and `--source-root` selects the source checkout or source ZIP. The symbol check binds each DLL to its portable PDB, checks SourceLink's repository and commit against package metadata, and verifies document checksums against that Git commit. A source ZIP uses its matching `SOURCE_SHA256.json` commit and source hashes. Generated `obj` documents must have matching embedded source. Tracked source cannot bypass the commit check merely because it is embedded. Pack only after committing final source; a dirty source build can carry an old SourceLink commit and fail this check.
+Set `RELEASE_VERSION` to the selected new version. The optional `--dotnet` selects the SDK executable; `--source-root` selects the source checkout or source ZIP. Pack committed source: a dirty build can retain an older SourceLink commit and fail inspection.
 
-The isolated debug consumer installs Core from the exact local batch into a private package cache, loads the matching snupkg PDB, triggers a known library exception and reads its actual stack frame file and line. The inspector verifies the corresponding embedded source bytes and reports that line. `EmbedAllSources` makes this offline lookup possible. This checks offline source identity and stack symbol resolution; it does not claim an unpublished SourceLink URL was fetched from GitHub or that a debugger UI was exercised.
+The symbol check binds each DLL to its portable PDB, verifies SourceLink's repository and commit against package metadata, and checks document hashes against that commit. A source ZIP uses its matching `SOURCE_SHA256.json`. Generated `obj` documents require matching embedded source; embedding a tracked file does not bypass the commit check.
 
-Reference tooling pins `js-yaml` 4.3.2. This is a targeted fix for the recorded advisories, including [empty merge-source CPU budget bypass](https://github.com/nodeca/js-yaml/security/advisories/GHSA-2883-xcg3-v3hh). Rerun `npm ci --prefix reference --ignore-scripts`, `npm audit --prefix reference` and the relevant fixed-source reference scenarios for the selected batch. It is not a runtime NuGet dependency.
+The debug consumer installs Core from the exact local batch into a private cache, loads the matching symbol package and triggers a known library exception. It checks the stack frame's file and line against the embedded source. This proves offline source and symbol correspondence; it does not prove that GitHub SourceLink retrieval or a debugger UI was exercised.
 
-Each future release requires these separately authorized external checks; local preparation does not establish their current remote status:
+For the selected release batch, verify the locked reference dependencies and relevant source scenarios. The pinned `js-yaml` dependency addresses the recorded [merge-source CPU budget advisory](https://github.com/nodeca/js-yaml/security/advisories/GHSA-2883-xcg3-v3hh); it is not a runtime NuGet dependency. Use `npm ci --prefix reference --ignore-scripts` and `npm audit --prefix reference`, and retain the actual result for the selected source.
 
-1. Run the checked-in GitHub Actions workflow on the public remote and require both platform checks on `main`.
-2. Verify that GitHub private vulnerability reporting is enabled and the repository link in `SECURITY.md` accepts reports.
-3. Protect the `nuget-production` environment and configure a NuGet Trusted Publishing policy for owner `gentt1024`, repository `Cordis.NET`, workflow `release.yml`, environment `nuget-production`, and package scope `Cordis.NET.*`.
-4. After those gates pass, create the reviewed prerelease tag and publish the exact hashed package artifact produced by the release workflow.
+## Check repository and publishing access
 
-For a future release, select its reviewed new tag in both the workflow ref picker and the `tag` input. The existing `v0.2.0-alpha.4` tag is not a destination for this continuation. When publication is authorized, run `release.yml` once with `publish=true`: both platforms validate first, the Linux package batch is sealed, and publication waits for the existing `nuget-production` approval. The publishing job downloads and verifies that artifact rather than rebuilding it. Use `publish=false` for validation-only work; a preliminary validation-only run is not required before an authorized publishing run. This preparation does not create a tag, approve the environment or publish packages.
+Before publishing, confirm the remote state:
 
-A repository-external maintainer archive preserves the original handoff, raw evidence and private development history. Continue from the existing public Git history; this release preparation does not require a new root commit or history rewrite. Record formal baseline promotion separately from earlier stages in which the lock was unchanged. Historical delivery statements do not establish the final package or publication result.
+1. The checked-in GitHub Actions workflow has completed the required checks for the reviewed source.
+2. GitHub private vulnerability reporting is enabled, and the repository link in `SECURITY.md` accepts reports.
+3. The `nuget-production` environment is protected. NuGet Trusted Publishing selects owner `gentt1024`, repository `Cordis.NET`, workflow `release.yml`, environment `nuget-production` and package scope `Cordis.NET.*`.
+
+Keep the existing protection and approval requirements. Local checks do not establish their current remote status.
+
+## Tag, seal and publish
+
+Create the reviewed new prerelease tag without moving an existing tag. In the `release.yml` workflow, select that same tag as both the workflow ref and the `tag` input.
+
+For an authorized publication, run the workflow once with `publish=true`. Validation runs before sealing; the Linux package batch is sealed, and publication waits for `nuget-production` approval. The publishing job downloads and verifies those exact artifacts instead of rebuilding them. Check the formal run's source identity, validation receipts, package hashes and symbols before approval.
+
+Use `publish=false` for validation-only work. A separate preliminary validation-only run is not required before an authorized publishing run. Preserve failed runs and their evidence; a later pass does not change the earlier result.
+
+## Verify public distribution
+
+After the publish job succeeds, confirm that all eight NuGet packages can be downloaded publicly and that their payloads match the sealed batch. Record NuGet's added signature separately. A propagation-time 404 is not a successful download and is not a reason to push the package again.
+
+Publish the source archive, browser runtime and author-tool archives with their matching manifest, evidence and checksums. The author-tool archive must be the one consumed by the formal platform checks. Check public attachment downloads against their recorded hashes before declaring distribution complete. Earlier package batches and historical PR results cannot substitute for this evidence.
+
+State validation limits in the release notes: macOS authoring/browser consumption does not establish full runtime, application or AOT support. Keep local supplements, failed complete gates and formal release results distinguishable; see [validation](validation.md).

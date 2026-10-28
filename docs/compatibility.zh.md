@@ -1,6 +1,6 @@
 # 兼容性与证据
 
-[English](compatibility.md)
+[English](compatibility.md) | 中文
 
 ## 0.2.1-alpha.1 的基线晋升
 

@@ -1,41 +1,62 @@
-# CLR 制品与运行实例
+# 安装与替换 CLR 插件制品
 
-[English](clr-artifacts.md)
+[English](clr-artifacts.md) | 中文
 
-普通 CLR 启动直接使用稳定制品。新进程或新的 collectible `AssemblyLoadContext` 不再创建另一份 bundle。托管依赖隔离、显式共享契约及既有实现替换协议保持不变。原生库遵循 CLR 和操作系统规则；独立 ALC 不承诺独立 native 静态状态。
+直接加载完整稳定制品，保留共享合同，并通过所属生命周期退出。新进程或 collectible AssemblyLoadContext 不要求复制另一份 bundle。动态 CLR 加载需要普通 .NET 运行时。
 
-## 标准包工作流
+## 准备包与 Host
 
-使用 `DotnetPluginToolchain` 与 `ProfileSession.ConfigurationOperations`。工具链负责获取、SDK 准备、完整文件校验记录、发布及制品保留。应用提供源选择、构建授权与通常的插件生命周期，无需实现接纳服务。
+<a id="标准包工作流"></a>
 
-1. 构建正常插件 NuGet 包，包含 `cordis.plugin.json`、私有依赖、资源和 Worker 文件。[托管插件示例](../examples/ManagedPlugin/README.md)说明元数据。运行数据放在代码目录之外。
-2. 使用 `new ClrModuleResolver(sharedContracts: [...])` 与 `DotnetPluginToolchain(profileDirectory, resolver, sources)`。如[托管应用示例](../examples/ManagedApplication/README.md)，将 `toolchain.Bundles` 传给 `ProfileLaunch.LocalBundles`。
-3. 以明确版本和构建授权调用 `InstallPackageAsync`。准备阶段一次性发布到独立 `.cordis/work` 输出；为声明的插件按其 DLL basename 提供 SDK 部署依赖清单，供 `AssemblyDependencyResolver` 使用。产品包装器可在返回准备结果之前补齐自己的元数据。
-4. 发布将同一份完整输出移动到 `.cordis/packages/<name>/<version>`，在旁置 `.<version>.files.json` 中记录完整文件集合与 SHA256，再校验并注册。这份记录属于工具链元数据，位于已批准制品树之外，产品清单不需要排除项。既有版本目录和记录都不覆盖；Profile 准入与完整准备/发布文件树比较继续使用原安装流水线。
-5. 启动先验证安装制品的清单和身份，再注册代码。装载直接使用这个目录；后续 Resolve 复用 lease。新进程重新验证，不重新复制。缺失记录、不完整或被修改的部署明确失败，不会重写清单来接受变化。
-6. 升级已安装的 profile 自有包会准备并持久化新版本，然后报告 `restart-required`；本进程保留旧代码路由。Watcher 处理选择变化后可以在重启前启用或停用旧实现，普通配置编辑仍作用于旧实现。重启读取保存的版本。同版本重复请求和 installation-owned 替换仍拒绝。新版本启动失败不意味着自动回退旧版本。
-7. `RemovePackageAsync` 取消选择、等待所属 fibers 结束，并解除 profile 依赖与 resolver 引用。CLR 文件仍保留给旧引用、延迟依赖、Worker 和其他进程。`PackageChange.Residuals` 返回保留版本目录，包括仍运行的旧版本和等待重启的新版本；逻辑移除不等于物理删除。工具链包装器应转发 `GetRetainedDirectories`，以保留完整报告。同一管理会话拒绝重新启用已移除身份，直到安装再次注册该身份；仅保留文件不构成启用资格。
-8. 所有宿主、Worker 和其他消费者停止后，调用 `DotnetPluginToolchain.DeleteRetainedArtifactAsync(profileDirectory, name, version)`，或 `cordis delete-retained <profile> <name> <version>`。Profile 仍引用该精确版本时拒绝；CLI 还会拒绝正在运行的标准 CLI 宿主。删除 API 在检查引用和删除文件期间持有既有 `package.json.cordis-lock` 写锁，遇到配合该协议的写入者占锁时立即拒绝。Manifest 无法读取或格式无效时保留制品。部署方仍负责排除任意外部消费者及不遵守该锁协议的写入者。失败报告剩余路径；不自动扫描，不根据 GC 删除。
+构建普通插件 NuGet 包，包含 `cordis.plugin.json`、私有依赖、资源及所需 Worker 制品；应用数据放在代码目录外。准备使用选定的 .NET SDK 和包含完整依赖集的显式源。[ManagedPlugin](../examples/ManagedPlugin/README.zh.md) 与 [ManagedApplication](../examples/ManagedApplication/README.zh.md)提供包和 Host。
 
-S4 候选工作流支持在同一 session 内先移除再安装。移除先通过 `GetLoadedModulesAsync` 检查已加载模块的所有权，包装器必须转发此查询。直接或外部 Fiber 会在改变选择前返回 `restart-required`，且 `RestartReason = "unmanaged-plugin"`。成功移除解除路由而不删除文件；解除后持久化失败，可以重试移除以完成已保存依赖的变更。另一个版本的重装加载新依赖闭包；同版本复用要求 receipt 有效且准备文件完整一致。有效但不同的文件树返回 `package-moved`，receipt 损坏仍失败。新准备对生成的 scaffold 使用 `DebugType=none`，比较不忽略任何文件。不要通过修改保留制品强行匹配。见[候选兼容性记录](compatibility.zh.md)。
+创建 `ClrModuleResolver(sharedContracts: [...])`，传入 Host 的精确附加合同程序集，再创建 `DotnetPluginToolchain(profileDirectory, resolver, sources)`。将 `toolchain.Bundles` 交给 `ProfileLaunch.LocalBundles`，使用 `session.ConfigurationOperations`。toolchain 管理获取、准备、文件回执、发布和保留目录，应用管理源选择、构建审批与业务就绪。
 
-信任边界是合作式部署，不是防御同权限代码的沙箱。校验记录在验证点发现内容变化；库自身之后不会覆盖或自动删除已发布制品。记录不替代发布者认证，也不阻止恶意并发写入。
+## 安装、发布与启动
 
-旧工具链未保存文件记录的部署需要通过此工作流重新安装，例如先装到新 profile 或新精确版本再切换部署。启动不自动采信旧文件。低层外部目录 API 仍供宿主自有部署使用，其所有者提供完整稳定的文件。
+1. 以精确版本和显式构建许可调用 InstallPackageAsync。准备阶段在独立 `.cordis/work` 输出中执行一次 SDK 部署 publish，并以插件 DLL 本名写入 AssemblyDependencyResolver 使用的部署依赖清单。产品包装器可在返回准备结果前完成自己的 metadata。
+2. toolchain 发布将完整输出移入 `.cordis/packages/<name>/<version>`，在相邻 `.<version>.files.json` 记录文件集与 SHA256 摘要，再验证和注册。回执位于制品树之外，不覆盖已有版本目录或回执；准入和完整准备／发布树比较仍属于安装。
+3. 启动在注册代码前核对回执与身份，直接加载稳定目录并复用模块 lease。重复进程验证但不复制；部署缺失、不完整或被修改时失败，不重写回执使其通过。
 
-## 开发与实现 HMR
+回执在验证点检测变化，不替代发布者认证，也不提供恶意文件系统沙箱。由 toolchain 之外管理的外部目录通过低层解析器 API 加载，部署所有者须提供完整稳定文件；已安装包的启动仍要求自己的回执。
 
-使用作者正常项目和 targets 为新代码修订发布一个完整的新输出目录，旧输出在使用期间保持不变。注册 `ClrModuleDefinition`，通过 `ReplaceAsync` 与既有 Loader 替换回调切换。[CLR Probes 示例](../examples/Probes.Clr/Program.cs)使用独立 V1/V2 目录，不产生运行期副本。
+## 升级、移除与重新安装
 
-`ClrModuleDefinition.LoadMode` 默认 `StableDirectory`。若外部开发目录确实需要原地重建，可以显式选择 `ShadowCopy`。准备之前须完成构建并停止整个目录的写入；此模式每次准备完整复制 bundle，不保证并发构建时获得一致快照。来源与副本目录不得重叠。复制范围包含私有依赖、原生依赖、Worker 与资源，不仅是入口 DLL。
+升级已安装的 Profile 所有包时，先准备并保存新精确版本，再报告 `restart-required`。当前进程保留旧代码路由，普通配置编辑仍作用于旧实现；监听到的选择变化可在重启前启用或禁用它。重启读取已保存版本，启动失败不自动恢复旧版本。同版本重复安装与替换 installation 所有包仍拒绝。
 
-`ClrUnloadObservation.LoadDirectory` 表示退休实例实际使用的目录。稳定装载时 `ShadowDirectory` 为 null，`TryDeleteShadow` 从不删除稳定来源。显式开发副本仅在所有文件消费者，包括 Worker，结束后才能调用删除。托管 wrapper 回收是附加观察，不证明此前提成立；native 占用仍可能推迟删除。
+RemovePackageAsync 取消选择、等待自有 Fiber 结束，再移除 Profile 依赖和解析器引用。改变选择前通过 GetLoadedModulesAsync 检查，直接或外部 Fiber 导致 `restart-required` 和 `unmanaged-plugin`。toolchain 包装器须转发该查询与 GetRetainedDirectories。撤销后持久化失败时，可重试移除以完成依赖编辑。
 
-业务退休、候选激活、卸载请求、GC 和物理删除仍是独立结果。生产不强制 GC；此路线不提供保留制品的原地更新或通用 native 隔离能力。
+移除后可在同会话重新安装并加载新依赖闭包。同版本复用要求有效回执和完全相同的准备内容，另一棵有效树返回 `package-moved`，损坏仍失败。保留文件本身不允许重新启用，不要修改已安装树来强行匹配。
 
-## 检查已经准备的替换候选
+逻辑移除为保留引用、延迟加载、Worker 和其他进程保留字节。PackageChange.Residuals 报告保留版本，包括旧活动版本和等待重启的版本，不表示物理删除。
 
-应用需要在撤回任何旧合同前检查实际候选时，传入 `admitCandidate`；没有准入政策的宿主可以省略。注册名包含别名和未激活出口；没有 `IClrTypertModule` 的入口由 `GetContribution` 返回 null。别名共享模块、插件和缓存贡献。普通 resolver 读取在提交前仍看到已发布代际。
+## 离线删除保留文件
+
+先停止所有 Host、Worker 和其他消费者，再调用 `DotnetPluginToolchain.DeleteRetainedArtifactAsync(profileDirectory, name, version)`，或使用 CLI：
+
+```console
+cordis delete-retained <profile> <name> <version>
+```
+
+Profile 仍引用精确版本时拒绝删除，CLI 还拒绝运行中的标准 CLI Host。API 在检查引用与删除期间持有既有 `package.json.cordis-lock` 写锁，拒绝冲突的协调写入者；manifest 损坏或不可读时保留制品。部署所有者须排除忽略该协议的外部消费者与写入者。失败报告剩余路径，不进行自动扫描或 GC 触发删除。
+
+## 开发时替换实现代码
+
+<a id="开发与实现-hmr"></a>
+
+每次代码修订发布一个完整目录，在消费者使用期间保留旧输出不变。注册 ClrModuleDefinition，再通过 Loader 替换回调调用 ReplaceAsync。[CLR Probes](../examples/Probes.Clr/Program.cs)使用不同的已准备 V1、V2 目录。
+
+LoadMode 默认为 StableDirectory。仅对之后须原地重建的外部开发目录选择 ShadowCopy；准备前先完成并静止整个构建，复制无法为活动构建创建一致快照。源码和副本不得重叠，bundle 包括私有／原生依赖、Worker 和资源。
+
+ClrUnloadObservation.LoadDirectory 标明退出实例所用目录，稳定加载时 ShadowDirectory 为 null，TryDeleteShadow 不删除稳定源码。显式副本也须等所有消费者停止后再删，托管回收不证明这一前提，原生锁仍可能延迟删除。业务退出、激活、卸载请求、回收和删除分别观察，生产不强制 GC，不同 ALC 不保证原生静态状态独立。
+
+## 检查已准备的替换候选
+
+<a id="检查已经准备的替换候选"></a>
+
+通过 admitCandidate 在撤销前检查实际合同。可选回调取得含别名和非活动导出的注册名称；无 IClrTypertModule 时 GetContribution 为 null，别名共享模块、插件和缓存贡献，普通解析仍看到已发布代际。
+
+下方集成片段展示切换成功路径，解析器、Loader、Typert loader（`artifacts`）、已准备替换定义和受影响的精确 Loader 请求名均须已存在：
 
 ```csharp
 await resolver.ReplaceAsync(
@@ -56,6 +77,6 @@ await resolver.ReplaceAsync(
 await artifacts.ResumeAsync(affectedRequests);
 ```
 
-`CheckApplicationContract` 是应用自己的政策；检查输出时读取 invocation 的 `Result.ResultSchema`。准入失败或切换前取消会退出候选、保留旧映射。切换失败继续使用既有显式恢复规则，只在确认提交或恢复成功后恢复合同。
+CheckApplicationContract 是应用策略，输出读取 invocation 的结果 codec ResultSchema，沿用正常惰性投影与诊断。长期保留时复制 JSON Schema 和字符串，不保留插件、codec、delegate 或 Type。
 
-准入完成即关闭视图，失败也一样。不要把插件、codec、delegate 或 Type 留作永久目录，应复制所需 JSON Schema 和字符串。视图不能使应用已捕获的 CLR 对象失效。工厂和 Schema 准备执行作者代码，其副作用不在回滚保证内。稳定启动、安装包重启升级及 native 资源所有权保持不变。
+准入失败或切换前取消会退出候选并保留旧映射。切换失败须检查既有恢复结果：仅在确认提交或成功恢复后恢复受影响合同，并保留原失败；该片段不实现应用失败分支。准入结束后 view 关闭，已捕获 CLR 对象仍是有效对象。factory 和 Schema 准备执行可信作者代码，其副作用不在回滚内。已安装包升级仍要求重启，不使用这条开发替换路线。

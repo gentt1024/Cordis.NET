@@ -1,6 +1,6 @@
 # Compatibility and evidence
 
-[中文](compatibility.zh.md)
+English | [中文](compatibility.zh.md)
 
 ## Baseline promotion for 0.2.1-alpha.1
 

@@ -1,36 +1,59 @@
-# 发布就绪
+# 发行流程
 
-[English](publication-readiness.md)
+[English](publication-readiness.md) | 中文
 
-准备中的版本为 `0.2.1-alpha.1`，基于已合入的升级与静态默认值／投影工作。本轮已授权准备和 CI，尚未授权 tag 或公开发布。CI 与 release 共用锁定的 S10 源码发现、分片及各平台严格并集。两平台同时执行 native JIT/AOT 和包验证，三平台消费同一 Linux 作者批次。未来获准的 tag 必须通过自身门禁，才可封存并经 `nuget-production` 发布。旧 tag、公开包和归档保持不变。
+本指南用于准备并发布新的 Cordis.NET 预览版。已发布内容见[发行证据](validation.zh.md#已发行版本证据)，main 中尚未发布的修改见[当前支持](development.zh.md#当前支持与发行状态)。完成本地准备不等于已经发行。
 
-当前源码树是可供审查的公开源码快照，包含文档、包元数据、每包 README、社区模板、公开验证摘要、许可材料和本地发布检查。
+## 选定发行身份
 
-仓库及包元数据固定为 `gentt1024/Cordis.NET`。已发布包及 tag 保持不变。源码版本为 `0.2.1-alpha.1`，选定新的验证身份不代表 NuGet 已可获取。此前同版本文字 CI 制品不得替换已发布包，也不得改名作为新发行。Cordis.NET 版本独立于固定 DSH tag。最终版本提交、tag 与验过的包／符号摘要必须对应。
+选择新的 Cordis.NET 版本，提交版本元数据、内部包引用、锁文件和发行说明。Cordis.NET 版本独立于 `upstream.lock.json` 固定的 DSH 版本。正式基线晋升应与使用其他锁的早期验证分开记录。
 
-安装协调实现通过 [PR #9 的 Windows/Linux 验证](https://github.com/gentt1024/Cordis.NET/actions/runs/37601516995)，包括作者合同和包检查。这些版本号为 alpha.3 的验证包仅证明该实现，不证明后续发布批次。当前源码证据见[验证记录](validation.zh.md)，未来每个版本化候选须生成自己的包及配对符号包。发行说明与回调迁移要求见[变更记录](../CHANGELOG.md)，数值 Settings 的直接修正另有[消费迁移指南](settings.zh.md)。
+仓库及包元数据指向 `gentt1024/Cordis.NET`。最终版本提交、tag 与已验包／符号摘要必须对应。已发布 tag、包与归档保持不变。同版本 CI 制品不能替换已发布包，旧制品改名也不会成为新发行。
 
-发布白名单包含 `Cordis.NET.*` 下的 Core、Composition、Extensions、Clr、Hosting、AspNetCore、JavaScript 和 Tool，以及对应符号包。`Cordis.Example.Greeting` 参与验证，但不进入发布集合。
+在[变更记录](../CHANGELOG.md)及相关指南中说明受影响的公共用法，保持中英文同步，保留许可与第三方来源记录。
 
-选择发行批次前，应在最终源码上执行既有原生验证、固定源码对照、JIT/Native AOT 和隔离包消费者检查。还须检查实际 nupkg/snupkg 批次并运行其离线调试消费者：
+## 验证最终源码与包
+
+在最终候选上运行既有 CI，要求其已配置的检查通过。CI 与 release 共用锁定的源码发现、分片及各平台严格并集。Windows 和 Ubuntu 还执行 native JIT/AOT、作者与包验证；三平台消费同一 Linux 作者批次。PR 结果验证的是该候选，发行 tag 仍须产生自己的正式证据。
+
+发布白名单包含 `Cordis.NET.*` 下的 Core、Composition、Extensions、Clr、Hosting、AspNetCore、JavaScript 和 Tool，以及对应符号包。`Cordis.Example.Greeting` 参与验证，但不发布。
+
+检查实际 nupkg/snupkg 批次，并运行其离线调试消费者：
 
 ```sh
 python scripts/package_inspection.py --directory artifacts/release-packages --version "$RELEASE_VERSION" --symbols --debug-consumer
 ```
 
-将 `RELEASE_VERSION` 设置为该批次另行批准的新版本。可通过 `--dotnet` 指定 SDK 可执行文件，通过 `--source-root` 指定源码 checkout 或 ZIP。符号检查将每个 DLL 绑定至对应 portable PDB，核对 SourceLink 的仓库、提交与包元数据一致，并将文档校验和与该 Git 提交的源码比较。源码 ZIP 使用匹配的 `SOURCE_SHA256.json` 提交和文件哈希。生成的 `obj` 文档必须包含校验和匹配的嵌入源码。跟踪源码不能仅因已嵌入而绕过提交检查。最终源码提交后再打包；脏源码构建可能携带旧 SourceLink 提交并在此处失败。
+`RELEASE_VERSION` 使用选定的新版本。可选 `--dotnet` 选择 SDK 可执行文件，`--source-root` 选择源码检出或源码 ZIP。打包应使用已提交源码：未提交修改的构建可能保留旧 SourceLink 提交，导致检查失败。
 
-隔离调试消费者从准确的本地批次安装 Core，使用独立包缓存，加载对应 snupkg PDB，触发已知库异常并读取真实堆栈帧的文件和行号。检查器验证对应嵌入源码的字节并报告该行。`EmbedAllSources` 支持这种离线定位。该检查证明离线源码身份及堆栈符号解析，不宣称成功从 GitHub 抓取未发布提交的 SourceLink URL，也不宣称执行过调试器 UI。
+符号检查将每个 DLL 与 portable PDB 绑定，核对 SourceLink 的仓库与提交是否对应包元数据，再按该提交核对文档摘要。源码 ZIP 使用配套的 `SOURCE_SHA256.json`。生成的 `obj` 文档须有对应嵌入源码；将受跟踪文件嵌入程序集不能绕过提交检查。
 
-参考工具固定使用 `js-yaml` 4.3.2，定向修复已记录的公告，包括[空 merge source 绕过 CPU 预算](https://github.com/nodeca/js-yaml/security/advisories/GHSA-2883-xcg3-v3hh)。所选批次须重新执行 `npm ci --prefix reference --ignore-scripts`、`npm audit --prefix reference` 和相关固定源码参考场景。它不是运行时 NuGet 依赖。
+调试消费者从精确本地批次将 Core 安装到私有缓存，加载匹配符号包，并触发已知库异常。它按嵌入源码核对堆栈帧的文件与行号。这证明离线源码与符号对应，不证明 GitHub SourceLink 拉取或调试器界面已被实际使用。
 
-之后每次发行均须完成下列单独授权的外部检查；本地准备不证明远端当前状态：
+对选定的发行批次，核对锁定的 reference 依赖及相关源码场景。固定的 `js-yaml` 依赖处理了已记录的 [merge-source CPU 预算漏洞](https://github.com/nodeca/js-yaml/security/advisories/GHSA-2883-xcg3-v3hh)，它不是运行时 NuGet 依赖。使用 `npm ci --prefix reference --ignore-scripts` 和 `npm audit --prefix reference`，保留选定源码上的实际结果。
 
-1. 在公开远端运行已提交的 GitHub Actions workflow，并要求 `main` 的两平台检查通过。
-2. 核实 GitHub 私密漏洞报告已启用，且 `SECURITY.md` 中的仓库链接可接收报告。
-3. 保护 `nuget-production` environment，并配置 NuGet Trusted Publishing policy：owner 为 `gentt1024`，repository 为 `Cordis.NET`，workflow 为 `release.yml`，environment 为 `nuget-production`，包范围为 `Cordis.NET.*`。
-4. 以上步骤通过后，创建已审查的预发布 tag，并发布 release workflow 生成且有哈希记录的准确包批次。
+## 核对仓库与发布权限
 
-未来发布时，在 workflow ref 选择器和 `tag` 输入中选择同一经过审阅的新 tag。既有 `v0.2.0-alpha.4` tag 不是本次续建的发布目标。发布获授权后，只需以 `publish=true` 运行一次 `release.yml`：两个平台先验证，封存 Linux 包批次，发布再等待既有 `nuget-production` 批准。发布 job 下载并核验该制品，不重新构建。`publish=false` 用于仅验证；正式获授权发布前不必额外先跑一次仅验证。此准备不创建 tag、不批准环境、不发布包。
+发布前确认远端状态：
 
-仓库外的维护者归档保留原始交接材料、原始证据和私有开发历史。应沿用现有公开 Git 历史；这次发布准备不要求新建根提交或重写历史。应将正式基线提升与此前 lock 未变的阶段分开记录。历史交付说明不能证明最终包或发布结果。
+1. 已提交的 GitHub Actions 工作流已对所审源码完成必需检查。
+2. GitHub 私密漏洞报告已启用，`SECURITY.md` 中的仓库链接可接收报告。
+3. `nuget-production` 环境受保护；NuGet Trusted Publishing 选择 owner `gentt1024`、repository `Cordis.NET`、workflow `release.yml`、environment `nuget-production`，包范围为 `Cordis.NET.*`。
+
+保留既有保护与审批要求。本地检查不能证明远端当前状态。
+
+## 创建 tag、封存并发布
+
+创建已审查的新预发布 tag，不移动既有 tag。在 `release.yml` 中，workflow ref 和 `tag` 输入选择同一 tag。
+
+发布已获授权时，以 `publish=true` 运行一次工作流。验证先于封存；Linux 包批次封存后，发布等待 `nuget-production` 批准。发布作业下载并核验这些精确制品，不重新构建。批准前核对正式运行的源码身份、验证回执、包摘要和符号。
+
+`publish=false` 用于仅验证。正式获授权发布前，不必额外先执行一轮仅验证。保留失败运行及证据，后续通过不改变早先结果。
+
+## 核验公开分发
+
+发布作业成功后，确认八个 NuGet 包均可公开下载，且载荷与封存批次一致。NuGet 新增签名单独记录。传播期间的 404 不算下载成功，也不应因此重新推包。
+
+提供源码归档、浏览器运行时与作者工具归档，以及匹配的 manifest、证据和校验和。作者工具归档必须是正式平台检查实际消费的那份。宣布分发完成前，按已记录摘要核对公共附件下载。早期包批次与历史 PR 结果不能替代本次证据。
+
+在发行说明中写明验证限制：macOS 作者／浏览器消费不代表完整运行时、应用或 AOT 支持。本地补验、完整门禁失败和正式发行结果应能分别辨认，见[验证记录](validation.zh.md)。

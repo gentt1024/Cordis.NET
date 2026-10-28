@@ -1,10 +1,12 @@
 # 标准管理与通知合同
 
-[English](management-remote-migration.md)
+[English](management-remote-migration.md) | 中文
 
-当前源码使用唯一的生成式 `pluginManager` 合同及生成式 `$events` 流。
-`PluginManager` 共用运行 Profile 的 `PluginConfigurationOperations`、工具链和安装任务表。
-维护中的 CLI 与 ManagedApplication 消费这些合同。本次源码修改要求重建客户端，不改变已发布包或持久 Profile 格式。
+在运行中的 Profile 上使用生成式 `pluginManager` 合同和选定 `$events` 流。
+`PluginManager` 共用其 `PluginConfigurationOperations`、工具链与安装任务表。
+[CLI](../tools/Cordis.Cli/README.zh.md) 和 [ManagedApplication](../examples/ManagedApplication/README.zh.md)
+提供完整消费者。这些合同已包含在发布的 `0.2.1-alpha.1` 中，切换版本时保持生成客户端与运行时包匹配。
+持久 Profile 格式有自身兼容边界。
 
 ## 公开操作
 

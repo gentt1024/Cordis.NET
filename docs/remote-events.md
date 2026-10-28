@@ -1,12 +1,18 @@
-# Remote events
+# Forward selected events to Remote listeners
 
-[中文](remote-events.zh.md)
+English | [中文](remote-events.zh.md)
 
-The fixed DSH event path is `$events` plus `$events/result`. Cordis event declarations determine listener signatures; the Host selects which compatible declarations to forward. Plain void events preserve their argument list. Scoped asynchronous waterfalls preserve the same-result `next()` continuation and project the Host agent subject to the Client's resolved Context. The selection does not include DSH product events automatically.
+Declare the events you want to expose, select them at the Host, and register listeners under a Client owner. The fixed DSH workflow uses `$events` and `$events/result`; it does not publish every application or DSH product event automatically.
+
+## Prepare both sides
+
+Use matching Composition packages, a generated event declaration and explicit STJ metadata. A network Host also needs its existing Registry, Gateway, authorized Connection and ASP.NET adapter. A Client needs a Cordis Context, Registry and borrowed Connection. Follow [Remote Host setup](authoring.md#register-call-and-withdraw-contracts) first.
+
+The following snippets are parts of an application. `Agent`, its Id/Context, request and notification DTOs, the JSON context, business handlers and `localContinuation` are application-owned. Register ordinary JSON boundary types in AppJson. The subject's scoped lifetime must be registered using the [scope routing](authoring.md#registration-scopes-and-peer-event-routing) API before expecting a remote waterfall.
 
 ## Declare and select
 
-A public delegate marked with `RemoteEvent` is retained in the existing declaration model. The generator interprets these facts for the Host descriptors and typed listeners. No separate event model format is required.
+Mark public delegates with RemoteEvent. Plain notifications keep their argument list; asynchronous scoped waterfalls retain their `next()` result contract:
 
 ```csharp
 [assembly: TypertContext("agent", typeof(string))]
@@ -22,7 +28,9 @@ public delegate Task<RemoteOptional<string?>> DecisionRequested(
 public delegate void ApplicationChanged(Change change);
 ```
 
-`AppJson` supplies source-generated metadata for the JSON request, result and notification arguments. The request contains the business fields; `agent` and `signal` are reserved projection fields, not serialized CLR resources. C# expresses TS's receiver/request/next shape as ordinary typed delegate parameters. The Host supplies its subject projection once when selecting the forwarding source:
+The request holds business data; projected agent and signal are not serialized CLR resources. Select forwarding under the Host owner's execution domain and supply subject projection once:
+
+Host forwarding and invocation:
 
 ```csharp
 var selected = new[] {
@@ -37,32 +45,48 @@ var decision = await DecisionRequestedTypert.InvokeAsync(
     caller, agent, request, localContinuation, cancellationToken);
 ```
 
-The business call supplies the subject, not a wire identity. The generated invocation uses `Scope.Target(agent, agent)` as its routing receiver and keeps the subject in the typed argument. The forwarding binding derives the Context and `agentId`, verifies that the carrier key is that exact subject, and sends only declared JSON data. A receiver without a scope key continues locally through `next()`; a keyed carrier with a missing or different subject is refused before projection. Existing Cordis filtering, continuation and source ownership remain in use.
+The business call supplies the subject, not an explicit wire identity. The helper uses `Scope.Target(agent, agent)` and retains the original subject for forwarding. A receiver without a scope key continues locally through next; a keyed carrier with a missing or different subject is refused before projection. Keep normal filtering, continuation and source ownership.
 
 ## Listen in C#
 
+Register Client listeners inside the owner execution domain. Caller and Client owner must share one root. For the agent receiver, register `registry.RegisterClientContext(owner, "agent", adapter)` first: its synchronous Resolve maps the incoming identity to a borrowed Context or `TypertResolvedContext.Owned`. Reuse the same adapter's Identity operation for outbound scoped calls. The snippets assume that application adapter is already installed:
+
 ```csharp
-await using var events = new TypertRemoteEventsClient(owner, registry, connection);
-ApplicationChangedTypert.On(events, caller, change => Refresh(change));
-DecisionRequestedTypert.On(events, caller, async (agent, request, next, signal) => {
-    if (!CanHandle(request)) return await next();
-    return new RemoteOptional<string?>(await AskAsync(agent, request, signal));
+TypertRemoteEventsClient events = null!;
+await owner.RunAsync(ctx =>
+{
+    events = new TypertRemoteEventsClient(ctx, registry, connection);
+    ApplicationChangedTypert.On(events, caller, change => Refresh(change));
+    DecisionRequestedTypert.On(events, caller, async (agent, request, next, signal) =>
+    {
+        if (!CanHandle(request)) return await next();
+        return new RemoteOptional<string?>(await AskAsync(agent, request, signal));
+    });
+    return Task.CompletedTask;
 });
-await events.RunAsync(host => OnReady(host.Home), generationCancellation);
+try
+{
+    await events.RunAsync(host => OnReady(host.Home), generationCancellation);
+}
+finally
+{
+    await events.DisposeAsync();
+}
 ```
 
-The surrounding connection controller owns recovery. `RunAsync` represents one generation; it does not add retry policy. The Client borrows its Registry, Connection and Context. Listener registrations belong to the calling Fiber.
+RunAsync owns one generation and stays active until cancellation or disconnection. The surrounding connection controller owns retry. Listener registrations belong to caller's Fiber; the event Client borrows Context, Registry and Connection. Dispose the event Client before its borrowed resources.
 
-The typed waterfall listener returns `RemoteEventResult<T>`. Its continuation marker is separate from all `T` values. Returning `await next()` preserves that marker; a normal `T` converts to an answer. Use `RemoteOptional<T>` when the declaration permits undefined. Thus continuation, undefined and explicit null remain distinct without throwing an internal control exception through user code.
+The listener returns RemoteEventResult<T>. `await next()` preserves a continuation marker separately from any T value. RemoteOptional<T> represents allowed undefined independently from present null. The Client callback's agent is the resolved Client Context, not a reconstructed Host Agent object.
 
-The existing `emit-dotnet` command also accepts a selected event name or delegate metadata name in `--service`. `CordisTypertClientModel`, `CordisTypertService`, `CordisTypertClientNamespace` and `CordisTypertClientName` generate the corresponding typed `On` helper and standalone data from the saved common model before compilation. Backend serializer restrictions still apply; a Host serializer that cannot be reproduced is not silently replaced with a different policy.
+## Generate independent listeners
 
-The same event selection is available to `emit-web` / `CordisTypertWebModel`, with explicit `CordisTypertWebReferenceModel` inputs. Normal build/pack delivers `createEvents` in `cordis/typert/web/remote.mjs`, its declaration and the shared Connection assets. No running Host or Provider assembly is required for generation. Host forwarding remains explicit. Arguments/request and continuation values use output projection; replies use input projection. `next()` runs the remaining local listener chain; when that chain does not answer, returning its continuation delegates to the Host. It is not a round trip that exposes the Host's later return value to the browser.
+Use `emit-dotnet --service <event-name-or-delegate-name>` with the existing model/client project properties to generate typed On helpers and data before compilation. The model-only Web route uses CordisTypertWebModel and explicit reference models, producing `createEvents` in `cordis/typert/web/remote.mjs` with declarations and shared Connection assets. No live Host or provider DLL is needed for generation; forwarding still requires Host selection.
 
-
-Collection element nullability comes from the event declaration, including `List<string?>?` and `Dictionary<string, T?>`. Authors register ordinary CLR metadata (`typeof(List<string>)`) in their JSON context; they do not hand-author a second schema. Generated source listeners, saved-model listeners and TS listeners use those same facts. Non-null elements still reject null. Namespace-qualified delegate identities permit unrelated same-name event delegates.
+Ordinary arguments, requests and continuation values are Host output; handler replies are Host input. Collection-element nullability comes from the declaration, including nullable lists and dictionary values. Register normal CLR types in STJ; do not hand-author another schema. Independent backends refuse serializer behavior they cannot reproduce. See [generation support](development.md#generation-backend-support).
 
 ## Listen in TypeScript
+
+The generated module below is served as events.mjs. Supply the existing owner, Connection and adapter source; application callbacks provide the UI and business action:
 
 ```ts
 import { createEvents } from './events.mjs'
@@ -74,16 +98,14 @@ events.on(caller, 'app/decision', async (request, next) => {
 await events.run(generationSignal, host => onReady(host.home))
 ```
 
-`adapters.getClient('agent')` is consulted for every invocation. Its synchronous resolver returns a borrowed Cordis Context, an owned value from `typertOwnedValue`, or undefined. The shared owned-value symbol matches fixed DSH. No registry copy or permanent identity table is added. Generated emit listeners retain each declared argument and generated waterfall listeners project `agent` and `signal` into the request.
+Every invocation reads `adapters.getClient('agent')` again. Its resolver returns a borrowed Cordis Context, an owned value from typertOwnedValue, or undefined. `next()` runs the remaining Client listener chain; when that chain has no answer its continuation delegates to the Host. It does not expose the Host's later return value as a browser round trip.
 
-The browser module package exports standard platform events through `/events`. `createManagementClient({ modules, events })` uses the existing recovery controller, subscribes before querying full state and graph, and never replays writes. The old notification Remote and `/notifications` export are removed.
+The browser package's standard events are exported through `/events`. Supply them to createManagementClient to reuse its subscribe-before-read recovery. Use the same generation cancellation signal and close/dispose the event Client when the page owner ends.
 
 ## Settlement and evidence boundaries
 
-Resolvers and releases are synchronous. Missing or failing resolution delegates to the Host continuation. Borrowed values are not disposed; an owned value is released at most once after the handler and result reply settle. Cancellation reaches the handler but does not free its Context early. Client and Connection disposal join active waterfall work.
+Resolvers and release callbacks are synchronous. An owned cleanup must not throw. Missing or failed resolution delegates to Host continuation. Borrowed values are not disposed; owned values release at most once after the handler and result reply settle. Cancellation reaches the handler but does not free its Context early. Client and Connection disposal wait for active waterfall work.
 
-Disconnect removes that delivery without synthesizing `next`; pending invocations may reach the next connection generation. Source withdrawal closes its streams and cancels its pending work. An obsolete client identity cannot settle a current delivery; duplicate settled replies cannot revive it. One-way emits have no durable replay guarantee. Waterfall replies distinguish result, next and rejection, including rejection name, message, code and details.
+Disconnect removes a delivery without synthesizing next; pending calls can reach a later connection generation. Source withdrawal closes streams and cancels pending work. Obsolete identities and duplicate replies cannot settle or revive a current delivery. Replies distinguish result, next and rejection, including name/message/code/details; notifications have no durable replay guarantee.
 
-The source correspondence is fixed DSH `packages/typert/protocol/src/types.ts`, `owned-value.ts`, `packages/api/gateway/src/client/remote-events.ts`, `stream-protocol.ts` and the forwarding selection in `packages/api/remotes/src/remote-events.ts`, at `639ed015397290b3745d163aafe02ffee4aa3f84`. This path does not by itself establish all browser scoped behavior, direct Gateway operatorPeer fallback, every model backend, or full DSH product/SDK interoperability. Validation records identify the actual candidate and consumers exercised.
-
-Generated waterfall helpers nest the original subject, request and signal in one native payload before event dispatch. A contextual subject may return a fresh caller view for ordinary direct event arguments; forwarding still projects the original subject used by the scope carrier. Authors keep the same `InvokeAsync` and `Forward` signatures and regenerate helpers after this correction.
+The protocol and owned-value sources are under fixed DSH `packages/typert/protocol` and `packages/api/gateway`, with Host forwarding in `packages/api/remotes`. [upstream.lock.json](../upstream.lock.json) selects the current baseline; [compatibility](compatibility.md) records adaptations and [validation](validation.md) identifies completed consumers. Selected event forwarding does not establish complete DSH product/SDK interoperability.

@@ -1,12 +1,13 @@
 # Standard management and notification contracts
 
-[中文](management-remote-migration.zh.md)
+English | [中文](management-remote-migration.zh.md)
 
-The current source uses one generated `pluginManager` contract and the generated
-`$events` stream. `PluginManager` shares the running profile's
-`PluginConfigurationOperations`, toolchain and installation table. The maintained CLI and
-ManagedApplication consume these contracts. This source change requires rebuilding clients;
-it does not change a published package or persisted profile format.
+Use the generated `pluginManager` contract and selected `$events` stream over the running
+profile. `PluginManager` shares its `PluginConfigurationOperations`, toolchain and installation
+table. The [CLI](../tools/Cordis.Cli/README.md) and [ManagedApplication](../examples/ManagedApplication/README.md)
+provide complete consumers. These contracts are included in published `0.2.1-alpha.1`;
+keep generated clients and runtime packages matched when changing versions. Persisted
+profile formats have their own compatibility boundary.
 
 ## Public operations
 

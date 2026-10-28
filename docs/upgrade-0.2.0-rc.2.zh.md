@@ -1,6 +1,6 @@
 # DSH 0.2.0-rc.2 升级
 
-[English](upgrade-0.2.0-rc.2.md)
+[English](upgrade-0.2.0-rc.2.md) | 中文
 
 复审修正将引用快照与 Fiber 的完整有效对象分离，保留父级 raw 表达式的不透明性，并为 self-contained ASP.NET 宿主捕获 SDK 框架引用。CLR 框架识别明确区分适配器核心清单、可执行宿主的框架引用清单和 framework-dependent 宿主 deps 三种来源。既有打包 gate 通过隔离 NuGet 消费端运行五种实际 CLR 部署；托管 CI 执行仍是独立证据。
 

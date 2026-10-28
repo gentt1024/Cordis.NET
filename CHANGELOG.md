@@ -1,12 +1,17 @@
 # Changelog
 
-## [0.2.1-alpha.1] - Unreleased
+## [Unreleased]
+
+- Skip unchanged Typert generation while preserving normal and design-time source registration. Changed inputs, missing or changed outputs, and invalid generation receipts trigger regeneration; Clean removes owned build state.
+- Preserve static Service input defaults for DTOs from referenced assemblies when their owning declaration models are supplied through the existing `AdditionalFiles` input. Service drift checks and omission/null distinctions remain in place.
+
+## [0.2.1-alpha.1] - 2026-10-27
 
 - Promotes the fixed DSH 0.2.1-rc.2 source and reviewed Windows manifest adaptation. CI and release use one complete source discovery/shard/union gate; historical inventories and platform exclusions remain explicit.
 - Includes the reviewed S1–S9 native management, readiness, Remote access/events/metadata and browser release coordination contracts. See the paired capability and compatibility documentation for supported scope and platform adaptations.
 - Shares proven static C# input defaults and finite projections across generated Host and independent saved-model consumers. Omission remains distinct from null; output decoding does not apply input defaults. Re-extract models and rebuild providers/clients with matching packages.
 - Limits generic expansion along the active recursive path rather than total graph size. Arbitrary author converter execution remains unsupported; built-in .NET string-enum projection is consumed independently and unsupported Web projection is explicitly refused.
-- No public package or tag has been created for this version.
+- Published to NuGet with browser runtime and author-tool archives. Exact artifacts, checksums and formal validation are on the [release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1).
 
 ## [0.2.0-alpha.5.2]
 

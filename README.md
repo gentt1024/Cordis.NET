@@ -1,41 +1,52 @@
 # Cordis.NET
 
-[中文](README.zh.md)
+English | [中文](README.zh.md)
 
-Cordis.NET is a faithful, idiomatic .NET port of the fixed DSH-maintained Cordis runtime and generic application infrastructure. Build ordinary C# plugins and services, compose applications, or expose selected services to .NET and Web clients. Remote is optional; ordinary plugin development does not require Node.
+Cordis.NET lets you build C# applications from plugins that provide services, declare dependencies and release their registrations when they stop. Add configuration, live updates and separately deployed CLR plugins as your application needs them. You can also expose selected services to .NET and Web clients through Remote.
 
-Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft. The behavior baseline is deepseek-ai/deepseek-harness at 687f282e8625c6b8d11ff58211a90524be2e4317, whose vendored Cordis reports 4.0.4; arbitrary TypeScript plugins are not a supported deployment format.
+The project is a faithful, idiomatic .NET port of the DSH-maintained Cordis runtime and its application infrastructure. Ordinary plugins run in process and do not require Node or Remote.
 
-## Start with your task
+## Get started
 
-| Task | Packages and entry |
+Install the published preview, `0.2.1-alpha.1`, in a .NET 10 application:
+
+```console
+dotnet new console -n MyApp -f net10.0
+dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.1
+```
+
+Follow [your first plugin](docs/getting-started.md) for the complete program, expected output and shutdown. No repository checkout is required.
+
+The [release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) provides browser runtime and author-tool archives, checksums and validation evidence. Use matching versions of the Cordis.NET packages and generated tools. **Current main includes unpublished fixes** for incremental generation and Host input defaults from referenced assemblies; see [release and source status](docs/development.md#current-support-and-release-status).
+
+## Choose what to add
+
+| If you need to… | Use |
 |---|---|
-| Run ordinary .NET plugins and services | Core; add Composition for Loader, profiles and configuration. [First package-only application](docs/getting-started.md). |
-| Expose a Host to .NET or Web consumers | Composition supplies declaration extraction, generated bindings, independent clients and shared Remote contracts; AspNetCore supplies the authorized HTTP/WebSocket host adapter. [Authoring](docs/authoring.md). |
-| Install and run separate CLR plugins | Clr supplies the SDK toolchain and stable artifact loading over existing configuration operations. [Artifact workflow](docs/clr-artifacts.md), [managed plugin](examples/ManagedPlugin/README.md), [managed application](examples/ManagedApplication/README.md). |
+| Register plugins, provide services and manage their lifetime | `Cordis.NET.Core`; start with [core concepts](docs/core-concepts.md). |
+| Compose an application from configuration and update it while running | `Cordis.NET.Composition`; see the [Composition example](examples/Composition/Program.cs) and [Settings](docs/settings.md). |
+| Expose selected services to generated .NET or Web clients | `Cordis.NET.Composition` for declarations, bindings and clients; `Cordis.NET.AspNetCore` for the HTTP/WebSocket adapter. See [Remote authoring](docs/authoring.md#declare-and-generate-native-remote-contracts). |
+| Install and load independent CLR plugins | `Cordis.NET.Clr`; follow [CLR artifacts](docs/clr-artifacts.md), the [managed plugin](examples/ManagedPlugin/README.md) and [managed application](examples/ManagedApplication/README.md). |
+| Integrate with Microsoft Generic Host | `Cordis.NET.Hosting`; see its [package guide](src/Cordis.Hosting/README.md). |
 
-Optional Hosting integrates Microsoft Generic Host. Extensions provides selected runtime extensions; JavaScript evaluates trusted configuration expressions through Jint, without a Node environment or sandbox. Static Core/Composition applications support Native AOT; dynamic CLR loading and Jint require an ordinary runtime. The CLI package is Cordis.NET.Tool. Package IDs use Cordis.NET.*, while namespaces and assemblies use Cordis.*.
+`Cordis.NET.Tool` supplies the `cordis` CLI. `Cordis.NET.Extensions` provides runtime extensions, and `Cordis.NET.JavaScript` evaluates trusted configuration expressions through Jint. Jint is not a sandbox. Static Core/Composition applications support Native AOT; dynamic CLR loading and Jint require an ordinary runtime. Package IDs use `Cordis.NET.*`; namespaces and assemblies use `Cordis.*`.
 
-## Select a package batch
+## Find the documentation
 
-This source prepares `0.2.1-alpha.1`; it is not yet published. Use its validated local feed and matching generated tools to try the current contracts. The previous published batch is [0.2.0-alpha.5.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2). Do not mix that batch with current generated code. See [current support](docs/development.md#current-support-and-release-status) and [release evidence](docs/validation.md#released-version-evidence).
+- **Learn:** [first plugin](docs/getting-started.md), [core concepts](docs/core-concepts.md).
+- **Build an application:** [authoring](docs/authoring.md), [Settings](docs/settings.md), [Remote events](docs/remote-events.md), [CLR artifacts](docs/clr-artifacts.md).
+- **Check support and design:** [supported backends](docs/development.md#generation-backend-support), [architecture](docs/architecture.md), [compatibility](docs/compatibility.md), [fixed upstream sources](docs/upstream.md).
+- **Contribute:** [development and verification](docs/development.md), [contributing](CONTRIBUTING.md), [release procedure](docs/publication-readiness.md).
+- **Look up a release:** [changelog](CHANGELOG.md), [validation evidence](docs/validation.md#released-version-evidence), [security](SECURITY.md), [notices](NOTICE.md).
 
-Follow [getting started](docs/getting-started.md) to install the selected batch and run without cloning the repository. To explore the same composition workflow from source with the SDK in global.json:
+To explore from source, use the SDK pinned in `global.json` and run:
 
 ```console
 dotnet run --project examples/Composition/Composition.csproj
 ```
 
-The example mounts a static plugin, reads its service and updates configuration. The [managed application](examples/ManagedApplication/README.md) adds package installation and browser modules; only its optional frontend build needs Node.
+## Project scope
 
-## Documentation
+Behavior follows the fixed revision in [upstream.lock.json](upstream.lock.json), currently DSH `0.2.1-rc.2` with vendored Cordis `4.0.4`. [Compatibility](docs/compatibility.md) records the .NET adaptations and supported interoperability. Arbitrary TypeScript plugins are not a supported .NET deployment format.
 
-- [Getting started](docs/getting-started.md): package selection, first call and shutdown.
-- [Authoring](docs/authoring.md): declarations, generated consumers, errors and ownership.
-- [Core concepts](docs/core-concepts.md) and [architecture](docs/architecture.md): runtime and subsystem responsibilities.
-- [Settings](docs/settings.md): live forms, revisions and coordinated writes.
-- [Development](docs/development.md): current support, maintenance navigation and verification.
-- [Compatibility](docs/compatibility.md), [upstream provenance](docs/upstream.md) and [upgrade matrix](docs/upgrade-0.2.0-rc.2.md): fixed behavior and platform adaptations.
-- [Publication readiness](docs/publication-readiness.md), [changelog](CHANGELOG.md), [contributing](CONTRIBUTING.md), [security](SECURITY.md) and [notices](NOTICE.md).
-
-This is an early preview. Public APIs and adaptations may change before a stable release; persisted data, Git history and published package identities are preserved.
+Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse or Microsoft. It is an early preview; public APIs may change before a stable release. Published package and tag identities remain fixed.

@@ -1,6 +1,6 @@
 # Settings 合同历史
 
-[English](settings-contract-migration.md)
+[English](settings-contract-migration.md) | 中文
 
 当前 Host 接线、客户端调用、revision 和持久化规则见 [Settings 指南](settings.zh.md)。
 

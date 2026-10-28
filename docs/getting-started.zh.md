@@ -1,25 +1,23 @@
-# 入门
+# 第一个插件
 
-[English](getting-started.md)
+[English](getting-started.md) | 中文
 
-当前源码准备 `0.2.1-alpha.1`，公开发布前需使用随附的已验 feed。下方既有公开批次保留自身合同，切换批次时须重新构建生成消费者。
+本教程创建一个控制台应用，注册插件、调用它提供的服务，再停止插件。使用已发布的 `0.2.1-alpha.1` 包。你需要 .NET 10 SDK 和 nuget.org 访问能力，无需克隆仓库或安装 Node。
 
-## 选择批次与 SDK
+## 创建应用
 
-使用 .NET 10 和所选批次 global.json 指定的 SDK；当前源码使用 10.0.111。从发行或[验证回执](validation.zh.md#已发行版本证据)选择精确 Cordis.NET 版本与 feed。对于 `0.2.0-alpha.5.2`，请在[匹配发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2)核对 NuGet 可用状态和浏览器客户端归档。所有包及工具须来自同一验收批次，不得用原 alpha.5 封存或同版本文字的 CI 包替代。
-
-将下方 `<selected-version>` 和 `<feed>` 替换为该批次的精确版本及 NuGet 源。公开发行可以使用 https://api.nuget.org/v3/index.json；未发布批次需使用随附的本地 feed。这些是占位符，不要求发布或重命名包。
-
-## 运行普通插件
-
-创建控制台应用。Core 不需要 clone 仓库、Node、HTTP 服务或源生成配置。
+在准备创建项目的目录中运行：
 
 ```console
 dotnet new console -n MyApp -f net10.0
-dotnet add MyApp package Cordis.NET.Core --version <selected-version> --source <feed>
+dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.1 --source https://api.nuget.org/v3/index.json
 ```
 
-将 MyApp/Program.cs 替换为：
+`Cordis.NET.Core` 提供插件运行时，这个程序不需要其他包。从 Cordis.NET 源码开发时，使用仓库 `global.json` 固定的 SDK。
+
+## 注册插件并调用服务
+
+将 `MyApp/Program.cs` 替换为：
 
 ```csharp
 using Cordis;
@@ -43,37 +41,33 @@ await context.RunAsync(async owner =>
 });
 ```
 
+程序使用三个对象：
+
+- `Context` 提供服务视图和执行域。根 Context 拥有这个应用的插件生命周期。
+- `Plugin<object?>` 定义激活时要做的事。这里以 `answer` 为服务名注册了一个函数。
+- `Fiber` 表示已注册的插件实例，拥有 `Apply` 创建的服务注册。
+
+`RunAsync` 进入 Context 执行域；插件回调本身就在其中运行。`WaitAsync` 等待插件当前的生命周期工作，激活出错时会报告异常。这个插件没有依赖，因此读取服务前它的 apply 已完成。如果插件缺少依赖，`WaitAsync` 可能在 Fiber 仍为 pending 时结束，不会等待未来的提供者。
+
+## 运行并停止
+
 ```console
 dotnet run --project MyApp
 ```
 
-程序输出 41 后退出。根 Context 拥有插件 Fiber，Fiber 拥有服务注册。WaitAsync 在读取前等待激活，DisposeAsync 在根关闭前撤销插件。调用位于 RunAsync 的 Context 执行域内。激活失败从 WaitAsync 抛出，不是 RemoteResult。应用拥有的外部资源仍由应用释放。
+程序输出 `41` 后退出。`fiber.DisposeAsync()` 停止插件并撤销服务注册，外层 `await using` 随后关闭根 Context。撤销注册不会释放被注册的值；如果插件创建了需要释放的资源，应通过 effect 注册清理。见[服务与资源归属](core-concepts.zh.md#服务与资源归属)。
 
-需要 Profile、配置和静态模块时，从同批次添加 Cordis.NET.Composition。现有 [Composition 示例](../examples/Composition/Program.cs)通过 StaticModuleResolver 和 Loader 更新 live 配置。普通插件／服务调用仍在进程内。依赖、服务视图和 effect 见[核心概念](core-concepts.zh.md)。
+`answer()` 是普通 C# 调用。应用内部的服务使用不需要网络服务器或 Remote 合同。
 
-## 将现有 Host 接到生成消费者
+## 继续构建应用
 
-Composition 提供作者声明和生成绑定，AspNetCore 提供 HTTP unary 与 WebSocket mux 适配。复用现有 Cordis Context 和 Registry，Host 拥有授权与 Connection，不为 RPC 再建插件运行时。
+| 下一项任务 | 指南 |
+|---|---|
+| 理解依赖、服务可见性和插件清理 | [核心概念](core-concepts.zh.md)。 |
+| 按配置加载静态模块并更新它们 | 添加相同版本的 `Cordis.NET.Composition`，参考 [Composition 示例](../examples/Composition/Program.cs)。 |
+| 向 .NET 或 Web 客户端提供选定服务 | 先[声明与生成 Remote 合同](authoring.zh.md#声明与生成原生-remote-合同)，再[登记、调用与撤销](authoring.zh.md#登记调用与撤销合同)。 |
+| 生成不依赖提供者程序集的 .NET 客户端 | [模型与客户端项目配置](authoring.zh.md#生成独立-net-客户端)，以及[后端支持范围](development.zh.md#生成后端支持范围)。 |
+| 安装独立部署的 CLR 插件 | [托管插件](../examples/ManagedPlugin/README.md)、[托管应用](../examples/ManagedApplication/README.md)和 [CLR 制品流程](clr-artifacts.zh.md)。 |
+| 从命令行校验或预览配置 | 安装匹配版本的 `Cordis.NET.Tool`，见 [CLI 指南（英文）](../tools/Cordis.Cli/README.md)。 |
 
-先按[作者指南](authoring.zh.md)的声明、生成和注册／调用／撤销章节接线，其中包含作者声明、JSON context、Host 绑定与 Web 调用。需要不依赖 Provider 实现的 .NET 调用方时，按该指南的模型／客户端项目配置执行普通 build，生成代码与 STJ 参与同次编译。
-
-独立后端能表达合同时，使用保存声明事实和显式引用模型；导出需要作者运行时 metadata 时，使用实际 contribution 的 TypertArtifacts.GenerateClient。两者共享 emitter 与 Connection，离线生成不执行任意作者代码。[后端支持形状](development.zh.md#alpha5-独立后端处置)定义边界。
-
-Unary 调用先检查 RemoteResult.Ok，再读取 Value／Error；准备失败和流错误具有独立合同。先释放客户端，再释放其借用的 Connection，最后关闭宿主资源；客户端不会关闭借用的 HttpClient。应用组合可参考现有 [Probes 应用](../examples/Probes/Program.cs)，增加监听时见 [Remote 事件](remote-events.zh.md)。运行 metadata 可用不等于任意 DTO 都支持静态 AOT。
-
-## 交付独立 CLR 插件
-
-沿用现有[托管插件](../examples/ManagedPlugin/README.md)和[托管应用](../examples/ManagedApplication/README.md)，其中演示包元数据、选定 feed、构建授权和安装命令。
-
-标准路线由 DotnetPluginToolchain 与 ProfileSession.ConfigurationOperations 执行 Prepare → Publish → Validate → LoadDirectory，直接加载验证过的稳定目录。已安装包升级保存新的精确版本并要求重启；逻辑移除保留仍可能被代码或其他进程使用的文件。完整回执、所有权和显式离线删除见 [CLR 制品](clr-artifacts.zh.md)。动态 CLR 加载不支持 Native AOT。
-
-## 验证配置并继续
-
-所选 Cordis.NET.Tool 批次提供 cordis validate 和 cordis preview。使用 --version 与 --add-source 从匹配 feed 安装精确工具版本后执行：
-
-```console
-cordis validate ./profile/cordis.patch.yml
-cordis preview ./profile/cordis.patch.yml
-```
-
-Settings、管理、可选适配器和生命周期细节见[作者指南](authoring.zh.md)。[当前支持](development.zh.md#当前支持与发行状态)与[历史证据](validation.zh.md)分别记录。
+Cordis.NET 包与工具应使用匹配版本；切换版本时，重新构建生成式提供者和客户端。浏览器归档位于[对应发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)。使用 main 文档中的后续能力前，先核对[当前源码状态](development.zh.md#当前支持与发行状态)。
