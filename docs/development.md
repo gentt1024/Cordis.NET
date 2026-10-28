@@ -32,6 +32,8 @@ The default JIT package-consumer path is `python scripts/verify-typert-dotnet.py
 
 This consumer maps `Cordis.NET.*` to the validated batch, its `Independent*` fixture packages to the temporary author feed, and public dependencies to nuget.org. It clears fallback folders and uses a private cache. Existing assets checks verify that cache and the selected Cordis package version; a public package with the same version does not establish candidate provenance.
 
+Typert MSBuild targets check content hashes for the evaluated source/model/reference lists, reference XML documentation, compiler and selected SDK Roslyn files, generation options and owned outputs. An unchanged build skips the compiler process while still registering `Compile`, `AdditionalFiles` and `FileWrites`. Missing or changed output, changed inputs/options, or a missing/invalid success receipt triggers generation. Receipts are invalidated before starting the compiler and written only after successful generation; `Clean` removes them. This is local build state, not a model format or a second declaration authority. Normal and design-time outputs remain separate. The existing declaration and referenced-model package consumers check no-change generation alongside their content, timestamp, failure and cold-rebuild checks.
+
 ## Model pipeline contract
 
 Ordinary and Remote roots share one declaration fact model. An incomplete port cannot define the next architecture: correct missing facts and stage responsibilities before creating another public protocol. Published alpha.5.2 is the public-use baseline. Corrections require explicit impact and regeneration guidance; historical experiments do not independently define the target contract.

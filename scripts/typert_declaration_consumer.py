@@ -102,7 +102,8 @@ def verify_declaration_consumer(root, source, feed, output, version, dotnet, com
             ["cordis/typert/" + model.name], "The author package exposes multiple declaration inputs"
     hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in owned}
     stamps = {path.name: path.stat().st_mtime_ns for path in owned}
-    run("declaration-author-incremental", [dotnet, "build", author_project, "-c", "Release"])
+    unchanged = run("declaration-author-incremental", [dotnet, "build", author_project, "-c", "Release"])
+    assert b"CORDISTYPERT extract-model completed." not in unchanged, "Unchanged declaration-author-incremental reran generation"
     for path in owned:
         assert path.stat().st_mtime_ns == stamps[path.name], "Unchanged declaration output was rewritten: " + path.name
         assert hashlib.sha256(path.read_bytes()).hexdigest() == hashes[path.name]
@@ -458,7 +459,8 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     first_source = generated.read_bytes()
     assert main_identity.encode() in first_source and reference_identity.encode() in first_source, "Generated data lost an explicit model input identity"
     stamp = generated.stat().st_mtime_ns
-    run("referenced-data-contracts-incremental", [dotnet, "build", contracts_project, "-c", "Release"])
+    unchanged = run("referenced-data-contracts-incremental", [dotnet, "build", contracts_project, "-c", "Release"])
+    assert b"CORDISTYPERT emit-dotnet-data completed." not in unchanged, "Unchanged referenced-data-contracts-incremental reran generation"
     assert generated.stat().st_mtime_ns == stamp and generated.read_bytes() == first_source
     caller, caller_project = project("ReferencedDataConsumer", '<OutputType>Exe</OutputType>',
         '<PackageReference Include="IndependentReferenced.Contracts" Version="1.0.0-alpha"/>')
@@ -498,7 +500,9 @@ def verify_referenced_data_consumer(root, source, feed, output, version, dotnet,
     remote_first = remote_source.read_bytes()
     assert reference_identity.encode() in remote_first
     remote_time = remote_source.stat().st_mtime_ns
-    run("referenced-remote-incremental", [dotnet, "build", remote_project, "-c", "Release"])
+    unchanged = run("referenced-remote-incremental", [dotnet, "build", remote_project, "-c", "Release"])
+    assert b"CORDISTYPERT emit-dotnet completed." not in unchanged, "Unchanged referenced-remote-incremental reran generation"
+    assert b"CORDISTYPERT emit-web completed." not in unchanged, "Unchanged referenced-remote-incremental reran generation"
     assert remote_source.stat().st_mtime_ns == remote_time
     remote_caller, remote_caller_project = project("ReferencedRemoteConsumer", '<OutputType>Exe</OutputType>',
         '<PackageReference Include="IndependentReferenced.Remote" Version="1.0.0-alpha"/>')
@@ -923,7 +927,9 @@ def verify_data_consumer(fixtures, source, feed, output, dotnet, composition, co
         assert design_source.read_bytes() == normal_source.read_bytes(), "Design-time and build projected different facts"
     hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in owned_sources}
     stamps = {path.name: path.stat().st_mtime_ns for path in owned_sources}
-    run("ordinary-data-contracts-incremental", [dotnet, "build", contracts_project, "-c", "Release"])
+    unchanged = run("ordinary-data-contracts-incremental", [dotnet, "build", contracts_project, "-c", "Release"])
+    assert b"CORDISTYPERT emit-dotnet-data completed." not in unchanged, "Unchanged ordinary-data-contracts-incremental reran generation"
+    assert b"CORDISTYPERT emit-dotnet completed." not in unchanged, "Unchanged ordinary-data-contracts-incremental reran generation"
     for path in owned_sources:
         assert path.stat().st_mtime_ns == stamps[path.name]
         assert hashlib.sha256(path.read_bytes()).hexdigest() == hashes[path.name]
