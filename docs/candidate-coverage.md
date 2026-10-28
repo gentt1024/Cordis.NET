@@ -1,6 +1,6 @@
 # Candidate capability coverage
 
-[中文](candidate-coverage.zh.md)
+English | [中文](candidate-coverage.zh.md)
 
 This index retains the C01–C22 identifiers and S1–S10 review trail from the upgrade investigation. The formal [behavior lock](../upstream.lock.json) now selects DSH `687f282e8625c6b8d11ff58211a90524be2e4317` (`0.2.1-rc.2`) with the recorded Windows source adaptation, executed as `fba488001a6c2d37787d800beeab54a770c826a1`. Core/Loader source origin remains `56b3d4f725681cf4556c1a8695a709cc3b6eed74`. Promotion preserves the named native adaptations and support boundaries; it does not claim complete DSH product coverage.
 

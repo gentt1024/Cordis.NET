@@ -1,6 +1,6 @@
 # 为 Cordis.NET 贡献
 
-[English](CONTRIBUTING.md)
+[English](CONTRIBUTING.md) | 中文
 
 欢迎贡献代码、文档、翻译、兼容性反例和断言审阅结果。
 

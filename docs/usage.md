@@ -3,16 +3,18 @@
 For service, event, configuration and callback authoring, see the [authoring guide](authoring.md)
 ([中文](authoring.zh.md)), including the generic/DSH startup choice and deployed patch resources.
 
-`BootGenericAsync` and the other authoring helpers require the authoring release listed in
-the [release notes](../CHANGELOG.md). Until it is available on NuGet, use the project references
-and source commands in that guide; older packages do not include these APIs.
+`BootGenericAsync` and the authoring helpers below are included in published
+`0.2.1-alpha.1`. Use matching package versions. Check [release and source status](development.md#current-support-and-release-status)
+for the incremental-generation and referenced-assembly default fixes that are only on main.
 
 Start with `examples/Composition` and `examples/Greeting.Plugin`. They use an ordinary
 ProjectReference for development; the verification gate consumes their packed NuGet artifact
 from a separate directory and isolated cache. The patch is an embedded assembly resource,
 so deployed applications need no source checkout or developer NuGet-cache path.
 
-Register available code explicitly, then load the file in a Cordis execution domain:
+For your own host, register code explicitly and load the file inside the Cordis execution
+domain. This integration fragment assumes `cordis.yml` selects the registered `greeting`
+module with entry ID `root:greeting`, and `GreetingModule` is referenced from the example project:
 
 ```csharp
 await using var root = new Cordis.Context();

@@ -1,6 +1,6 @@
 # 上游基线与来源
 
-[English](upstream.md)
+[English](upstream.md) | 中文
 
 锁定的上游提交与本地装配的验证提交是不同身份。`harness.sourceAdaptation` 选择[已审补丁记录](../reference/candidate-adaptation.json)，绑定上游树、唯一改动的实现文件、补丁摘要及可重建的派生提交。上游原始测试未改。文件名沿用 S10 发现阶段的名称，正式锁现选择该记录。native 适配见[兼容性](compatibility.zh.md)，限定范围见[能力覆盖](candidate-coverage.zh.md)。
 

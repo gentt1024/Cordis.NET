@@ -1,6 +1,6 @@
 # DSH 0.2.0-rc.2 upgrade
 
-[中文](upgrade-0.2.0-rc.2.zh.md)
+English | [中文](upgrade-0.2.0-rc.2.zh.md)
 
 Follow-up fixes separate reference snapshots from the Fiber's complete effective object, keep parent raw expressions opaque, and capture SDK-declared host frameworks for self-contained ASP.NET deployments. CLR classification now names its three sources explicitly: the adapter's core manifest, the executable's framework-reference manifest, and framework-dependent host deps. The package gate runs five actual CLR deployment modes as isolated NuGet consumers; hosted CI execution remains separate evidence.
 

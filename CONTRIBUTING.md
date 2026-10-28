@@ -1,6 +1,6 @@
 # Contributing to Cordis.NET
 
-[中文](CONTRIBUTING.zh.md)
+English | [中文](CONTRIBUTING.zh.md)
 
 Contributions to code, documentation, translation, compatibility counterexamples, and assertion review are welcome.
 

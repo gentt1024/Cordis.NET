@@ -1,25 +1,23 @@
-# Getting started
+# Your first plugin
 
-[中文](getting-started.zh.md)
+English | [中文](getting-started.zh.md)
 
-The current source prepares `0.2.1-alpha.1`, which requires a supplied validated feed until publication. The older published batch below retains its own contracts; rebuild generated consumers when changing batches.
+This tutorial creates a console application, registers a plugin, calls its service and stops it. It uses the published `0.2.1-alpha.1` package. You need the .NET 10 SDK and access to nuget.org; no repository checkout or Node installation is required.
 
-## Choose the batch and SDK
+## Create the application
 
-Use .NET 10 and the SDK selected by the chosen batch's global.json. This source checkout uses 10.0.111. Pick an exact Cordis.NET package version and feed from its release or [validation receipt](validation.md#released-version-evidence). For `0.2.0-alpha.5.2`, check the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2) for NuGet availability and the browser client archive. Keep all packages and tools from one validated batch. Do not substitute the original alpha.5 archive or same-version CI packages.
-
-Replace `<selected-version>` and `<feed>` below with that batch's exact version and NuGet source. A public release can use https://api.nuget.org/v3/index.json; an unpublished batch requires its supplied local feed. These are placeholders, not a request to publish or rename a package.
-
-## Run an ordinary plugin
-
-Create a console application. No repository checkout, Node, HTTP server or source generator configuration is required for Core.
+Run these commands in the directory where you want to create the project:
 
 ```console
 dotnet new console -n MyApp -f net10.0
-dotnet add MyApp package Cordis.NET.Core --version <selected-version> --source <feed>
+dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.1 --source https://api.nuget.org/v3/index.json
 ```
 
-Replace MyApp/Program.cs with:
+`Cordis.NET.Core` supplies the plugin runtime. The other packages are optional for this program. When working from a Cordis.NET source checkout, use the SDK pinned in its `global.json`.
+
+## Register a plugin and call its service
+
+Replace `MyApp/Program.cs` with:
 
 ```csharp
 using Cordis;
@@ -43,37 +41,33 @@ await context.RunAsync(async owner =>
 });
 ```
 
+The program uses three objects:
+
+- `Context` provides the service view and execution domain. The root context owns this application's plugin lifetime.
+- `Plugin<object?>` defines what to do when activated. Here it registers a function under the service name `answer`.
+- `Fiber` represents the registered plugin instance. It owns the registration created by `Apply`.
+
+`RunAsync` enters the Context execution domain; plugin callbacks already run there. `WaitAsync` waits for the plugin's current lifecycle work and reports an activation error if one occurs. This plugin has no dependencies, so its apply function has completed before the service read. For a plugin waiting on an absent dependency, `WaitAsync` can finish while the Fiber is still pending; it does not wait for a future provider.
+
+## Run and stop it
+
 ```console
 dotnet run --project MyApp
 ```
 
-The program prints 41 and exits. The root Context owns the plugin Fiber; the Fiber owns its service registration. WaitAsync observes activation before the read, and DisposeAsync withdraws the plugin before the root closes. Calls execute inside RunAsync's Context execution domain. An activation failure throws from WaitAsync; it is not a RemoteResult. Application-owned external resources still need their own disposal.
+The program prints `41` and exits. `fiber.DisposeAsync()` stops the plugin and withdraws its service registration. The outer `await using` then closes the root context. Withdrawing a registration does not dispose the registered value; if your plugin creates a resource that needs cleanup, register that cleanup with an effect. See [resource ownership](core-concepts.md#services-and-resource-ownership).
 
-For profiles, configuration and static modules, add Cordis.NET.Composition from the same batch. The existing [Composition example](../examples/Composition/Program.cs) uses StaticModuleResolver and Loader for a live configuration update. Ordinary plugin/service calls remain in process. See [core concepts](core-concepts.md) for dependencies, service views and effects.
+The call to `answer()` is an ordinary C# call. A network server or Remote contract is unnecessary for services used within the application.
 
-## Connect an existing Host to generated consumers
+## Continue with your application
 
-Use Composition for author declarations and generated bindings, and AspNetCore for the HTTP unary and WebSocket mux adapter. Keep one existing Cordis Context and Registry; the host owns authorization and the Connection. Do not create another plugin runtime for RPC.
+| Next task | Guide |
+|---|---|
+| Understand dependencies, service visibility and plugin cleanup | [Core concepts](core-concepts.md). |
+| Load static modules from configuration and update them | Add `Cordis.NET.Composition` at the same version; follow the [Composition example](../examples/Composition/Program.cs). |
+| Expose selected services to .NET or Web clients | [Declare and generate Remote contracts](authoring.md#declare-and-generate-native-remote-contracts), then [register, call and withdraw](authoring.md#register-call-and-withdraw-contracts). |
+| Generate a provider-independent .NET client | [Model and client project settings](authoring.md#generate-an-independent-net-client) and [backend support](development.md#generation-backend-support). |
+| Install independently deployed CLR plugins | [Managed plugin](../examples/ManagedPlugin/README.md), [managed application](../examples/ManagedApplication/README.md) and [CLR artifacts](clr-artifacts.md). |
+| Validate or preview configuration from the command line | Install the matching `Cordis.NET.Tool` version; see the [CLI guide](../tools/Cordis.Cli/README.md). |
 
-Follow [declare and generate](authoring.md#declare-and-generate-native-remote-contracts), then [register, call and withdraw](authoring.md#register-call-and-withdraw-contracts). Those sections supply the author declaration, JSON context, host binding and Web call. For a provider-independent .NET caller, use the [model and client project settings](authoring.md#native-authored-models-and-net-consumers-2026-10-10) before ordinary build. The generated source participates in the same compilation as STJ.
-
-Use saved declaration facts plus explicit reference models when the independent backend supports the contract. Use TypertArtifacts.GenerateClient with an actual contribution when export needs the author's runtime metadata. Both use the shared emitter and Connection; offline generation does not execute arbitrary author code. [Supported backend shapes](development.md#alpha5-independent-backend-disposition) define the boundary.
-
-Unary callers inspect RemoteResult.Ok before Value/Error. Preparation failures and stream errors have separate contracts. Dispose the client before its borrowed Connection, and the Connection before host resources; client disposal does not close a borrowed HttpClient. Start with the existing [Probes application](../examples/Probes/Program.cs) for application composition and [Remote events](remote-events.md) when adding listeners. Runtime metadata support does not establish static AOT support for arbitrary DTOs.
-
-## Deliver independent CLR plugins
-
-Use the existing [managed plugin](../examples/ManagedPlugin/README.md) and [managed application](../examples/ManagedApplication/README.md); they demonstrate the package metadata, selected feeds, build authorization and installation commands.
-
-The standard path is Prepare → Publish → Validate → LoadDirectory through DotnetPluginToolchain and ProfileSession.ConfigurationOperations. Load the verified stable directory directly. Installed upgrades persist a new exact version and require restart; logical removal preserves files for retained code and other processes. Follow [CLR artifacts](clr-artifacts.md) for complete receipts, ownership and explicit offline deletion. Dynamic CLR loading is not Native AOT.
-
-## Validate configuration and continue
-
-The selected Cordis.NET.Tool batch provides cordis validate and cordis preview. Install the exact tool version from the matching feed using --version and --add-source, then run:
-
-```console
-cordis validate ./profile/cordis.patch.yml
-cordis preview ./profile/cordis.patch.yml
-```
-
-Read [authoring](authoring.md) for Settings, management, optional adapters and lifecycle details. [Current support](development.md#current-support-and-release-status) separates known limits from [historical evidence](validation.md).
+Use matching versions of Cordis.NET packages and tools, and rebuild generated providers and clients when changing versions. Browser archives are on the [matching release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1). For capabilities added after that release, check [current source status](development.md#current-support-and-release-status) before following a guide from main.

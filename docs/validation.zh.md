@@ -1,10 +1,18 @@
 # 验证
 
-[English](validation.md)
+[English](validation.md) | 中文
 
-## 0.2.1-alpha.1 准备
+## 当前发行与源码
 
-PR #26 已 squash 合入为 `19abc55163eb415de3d261a8f153453413d789ca`，源码树与 [CI 40288031108](https://github.com/gentt1024/Cordis.NET/actions/runs/40288031108) 验过的候选相同。该运行有 15 个成功作业和 3 个可选 candidate 跳过，不是本次新版本或正式锁的验证。发行分支晋升已审 S10 源码装配，使用 CI 与 release 共用的工作流将既定范围设为必需。新版本批次证据待完成，尚未创建发行 tag 或公开包。下方带日期的章节保留原始证据与晋升前范围。
+已发布预览版为 [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)，发行日期为 2026-10-27。[正式运行](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986)在 tag 提交 `a2728c7e929a01a586fc714d9b397eaf9549e153` 上的 18 个作业全部通过。制品与验证边界见[已发行版本证据](#已发行版本证据)。
+
+此后 main 合入了[增量生成](https://github.com/gentt1024/Cordis.NET/pull/28)和[跨程序集 Host 默认值](https://github.com/gentt1024/Cordis.NET/pull/29)修正，已发布包不包含它们。对应 PR 验证证明的是各自候选，不是新版本的发行验证。源码与包的选择见[当前支持](development.zh.md#当前支持与发行状态)。
+
+下方准备与候选章节描述历史检查点，其中当时的锁、待办及命令不作为当前发行操作指南；当前流程见[发行准备](publication-readiness.zh.md)。
+
+## 历史记录：0.2.1-alpha.1 准备
+
+发行准备前，PR #26 squash 合入为 `19abc55163eb415de3d261a8f153453413d789ca`，源码树与 [CI 40288031108](https://github.com/gentt1024/Cordis.NET/actions/runs/40288031108) 验过的候选相同。该运行有 15 个成功作业和 3 个可选 candidate 跳过，没有验证新版本或正式锁。随后发行分支晋升已审 S10 源码装配，使用 CI 与 release 共用的工作流将既定范围设为必需。在这一检查点，版本批次证据、发行 tag 和公开包仍待完成。下方带日期的章节保留原始证据与晋升前范围。
 
 ## 候选 S10 同批门禁，晋升前验证
 
@@ -251,7 +259,11 @@ python3 scripts/verify.py --dsh <locked-source-checkout> \
 
 ## 已发行版本证据
 
-[alpha.5.2 发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2)提供正式 manifest、evidence 和 SHA256SUMS。tag 对应 `1ed99e39c44c8f7ecbd064b365b8ebb31530f3c4`，[正式运行](https://github.com/gentt1024/Cordis.NET/actions/runs/39145687915)七项作业全部通过。八个产品包及匹配符号来自 Linux 验证批次，Example 排除。公开 NuGet 载荷与封存一致，允许新增 NuGet 签名；发行附件已公共下载核对摘要。
+[0.2.1-alpha.1 发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)提供源码 ZIP、浏览器运行时与作者工具归档、正式 manifest、evidence 和 SHA256SUMS。tag 对应 `a2728c7e929a01a586fc714d9b397eaf9549e153`，[正式运行](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986)的 18 个作业全部通过。验证采用固定 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`，以及已记录的 Windows 适配 `fba488001a6c2d37787d800beeab54a770c826a1`。
+
+八个产品包及匹配符号包来自该运行的 Linux 验证批次，Example 参与验证但不发布。公开 NuGet 载荷与封存批次一致，差异仅为 NuGet 新增签名。六个公开发行附件已下载核对摘要。Windows／Ubuntu 证据包含运行时、包、AOT 与作者验证；macOS 覆盖具名作者和浏览器消费者，不代表完整运行时或应用验收。
+
+更早发行保留各自证据，包括 [alpha.5.2 发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2)及其[七作业正式运行](https://github.com/gentt1024/Cordis.NET/actions/runs/39145687915)。这些结果不验证后续源码修改。
 
 ## 已接受风险与证据边界
 

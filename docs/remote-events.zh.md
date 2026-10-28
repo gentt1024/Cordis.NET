@@ -1,12 +1,18 @@
-# Remote 事件
+# 向 Remote 监听器转发选定事件
 
-[English](remote-events.md)
+[English](remote-events.md) | 中文
 
-固定 DSH 的事件路径是 `$events` 与 `$events/result`。Cordis 事件声明决定监听签名，Host 选择需要转发的兼容声明。普通 void 事件保留原参数列表；scoped 异步 waterfall 保留同结果类型的 `next()`，并把 Host agent subject 投影为客户端解析出的 Context。平台不会自动选入 DSH 的产品事件。
+声明要暴露的事件，由 Host 选定转发，再在 Client 所有者下注册监听。固定 DSH 流程使用 `$events` 与 `$events/result`，不会自动公开所有应用事件或 DSH 产品事件。
+
+## 准备两端
+
+使用匹配的 Composition 包、生成式事件声明和显式 STJ metadata。网络 Host 还需要现有 Registry、Gateway、授权 Connection 与 ASP.NET 适配器；Client 需要 Cordis Context、Registry 和借用 Connection。先完成 [Remote Host 接线](authoring.zh.md#登记调用与撤销合同)。
+
+以下片段属于应用的一部分。`Agent` 及其 Id／Context、请求与通知 DTO、JSON context、业务处理和 `localContinuation` 均由应用提供，普通 JSON 边界类型注册到 AppJson。期望远端 waterfall 前，须通过[scope 路由](authoring.zh.md#注册-scope-与-peer-事件路由) API 注册 subject 所属的 scoped 生命周期。
 
 ## 声明与选择
 
-带 `RemoteEvent` 的公开委托保存在现有共同声明模型中。生成器从这些事实生成 Host 描述和类型化监听，不建立第二种事件模型格式。
+为公开 delegate 标记 RemoteEvent。普通通知保留参数列表，异步 scoped waterfall 保留 `next()` 结果合同：
 
 ```csharp
 [assembly: TypertContext("agent", typeof(string))]
@@ -22,7 +28,9 @@ public delegate Task<RemoteOptional<string?>> DecisionRequested(
 public delegate void ApplicationChanged(Change change);
 ```
 
-`AppJson` 提供请求、结果和通知参数的源生成 JSON 元数据。request 只含业务字段；`agent`、`signal` 是保留的投影字段，不序列化 CLR 资源。C# 用普通类型化委托参数表达 TS 的 receiver／request／next。Host 在选择转发源时提供一次 subject 投影：
+request 承载业务数据，投影的 agent 和 signal 不序列化 CLR 资源。在 Host 所有者执行域选择转发，并一次性提供 subject 投影：
+
+Host 转发与调用：
 
 ```csharp
 var selected = new[] {
@@ -37,32 +45,52 @@ var decision = await DecisionRequestedTypert.InvokeAsync(
     caller, agent, request, localContinuation, cancellationToken);
 ```
 
-业务调用传 subject，不传 wire 身份。生成的调用以 `Scope.Target(agent, agent)` 作为路由 receiver，subject 留在类型化参数中。转发绑定从 subject 得到 Context 与 `agentId`，核对 carrier 的 key 与该 subject 是同一对象，只发送已声明的 JSON 数据。没有 scope key 的 receiver 通过 `next()` 继续本地处理；有 key 但 subject 缺失或不一致时，在投影前拒绝。过滤、continuation 和源所有权继续由现有 Cordis 机制承担。
+业务调用传入 subject，不传显式 wire 身份。辅助接口使用 `Scope.Target(agent, agent)`，转发时保留原始 subject。没有 scope key 的 receiver 通过 next 留在本地；带 key 的 carrier 若缺少 subject 或 subject 不同，在投影前拒绝。普通过滤、continuation 和来源归属保持有效。
 
-## C# 监听
+## 在 C# 中监听
+
+<a id="c-监听"></a>
+
+在所有者执行域内注册 Client 监听，caller 与 Client owner 须共享根。agent receiver 先通过 `registry.RegisterClientContext(owner, "agent", adapter)` 安装应用适配器，其同步 Resolve 将传入身份映射为借用 Context 或 `TypertResolvedContext.Owned`；出站 scoped 调用复用同一适配器的 Identity。下方假定已安装该适配器：
 
 ```csharp
-await using var events = new TypertRemoteEventsClient(owner, registry, connection);
-ApplicationChangedTypert.On(events, caller, change => Refresh(change));
-DecisionRequestedTypert.On(events, caller, async (agent, request, next, signal) => {
-    if (!CanHandle(request)) return await next();
-    return new RemoteOptional<string?>(await AskAsync(agent, request, signal));
+TypertRemoteEventsClient events = null!;
+await owner.RunAsync(ctx =>
+{
+    events = new TypertRemoteEventsClient(ctx, registry, connection);
+    ApplicationChangedTypert.On(events, caller, change => Refresh(change));
+    DecisionRequestedTypert.On(events, caller, async (agent, request, next, signal) =>
+    {
+        if (!CanHandle(request)) return await next();
+        return new RemoteOptional<string?>(await AskAsync(agent, request, signal));
+    });
+    return Task.CompletedTask;
 });
-await events.RunAsync(host => OnReady(host.Home), generationCancellation);
+try
+{
+    await events.RunAsync(host => OnReady(host.Home), generationCancellation);
+}
+finally
+{
+    await events.DisposeAsync();
+}
 ```
 
-外围 connection controller 拥有恢复策略。`RunAsync` 表示一个代际，不添加重试策略。Client 借用 Registry、Connection 和 Context，监听注册属于调用 Fiber。
+RunAsync 管理一代连接，持续到取消或断开，重试由外层连接控制器负责。监听注册归 caller 的 Fiber，事件 Client 借用 Context、Registry 和 Connection，应先于借用资源释放。
 
-类型化 waterfall 监听返回 `RemoteEventResult<T>`，将 continuation 标记与所有 `T` 值分开。`return await next()` 保留该标记；普通 `T` 隐式转换为业务答案。声明允许 undefined 时使用 `RemoteOptional<T>`。这样 continuation、undefined 与显式 null 各自独立，不通过用户代码中的内部控制异常模拟。
+监听返回 RemoteEventResult<T>，`await next()` 将 continuation marker 与任何 T 值分开。RemoteOptional<T> 独立表示允许的 undefined 与显式 null。Client 回调中的 agent 是解析后的 Client Context，不是重建的 Host Agent 对象。
 
-现有 `emit-dotnet` 的 `--service` 也接受选定事件名或委托元数据名。`CordisTypertClientModel`、`CordisTypertService`、`CordisTypertClientNamespace` 和 `CordisTypertClientName` 在编译前从保存的共同模型生成类型化 `On` 帮助类及独立数据。后端序列化限制仍然适用，不能复现的 Host serializer 不会被悄悄替换为另一种策略。
+## 生成独立监听器
 
-`emit-web`／`CordisTypertWebModel` 使用同一事件选择，接受显式 `CordisTypertWebReferenceModel` 输入。正常 build/pack 在 `cordis/typert/web/remote.mjs` 交付 `createEvents`，连同声明和共享 Connection 资产；生成不要求运行 Host 或加载 Provider 程序集，Host 转发仍须明确选择。普通参数／request 和 continuation 值采用输出投影，reply 采用输入投影。`next()` 执行后续客户端本地监听链；本地链没有回答时，返回其 continuation 才将处理交回 Host。它不是让浏览器读取 Host 后续返回值的往返调用。
+使用 `emit-dotnet --service <event-name-or-delegate-name>` 和既有模型／客户端项目属性，在编译前生成类型化 On 辅助接口及数据。模型独立 Web 路线使用 CordisTypertWebModel 与显式引用模型，输出 `cordis/typert/web/remote.mjs` 的 `createEvents`、声明及共享 Connection 资产。生成不需要运行 Host 或提供者 DLL，转发仍要求 Host 选择。
 
+普通参数、request 和 continuation 值是 Host 输出，handler reply 是 Host 输入。集合元素空性来自声明，包括可空列表与字典值；向 STJ 注册普通 CLR 类型，不手写第二份 Schema。独立后端拒绝不能复现的 serializer 行为，见[生成支持范围](development.zh.md#生成后端支持范围)。
 
-集合元素空性来自事件声明，包括 `List<string?>?` 和 `Dictionary<string, T?>`。作者在 JSON context 注册普通 CLR 元数据（`typeof(List<string>)`），不另写一份 Schema。源码生成监听、保存模型生成监听和 TS 监听使用同一组事实；非空元素仍拒绝 null。委托采用 namespace 限定身份，互不相关的同名事件委托可以共存。
+## 在 TypeScript 中监听
 
-## TypeScript 监听
+<a id="typescript-监听"></a>
+
+下方生成模块以 events.mjs 提供，传入现有 owner、Connection 与 adapter source，由应用回调提供 UI 与业务动作：
 
 ```ts
 import { createEvents } from './events.mjs'
@@ -74,16 +102,16 @@ events.on(caller, 'app/decision', async (request, next) => {
 await events.run(generationSignal, host => onReady(host.home))
 ```
 
-每次调用都读取 `adapters.getClient('agent')`。其同步 resolver 返回借用的 Cordis Context、`typertOwnedValue` 创建的 owned 值，或 undefined。owned-value 共享 symbol 与固定 DSH 相同，不另存 registry 或永久身份表。生成式 emit 监听保留各个原参数，waterfall 监听将 `agent` 与 `signal` 投影到 request。
+每次调用重新读取 `adapters.getClient('agent')`。resolver 返回借用的 Cordis Context、typertOwnedValue 的 owned value 或 undefined。`next()` 执行 Client 剩余监听链，没有答案时以 continuation 委托 Host；它不是将 Host 后续返回值暴露给浏览器的往返。
 
-浏览器模块包通过 `/events` 导出标准平台事件。`createManagementClient({ modules, events })` 复用现有恢复控制器，先订阅再读取完整 state／graph，不重放写入。旧通知 Remote 与 `/notifications` 导出退出。
+浏览器包通过 `/events` 导出标准事件，交给 createManagementClient 复用先订阅后读取的恢复流程。使用同一代取消信号，在页面所有者结束时关闭并释放事件 Client。
 
-## 结算与证据边界
+## 结束与证据边界
 
-resolver 和 release 保持同步。缺少或失败的解析继续 Host 的 continuation。borrowed 值不销毁；owned 值在 handler 与回复结算之后最多释放一次。取消会通知 handler，但不会提前释放其 Context。Client 和 Connection 释放会等待活动 waterfall。
+<a id="结算与证据边界"></a>
 
-断线移除该次交付，不合成 `next`，待决调用可以投递给后续代际。源撤销关闭流并取消待决工作。旧 client 身份不能结算当前交付；重复的已完成回复不能恢复调用。emit 不保证持久重放。waterfall 回复区分 result、next 和 rejection，保留拒绝的 name、message、code、details。
+resolver 与 release 回调同步执行，owned cleanup 不应抛错。解析缺失或失败时委托 Host continuation。借用值不被释放，owned value 在 handler 与结果回复完成后最多释放一次。取消传递到 handler，但不提前释放其 Context；Client 与 Connection 的释放等待活动 waterfall 工作。
 
-源码对应固定 DSH `639ed015397290b3745d163aafe02ffee4aa3f84` 的 `packages/typert/protocol/src/types.ts`、`owned-value.ts`、`packages/api/gateway/src/client/remote-events.ts`、`stream-protocol.ts`，以及 `packages/api/remotes/src/remote-events.ts` 的转发选择。这条路径本身不证明全部浏览器 scoped、直接 Gateway 的 operatorPeer fallback、所有模型后端或全部 DSH 产品／SDK 互通。验证记录单独标识实际候选及已执行消费者。
+断开移除该 delivery，不合成 next，待处理调用可到达后续连接代际。来源撤销关闭流并取消待办，旧身份和重复回复不能结束或复活当前 delivery。回复区分 result、next 与 rejection，保留 name／message／code／details；通知不承诺持久重放。
 
-生成式 waterfall helper 在事件分发前，将原始 subject、request 和 signal 放入一个原生 payload。contextual subject 在普通直接事件参数中可以产生新的 caller view；转发仍投影与 scope carrier 一致的原始 subject。作者继续使用原有 `InvokeAsync` 和 `Forward` 签名，在修正后重新生成 helper。
+协议与 owned-value 源码位于固定 DSH 的 `packages/typert/protocol` 和 `packages/api/gateway`，Host 转发位于 `packages/api/remotes`。[upstream.lock.json](../upstream.lock.json)选择当前基线，[兼容说明](compatibility.zh.md)记录适配，[验证记录](validation.zh.md)标明已完成的消费者。选定事件转发不代表完整 DSH 产品／SDK 互通。

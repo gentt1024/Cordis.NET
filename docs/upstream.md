@@ -1,6 +1,6 @@
 # Upstream baseline and provenance
 
-[中文](upstream.zh.md)
+English | [中文](upstream.zh.md)
 
 The locked upstream commit is distinct from the locally assembled verification commit. `harness.sourceAdaptation` selects the [reviewed patch record](../reference/candidate-adaptation.json), which binds the upstream tree, one changed implementation file, patch digest and reproducible derived commit. Original upstream tests are unchanged. The filename retains its S10 discovery origin; the formal lock now selects this record. See [compatibility](compatibility.md) for native adaptations and [capability coverage](candidate-coverage.md) for the bounded scope.
 

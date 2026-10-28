@@ -1,30 +1,51 @@
 # Cordis.NET.Tool
 
-Choose the exact version and feed for this package batch; see [getting started](../../docs/getting-started.md) for package-only use and ownership. Published packages and unreleased candidate feeds are distinct.
+English | [中文](https://github.com/gentt1024/Cordis.NET/blob/main/tools/Cordis.Cli/README.zh.md)
 
-CLR startup uses installed files directly. Package upgrades prepare and save the new version, then require a host restart. Removal retains deployment files. After stopping every host, Worker and other consumer, use `cordis delete-retained <profile> <package> <version>` to physically delete an unreferenced version and its receipt. See the [artifact workflow](../../docs/clr-artifacts.md).
+Validate configuration, run an ordinary CLR application and manage plugins through its authorized Host. Local file commands and online management commands have different prerequisites.
+
+## Install the tool
+
+Use the .NET 10 SDK and matching .NET and ASP.NET Core runtimes. Install the published preview:
 
 ```console
-dotnet tool install --global Cordis.NET.Tool --version <selected-version>
+dotnet tool install --global Cordis.NET.Tool --version 0.2.1-alpha.1
 ```
 
-The published tool validates and previews entry configuration with `cordis validate <path>` and `cordis preview <path>`.
+For source development, run `dotnet run --project tools/Cordis.Cli -- <command-and-arguments>` from the repository root with its pinned SDK. See [release and source status](https://github.com/gentt1024/Cordis.NET/blob/main/docs/development.md#current-support-and-release-status) for unpublished fixes.
 
-Current source additionally runs an ordinary CLR profile and calls the formal management endpoint. It requires the matching .NET and ASP.NET Core runtimes. For source builds, prefix the following arguments with `dotnet run --project tools/Cordis.Cli --` instead of `cordis`:
+## Validate or preview a configuration file
 
-Set `CORDIS_MANAGEMENT` to the same authorization header value in both terminals. For this loopback example, choose a local value; a deployed host supplies its own authorization policy:
+These local commands parse configuration without activating plugins:
+
+```console
+cordis validate cordis.yml
+cordis preview cordis.yml --patch cordis.patch.yml --json
+```
+
+Use your actual file paths. A valid file does not prove that services, dependencies or JavaScript expressions will activate successfully.
+
+## Run a CLR profile
+
+First build the local feed in the [managed application example](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md). The commands below use its `artifacts/managed-feed` and package identity. Create a separate CLI profile; the CLI does not supply that example's browser mapping. Set the same authorization value in both terminals:
 
 ```powershell
 $env:CORDIS_MANAGEMENT = 'Bearer local-development-token'
 ```
 
-First build the local feed using the [independent managed application example](../../examples/ManagedApplication/README.md). Use a separate CLI profile; the CLI does not supply that example's browser client mapping. Start the host in the first terminal:
+This is a loopback example value. A deployed Host supplies its own authentication and authorization policy. The named variable is read as the HTTP authorization header.
+
+Start the Host in the first terminal:
 
 ```console
 cordis run artifacts/cli-profile --source artifacts/managed-feed --url http://127.0.0.1:5080 --authorization-env CORDIS_MANAGEMENT --allow-build Example.ManagedPlugin@1.0.0-alpha.1 --settings example.managedplugin=limit,credential
 ```
 
-Keep it running and issue management commands from the second terminal:
+Keep this Host running. A second process cannot own the same profile. Stop the Host before offline file operations. This route loads CLR code on an ordinary runtime; static AOT applications use the libraries and republish code changes.
+
+## Inspect, install and remove plugins
+
+Use the second terminal against the running Host:
 
 ```console
 cordis inspect http://127.0.0.1:5080/cordis Example.ManagedPlugin 1.0.0-alpha.1 --source artifacts/managed-feed --authorization-env CORDIS_MANAGEMENT
@@ -33,12 +54,28 @@ cordis settings http://127.0.0.1:5080/cordis example.managedplugin --authorizati
 cordis remove http://127.0.0.1:5080/cordis Example.ManagedPlugin --authorization-env CORDIS_MANAGEMENT
 ```
 
-The named environment variable supplies the host's chosen authorization header; the CLI supplies no account system. Both the caller's build acknowledgement and the host's exact package allowance are required. Repeated `--source` options configure explicit feeds. Inspection does not run package code; approved preparation may run package/dependency build targets.
+Inspection does not run package code. Preparation requires both the caller's `--approve-build` and the Host's exact package allowance; approved build targets can include dependencies. `run` accepts repeated `--source` options; an online command selects its inspection source with `--source`. Installed upgrades save the selected version and require restart. Removal retains deployment files.
 
-Online commands use the running host. A second CLI host cannot own the same profile. `wait <endpoint> <request-id>` observes only an active installation; exit code 3 means unknown, not successful. A lost install response triggers a query, never an automatic retry. Static Native AOT applications use the libraries with static modules and republish code changes; this dynamic CLI path does not load new managed code into AOT.
+After a lost install response, query the operation instead of repeating it. `wait <endpoint> <request-id>` observes an active installation; exit code 3 means unknown. The CLI does not automatically retry an installation.
 
-Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse, or Microsoft.
+## Edit live Settings or full configuration
 
-Full configuration and Settings are separate permissions. `configuration <endpoint> <entry>` reads raw configuration with a string hash and runtime address. `settings <endpoint> <namespace>` calls the generated standard Remote and returns a numeric form revision; its namespace is the profile entry id. `schema <endpoint> configuration|settings <entry>` exports declarations; the Settings schema comes from the same describe snapshot. `edit <endpoint> configuration|settings <entry> <revision> <operations.json>` submits one ordered JSON array, for example `[{"op":"set","path":["label"],"value":"worker"}]` or `[{"op":"unset","path":["label"]}]`. Normal edits submit the revision from their original read; the CLI does not refresh it before writing. Settings accepts a numeric revision or `-` to omit the expected revision, and rejects null/string hashes. Omission retains authorization, candidate validation, write coordination and source-consistency checks. Full configuration can restart an activation; Settings permits only the host-selected live fields. See [Settings migration](../../docs/settings-contract-migration.md).
+Use `settings <endpoint> <namespace>` for the generated live form. Its namespace is the profile entry ID and its revision is numeric. Use `configuration <endpoint> <entry>` for raw configuration with its separate string hash and runtime address. These operations require different permissions.
 
-`sources` and `versions <endpoint> <name> --source <feed>` expose the host's selected feeds. `compatibility <endpoint>` reads exact DSH grants and corruption diagnostics. `grant <endpoint> <package@version> <runtime-version> <enabled> <accept-risk>` takes two positional Boolean values, each spelled `true` or `false`; the first enables or revokes the grant, and the second acknowledges the compatibility risk. It uses the existing DSH policy and refuses generic profiles. A compatibility grant never approves build execution. Add `--authorization-env` to these online commands as required by the host.
+`schema <endpoint> configuration|settings <entry>` reads the selected declaration. `edit <endpoint> configuration|settings <entry> <revision> <operations.json>` submits one ordered JSON array, for example:
+
+```json
+[{"op":"set","path":["limit"],"value":7},{"op":"unset","path":["credential"]}]
+```
+
+Submit the revision from the original read. The CLI does not refresh it before writing. Settings accepts a numeric revision, or `-` to omit the expected revision; string hashes and null are refused. Omission retains authorization, complete candidate validation and write coordination. Full configuration can restart an activation; Settings exposes only Host-selected live fields. Add `--authorization-env` to online commands.
+
+## Inspect sources and compatibility
+
+`sources` and `versions <endpoint> <name> --source <feed>` read the selected feeds. `compatibility <endpoint>` reads exact DSH grants and corruption diagnostics. `grant <endpoint> <package@version> <runtime-version> <enabled> <accept-risk>` takes two positional Boolean values, spelled `true` or `false`. The first enables or revokes a grant; the second acknowledges risk. Generic profiles refuse this operation, and a compatibility grant does not approve build execution.
+
+## Delete retained files offline
+
+Stop every Host, Worker and other consumer before running `cordis delete-retained <profile> <package> <version>`. It deletes only an unreferenced version and its receipt. See [retained-file ownership](https://github.com/gentt1024/Cordis.NET/blob/main/docs/clr-artifacts.md).
+
+Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse or Microsoft.

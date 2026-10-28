@@ -1,33 +1,63 @@
 # Cordis.NET browser author tools
 
-[中文](README.zh.md)
+English | [中文](https://github.com/gentt1024/Cordis.NET/blob/main/clients/tools/README.zh.md)
 
-This Node package builds an independent author project into the existing Cordis.NET client factory and manifest. It needs no Cordis source checkout or .NET SDK. Version `0.2.0-alpha.5.2` is distributed as a separate installable archive alongside the browser runtime in the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2). Check that release for publication and exact artifact hashes. Published alpha.5.1 does not include this tool.
+Build a browser plugin into the factory and manifest consumed by Cordis.NET's existing module Loader. You need Node 22 or newer and npm; an independent author project needs neither a Cordis source checkout nor the .NET SDK.
 
-Install the selected tool archive as a development dependency, then use the installed command:
+## Create an author project
+
+Install the published tool archive from the matching GitHub release:
 
 ```console
-npm install --save-dev <client-tools-tgz>
-npx --no-install cordis-client-build . dist --entry src/client.tsx
+mkdir example-panel
+cd example-panel
+npm init -y
+npm install --save-dev https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.1/cordis-net-client-tools-0.2.1-alpha.1.tgz
 ```
 
-The entry defaults to `client.ts`. `--watch` publishes complete immutable directories beneath `dist/generations`. Each successful build writes a JSON `client-built` frame containing `name`, `revision` and `directory`. A failed build writes `build-error` and keeps the previous complete generation. Changing package identity or external requests requires restarting the watcher. The host retains process and installation ownership.
-
-Choose an output directory separate from the build inputs, such as `dist`. The command refuses the author directory, its ancestors, and directories containing the entry or a bundled JavaScript, TypeScript, CSS or image input. Author and output paths resolve existing directory aliases before comparison; a new output resolves through its nearest existing parent. The command checks each completed build's inputs before writing or moving output, including watch rebuilds. An output conflict leaves the input paths and bytes unchanged and emits no `client-built` frame. This prevents accidental input replacement; it is not a sandbox against concurrent filesystem changes.
-
-The author package declares the same loader contract:
+Merge the following fields into `package.json`, retaining the `devDependencies` written by npm:
 
 ```json
-{
-  "name": "example-panel",
-  "dsh": { "client": { "platform": "web", "external": ["example-provider"] } }
+{"name":"example-panel","dsh":{"client":{"platform":"web","external":[]}}}
+```
+
+Create `client.js`:
+
+```js
+export function apply(ctx) {
+  ctx.effect(() => {
+    console.log('panel started')
+    return () => console.log('panel stopped')
+  })
 }
 ```
 
-The output contains `client.js` and `package.json` with `exports["./client"]`. Load it through the existing ClientModuleCatalog and ClientModules workflow. Declared externals match complete import requests; declaring a package does not also externalize its subpaths. The existing Cordis runtime requests are implicit. Other dependencies are bundled. The tool does not install provider modules or replace host admission policy.
+## Build and watch the plugin
 
-CSS follows the fixed DSH dynamic-factory build: `.module.css` exports hashed class names and injects a plugin-owned style at factory execution; ordinary `.css` injects a style; `.css?inline` exports compiled text for an author-owned effect. Styles carry `data-plugin` and `data-plugin-css`, and the existing Loader removes owned styles after plugin cleanup. Stylesheet changes participate in watch builds. Compilation uses pinned Lightning CSS. Relative CSS URLs and imports retain the fixed transform behavior; this tool does not invent a separate asset server or dynamic chunk protocol.
+```console
+npx --no-install cordis-client-build . dist --entry client.js
+```
 
-Imports ending in `.svg`, `.png` or `.webp` export `data:image/svg+xml;base64,`, `data:image/png;base64,` or `data:image/webp;base64,` URLs with the file's exact bytes. Image changes participate in watch builds. The URLs remain inside the single factory artifact and need no separate asset files or manifest settings.
+The output contains `client.js` and a manifest with `exports["./client"]`. Load that directory through the Host's ClientModuleCatalog and browser ClientModules workflow. The plugin logs `panel started` on activation and `panel stopped` when its effect is released. Building does not activate the plugin.
 
-The native esbuild and Lightning CSS binaries are installed for the author's current operating system. Distribute the tool archive and its dependency declarations, not a copied Windows `node_modules` directory. Cross-platform acceptance must consume the same saved models and tool archive on the target systems; locally produced and consumed artifacts alone do not establish that evidence.
+The default entry is `client.ts` when `--entry` is absent; JavaScript, TypeScript and TSX entries can be selected explicitly. Add `--watch` to publish complete immutable directories under `dist/generations`. Success writes a JSON `client-built` frame with `name`, `revision` and `directory`; failure writes `build-error` and preserves the previous complete generation. Restart watch after changing package identity or external requests.
+
+## Declare external modules
+
+List complete import requests in `dsh.client.external`, such as `example-provider/client`. Declaring a package does not also externalize its subpaths. The Cordis runtime requests are implicit; ordinary dependencies are bundled. Declare service-provider package dependencies in `inject` where the Loader requires them. The tool does not install provider modules or supply Host admission policy.
+
+## Include styles and images
+
+`.module.css` exports hashed class names and injects a plugin-owned style at factory execution. Ordinary `.css` injects a style; `.css?inline` exports compiled text for an author-owned effect. Styles carry `data-plugin` and `data-plugin-css`, and the Loader removes owned styles after plugin cleanup. CSS changes participate in watch builds. Pinned Lightning CSS retains the fixed relative URL/import transform; this does not add an asset server or dynamic chunk protocol.
+
+SVG, PNG and WebP imports export base64 data URLs with the exact file bytes. Image changes participate in watch builds. These bytes stay inside the factory artifact and need no separate manifest setting.
+
+## Keep output separate from inputs
+
+Choose an output directory such as `dist`. The command refuses the author directory, its ancestors, and directories containing the entry or a bundled JavaScript, TypeScript, CSS or image input. Existing directory aliases are resolved before comparison; new output paths resolve through their nearest existing parent. Every completed build, including watch, checks its inputs before moving output. A conflict preserves input bytes and emits no `client-built` frame. This prevents accidental replacement, not hostile concurrent filesystem changes.
+
+## Connect the Host and browser
+
+The Host owns process startup, frame consumption, catalog publication and shutdown. The browser runtime owns module activation and effect cleanup. Follow [browser integration](https://github.com/gentt1024/Cordis.NET/blob/main/clients/modules/README.md) and [ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md) for that setup.
+
+Distribute this archive with its dependency declarations. Native esbuild and Lightning CSS binaries install for the author's OS; do not copy a Windows `node_modules` directory to another platform. The [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) provides hashes and platform evidence. The tools are distributed as a TGZ, not installed from an npm registry release.

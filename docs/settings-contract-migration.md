@@ -1,6 +1,6 @@
 # Settings contract history
 
-[中文](settings-contract-migration.zh.md)
+English | [中文](settings-contract-migration.zh.md)
 
 Current Host setup, client calls, revision and persistence rules live in the [Settings guide](settings.md).
 

@@ -1,6 +1,6 @@
 # Mature library reuse for native Typert, 2026-10-10
 
-[中文](typert-dotnet-library-research.zh.md)
+English | [中文](typert-dotnet-library-research.zh.md)
 
 This research appendix belongs to the [original application-infrastructure scope](https://github.com/gentt1024/Cordis.NET/blob/1ed99e39c44c8f7ecbd064b365b8ebb31530f3c4/docs/development.md#application-infrastructure-scope-reconciliation-2026-10-09). It informs architectural judgment before a substantial rewrite. It introduces no implementation decision, package selection, new plan, or acceptance claim. DSH `639ed015397290b3745d163aafe02ffee4aa3f84` remains the behavior authority in [upstream.lock.json](../upstream.lock.json).
 

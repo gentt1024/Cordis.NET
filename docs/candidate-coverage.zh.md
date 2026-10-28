@@ -1,6 +1,6 @@
 # 候选能力覆盖索引
 
-[English](candidate-coverage.md)
+[English](candidate-coverage.md) | 中文
 
 本索引保留升级调查的 C01–C22 编号及 S1–S10 审查记录。正式[行为锁](../upstream.lock.json)现选择 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`（`0.2.1-rc.2`）和已记录的 Windows 源码适配，执行身份为 `fba488001a6c2d37787d800beeab54a770c826a1`。Core/Loader 来源仍为 `56b3d4f725681cf4556c1a8695a709cc3b6eed74`。晋升保留具名 native 适配与支持边界，不宣称覆盖全部 DSH 产品。
 

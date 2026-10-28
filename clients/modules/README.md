@@ -1,55 +1,28 @@
-# Browser client modules
+# Cordis.NET browser client modules
 
-This optional TypeScript package reuses the fixed DSH browser module registry, entry reconciliation, Cordis and Loader. It does not require Node in a deployed Host or in ordinary C# plugin development. The copied source and licenses are under `vendor`; `vendor/provenance.json` records the fixed upstream commit and source hashes.
+English | [中文](https://github.com/gentt1024/Cordis.NET/blob/main/clients/modules/README.zh.md)
 
-The local `ClientEntries` correction keeps installed code identity separate from activation success. After a failed replacement, explicitly syncing an earlier graph loads that target; retry uses the current target. Download failure before withdrawal leaves the existing Fiber available. This is a bounded correction to a defect also present in the fixed source, not automatic rollback of application state. Provenance retains the original hash and records the local hash and reason separately; the normal build checks both unchanged and adapted file identities.
+Load browser plugin factories, reconcile entries and manage their Cordis effects using the fixed DSH module registry and Loader. The page supplies its renderer and authentication. Running the browser or an ordinary C# plugin does not require Node; source builds and author tools do.
 
-Build the runtime and its self-contained declarations:
+## Obtain the browser runtime
 
-```sh
-npm ci --prefix clients/modules
-node scripts/build-client-modules.mjs artifacts/client-modules
-node scripts/verify-client-module-types.mjs artifacts/client-modules
+Install the published archive for package imports and declarations:
+
+```console
+npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.1/cordis-net-client-modules-0.2.1-alpha.1.tgz
 ```
 
-Serve `client.mjs` as a same-origin ES module. Copy the complete output directory when distributing the TypeScript package; its declarations and `LICENSES.txt` accompany the runtime.
+For direct browser loading, serve the complete built runtime directory at a same-origin path such as `/client-runtime`. Keep its modules, declarations and `LICENSES.txt` together. [ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md) shows native Host artifact mapping. Runtime and author-tool archives have separate roles and are both on the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1).
 
-An author package has `client.ts`, a package name, and an explicit `dsh.client` declaration:
+## Build a plugin for the Loader
 
-```json
-{"name":"my-panel","dsh":{"client":{"platform":"web","external":["@cordis-net/client-modules"]}}}
-```
+Follow the [author-tool tutorial](https://github.com/gentt1024/Cordis.NET/blob/main/clients/tools/README.md) to create a plugin and produce `client.js` with its manifest. The classic registration script receives the registry's `require`, and its exported `apply` runs through the Loader. Register DOM, listeners and other cleanup with `ctx.effect`. Package-local dynamic chunks are unsupported by this build entry; independent `ClientArtifact` consumers retain their separate format.
 
-Authors can import the public `Context` and `Service` values from `@cordis-net/client-modules`. The author build preserves that request, and the browser supplies the same Cordis instance as the page root. Declare cross-package imports in `external`, including `/client` requests, and service-provider package dependencies in `inject`.
+Authors import `Context` and `Service` from `@cordis-net/client-modules` to share the page's Cordis instance. External requests match exactly, including subpaths; service-provider dependencies use `inject`. For watch, the Host consumes only successful `client-built` frames through its session queue, captures a new catalog and sends the module-change notification. The Host owns watcher startup and shutdown.
 
-```sh
-cd path/to/author-package
-npm install --save-dev <client-tools-tgz>
-npx --no-install cordis-client-build . dist --entry client.ts
-```
+## Connect a page to its Host
 
-Add `--watch` as the final argument for optional author development. Each successful build publishes a complete immutable generation directory and a JSON stdout frame `{kind:"client-built",name,revision,directory}`. Compilation failure emits `{kind:"build-error",name,diagnostic}` and preserves earlier directories. A later success publishes a new directory. Changes to the declared external requests require restarting the watch. The Host consumes only successful frames through its session queue, captures a new catalog, and sends its `client-modules` event. Host-owned process startup, cancellation and shutdown remain integration responsibilities; this compiler command does not manage those tasks.
-
-The output is a single classic factory-registration script, `client.js`, and its package manifest. Its factory receives the fixed module registry's `require`; its exported `apply` runs through the existing Cordis Loader. Register DOM, listeners and other contributions with `ctx.effect` so Cordis releases them when the plugin is withdrawn. Package-local dynamic chunks are not supported by this build entry. Existing independent `ClientArtifact` consumers keep their own format contract.
-
-The native Host's `ClientModuleCatalog` selects immutable bytes, dependency rows and revisioned URLs. Its graph contains `rev`, `entries`, `batches` and optional `release: { version, commit? }`. The application supplies release identity through `ClientModuleCatalog.CaptureAsync(..., release: ...)`; the artifact revision does not change when only the application release changes. The browser rejects executable artifact URLs that are outside the page origin or do not identify their declared revision. Successful provider replacement refreshes consumers that imported its previous exports. A failed replacement download retains the active old fiber and exposes a synchronization failure; retry uses the latest desired graph. Explicit `modules.disconnect()` invalidates pending activation and withdraws the roster through the fixed entry mechanism. Initial bootstrap uses the fixed web activation audit: failed imports, failed activation and missing-service Pending entries reject startup and release its facade. Later synchronization retains its diagnostic/retry behavior.
-
-`modules.releaseChange` is a stable observable of `{ page, previous, host }` when the connected Host serves another release. `modules.dismissRelease()` hides that notice without admitting the graph. Both version and optional commit must match the page's boot release before a received graph is parsed or applied; returning to that identity resumes updates. Management reconnection uses the same gate. Previously accepted work and retry remain available, while disconnect and disposal still clean up resources. The shell chooses how to present the notice or offer a reload.
-
-Each factory owns only its newly inserted, untagged styles; shell styles and nested factories retain their ownership. A failed factory removes its new styles. The author build supports SVG/PNG/WebP data URL imports and watches those physical inputs. Slots declarations add `inline?: true` and `KeyedStandardSource(key, member?)`; renderer behavior remains application-owned.
-
-The page shell may supply additional module objects through `bootClientModules({ graph, staticModules, loadBundle })`.
-`staticModules` maps **exact requests** to shell-owned objects, including separately declared subpaths. Values keep their identity
-across plugin withdrawal and reload. SDK modules are supplied by default; explicit keys take precedence. Keep Cordis imports
-on the SDK's runtime instance when providing application services. The native Host declares the same additional names with
-`ClientModuleCatalog.CaptureAsync(..., platformModules: names)`; the existing capture entry remains available.
-The catalog records names, never serializes module objects, and rejects requests without a declared supplier. Authors list
-these requests in `dsh.client.external`. The author build externalizes only exact requests and bundles ordinary dependencies.
-An optional `loadBundle(url)` must execute the classic script registration before its promise resolves; omitting it uses
-the fixed upstream script-element transport. Artifact URLs still obey the same-origin revision boundary.
-See the matching [English](../../docs/development.md#shell-owned-client-modules) and [Chinese](../../docs/development.zh.md#外壳持有的客户端模块) integration examples.
-
-For a Host mapped at `/cordis`, a browser entry can use:
+The Host must expose generated management and notification contributions through `/remote`, with management state at `/cordis`. Serve the runtime at `/client-runtime`. The following module fragment belongs inside a page that supplies `renderConnection` and `renderProgress`; it is not an entire page shell:
 
 ```js
 import { bootClientModules, createManagementClient } from '/client-runtime/client.mjs'
@@ -64,18 +37,37 @@ management.connection.subscribe(() => renderConnection(management.connection.get
 management.subscribe(event => renderProgress(event))
 ```
 
-The management client waits for the generated notification stream's readiness, then reads full state and graph on connection and reconnection. Selected configuration and client-module notifications invalidate those reads; installation state and log notifications reach subscribers with their original arguments. Notifications have no replay or sequence-gap protocol. Transient connection loss preserves page plugins and drafts. Identical artifacts retain their instances across Host reconnection; actual roster withdrawal, explicit disconnect and page close release effects. Raw configuration mutations require a connected Host generation and are never automatically replayed. `ManagementHttpError` represents a known HTTP refusal, while `ManagementOutcomeUnknown` means the caller cannot infer whether a raw configuration mutation happened.
+`createManagementClient` waits for the notification stream's readiness before reading full state and graph, including on reconnection. Configuration/module notifications invalidate these reads, and installation state/log notifications retain their arguments. Transient connection loss preserves page plugins and drafts. Notifications provide no replay or sequence-gap protocol.
 
-Plugin and package operations use the actual generated `/management` module. Installation submits the inspection's `contentHash` as `inspectedHash` plus a caller-owned `requestId`; after a lost response the caller queries the same generation's active `waitForInstall`. A null result remains unknown. The shell's fetch carrier supplies authentication and `If-Cordis-Generation`; approval policy belongs to the native Host. See the [standard management migration guide](../../docs/management-remote-migration.md) for public calls and removed handwritten routes and methods.
+Use the generated `/management` module for plugin/package operations. Installation sends the inspection's `contentHash` as `inspectedHash` and a caller-owned `requestId`. After losing a response, query that generation's active `waitForInstall`; null means unknown. The fetch carrier supplies authentication and `If-Cordis-Generation`. Raw configuration mutations require the connected generation and are never replayed. `ManagementHttpError` is a known HTTP refusal; `ManagementOutcomeUnknown` means the mutation outcome is unknown.
 
-Settings is consumed through the generated standard Remote module, not handwritten management methods. It uses numeric form revisions and optional expected revisions and exposes secret availability as `{path,set}` sidecars. Full-configuration management methods retain their independent hash fence. Regenerate consumers using the [Settings migration guide](../../docs/settings-contract-migration.md).
+Use the generated Settings module for live forms with numeric revisions, optional expected revisions and secret-presence sidecars. Full configuration retains its separate hash fence. See [Settings](https://github.com/gentt1024/Cordis.NET/blob/main/docs/settings.md) and the [management contract](https://github.com/gentt1024/Cordis.NET/blob/main/docs/management-remote-migration.md).
 
-`SlotCore` is the fixed generic contribution registry, exported beside the module client. It does not bring a React runtime into the bundle. Its type declarations retain the upstream renderer contracts and ship their licensed React/CSS type dependencies. Import types and augment `SlotMap` through the public `@cordis-net/client-modules/slots` subpath. A host can declare root and child seats; a plugin registers a component and owns the returned disposer with `ctx.effect`. The examples demonstrate a provider declaring a list seat and a separate panel registering into it. Replacement clears the previous registry's entries, and withdrawal removes the panel's contribution. Application-specific renderer and session binding remain outside this package.
+## Supply modules and UI contributions
 
-`createManagementClient` requires the generated notification client in `events` and accepts optional `transport.fetch` and `recovery`. The carrier is native HTTP envelopes and WebSocket mux. The fixed upstream controller owns handshake deadlines, continuous backoff, browser offline suspension and manual `management.reconnect()`. Failed handshakes close their subscription attempt and retry even when the stream remained open. Injected fetch carriers honor read cancellation; the generated notification client releases its observer when that attempt is aborted. Late callbacks cannot publish readiness. Recovery never replays writes.
+`bootClientModules({ graph, staticModules, loadBundle })` can use shell-owned module objects. `staticModules` keys are exact requests, including explicitly declared subpaths. Objects keep their identity across plugin withdrawal and reload. SDK modules are defaults, and explicit keys take precedence. Keep Cordis imports on the SDK runtime instance. The Host declares matching names through `ClientModuleCatalog.CaptureAsync(..., platformModules: names)`; names, not objects, enter the catalog. Undeclared suppliers are refused.
 
-`management.close()` closes recovery and withdraws modules; the page still owns `modules.dispose()` and `events.dispose()`. Release all three when disposing the page. The isolated `client-modules-browser-host.mjs` carrier exercises factory scripts in a browser, but does not prove native management, configuration or Host composition.
+An optional `loadBundle(url)` must execute classic-script registration before resolving. The default uses the upstream script-element transport. Executable URLs must be same-origin and identify their declared revision. See [shell-owned modules](https://github.com/gentt1024/Cordis.NET/blob/main/docs/development.md#shell-owned-client-modules).
 
-Run `node scripts/verify-client-shared-modules.mjs` for an independent built-plugin check of the public bootstrap with an injected Node transport.
-For real browser transport checks, start `node scripts/client-modules-browser-host.mjs` and open its printed origin at `/shared`.
-The page checks default/custom loading, exact subpath refusal, and singleton identity after withdrawal/reload. Browser and Node results are separate evidence.
+`SlotCore` supplies the generic contribution registry without a React runtime. Its declarations include licensed React/CSS type dependencies. Import and augment `SlotMap` through `@cordis-net/client-modules/slots`. The application owns rendering and session binding; a plugin owns its contribution disposer through `ctx.effect`. Factory-owned styles are released on failure or withdrawal without taking ownership of shell or nested-factory styles. SVG/PNG/WebP data URLs and inline-slot hints are supported; hints do not install a renderer.
+
+## Handle release changes, recovery and shutdown
+
+Catalogs contain `rev`, `entries`, `batches` and optional `release: { version, commit? }`. The application supplies release identity when capturing the catalog; changing it alone does not change artifact revisions. `modules.releaseChange` reports `{ page, previous, host }`. `dismissRelease()` hides the notice without admitting the new graph; the shell chooses whether to offer a reload. Version and optional commit must match the boot release before a graph is parsed or applied.
+
+Initial bootstrap refuses failed imports, activation errors and missing-service Pending entries and releases its facade. Later synchronization reports failures and supports retry. A replacement download failure retains the old active Fiber. Explicitly syncing an earlier target loads that target; retry uses the latest desired target. This is not automatic rollback of application state. Successful provider replacement refreshes importing consumers.
+
+Recovery owns handshake deadlines, backoff, offline suspension and `management.reconnect()`. Failed handshakes release their attempt, read cancellation is honored and late callbacks cannot publish readiness. Recovery never replays writes. Explicit `modules.disconnect()` invalidates pending activation and withdraws the roster. On page teardown, close management recovery, then dispose the event client and shared Connection before their borrowed module Context. Dispose the modules facade as well.
+
+## Build from source
+
+From the repository root, use Node and the SDK pinned in `global.json`; the build invokes the .NET ClientAssets generator:
+
+```sh
+npm ci --prefix reference --ignore-scripts
+npm ci --prefix clients/modules --ignore-scripts
+node scripts/build-client-modules.mjs artifacts/client-modules
+node scripts/verify-client-module-types.mjs artifacts/client-modules
+```
+
+Source and license identities are recorded in `vendor/provenance.json`. Adapted files retain original and local hashes with reasons. For the browser transport check, start `node scripts/client-modules-browser-host.mjs` and open its printed origin at `/shared`. The injected-transport check is `node scripts/verify-client-shared-modules.mjs`; a Node result is not a browser result, and neither alone proves complete native Host composition.

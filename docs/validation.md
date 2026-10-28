@@ -1,10 +1,18 @@
 # Validation
 
-[中文](validation.zh.md)
+English | [中文](validation.zh.md)
 
-## 0.2.1-alpha.1 preparation
+## Current release and source
 
-PR #26 was squash merged as `19abc55163eb415de3d261a8f153453413d789ca`, with the same tree as the candidate verified by [CI 40288031108](https://github.com/gentt1024/Cordis.NET/actions/runs/40288031108). That run had 15 successful jobs and three optional candidate skips; it is not validation of this new version or formal lock. The release branch promotes the previously reviewed S10 source assembly and makes its existing scope mandatory through one workflow shared by CI and release. New versioned evidence is pending. No release tag or public package has been created. The dated sections below preserve the original evidence and pre-promotion scope.
+The published preview is [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1), released on 2026-10-27. Its [formal run](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986) passed all 18 jobs at tag commit `a2728c7e929a01a586fc714d9b397eaf9549e153`. See [released version evidence](#released-version-evidence) for the artifacts and validation boundaries.
+
+Main has since incorporated [incremental generation](https://github.com/gentt1024/Cordis.NET/pull/28) and [referenced-assembly Host defaults](https://github.com/gentt1024/Cordis.NET/pull/29). These fixes are not in the published package. Their PR validation is evidence for their candidates, not a new release validation. [Current support](development.md#current-support-and-release-status) explains which source or package to use.
+
+The preparation and candidate sections below describe historical checkpoints. Their then-current locks, pending work and commands are not current release instructions; use [publication readiness](publication-readiness.md) for that procedure.
+
+## Historical 0.2.1-alpha.1 preparation
+
+Before release preparation, PR #26 was squash merged as `19abc55163eb415de3d261a8f153453413d789ca`, with the same tree as the candidate verified by [CI 40288031108](https://github.com/gentt1024/Cordis.NET/actions/runs/40288031108). That run had 15 successful jobs and three optional candidate skips; it did not validate the new version or formal lock. The release branch then promoted the reviewed S10 source assembly and made its existing scope mandatory through one workflow shared by CI and release. At this checkpoint, versioned evidence, a release tag and public packages were still pending. The dated sections below retain the original evidence and pre-promotion scope.
 
 ## Candidate S10 same-batch gate, before promotion
 
@@ -251,7 +259,11 @@ Run `python scripts/check-docs.py` for documentation and owning tests for code c
 
 ## Released version evidence
 
-The [alpha.5.2 release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2) supplies the formal manifest, evidence and SHA256SUMS. Its tag identifies `1ed99e39c44c8f7ecbd064b365b8ebb31530f3c4`; all seven jobs in the [formal run](https://github.com/gentt1024/Cordis.NET/actions/runs/39145687915) passed. Eight product packages and matching symbols came from the Linux validation batch; Example was excluded. Public NuGet payloads matched sealed bytes apart from the added NuGet signature. Public release attachments were downloaded and their digests checked.
+The [0.2.1-alpha.1 release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) supplies the source ZIP, browser runtime and author-tool archives, formal manifest, evidence and SHA256SUMS. Its tag identifies `a2728c7e929a01a586fc714d9b397eaf9549e153`; all 18 jobs in the [formal run](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986) passed. Validation used fixed DSH `687f282e8625c6b8d11ff58211a90524be2e4317` and the recorded Windows adaptation `fba488001a6c2d37787d800beeab54a770c826a1`.
+
+The eight product packages and matching symbol packages came from that run's Linux validation batch; Example was validated but excluded from publication. Public NuGet payloads matched the sealed batch apart from NuGet's added signature. The six public release attachments were downloaded and checked against their digests. Windows/Ubuntu evidence includes runtime, package, AOT and authoring validation; macOS covers the named authoring and browser consumers, not the full runtime or application suite.
+
+Earlier releases retain their own evidence, including the [alpha.5.2 release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.0-alpha.5.2) and its [seven-job formal run](https://github.com/gentt1024/Cordis.NET/actions/runs/39145687915). Those results do not validate later source changes.
 
 ## Accepted risks and evidence boundaries
 

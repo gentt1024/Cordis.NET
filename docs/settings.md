@@ -1,12 +1,20 @@
-# Settings guide
+# Read and edit live Settings
 
-[中文](settings.zh.md)
+English | [中文](settings.zh.md)
 
-Settings exposes live configuration forms through the existing configuration authority. Use numeric revisions and omit `expectedRevision` only when a prior-form comparison is not required.
+Settings exposes selected live configuration through the running profile's existing writer. Describe the current form, edit its offered paths and submit its numeric revision. Full raw configuration has a separate permission and hash contract.
 
-## Host and consumer use
+## Prepare the Host and form
 
-Mount the ordinary `SettingsForms` service over the running session's existing `ConfigurationOperations`. The optional `SettingsPolicy` limits host visibility; absent a policy, declared supported live fields are offered. Publish the standard controller independently of that optional provider and register its generated contribution:
+Use matching Composition and AspNetCore packages with a .NET 10 ASP.NET Core Host. Authors must declare live fields through their Config schema; a running entry must offer the form you want to edit. See [configuration descriptions](configuration-description.md) for those declarations.
+
+The snippets below are Host and consumer integration fragments, not one combined program. The consumers assume a `worker` form with a live `limit` field; [ManagedApplication](../examples/ManagedApplication/README.md) is a complete example with namespace `example.managedplugin` instead.
+
+## Mount the provider and controller
+
+<a id="host-and-consumer-use"></a>
+
+Use the running session's `ConfigurationOperations`. `app`, `session` and the authorization callback belong to your Host. Create the Connection inside the existing Context execution domain:
 
 ```csharp
 var registry = new TypertRegistry(session.Context);
@@ -18,6 +26,7 @@ await session.Context.RunAsync(ctx =>
     new SettingsController(ctx);
     registry.Register(ctx, contribution);
     connection = new(ctx, new TypertGateway(ctx, registry));
+    ctx.Provide("connection", connection);
     return Task.CompletedTask;
 });
 app.UseWebSockets();
@@ -25,44 +34,77 @@ app.MapCordisRemote("/remote", connection, authorize);
 var clientArtifact = TypertArtifacts.GenerateClient(contribution);
 ```
 
-The host supplies `authorize` and delivers the generated module and declaration together. The ordinary service remains usable in process; it does not require Remote. Remote resolves the current `ISettingsProvider` named `settings` on each call. Its absence is a `gateway/internal` refusal. See [authoring](authoring.md#native-authored-models-and-net-consumers-2026-10-10) for the model-only .NET client build.
+The optional SettingsPolicy limits visibility; absent a policy, supported declared live fields are offered. The controller can be registered without a provider, but a call with no current `settings` provider fails with `gateway/internal`. Each call resolves the current provider. Ordinary in-process Settings use needs no Remote.
+
+Deliver `clientArtifact.Module` and its declaration together, using the same module basename. The TS example below assumes `settings.mjs`. The Host owns authentication, authorization and shutdown. Await Connection disposal and withdraw its registration before disposing the owning Context; clients borrow these resources.
+
+## Read and write from C#
+
+Generate an independent client with service `settingsController`, client name `SettingsClient` and namespace `Example.Settings`, using Composition's saved model and the [client project settings](authoring.md#generate-an-independent-net-client). This example uses a Host at `http://localhost:5000`; replace that address with your mapped endpoint and supply its authorization through HttpClient as required:
 
 ```csharp
+using Cordis.Composition;
+using Example.Settings;
+using System.Text.Json;
+
+const string ns = "worker";
 using var http = new HttpClient();
 await using var connection = new TypertConnection(http, new Uri("http://localhost:5000/remote"));
 await using var remote = new SettingsClient(connection);
 var describe = await remote.DescribeAsync();
 if (!describe.Ok) throw describe.Error;
-var form = describe.Value.Namespaces.Single(row => row.Ns == "worker");
-using var document = JsonDocument.Parse("{\"limit\":30}");
-var updated = await remote.UpdateAsync(form.Ns, document.RootElement, form.Revision);
+var form = describe.Value.Namespaces?.SingleOrDefault(row => row.Ns == ns)
+    ?? throw new InvalidOperationException("The Host does not offer the worker form.");
+using var document = JsonDocument.Parse("""{"limit":30}""");
+var updated = await remote.UpdateAsync(ns, document.RootElement, form.Revision);
+if (!updated.Ok) throw updated.Error;
+Console.WriteLine(updated.Value.Revision);
 ```
+
+Check `Ok` before reading either successful value. A write returns a fresh redacted namespace. The `await using` order disposes the client before its borrowed Connection and HttpClient. A missing form means the Host did not offer that namespace; do not substitute an unrelated entry or revision.
+
+## Read and mutate from TypeScript
+
+Import the generated module and connect to the actual Remote address. Here the Host shares the page origin:
 
 ```ts
 import { createRemote, TypertConnection } from './settings.mjs'
 
 const connection = new TypertConnection(new URL('/remote', location.href))
 const remote = createRemote(connection)
-const read = await remote['settings/describe']({})
-if (!read.ok) throw new Error(read.error.message)
-const form = read.value.namespaces.find(row => row.ns === 'worker')!
-const write = await remote['settings/mutate']({
-  ns: form.ns,
-  ops: [{ op: 'set', path: ['limit'], value: 30 }],
-  expectedRevision: form.revision,
-})
-await remote.dispose()
-await connection.dispose()
+const ns = 'worker'
+try {
+  const read = await remote['settings/describe']({})
+  if (!read.ok) throw new Error(read.error.message)
+  const form = read.value.namespaces?.find(row => row.ns === ns)
+  if (!form) throw new Error('The Host does not offer the worker form')
+  const write = await remote['settings/mutate']({
+    ns,
+    ops: [{ op: 'set', path: ['limit'], value: 30 }],
+    expectedRevision: form.revision,
+  })
+  if (!write.ok) throw new Error(write.error.message)
+  console.log(write.value.revision)
+} finally {
+  await remote.dispose()
+  await connection.dispose()
+}
 ```
 
-Normal editing submits the revision it read. All three Remote writes return a fresh redacted namespace. Native provider writes return Task; the controller then describes the same captured provider. An empty `ns` is refused as `gateway/bad-request` before provider lookup, whether or not the optional provider is present. `update` recursively merges objects and replaces arrays. `replace` resets the offered live fields against inheritance, then merges the submitted section while retaining ordinary configuration. A replace assembled from a redacted read can reset omitted secrets. Use `mutate` for incomplete views: ordered object unsets restore inheritance, and array unsets remove the element. Set requires a `value`, which may explicitly be JSON null; unset omits `value`.
+The generated output permits omitted fields: check the optional namespaces collection, then write to the application's selected namespace. Handle both read and write failures. A `settings/conflict` requires a fresh read and an application decision about the user's draft, not an automatic retry of the same edit. Native provider writes return Task; the Remote controller describes the same captured provider after completion.
 
-The form schema preserves redacted public defaults. Secret defaults and required flags are removed, and host-hidden fields are omitted. Non-live object paths use fresh empty-object wrappers; metadata at a live boundary is retained.
+## Choose an edit operation
+
+- `update` recursively merges objects and replaces arrays.
+- `replace` resets the offered live fields against inheritance, then merges the submitted section while retaining ordinary configuration. Replacing from a redacted read can reset omitted secrets.
+- `mutate` applies ordered paths. Object unset restores inheritance; array unset removes the element. A set includes `value`, which may be explicit JSON null; unset omits `value`.
+
+Use mutate for incomplete views. Empty namespace is refused with `gateway/bad-request` before provider lookup. Reads preserve public defaults, omit hidden properties and remove secret defaults and required flags. Secret presence is available separately, never the secret value. Non-live object paths are fresh wrappers; metadata at a live boundary is retained.
 
 ## Revision and commit semantics
 
-The .NET numeric carrier is `double`, matching JavaScript number. Revisions begin at zero and belong to one `SettingsForms` owner. They observe entry Fiber identity, the complete Config declaration and raw entry configuration. A presentation-only `Configure` change emits `settings/document-updated` with the same revision. Observed disappearance increments once; reappearance advances the observation again. A new owner starts new observations. Revisions are neither persisted nor derived from a content hash, and do not promise permanent cross-process monotonicity.
+The .NET numeric carrier is double, matching JavaScript number. Revisions start at zero for one SettingsForms owner and observe entry Fiber identity, the complete Config declaration and raw configuration. A presentation-only Configure change emits `settings/document-updated` with the same revision. Observed disappearance increments once; reappearance advances again. A new owner starts new observations. Revisions are not persisted content hashes or permanent cross-process counters.
 
-Supplying a stale expected revision refuses the write before persistence with `settings/conflict` and numeric `{ns, expected, actual}` details. Omitting it removes only that prior-form comparison. Host authorization, offered-path policy, complete candidate validation, the profile queue and captured-source consistency checks still apply. Generated clients omit the argument on the wire when the optional C# carrier has its default; explicit JSON null remains a different input and is rejected. Do not stringify a numeric revision, silently discard a stale argument, or send null to mean omission.
+A stale expected revision refuses before persistence with `settings/conflict` and numeric `{ns, expected, actual}` details. Omission skips only the prior-form comparison; authorization, offered paths, full candidate validation, profile queue and captured-source consistency still apply. Omit the optional argument to omit it on the wire. Explicit JSON null is different and refused; never stringify a revision.
 
-The existing full-configuration/file hash mechanism retains its independent source-editing duties. `ReadConfigurationAsync`, `MutateConfigurationAsync`, `ReadConfigurationSchemasAsync` and profile/package operations still use their own documented hash contracts. They share the existing profile authority and write flow with Settings. A full-configuration hash cannot serve as a Settings form revision.
+Full configuration APIs retain their own file/source hash contract and share the same profile writer. A full-configuration hash is not a Settings form revision. Use [document opening](authoring.md#open-the-settings-document) only as a separately authorized Host action; it opens the Host's document, not a browser download.
