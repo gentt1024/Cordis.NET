@@ -4,9 +4,9 @@ English | [中文](development.zh.md)
 
 ## Current support and release status
 
-The published preview is [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1), released on 2026-10-27 from tag commit `a2728c7e929a01a586fc714d9b397eaf9549e153`. It uses the fixed DSH 0.2.1-rc.2 baseline and recorded Windows adaptation. [Release evidence](validation.md#released-version-evidence) identifies its formal validation and downloadable artifacts.
+This source targets [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2). Its matching release page identifies publication status, final source and artifact evidence. The fixed DSH 0.2.1-rc.2 baseline and recorded Windows adaptation are unchanged.
 
-Current main also contains two fixes that have **not been published**: [PR #28](https://github.com/gentt1024/Cordis.NET/pull/28) skips unchanged Typert generation and restores invalidated outputs; [PR #29](https://github.com/gentt1024/Cordis.NET/pull/29) composes a referenced DTO's owning model into generated Service input defaults. To use these fixes before a new release, build matching packages and tools from one source revision. Installing the published alpha.1 packages does not include them, even though the source version property has not changed. A passing PR is not a new release; [publication readiness](publication-readiness.md) describes the release procedure.
+Alpha.2 includes [PR #28](https://github.com/gentt1024/Cordis.NET/pull/28), which skips unchanged Typert generation and restores invalidated outputs, and [PR #29](https://github.com/gentt1024/Cordis.NET/pull/29), which composes a referenced DTO's owning model into generated Service input defaults. Earlier alpha.1 packages lack these fixes. Use one matching package/tool batch; a passing PR or local candidate does not establish formal publication. [Publication readiness](publication-readiness.md) describes the release gates.
 
 | Area | Current use and boundary |
 |---|---|
@@ -82,7 +82,7 @@ The nullability/default query graph reuses ordinary recursive uses. Its 256 budg
 
 When static generation cannot reproduce a contract, runtime `TypertArtifacts.GenerateClient(contribution)` can export the actual Host descriptors through the shared emitter where supported. That is an explicit runtime route, not automatic reflection fallback or a second model format. Preserve one primary model, explicit references and normal build/pack inputs; regenerate with matching packages/tools when facts change. [Authoring](authoring.md#generate-models-and-independent-clients) gives the inputs and [compatibility](compatibility.md) records platform adaptations.
 
-Published alpha.1 contains the C# struct/generic/default projection support above. Main's later incremental-generation and referenced-assembly Host-default fixes remain unpublished; see [release and source status](#current-support-and-release-status). Support statements do not replace the [actual validation evidence](validation.md) or prove complete DSH product/SDK interoperability.
+Published alpha.1 contains the C# struct/generic/default projection support above. Alpha.2 adds incremental generation and referenced-assembly Host-default fixes; see [release and source status](#current-support-and-release-status). Support statements do not replace the [actual validation evidence](validation.md) or prove complete DSH product/SDK interoperability.
 
 ## Fast loop
 

@@ -12,7 +12,7 @@
 mkdir example-panel
 cd example-panel
 npm init -y
-npm install --save-dev https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.1/cordis-net-client-tools-0.2.1-alpha.1.tgz
+npm install --save-dev https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.2/cordis-net-client-tools-0.2.1-alpha.2.tgz
 ```
 
 将以下字段合入 `package.json`，保留 npm 写入的 `devDependencies`：
@@ -60,4 +60,4 @@ SVG、PNG 和 WebP import 导出包含精确文件字节的 base64 data URL，�
 
 Host 管理进程启动、帧消费、catalog 发布与退出；浏览器运行时管理模块激活和 effect 清理。接线见[浏览器集成](https://github.com/gentt1024/Cordis.NET/blob/main/clients/modules/README.zh.md)及 [ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md)。
 
-交付归档及其依赖声明。esbuild 和 Lightning CSS 原生二进制按作者操作系统安装，不要把 Windows `node_modules` 复制到另一平台。[对应发行](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)提供摘要与平台证据。本工具通过 TGZ 分发，不从 npm registry 的发行安装。
+交付归档及其依赖声明。esbuild 和 Lightning CSS 原生二进制按作者操作系统安装，不要把 Windows `node_modules` 复制到另一平台。[对应发行](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2)提供摘要与平台证据。本工具通过 TGZ 分发，不从 npm registry 的发行安装。

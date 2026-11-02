@@ -2,7 +2,7 @@
 
 [English](getting-started.md) | 中文
 
-本教程创建一个控制台应用，注册插件、调用它提供的服务，再停止插件。使用已发布的 `0.2.1-alpha.1` 包。你需要 .NET 10 SDK 和 nuget.org 访问能力，无需克隆仓库或安装 Node。
+本教程创建一个控制台应用，注册插件、调用它提供的服务，再停止插件。使用本源码选定的 `0.2.1-alpha.2` 包。你需要 .NET 10 SDK 和 nuget.org 访问能力，无需克隆仓库或安装 Node。
 
 ## 创建应用
 
@@ -10,7 +10,7 @@
 
 ```console
 dotnet new console -n MyApp -f net10.0
-dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.1 --source https://api.nuget.org/v3/index.json
+dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.2 --source https://api.nuget.org/v3/index.json
 ```
 
 `Cordis.NET.Core` 提供插件运行时，这个程序不需要其他包。从 Cordis.NET 源码开发时，使用仓库 `global.json` 固定的 SDK。
@@ -70,4 +70,4 @@ dotnet run --project MyApp
 | 安装独立部署的 CLR 插件 | [托管插件](../examples/ManagedPlugin/README.md)、[托管应用](../examples/ManagedApplication/README.md)和 [CLR 制品流程](clr-artifacts.zh.md)。 |
 | 从命令行校验或预览配置 | 安装匹配版本的 `Cordis.NET.Tool`，见 [CLI 指南（英文）](../tools/Cordis.Cli/README.md)。 |
 
-Cordis.NET 包与工具应使用匹配版本；切换版本时，重新构建生成式提供者和客户端。浏览器归档位于[对应发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)。使用 main 文档中的后续能力前，先核对[当前源码状态](development.zh.md#当前支持与发行状态)。
+Cordis.NET 包与工具应使用匹配版本；切换版本时，重新构建生成式提供者和客户端。浏览器归档位于[对应发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2)。使用 main 文档中的后续能力前，先核对[当前源码状态](development.zh.md#当前支持与发行状态)。

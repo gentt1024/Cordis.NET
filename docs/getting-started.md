@@ -2,7 +2,7 @@
 
 English | [中文](getting-started.zh.md)
 
-This tutorial creates a console application, registers a plugin, calls its service and stops it. It uses the published `0.2.1-alpha.1` package. You need the .NET 10 SDK and access to nuget.org; no repository checkout or Node installation is required.
+This tutorial creates a console application, registers a plugin, calls its service and stops it. It targets the `0.2.1-alpha.2` package. You need the .NET 10 SDK and access to nuget.org; no repository checkout or Node installation is required.
 
 ## Create the application
 
@@ -10,7 +10,7 @@ Run these commands in the directory where you want to create the project:
 
 ```console
 dotnet new console -n MyApp -f net10.0
-dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.1 --source https://api.nuget.org/v3/index.json
+dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.2 --source https://api.nuget.org/v3/index.json
 ```
 
 `Cordis.NET.Core` supplies the plugin runtime. The other packages are optional for this program. When working from a Cordis.NET source checkout, use the SDK pinned in its `global.json`.
@@ -70,4 +70,4 @@ The call to `answer()` is an ordinary C# call. A network server or Remote contra
 | Install independently deployed CLR plugins | [Managed plugin](../examples/ManagedPlugin/README.md), [managed application](../examples/ManagedApplication/README.md) and [CLR artifacts](clr-artifacts.md). |
 | Validate or preview configuration from the command line | Install the matching `Cordis.NET.Tool` version; see the [CLI guide](../tools/Cordis.Cli/README.md). |
 
-Use matching versions of Cordis.NET packages and tools, and rebuild generated providers and clients when changing versions. Browser archives are on the [matching release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1). For capabilities added after that release, check [current source status](development.md#current-support-and-release-status) before following a guide from main.
+Use matching versions of Cordis.NET packages and tools, and rebuild generated providers and clients when changing versions. Browser archives are on the [matching release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2). For capabilities added after that release, check [current source status](development.md#current-support-and-release-status) before following a guide from main.

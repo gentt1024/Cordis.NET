@@ -9,7 +9,7 @@ Run an application's configured profile with ProfileSession, coordinate refresh 
 Use the .NET 10 SDK and matching Cordis.NET package versions.
 
 ```console
-dotnet add package Cordis.NET.Extensions --version 0.2.1-alpha.1
+dotnet add package Cordis.NET.Extensions --version 0.2.1-alpha.2
 ```
 
 ## Use this package

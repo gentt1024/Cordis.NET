@@ -9,7 +9,7 @@ Load independently deployed CLR plugins from complete artifact directories, repl
 Use the .NET 10 SDK and matching Cordis.NET package versions.
 
 ```console
-dotnet add package Cordis.NET.Clr --version 0.2.1-alpha.1
+dotnet add package Cordis.NET.Clr --version 0.2.1-alpha.2
 ```
 
 ## Use this package

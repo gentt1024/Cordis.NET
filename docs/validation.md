@@ -4,9 +4,9 @@ English | [中文](validation.zh.md)
 
 ## Current release and source
 
-The published preview is [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1), released on 2026-10-27. Its [formal run](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986) passed all 18 jobs at tag commit `a2728c7e929a01a586fc714d9b397eaf9549e153`. See [released version evidence](#released-version-evidence) for the artifacts and validation boundaries.
+The current source targets [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2), including [incremental generation](https://github.com/gentt1024/Cordis.NET/pull/28), [referenced-assembly Host defaults](https://github.com/gentt1024/Cordis.NET/pull/29) and the paired documentation refresh. The matching release page owns its final tag, package/symbol hashes, browser archives and formal run. Earlier PR and local-candidate results do not replace those release receipts.
 
-Main has since incorporated [incremental generation](https://github.com/gentt1024/Cordis.NET/pull/28) and [referenced-assembly Host defaults](https://github.com/gentt1024/Cordis.NET/pull/29). These fixes are not in the published package. Their PR validation is evidence for their candidates, not a new release validation. [Current support](development.md#current-support-and-release-status) explains which source or package to use.
+The earlier [0.2.1-alpha.1 release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) was published on 2026-10-27. Its [formal run](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986) passed all 18 jobs at tag commit `a2728c7e929a01a586fc714d9b397eaf9549e153`; that evidence remains attached to alpha.1.
 
 The preparation and candidate sections below describe historical checkpoints. Their then-current locks, pending work and commands are not current release instructions; use [publication readiness](publication-readiness.md) for that procedure.
 
