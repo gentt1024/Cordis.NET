@@ -9,7 +9,7 @@
 使用 .NET 10 SDK，以及匹配的 .NET 与 ASP.NET Core 运行时，安装已发布的预览版：
 
 ```console
-dotnet tool install --global Cordis.NET.Tool --version 0.2.1-alpha.1
+dotnet tool install --global Cordis.NET.Tool --version 0.2.1-alpha.2
 ```
 
 源码开发时，在仓库根目录使用固定 SDK，运行 `dotnet run --project tools/Cordis.Cli -- <command-and-arguments>`。尚未发布的修正见[发行与源码状态](https://github.com/gentt1024/Cordis.NET/blob/main/docs/development.zh.md#当前支持与发行状态)。

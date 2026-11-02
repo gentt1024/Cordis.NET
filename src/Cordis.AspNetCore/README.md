@@ -9,7 +9,7 @@ Expose selected Cordis services through authorized HTTP unary and WebSocket mux 
 Use the .NET 10 SDK and matching Cordis.NET package versions.
 
 ```console
-dotnet add package Cordis.NET.AspNetCore --version 0.2.1-alpha.1
+dotnet add package Cordis.NET.AspNetCore --version 0.2.1-alpha.2
 ```
 
 ## Use this package

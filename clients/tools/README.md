@@ -12,7 +12,7 @@ Install the published tool archive from the matching GitHub release:
 mkdir example-panel
 cd example-panel
 npm init -y
-npm install --save-dev https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.1/cordis-net-client-tools-0.2.1-alpha.1.tgz
+npm install --save-dev https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.2/cordis-net-client-tools-0.2.1-alpha.2.tgz
 ```
 
 Merge the following fields into `package.json`, retaining the `devDependencies` written by npm:
@@ -60,4 +60,4 @@ Choose an output directory such as `dist`. The command refuses the author direct
 
 The Host owns process startup, frame consumption, catalog publication and shutdown. The browser runtime owns module activation and effect cleanup. Follow [browser integration](https://github.com/gentt1024/Cordis.NET/blob/main/clients/modules/README.md) and [ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md) for that setup.
 
-Distribute this archive with its dependency declarations. Native esbuild and Lightning CSS binaries install for the author's OS; do not copy a Windows `node_modules` directory to another platform. The [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) provides hashes and platform evidence. The tools are distributed as a TGZ, not installed from an npm registry release.
+Distribute this archive with its dependency declarations. Native esbuild and Lightning CSS binaries install for the author's OS; do not copy a Windows `node_modules` directory to another platform. The [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2) provides hashes and platform evidence. The tools are distributed as a TGZ, not installed from an npm registry release.

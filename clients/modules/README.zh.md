@@ -9,10 +9,10 @@
 安装已发布归档，供包 import 与声明使用：
 
 ```console
-npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.1/cordis-net-client-modules-0.2.1-alpha.1.tgz
+npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.2/cordis-net-client-modules-0.2.1-alpha.2.tgz
 ```
 
-直接在浏览器加载时，将完整构建运行时目录放在 `/client-runtime` 等页面同源路径下，保留模块、声明与 `LICENSES.txt`。[ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md)展示原生 Host 制品映射。运行时与作者工具归档职责不同，均位于[对应发行](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)。
+直接在浏览器加载时，将完整构建运行时目录放在 `/client-runtime` 等页面同源路径下，保留模块、声明与 `LICENSES.txt`。[ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md)展示原生 Host 制品映射。运行时与作者工具归档职责不同，均位于[对应发行](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2)。
 
 ## 为 Loader 构建插件
 

@@ -4,9 +4,9 @@
 
 ## 当前支持与发行状态
 
-已发布的预览版为 [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)，于 2026-10-27 从 tag 提交 `a2728c7e929a01a586fc714d9b397eaf9549e153` 发行，采用固定 DSH 0.2.1-rc.2 基线及已记录的 Windows 适配。[发行证据](validation.zh.md#已发行版本证据)列出正式验证与可下载制品。
+本源码面向 [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2)。对应发行页列出公开状态、最终源码及制品证据。固定 DSH 0.2.1-rc.2 基线与已记录的 Windows 适配均不变。
 
-当前 main 另有两项**尚未发布**的修正：[PR #28](https://github.com/gentt1024/Cordis.NET/pull/28)跳过未变化的 Typert 生成，并恢复失效输出；[PR #29](https://github.com/gentt1024/Cordis.NET/pull/29)将引用 DTO 所属模型的事实接入生成式 Service 的输入默认值。新版本发布前，如需使用这些修正，应从同一源码提交构建匹配的包与工具。即使源码版本属性尚未变化，已发布的 alpha.1 包也不包含它们。PR 通过不等于新版本发行；发行流程见[发行准备](publication-readiness.zh.md)。
+Alpha.2 包含[PR #28](https://github.com/gentt1024/Cordis.NET/pull/28)的未变化 Typert 生成跳过与失效输出恢复，以及[PR #29](https://github.com/gentt1024/Cordis.NET/pull/29)将引用 DTO 所属模型接入生成式 Service 输入默认值的修正。此前的 alpha.1 包不含这些修正。包与工具应使用同批版本；PR 或本地候选通过不等于正式公开。[发行准备](publication-readiness.zh.md)说明必需门禁。
 
 | 范围 | 当前用法与边界 |
 |---|---|
@@ -82,7 +82,7 @@ C# Remote 投影还保留已识别的 ImmutableArray<T> 与 DateTimeOffset 映�
 
 静态生成不能复现合同时，运行时 `TypertArtifacts.GenerateClient(contribution)` 可在支持范围内通过共享 emitter 导出实际 Host 描述。这是显式运行时路线，不是自动反射回退或第二种模型格式。保留一个主模型、显式引用和普通 build／pack 输入，事实变化时使用匹配包／工具重新生成。[作者指南](authoring.zh.md#生成模型与独立客户端)说明输入，[兼容记录](compatibility.zh.md)说明平台适配。
 
-上述 C# struct／泛型／默认值投影支持已在 alpha.1 发布；main 后续的增量生成与跨程序集 Host 默认值修正尚未发布，见[发行与源码状态](#当前支持与发行状态)。支持声明不替代[实际验证证据](validation.zh.md)，也不证明完整 DSH 产品／SDK 互通。
+上述 C# struct／泛型／默认值投影支持已在 alpha.1 发布；alpha.2 加入增量生成与跨程序集 Host 默认值修正，见[发行与源码状态](#当前支持与发行状态)。支持声明不替代[实际验证证据](validation.zh.md)，也不证明完整 DSH 产品／SDK 互通。
 
 ## 快速循环
 

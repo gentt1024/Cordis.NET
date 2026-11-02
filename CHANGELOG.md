@@ -1,9 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.1-alpha.2]
 
 - Skip unchanged Typert generation while preserving normal and design-time source registration. Changed inputs, missing or changed outputs, and invalid generation receipts trigger regeneration; Clean removes owned build state.
 - Preserve static Service input defaults for DTOs from referenced assemblies when their owning declaration models are supplied through the existing `AdditionalFiles` input. Service drift checks and omission/null distinctions remain in place.
+
+- Refresh paired authoring guides, package READMEs, setup examples and language navigation.
 
 ## [0.2.1-alpha.1] - 2026-10-27
 

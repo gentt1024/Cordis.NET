@@ -4,11 +4,11 @@
 
 ## 当前发行与源码
 
-已发布预览版为 [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1)，发行日期为 2026-10-27。[正式运行](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986)在 tag 提交 `a2728c7e929a01a586fc714d9b397eaf9549e153` 上的 18 个作业全部通过。制品与验证边界见[已发行版本证据](#已发行版本证据)。
+当前源码面向 [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2)，包含[增量生成](https://github.com/gentt1024/Cordis.NET/pull/28)、[跨程序集 Host 默认值](https://github.com/gentt1024/Cordis.NET/pull/29)及配对文档整理。对应发行页承载最终 tag、包/符号摘要、浏览器归档和正式运行。此前 PR 与本地候选的结果不能替代该发行回执。
 
-此后 main 合入了[增量生成](https://github.com/gentt1024/Cordis.NET/pull/28)和[跨程序集 Host 默认值](https://github.com/gentt1024/Cordis.NET/pull/29)修正，已发布包不包含它们。对应 PR 验证证明的是各自候选，不是新版本的发行验证。源码与包的选择见[当前支持](development.zh.md#当前支持与发行状态)。
+此前的 [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) 于 2026-10-27 发行。[正式运行](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986)在 tag 提交 `a2728c7e929a01a586fc714d9b397eaf9549e153` 上的 18 个作业全部通过，该证据仍归属 alpha.1。
 
-下方准备与候选章节描述历史检查点，其中当时的锁、待办及命令不作为当前发行操作指南；当前流程见[发行准备](publication-readiness.zh.md)。
+下方准备与候选章节描述历史检查点。当时的锁、待办和命令不属于当前发行指令；当前流程见[发行准备](publication-readiness.zh.md)。
 
 ## 历史记录：0.2.1-alpha.1 准备
 
