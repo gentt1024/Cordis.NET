@@ -4,9 +4,9 @@ English | [中文](development.zh.md)
 
 ## Current support and release status
 
-This source targets [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2). Its matching release page identifies publication status, final source and artifact evidence. The fixed DSH 0.2.1-rc.2 baseline and recorded Windows adaptation are unchanged.
+This source targets [0.2.1-alpha.3](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3). Its matching release page identifies publication status, final source and artifact evidence. The fixed DSH 0.2.1-rc.2 baseline and recorded Windows adaptation are unchanged.
 
-Alpha.2 includes [PR #28](https://github.com/gentt1024/Cordis.NET/pull/28), which skips unchanged Typert generation and restores invalidated outputs, and [PR #29](https://github.com/gentt1024/Cordis.NET/pull/29), which composes a referenced DTO's owning model into generated Service input defaults. Earlier alpha.1 packages lack these fixes. Use one matching package/tool batch; a passing PR or local candidate does not establish formal publication. [Publication readiness](publication-readiness.md) describes the release gates.
+Alpha.3 corrects closed generic DTOs in saved-model Web contracts through the existing common argument bindings. Normal PackageReference/MSBuild generation retains explicit reference models and nested argument nullability; see [Remote authoring](authoring.md). It does not add Web string-enum conversion. Alpha.2 already includes the incremental-generation and referenced-assembly Host-default fixes from [PR #28](https://github.com/gentt1024/Cordis.NET/pull/28) and [PR #29](https://github.com/gentt1024/Cordis.NET/pull/29). Use one matching package/tool batch; a passing PR or local candidate does not establish formal publication. [Publication readiness](publication-readiness.md) describes the release gates.
 
 | Area | Current use and boundary |
 |---|---|

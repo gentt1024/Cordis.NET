@@ -9,7 +9,7 @@ Build an in-process plugin application with services, dependency-driven activati
 Use the .NET 10 SDK and matching Cordis.NET package versions.
 
 ```console
-dotnet add package Cordis.NET.Core --version 0.2.1-alpha.2
+dotnet add package Cordis.NET.Core --version 0.2.1-alpha.3
 ```
 
 ## Use this package

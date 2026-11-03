@@ -2,6 +2,12 @@
 
 English | [中文](compatibility.zh.md)
 
+## Closed generic Web projection correction, 2026-11-03
+
+The fixed DSH generator checks Remote data through instantiated TypeScript types, obtaining each property from that type; a genuinely unresolved parameter is rejected. The saved C# model instead retains a generic declaration plus its concrete use. Web projection now applies the existing common `TypeSubstitution` bindings before reading members and keys Schema definitions by the complete constructed use, including argument nullability. This corrects the previous refusal of a closed `Envelope<string>` and prevents distinct closures from reusing the first closure's member Schema. Conditional output omission also uses the substituted member type.
+
+This is a correction to the native saved-model backend, not a change to the fixed baseline, model format, runtime protocol or author declaration. Explicit reference models remain required for external declarations. Constrained/open generic endpoints and previously refused converters remain outside this correction; in particular, string-converted enum Web semantics are not added here.
+
 ## Baseline promotion for 0.2.1-alpha.1
 
 The formal lock now selects DSH `687f282e8625c6b8d11ff58211a90524be2e4317` (`0.2.1-rc.2`) and the exact Windows manifest adaptation recorded in `reference/candidate-adaptation.json`. Validation reconstructs derived source `fba488001a6c2d37787d800beeab54a770c826a1`; it never fetches that local commit from upstream. The patch and commit object are unchanged from the reviewed S10 candidate. The dated candidate entries below record the decisions at their original checkpoints; statements that the formal lock was unchanged describe those checkpoints. This promotion changes source selection and validation wiring, not the established S1–S9 native contracts or the supported subset. Historical inventories, failures and prior package identities remain unchanged.

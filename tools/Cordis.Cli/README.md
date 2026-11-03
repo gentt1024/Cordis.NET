@@ -9,7 +9,7 @@ Validate configuration, run an ordinary CLR application and manage plugins throu
 Use the .NET 10 SDK and matching .NET and ASP.NET Core runtimes. Install the published preview:
 
 ```console
-dotnet tool install --global Cordis.NET.Tool --version 0.2.1-alpha.2
+dotnet tool install --global Cordis.NET.Tool --version 0.2.1-alpha.3
 ```
 
 For source development, run `dotnet run --project tools/Cordis.Cli -- <command-and-arguments>` from the repository root with its pinned SDK. See [release and source status](https://github.com/gentt1024/Cordis.NET/blob/main/docs/development.md#current-support-and-release-status) for unpublished fixes.

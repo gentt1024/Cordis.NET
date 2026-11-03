@@ -316,12 +316,17 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
 
                     break;
                 case "named":
-                    if (!names.TryGetValue(reference.Name, out var name))
+                    var key = JsonSerializer.Serialize(
+                        reference with
+                        {
+                            Nullability = "NotAnnotated"
+                        });
+                    if (!names.TryGetValue(key, out var name))
                     {
                         name = "Type" + names.Count;
-                        names.Add(reference.Name, name);
+                        names.Add(key, name);
                         definitions.Add(name, null);
-                        definitions[name] = Object(types[reference.Name]);
+                        definitions[name] = Object(types[reference.Name], reference);
                     }
 
                     value = new()
@@ -339,7 +344,7 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
         bool IsEnum(NativeTypeReference reference) => reference.Kind == "named" &&
             types[reference.Name].Enumeration is not null;
 
-        JsonObject Object(NativeTypeDeclaration type)
+        JsonObject Object(NativeTypeDeclaration type, NativeTypeReference use)
         {
             if (type.Enumeration is not null && Attribute(type.Attributes, "JsonConverterAttribute") is not null)
                 throw Refuse("String enum converter semantics require a further Web projection: " + type.Id);
@@ -356,6 +361,7 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                 throw Refuse("Non-default number handling: " + type.Id);
             var properties = new JsonObject();
             var required = new JsonArray();
+            var bindings = TypeSubstitution.Bind(type, use);
             var constructor = type.Constructors.SingleOrDefault(value => value.JsonConstructor);
             if (constructor is null &&
                 !type.Constructors.Any(value => value.Accessibility == "Public" && value.Parameters.Length == 0))
@@ -382,7 +388,8 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                     if (attribute.Name == JsonPrefix + "JsonNumberHandlingAttribute" &&
                         attribute.Arguments.Single().Json != "0")
                         throw Refuse("Non-default number handling: " + type.Id + "." + member.Name);
-                var reference = member.Type;
+                var memberType = TypeSubstitution.Apply(member.Type, bindings, types);
+                var reference = memberType;
                 if (member.Attributes.Any(value => value.Name == "System.Diagnostics.CodeAnalysis." +
                         (output ? "MaybeNullAttribute" : "AllowNullAttribute")))
                     reference = reference with
@@ -399,8 +406,8 @@ internal sealed class WebProjection(NativeTypeDeclaration[] declarations, Native
                 properties.Add(member.WireName, property);
                 var condition = ignore is null ? Option("DefaultIgnoreCondition", "0") : Named(ignore, "Condition");
                 var canOmit = condition == "2" || condition == "3" &&
-                    (!IsEnum(member.Type) && member.Type.Kind is "nullable" or "named" or "array" or "collection" ||
-                        member.Type.Name == "System_String");
+                    (!IsEnum(memberType) && memberType.Kind is "nullable" or "named" or "array" or "collection" ||
+                        memberType.Name == "System_String");
                 if (output
                         ? !canOmit
                         : member.Required || member.JsonRequired ||

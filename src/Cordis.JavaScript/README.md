@@ -9,7 +9,7 @@ Evaluate trusted `!!js` configuration expressions through Jint with access to th
 Use the .NET 10 SDK and matching Cordis.NET package versions.
 
 ```console
-dotnet add package Cordis.NET.JavaScript --version 0.2.1-alpha.2
+dotnet add package Cordis.NET.JavaScript --version 0.2.1-alpha.3
 ```
 
 ## Use this package

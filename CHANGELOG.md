@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.1-alpha.3]
+
+- Correct saved-model Web projection of closed generic DTOs. Reuse common argument substitution, distinguish constructed Schema definitions including nested nullability, and preserve conditional output omission. External declarations continue to use their owning reference models.
+
 ## [0.2.1-alpha.2]
 
 - Skip unchanged Typert generation while preserving normal and design-time source registration. Changed inputs, missing or changed outputs, and invalid generation receipts trigger regeneration; Clean removes owned build state.

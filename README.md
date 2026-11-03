@@ -8,16 +8,16 @@ The project is a faithful, idiomatic .NET port of the DSH-maintained Cordis runt
 
 ## Get started
 
-Install the preview version selected by this source revision, `0.2.1-alpha.2`, in a .NET 10 application:
+Install the preview version selected by this source revision, `0.2.1-alpha.3`, in a .NET 10 application:
 
 ```console
 dotnet new console -n MyApp -f net10.0
-dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.2
+dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.3
 ```
 
 Follow [your first plugin](docs/getting-started.md) for the complete program, expected output and shutdown. No repository checkout is required.
 
-The [release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2) provides browser runtime and author-tool archives, checksums and validation evidence. Use matching versions of the Cordis.NET packages and generated tools. This version includes incremental generation and Host input defaults from referenced assemblies. The release page determines publication status; see [release and source status](docs/development.md#current-support-and-release-status).
+The [release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3) provides browser runtime and author-tool archives, checksums and validation evidence. Use matching versions of the Cordis.NET packages and generated tools. This version supports closed generic DTOs in generated Web contracts, alongside incremental generation and Host input defaults from referenced assemblies. The release page determines publication status; see [release and source status](docs/development.md#current-support-and-release-status).
 
 ## Choose what to add
 

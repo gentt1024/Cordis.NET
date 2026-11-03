@@ -8,16 +8,16 @@ Cordis.NET 用插件组织 C# 应用：插件提供服务、声明依赖，并�
 
 ## 开始使用
 
-在 .NET 10 应用中安装本源码选定的预览版 `0.2.1-alpha.2`：
+在 .NET 10 应用中安装本源码选定的预览版 `0.2.1-alpha.3`：
 
 ```console
 dotnet new console -n MyApp -f net10.0
-dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.2
+dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.3
 ```
 
 接着阅读[第一个插件](docs/getting-started.zh.md)，完成程序、观察输出并正确退出。无需克隆仓库。
 
-[发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2)提供浏览器运行时、作者工具归档、校验和及验证证据。Cordis.NET 包与生成工具应使用匹配版本。本版本包含增量生成，以及 Host 引用另一程序集 DTO 时的输入默认值修正。是否已公开以发行页为准，详见[发行与源码状态](docs/development.zh.md#当前支持与发行状态)。
+[发行页](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3)提供浏览器运行时、作者工具归档、校验和及验证证据。Cordis.NET 包与生成工具应使用匹配版本。本版本支持生成式 Web 合同中的闭合泛型 DTO，并包含增量生成及跨程序集 Host 输入默认值修正。是否已公开以发行页为准，详见[发行与源码状态](docs/development.zh.md#当前支持与发行状态)。
 
 ## 按需添加能力
 
