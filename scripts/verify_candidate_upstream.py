@@ -93,6 +93,9 @@ def environment(dsh, origin, output, suite):
                CORDIS_CANDIDATE_SUITE=suite, CORDIS_CANDIDATE_REFERENCE=str(ROOT / "reference"), CORDIS_CANDIDATE_CACHE=str(output / "cache"))
     tools_bin = ROOT / "reference/candidate-tools/node_modules/.bin"
     env["PATH"] = str(tools_bin) + os.pathsep + env.get("PATH", "")
+    if platform.system() == "Windows":
+        env["GIT_TRACE_PERFORMANCE"] = str((output / (suite + "-git-performance.log")).resolve())
+        env["GIT_TRACE_REDACT"] = "1"
     for key in ("CORDIS_UPSTREAM_SELECTION", "CORDIS_UPSTREAM_REPORT"):
         env.pop(key, None)
     temp = output / "temp"

@@ -10,6 +10,13 @@ public partial class WebContractRemote
 {
     private int calls;
 
+    [RemoteMethod("closed")]
+    public Task<ClosedEnvelopes> ClosedAsync(ClosedEnvelopes value)
+    {
+        calls++;
+        return Task.FromResult(value);
+    }
+
     [RemoteMethod("nullableEnums")]
     public Task<NumericStatus?[]> NullableEnumsAsync(
         NumericStatus? negative = NumericStatus.Unavailable,
@@ -73,6 +80,12 @@ public partial class WebContractRemote
     }
 }
 
+public sealed record ClosedEnvelopes(
+    Envelope<string> Text,
+    Envelope<int> Number,
+    Envelope<string[]> Labels,
+    Envelope<string?[]> NullableLabels);
+
 [JsonSourceGenerationOptions(
     RespectNullableAnnotations = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
@@ -93,4 +106,5 @@ public partial class WebContractRemote
 [JsonSerializable(typeof(SelectedConstructor))]
 [JsonSerializable(typeof(DirectionalData))]
 [JsonSerializable(typeof(System.Text.Json.JsonElement))]
+[JsonSerializable(typeof(ClosedEnvelopes))]
 public partial class WebContractJson : JsonSerializerContext;

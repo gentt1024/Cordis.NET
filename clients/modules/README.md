@@ -9,10 +9,10 @@ Load browser plugin factories, reconcile entries and manage their Cordis effects
 Install the published archive for package imports and declarations:
 
 ```console
-npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.2/cordis-net-client-modules-0.2.1-alpha.2.tgz
+npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.3/cordis-net-client-modules-0.2.1-alpha.3.tgz
 ```
 
-For direct browser loading, serve the complete built runtime directory at a same-origin path such as `/client-runtime`. Keep its modules, declarations and `LICENSES.txt` together. [ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md) shows native Host artifact mapping. Runtime and author-tool archives have separate roles and are both on the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2).
+For direct browser loading, serve the complete built runtime directory at a same-origin path such as `/client-runtime`. Keep its modules, declarations and `LICENSES.txt` together. [ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md) shows native Host artifact mapping. Runtime and author-tool archives have separate roles and are both on the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3).
 
 ## Build a plugin for the Loader
 

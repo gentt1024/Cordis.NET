@@ -4,7 +4,9 @@
 
 ## 当前发行与源码
 
-当前源码面向 [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2)，包含[增量生成](https://github.com/gentt1024/Cordis.NET/pull/28)、[跨程序集 Host 默认值](https://github.com/gentt1024/Cordis.NET/pull/29)及配对文档整理。对应发行页承载最终 tag、包/符号摘要、浏览器归档和正式运行。此前 PR 与本地候选的结果不能替代该发行回执。
+当前源码面向 [0.2.1-alpha.3](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3)，修正保存模型中的闭合泛型 Web 合同，并保留此前生成与 Host 默认值修正。对应发行页承载最终 tag、包/符号摘要、浏览器归档和正式运行。此前 PR 与本地候选的结果不能替代该发行回执。
+
+此前的 [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2) 在 tag 提交 `4da57d783d77f31ee94839fce099183a06ad3367` 的[正式运行 41412379531](https://github.com/gentt1024/Cordis.NET/actions/runs/41412379531) 上通过全部 18 个作业。其公共包和归档核验仍归属 alpha.2，不归属这次修正。
 
 此前的 [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) 于 2026-10-27 发行。[正式运行](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986)在 tag 提交 `a2728c7e929a01a586fc714d9b397eaf9549e153` 上的 18 个作业全部通过，该证据仍归属 alpha.1。
 

@@ -2,6 +2,12 @@
 
 [English](compatibility.md) | 中文
 
+## 闭合泛型 Web 投影修正，2026-11-03
+
+固定 DSH 生成器通过已实例化的 TypeScript 类型检查 Remote 数据，从该类型取得各属性；真正未绑定的参数会被拒绝。保存的 C# 模型则保留泛型声明及其具体使用点。Web 投影现在先用已有共同 `TypeSubstitution` 绑定代入成员类型，并按包含实参空性的完整闭合使用点缓存 Schema 定义。这修正了闭合 `Envelope<string>` 被拒绝的问题，也避免不同闭合类型复用第一次闭合的成员 Schema。输出条件省略同样使用代入后的成员类型。
+
+这是原生保存模型后端的修正，不改变固定上游、模型格式、运行协议或作者声明。外部声明仍需显式引用所属模型。本次不加入受约束／开放泛型 endpoint 或此前拒绝的转换器；尤其没有补入字符串枚举转换的 Web 语义。
+
 ## 0.2.1-alpha.1 的基线晋升
 
 正式锁现选择 DSH `687f282e8625c6b8d11ff58211a90524be2e4317`（`0.2.1-rc.2`），并指向 `reference/candidate-adaptation.json` 记录的精确 Windows manifest 适配。验证重建派生源码 `fba488001a6c2d37787d800beeab54a770c826a1`，不会从上游获取这个本地提交。补丁与提交对象保持已审 S10 候选的字节。下方带日期的候选条目记录各原检查点的决定，其中“正式锁未变”描述的是当时状态。本次晋升改变源码选择及验证接线，不改变已成立的 S1–S9 native 合同或支持范围。历史 inventory、失败及既有包身份均保留。
@@ -25,6 +31,8 @@ S10 还修复了包进程记录中的既有 Linux 竞态：短命根进程可能
 固定候选已确认存在 Windows 原始测试失败，位于 `package-manifest.spec.ts` 删除 manifest 后继续查找外层作用域的用例。作用域读取器返回普通盘符路径，原断言要求带命名空间前缀的路径。独立 Node 24.12.0 进程在有、无候选解析钩子两种情况下均复现失败；该 Node 版本处于上游声明的支持范围。见[诊断运行](https://github.com/gentt1024/Cordis.NET/actions/runs/39919928667)。另一次 [Windows 补丁对照](https://github.com/gentt1024/Cordis.NET/actions/runs/39920616943) 执行未修改的 39 项测试文件，原始实现有一项失败，隔离副本仅修正 fallback 路径后 39 项全过、零跳过。未适配候选直到 [771d69a 批次](https://github.com/gentt1024/Cordis.NET/actions/runs/39935870050)仍保留此失败。上文使用独立身份的适配现在应用已归因的修复，不改写这些失败收据，也不证明未修改的上游通过。
 
 [3b6364a 验证批次](https://github.com/gentt1024/Cordis.NET/actions/runs/39922002150)还在私有仓库 SSH 回退用例中记录了一次五秒 Git 预检超时，发生在 pnpm 启动之前。[完整 composition 对照](https://github.com/gentt1024/Cordis.NET/actions/runs/39925752082)使用相同的原始用例、文件执行顺序、Git 版本和 runner 镜像，未复现该超时，根因仍未解决。失败批次继续保留，没有放宽超时、断言或跳过策略。
+
+同一用例在 [alpha.3 准备运行 41571256408](https://github.com/gentt1024/Cordis.NET/actions/runs/41571256408)中再次超时。Windows 源码验证现将 Git 原生命令计时日志与既有套件证据一起保留，区分已结束 Git 命令的耗时与整个测试的耗时。原始源码、五秒预检期限、断言及跳过规则均不变。后续通过不能解释或替代这次失败。
 
 包展示元数据保留明确的原生边界。公开 `BundleConfigurationInfo` 提供包名、版本和描述，不提供 DSH 插件的本地化元数据或图标资源。候选的 package subpath 图标／locale 规则保留在源码清单和原始测试中，但不宣称原生展示支持。这类展示能力大部分在旧基线已存在；这里记录既有覆盖限制，不将其算成本次新增实现，也不据此省略包解析、元数据缓存失效或描述回归。新增原生本地化／图标输出需要单独的公开合同及消费者迁移。
 

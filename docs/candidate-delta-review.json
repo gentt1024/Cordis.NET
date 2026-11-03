@@ -315,7 +315,7 @@
     "tests/Cordis.Platform.Tests/TypertGeneratedInfoTests.cs": "13772b688d093ccb3674c9f3557e05909bd683a61392caa815a567735858cded",
     "tests/fixtures/ClientReleaseBrowser/index.html": "640ef749b3771eb4fb2401d1532d63d41f86ce713ecc7919d666f289fb0e8971",
     "tests/fixtures/DeclarationModel/SharedConsumer.cs": "d1e227117bc4512d5643fdadfe8a0198d0e2e937bb45af9f03fac71e809bc60f",
-    "tools/Cordis.Typert.Compiler/WebProjection.cs": "387e38a1cacea9ae0cff8ccc136ce86afd252f78084a91838a4abee7900f82cc",
+    "tools/Cordis.Typert.Compiler/WebProjection.cs": "ee4c12abcb5aaae4004455b5662729dd1c4cfba21e9b0997113e5885936c15ed",
     "tools/Cordis.Typert.Generator/Model/DotnetProjectionEmitter.Info.cs": "a36e992fbb3a257488651314b09bca69880dba4b47a8e7da7115e0d86126fa1d"
   },
   "sourceSetup": {

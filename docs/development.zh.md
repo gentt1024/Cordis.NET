@@ -4,9 +4,9 @@
 
 ## 当前支持与发行状态
 
-本源码面向 [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2)。对应发行页列出公开状态、最终源码及制品证据。固定 DSH 0.2.1-rc.2 基线与已记录的 Windows 适配均不变。
+本源码面向 [0.2.1-alpha.3](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3)。对应发行页列出公开状态、最终源码及制品证据。固定 DSH 0.2.1-rc.2 基线与已记录的 Windows 适配均不变。
 
-Alpha.2 包含[PR #28](https://github.com/gentt1024/Cordis.NET/pull/28)的未变化 Typert 生成跳过与失效输出恢复，以及[PR #29](https://github.com/gentt1024/Cordis.NET/pull/29)将引用 DTO 所属模型接入生成式 Service 输入默认值的修正。此前的 alpha.1 包不含这些修正。包与工具应使用同批版本；PR 或本地候选通过不等于正式公开。[发行准备](publication-readiness.zh.md)说明必需门禁。
+Alpha.3 通过已有共同参数绑定修正保存模型 Web 合同中的闭合泛型 DTO。正常 PackageReference/MSBuild 生成保留显式引用模型及嵌套实参空性，见 [Remote 作者指南](authoring.zh.md)。本次没有加入 Web 字符串枚举转换。Alpha.2 已包含[PR #28](https://github.com/gentt1024/Cordis.NET/pull/28)和[PR #29](https://github.com/gentt1024/Cordis.NET/pull/29)的增量生成与跨程序集 Host 默认值修正。包与工具应使用同批版本；PR 或本地候选通过不等于正式公开。[发行准备](publication-readiness.zh.md)说明必需门禁。
 
 | 范围 | 当前用法与边界 |
 |---|---|

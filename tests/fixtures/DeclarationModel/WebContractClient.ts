@@ -15,6 +15,15 @@ type Direction = Parameters<RemoteClient['webContract/direction']>[0]
 const valid: Direction = { value: { Count: 1, GlobalCount: 1, Value: 'input', OutputNullable: 'input', InputNullable: null } }
 // @ts-expect-error Setter DisallowNull is an input restriction.
 const invalidInput: Direction = { value: { Count: 1, GlobalCount: 1, Value: null, OutputNullable: 'input' } }
+type Closed = Parameters<RemoteClient['webContract/closed']>[0]
+const closed: Closed = { value: {
+  Text: { Value: 'closed' }, Number: { Value: 7 },
+  Labels: { Value: ['non-null'] }, NullableLabels: { Value: [null, 'nullable'] },
+} }
+// @ts-expect-error The numeric closure must not reuse the string closure.
+const invalidClosed: Closed = { value: { ...closed.value, Number: { Value: 'wrong' } } }
+// @ts-expect-error Array element nullability belongs to the closed type argument.
+const invalidLabels: Closed = { value: { ...closed.value, Labels: { Value: [null] } } }
 function checkOutput(result: Awaited<ReturnType<RemoteClient['webContract/direction']>>) {
   if (!result.ok) throw result.error
   if (info.methods['webContract/direction'].result.create().parse(result.value) !== result.value)
@@ -38,7 +47,7 @@ function checkOutput(result: Awaited<ReturnType<RemoteClient['webContract/direct
       result.value.OutputNullable !== null || result.value.Always !== 0 || result.value.InputNullable !== 'initial')
     throw new Error('Output does not match directional serialization')
 }
-void [nullRevision, missingName, missingSelected, invalidInput]
+void [nullRevision, missingName, missingSelected, invalidInput, invalidClosed, invalidLabels]
 
 export async function run(origin: string) {
   const connection = new TypertConnection(origin + '/remote')
@@ -84,12 +93,23 @@ export async function run(origin: string) {
       if (!result.ok || JSON.stringify(result.value) !== JSON.stringify(expected))
         throw new Error('Nullable enum default, omission or explicit null changed')
     }
+    const closures = await client['webContract/closed'](closed)
+    if (!closures.ok) throw closures.error
+    const number: number | undefined = closures.value.Number?.Value
+    if (number !== 7 || closures.value.Text?.Value !== 'closed' ||
+        closures.value.Labels?.Value?.[0] !== 'non-null' || closures.value.NullableLabels?.Value?.[0] !== null ||
+        closures.value.NullableLabels?.Value?.[1] !== 'nullable')
+      throw new Error('Closed generic values or argument nullability changed')
+    if (resultCodecs['webContract/closed'].parse(closures.value) !== closures.value)
+      throw new Error('Closed generic result codec changed the wire value')
     const before = await client['webContract/calls']({})
     for (const [endpoint, input] of [
       ['webContract/enums', { value: { Status: null } }],
       ['webContract/enums', { value: { Status: 'Succeeded' } }],
       ['webContract/enums', { value: { Status: 1.5 } }],
       ['webContract/enums', { value: { Flags: 256 } }],
+      ['webContract/closed', { value: { ...closed.value, Number: { Value: 'wrong' } } }],
+      ['webContract/closed', { value: { ...closed.value, Labels: { Value: [null] } } }],
       ['webContract/revision', { expectedRevision: null }],
       ['webContract/required', { value: {} }],
       ['webContract/selected', { value: {} }],

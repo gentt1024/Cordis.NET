@@ -443,6 +443,8 @@ target 在 `CoreCompile` 前调用 `emit-dotnet-data`，复用 Remote caller 支
 
 从 `remote.mjs` 导入 `createRemote` 和 `TypertConnection`，为 Host 的 Remote 地址建立 Connection，再调用生成的 endpoint 方法。方法沿用现有 `RemoteResult`、流、取消及借用 Connection 的合同。发射器与运行时 descriptor 生成共用；保存模型路线直接从共同声明和显式引用源模型取得类型，不加载或执行作者代码，不新增线协议或模型格式。
 
+保存模型的 Web 路线会代入受支持的无约束数据声明的闭合实参，例如 `Envelope<string>` 和 `Envelope<int>`。声明来自另一程序集时，通过 `CordisTypertWebReferenceModel` 提供所属源模型。各闭合类型保留自己的成员类型和嵌套实参空性，不会共用不同闭合类型的 Schema 定义。开放参数及此前不支持的转换器、继承语义仍被拒绝，既有后端深度限制不变。
+
 Schema 文件是 JSON Schema 2020-12 定义目录。完整参数对象位于 `#/$defs/<转义后的 namespace/method/arguments>`，也可以选择 `parameters/<wire>`、`result` 和可选 `uplink` 定义。定义 key 中 `/` 转义为 `~1`，`~` 转义为 `~0`。递归引用仍在同一文档内。制品注释记录输入身份；输出不变时保留时间戳。声明初始化值不被宣称为 Host 默认值：该后端不执行构造器或 accessor。
 
 生成事件时，将 `CordisTypertService` 设为声明的事件名（如 `alpha/changed`）或 delegate 的完整 metadata name。主模型／引用模型属性及五个包资产不变。模块导出 `createEvents`，借用共享 Connection：
