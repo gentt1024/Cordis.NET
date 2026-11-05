@@ -2,6 +2,16 @@
 
 English | [中文](compatibility.zh.md)
 
+## SDK security servicing, 2026-11-05
+
+The build SDK is pinned to 10.0.114, which ships .NET 10.0.14. This replaces SDK 10.0.111 and its 10.0.11 AOT toolchain, affected by [GHSA-p3jp-9v83-76w9](https://github.com/advisories/GHSA-p3jp-9v83-76w9). NuGet auditing and warnings-as-errors remain enabled. The servicing update keeps the SDK feature band, fixed DSH baseline, explicit PackageReference versions and generated-contract format unchanged; compiler loading still requires matching Roslyn assembly identities.
+
+The public API snapshot records the SDK's updated System.Text.Json source-generator metadata. Public types, members and signatures are unchanged.
+
+## Visual Studio MSBuild Roslyn directory resolution, 2026-11-05
+
+Issue [#33](https://github.com/gentt1024/Cordis.NET/issues/33) identifies a package build-target assumption: Visual Studio MSBuild can place `MSBuildSDKsPath` outside the .NET SDK, so its sibling `Roslyn/bincore` is not the compiler directory. Generation now resolves the SDK `RoslynCoreAssembliesPath` at target execution and shares that directory between commands and incremental tool inputs. The SDK-layout fallback applies only when that property is absent; missing assemblies fail before generation. The `dotnet` compiler retains its exact assembly identity checks. This changes native build-host discovery, not the fixed DSH baseline, model format, generated contracts or supported projection shapes. It does not establish IDE UI or full macOS runtime/AOT acceptance.
+
 ## Closed generic Web projection correction, 2026-11-03
 
 The fixed DSH generator checks Remote data through instantiated TypeScript types, obtaining each property from that type; a genuinely unresolved parameter is rejected. The saved C# model instead retains a generic declaration plus its concrete use. Web projection now applies the existing common `TypeSubstitution` bindings before reading members and keys Schema definitions by the complete constructed use, including argument nullability. This corrects the previous refusal of a closed `Envelope<string>` and prevents distinct closures from reusing the first closure's member Schema. Conditional output omission also uses the substituted member type.

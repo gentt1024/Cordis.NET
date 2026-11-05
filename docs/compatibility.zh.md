@@ -2,6 +2,16 @@
 
 [English](compatibility.md) | 中文
 
+## SDK 安全维护，2026-11-05
+
+构建 SDK 固定为 10.0.114，随附 .NET 10.0.14，替换 SDK 10.0.111 及受 [GHSA-p3jp-9v83-76w9](https://github.com/advisories/GHSA-p3jp-9v83-76w9) 影响的 10.0.11 AOT 工具链。NuGet 审计与警告视为错误继续启用。此次维护保持 SDK 功能带、固定 DSH 基线、显式 PackageReference 版本和生成合同格式不变；编译器加载仍要求 Roslyn 程序集身份匹配。
+
+公共 API 快照同步 SDK 更新后的 System.Text.Json 源生成器元数据，公共类型、成员和签名未变。
+
+## Visual Studio MSBuild Roslyn 目录解析，2026-11-05
+
+Issue [#33](https://github.com/gentt1024/Cordis.NET/issues/33) 指出包构建 target 的一项假设：Visual Studio MSBuild 的 `MSBuildSDKsPath` 可以位于 .NET SDK 之外，因此其相邻 `Roslyn/bincore` 不是编译器目录。生成现在在 target 执行时解析 SDK 的 `RoslynCoreAssembliesPath`，命令与增量工具输入使用同一目录。仅当该属性为空时才回退到 SDK 目录布局；程序集缺失在生成前明确失败。`dotnet` 编译器保留精确程序集身份检查。这是原生构建宿主发现修正，不改变固定 DSH 基线、模型格式、生成合同或已支持投影形状，也不代表 IDE UI 或完整 macOS runtime/AOT 验收。
+
 ## 闭合泛型 Web 投影修正，2026-11-03
 
 固定 DSH 生成器通过已实例化的 TypeScript 类型检查 Remote 数据，从该类型取得各属性；真正未绑定的参数会被拒绝。保存的 C# 模型则保留泛型声明及其具体使用点。Web 投影现在先用已有共同 `TypeSubstitution` 绑定代入成员类型，并按包含实参空性的完整闭合使用点缓存 Schema 定义。这修正了闭合 `Envelope<string>` 被拒绝的问题，也避免不同闭合类型复用第一次闭合的成员 Schema。输出条件省略同样使用代入后的成员类型。
