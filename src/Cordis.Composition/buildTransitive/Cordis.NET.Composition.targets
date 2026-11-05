@@ -34,11 +34,17 @@
   <!-- Hash contents and the evaluated input list; timestamps alone miss deletions and restored files.
        Only Exec is conditional: Compile, AdditionalFiles and FileWrites must remain registered. -->
   <Target Name="_CordisTypertIncrementalInputs">
+    <PropertyGroup>
+      <_CordisTypertRoslynDirectory>$(RoslynCoreAssembliesPath)</_CordisTypertRoslynDirectory>
+      <_CordisTypertRoslynDirectory Condition="'$(_CordisTypertRoslynDirectory)' == ''">$(MSBuildSDKsPath)/../Roslyn/bincore</_CordisTypertRoslynDirectory>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_CordisTypertRoslynDirectory)/Microsoft.CodeAnalysis.dll') or !Exists('$(_CordisTypertRoslynDirectory)/Microsoft.CodeAnalysis.CSharp.dll')"
+           Text="CORDISTYPERT: SDK Roslyn assemblies are missing from '$(_CordisTypertRoslynDirectory)'. Check the selected .NET SDK and RoslynCoreAssembliesPath." />
     <ItemGroup>
       <_CordisTypertToolInputs Include="$(CordisTypertDotnetHost)" Condition="Exists('$(CordisTypertDotnetHost)')" />
       <_CordisTypertToolInputs Include="$(CordisTypertCompiler);$([System.IO.Path]::ChangeExtension('$(CordisTypertCompiler)', '.deps.json'));$([System.IO.Path]::ChangeExtension('$(CordisTypertCompiler)', '.runtimeconfig.json'))" />
       <_CordisTypertToolInputs Include="$([System.IO.Path]::GetDirectoryName('$(CordisTypertCompiler)'))/*.dll" />
-      <_CordisTypertToolInputs Include="$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.dll;$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll;$(_CordisTypertTargets)" />
+      <_CordisTypertToolInputs Include="$(_CordisTypertRoslynDirectory)/Microsoft.CodeAnalysis.dll;$(_CordisTypertRoslynDirectory)/Microsoft.CodeAnalysis.CSharp.dll;$(_CordisTypertTargets)" />
     </ItemGroup>
   </Target>
   <Target Name="CordisTypertEmitWeb" BeforeTargets="CoreCompile" DependsOnTargets="_CordisTypertIncrementalInputs"
@@ -47,7 +53,7 @@
     <WriteLinesToFile File="$(CordisTypertOutputDirectory)web-reference-models.rsp" Lines="@(CordisTypertWebReferenceModel->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <ItemGroup><FileWrites Include="$(_CordisTypertWebFiles);$(CordisTypertOutputDirectory)web-reference-models.rsp" /></ItemGroup>
     <PropertyGroup>
-      <_CordisTypertWebCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-web --model &quot;$(CordisTypertWebModel)&quot; --service &quot;$(CordisTypertService)&quot; --reference-models &quot;$(CordisTypertOutputDirectory)web-reference-models.rsp&quot; --output &quot;$(CordisTypertWebDirectory)&quot;</_CordisTypertWebCommand>
+      <_CordisTypertWebCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(_CordisTypertRoslynDirectory)&quot; emit-web --model &quot;$(CordisTypertWebModel)&quot; --service &quot;$(CordisTypertService)&quot; --reference-models &quot;$(CordisTypertOutputDirectory)web-reference-models.rsp&quot; --output &quot;$(CordisTypertWebDirectory)&quot;</_CordisTypertWebCommand>
       <_CordisTypertWebPrevious></_CordisTypertWebPrevious>
       <_CordisTypertWebPrevious Condition="Exists('$(CordisTypertOutputDirectory)web.incremental')">$([System.IO.File]::ReadAllText('$(CordisTypertOutputDirectory)web.incremental').Trim())</_CordisTypertWebPrevious>
     </PropertyGroup>
@@ -119,7 +125,7 @@
     <WriteLinesToFile File="$(CordisTypertOutputDirectory)model-sources.rsp" Lines="@(_CordisTypertSources->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <WriteLinesToFile File="$(CordisTypertOutputDirectory)model-references.rsp" Lines="@(ReferencePath->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <PropertyGroup>
-      <_CordisTypertModelCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; extract-model --project-directory &quot;$(MSBuildProjectDirectory)&quot; --sources &quot;$(CordisTypertOutputDirectory)model-sources.rsp&quot; --references &quot;$(CordisTypertOutputDirectory)model-references.rsp&quot; --assembly-name &quot;$(AssemblyName)&quot; --language-version &quot;$(_CordisTypertLanguageVersion)&quot; --nullable &quot;$(_CordisTypertNullable)&quot; --defines &quot;$(DefineConstants)&quot; --allow-unsafe &quot;$(AllowUnsafeBlocks)&quot; --check-overflow &quot;$(CheckForOverflowUnderflow)&quot; --output-kind &quot;$(OutputType)&quot; --platform &quot;$(PlatformTarget)&quot; --optimize &quot;$(Optimize)&quot; --roots &quot;$(CordisTypertOutputDirectory)model-roots.rsp&quot; --service &quot;$(_CordisTypertAuthoredService)&quot; --output &quot;$(CordisTypertModelPath)&quot;</_CordisTypertModelCommand>
+      <_CordisTypertModelCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(_CordisTypertRoslynDirectory)&quot; extract-model --project-directory &quot;$(MSBuildProjectDirectory)&quot; --sources &quot;$(CordisTypertOutputDirectory)model-sources.rsp&quot; --references &quot;$(CordisTypertOutputDirectory)model-references.rsp&quot; --assembly-name &quot;$(AssemblyName)&quot; --language-version &quot;$(_CordisTypertLanguageVersion)&quot; --nullable &quot;$(_CordisTypertNullable)&quot; --defines &quot;$(DefineConstants)&quot; --allow-unsafe &quot;$(AllowUnsafeBlocks)&quot; --check-overflow &quot;$(CheckForOverflowUnderflow)&quot; --output-kind &quot;$(OutputType)&quot; --platform &quot;$(PlatformTarget)&quot; --optimize &quot;$(Optimize)&quot; --roots &quot;$(CordisTypertOutputDirectory)model-roots.rsp&quot; --service &quot;$(_CordisTypertAuthoredService)&quot; --output &quot;$(CordisTypertModelPath)&quot;</_CordisTypertModelCommand>
       <_CordisTypertModelPrevious></_CordisTypertModelPrevious>
       <_CordisTypertModelPrevious Condition="Exists('$(CordisTypertModelPath).incremental')">$([System.IO.File]::ReadAllText('$(CordisTypertModelPath).incremental').Trim())</_CordisTypertModelPrevious>
     </PropertyGroup>
@@ -173,7 +179,7 @@
       <FileWrites Include="$(_CordisTypertDataFiles)" />
     </ItemGroup>
     <PropertyGroup>
-      <_CordisTypertDataCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet-data --model &quot;$(CordisTypertDataModel)&quot; --roots &quot;$(_CordisTypertProjectionDirectory)data-roots.rsp&quot; --reference-models &quot;$(_CordisTypertProjectionDirectory)data-reference-models.rsp&quot; --namespace &quot;$(CordisTypertDataNamespace)&quot; --context &quot;$(CordisTypertDataJsonContext)&quot; --output &quot;$(CordisTypertDataSource)&quot;</_CordisTypertDataCommand>
+      <_CordisTypertDataCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(_CordisTypertRoslynDirectory)&quot; emit-dotnet-data --model &quot;$(CordisTypertDataModel)&quot; --roots &quot;$(_CordisTypertProjectionDirectory)data-roots.rsp&quot; --reference-models &quot;$(_CordisTypertProjectionDirectory)data-reference-models.rsp&quot; --namespace &quot;$(CordisTypertDataNamespace)&quot; --context &quot;$(CordisTypertDataJsonContext)&quot; --output &quot;$(CordisTypertDataSource)&quot;</_CordisTypertDataCommand>
       <_CordisTypertDataPrevious></_CordisTypertDataPrevious>
       <_CordisTypertDataPrevious Condition="Exists('$(_CordisTypertProjectionDirectory)data.incremental')">$([System.IO.File]::ReadAllText('$(_CordisTypertProjectionDirectory)data.incremental').Trim())</_CordisTypertDataPrevious>
     </PropertyGroup>
@@ -230,7 +236,7 @@
     </ItemGroup>
     <WriteLinesToFile File="$(_CordisTypertProjectionDirectory)client-reference-models.rsp" Lines="@(CordisTypertClientReferenceModel->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
     <PropertyGroup>
-      <_CordisTypertClientCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(MSBuildSDKsPath)/../Roslyn/bincore&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --reference-models &quot;$(_CordisTypertProjectionDirectory)client-reference-models.rsp&quot; --namespace &quot;$(CordisTypertClientNamespace)&quot; --service &quot;$(CordisTypertService)&quot; --client &quot;$(CordisTypertClientName)&quot; --output &quot;$(CordisTypertClientSource)&quot;</_CordisTypertClientCommand>
+      <_CordisTypertClientCommand>&quot;$(CordisTypertDotnetHost)&quot; &quot;$(CordisTypertCompiler)&quot; --roslyn-directory &quot;$(_CordisTypertRoslynDirectory)&quot; emit-dotnet --model &quot;$(CordisTypertClientModel)&quot; --reference-models &quot;$(_CordisTypertProjectionDirectory)client-reference-models.rsp&quot; --namespace &quot;$(CordisTypertClientNamespace)&quot; --service &quot;$(CordisTypertService)&quot; --client &quot;$(CordisTypertClientName)&quot; --output &quot;$(CordisTypertClientSource)&quot;</_CordisTypertClientCommand>
       <_CordisTypertClientPrevious></_CordisTypertClientPrevious>
       <_CordisTypertClientPrevious Condition="Exists('$(_CordisTypertProjectionDirectory)client.incremental')">$([System.IO.File]::ReadAllText('$(_CordisTypertProjectionDirectory)client.incremental').Trim())</_CordisTypertClientPrevious>
     </PropertyGroup>
