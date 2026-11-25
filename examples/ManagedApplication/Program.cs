@@ -166,6 +166,7 @@ foreach (var path in Directory.EnumerateFiles(runtime, "*.mjs", SearchOption.Top
         continue;
     app.MapGet("/client-runtime/" + name, () => Results.File(path, "text/javascript"));
 }
+
 app.MapGet("/client-runtime/LICENSES.txt", () => Results.File(Path.Combine(runtime, "LICENSES.txt"), "text/plain"));
 
 // Refreshed runs inside the session queue. Capture is queued afterwards so catalog publication

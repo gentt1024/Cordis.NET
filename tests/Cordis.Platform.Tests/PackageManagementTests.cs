@@ -134,7 +134,9 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         Assert.False(File.Exists(Path.Combine(embedded, "IndependentPlugin.pdb")));
         using (var assembly = File.OpenRead(Path.Combine(embedded, "IndependentPlugin.dll")))
         using (var pe = new PEReader(assembly))
-            Assert.Contains(pe.ReadDebugDirectory(), entry => entry.Type == DebugDirectoryEntryType.EmbeddedPortablePdb);
+            Assert.Contains(
+                pe.ReadDebugDirectory(),
+                entry => entry.Type == DebugDirectoryEntryType.EmbeddedPortablePdb);
 
 
         await using var resolver = new ClrModuleResolver(sharedContracts: [typeof(ConfigObject<>).Assembly]);

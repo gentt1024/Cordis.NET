@@ -17,4 +17,7 @@ public interface IConfigurationSchemaProjectionResolver
 /// <param name="Schema">A self-contained JSON Schema draft 2020-12 export in the json-schema-2020-12 format,
 /// or null if the owned module declares no Config. Report projection limitations through the export's Complete and Diagnostics.</param>
 /// <param name="AcceptsMissing">Whether the input may be omitted. Null signals an unknown omission rule for a supplied schema.</param>
-public sealed record ResolvedConfigurationSchema(string ModuleIdentity, ConfigurationSchemaExport? Schema, bool? AcceptsMissing);
+public sealed record ResolvedConfigurationSchema(
+    string ModuleIdentity,
+    ConfigurationSchemaExport? Schema,
+    bool? AcceptsMissing);

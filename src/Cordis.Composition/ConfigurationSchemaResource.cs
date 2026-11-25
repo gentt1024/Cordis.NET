@@ -26,6 +26,7 @@ internal static class ConfigurationSchemaResource
         var key = Convert.ToHexStringLower(digest);
         var idPrefix = "urn:cordis:config-schema:" + key + ":";
         var anonymousBase = new Uri("https://cordis.invalid/schema/" + key + "/");
+
         void Visit(JsonNode? node, Resource? parent)
         {
             if (node is null)
@@ -46,7 +47,8 @@ internal static class ConfigurationSchemaResource
                 var baseUri = parent?.Original ?? anonymousBase;
                 var original = schema.ContainsKey("$id") ? new Uri(baseUri, Text(schema, "$id")) : baseUri;
                 if (original.Fragment.Length > 1)
-                    throw new NotSupportedException("A draft 2020-12 schema resource id cannot contain a nonempty fragment.");
+                    throw new NotSupportedException(
+                        "A draft 2020-12 schema resource id cannot contain a nonempty fragment.");
                 resource = new(original, idPrefix + resources.Count.ToString(CultureInfo.InvariantCulture), schema);
                 if (!resources.TryAdd(WithoutFragment(original), resource))
                     throw new FormatException("Two schema resources have the same id within one declaration.");
@@ -63,6 +65,7 @@ internal static class ConfigurationSchemaResource
                     if (!resource!.Anchors.Add(anchor))
                         throw new FormatException("Two schema anchors have the same name within one resource.");
                 }
+
             foreach (var keyword in new[] { "$ref", "$dynamicRef" })
                 if (schema.ContainsKey(keyword))
                     links.Add((schema, keyword, new Uri(resource!.Original, Text(schema, keyword))));
@@ -73,7 +76,8 @@ internal static class ConfigurationSchemaResource
                 switch (keyword)
                 {
                     case "$defs" or "definitions" or "properties" or "patternProperties" or "dependentSchemas":
-                        foreach (var (_, child) in value?.AsObject() ?? throw new FormatException("Expected a schema map."))
+                        foreach (var (_, child) in value?.AsObject() ??
+                                 throw new FormatException("Expected a schema map."))
                             Visit(child, resource);
                         break;
                     case "allOf" or "anyOf" or "oneOf" or "prefixItems":
@@ -106,7 +110,10 @@ internal static class ConfigurationSchemaResource
 
     private sealed record Resource(Uri Original, string Embedded, JsonObject Root)
     {
-        internal HashSet<string> Anchors { get; } = new(StringComparer.Ordinal);
+        internal HashSet<string> Anchors
+        {
+            get;
+        } = new(StringComparer.Ordinal);
     }
 
     private static string WithoutFragment(Uri uri) => uri.AbsoluteUri.Split('#', 2)[0];
@@ -132,6 +139,7 @@ internal static class ConfigurationSchemaResource
                 _ => null
             };
         }
+
         return node;
     }
 }

@@ -95,7 +95,12 @@ internal sealed class ConfigurationDocumentBuilder
         AddEntry(path, id, name, tree, status, target, definition);
     }
 
-    internal void AddProjection(string path, string? id, string name, bool target, ResolvedConfigurationSchema projection)
+    internal void AddProjection(
+        string path,
+        string? id,
+        string name,
+        bool target,
+        ResolvedConfigurationSchema projection)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projection.ModuleIdentity);
         if (projection.Schema is not { } export)
@@ -109,17 +114,20 @@ internal sealed class ConfigurationDocumentBuilder
         var standalone = JsonNode.Parse(export.Document) ?? throw new FormatException("A schema cannot be null.");
         if (_projections.TryGetValue(projection.ModuleIdentity, out var existing))
         {
-            if (existing.AcceptsMissing != projection.AcceptsMissing || !JsonNode.DeepEquals(existing.Schema, standalone))
+            if (existing.AcceptsMissing != projection.AcceptsMissing ||
+                !JsonNode.DeepEquals(existing.Schema, standalone))
                 throw new FormatException("One resolved module identity returned inconsistent declarations.");
         }
         else
         {
             var embedded = ConfigurationSchemaResource.Embed(standalone, projection.ModuleIdentity);
             var definition = "config" + (_declarationCount++).ToString(CultureInfo.InvariantCulture);
-            _definitions.Add(definition, new JsonObject
-            {
-                ["anyOf"] = new JsonArray(embedded, Ref("loaderExpression"))
-            });
+            _definitions.Add(
+                definition,
+                new JsonObject
+                {
+                    ["anyOf"] = new JsonArray(embedded, Ref("loaderExpression"))
+                });
             if (projection.AcceptsMissing == false)
                 _requiredConfigs.Add(definition);
             existing = (standalone, projection.AcceptsMissing, definition);
@@ -136,7 +144,14 @@ internal sealed class ConfigurationDocumentBuilder
         AddEntry(path, id, name, null, status, target, existing.Definition);
     }
 
-    private void AddEntry(string path, string? id, string? name, string? tree, string status, bool target, string definition)
+    private void AddEntry(
+        string path,
+        string? id,
+        string? name,
+        string? tree,
+        string status,
+        bool target,
+        string definition)
     {
         var entry = new JsonObject
         {

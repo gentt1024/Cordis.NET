@@ -363,7 +363,10 @@ public static class ConfigurationSchemaDiscovery
                         {
                             try
                             {
-                                var projection = await projections.TryResolveSchemaAsync(name, baseUri, cancellationToken);
+                                var projection = await projections.TryResolveSchemaAsync(
+                                    name,
+                                    baseUri,
+                                    cancellationToken);
                                 if (projection is not null)
                                 {
                                     document.AddProjection(position, literalId, name, target, projection);
@@ -377,6 +380,7 @@ public static class ConfigurationSchemaDiscovery
                                 continue;
                             }
                         }
+
                         var plugin = (await resolver.ResolveAsync(name, baseUri, cancellationToken)).Plugin;
                         var captured = (plugin as IConfigurationPlugin)?.CaptureConfiguration();
                         var unsupported = plugin is ITreeCarrierPlugin;

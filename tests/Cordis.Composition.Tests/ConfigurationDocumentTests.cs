@@ -22,15 +22,19 @@ public sealed class ConfigurationDocumentTests
         };
         var plugin = new Plugin<object?>
         {
-            Configuration = new(raw => raw switch
+            Configuration = new(
+                raw => raw switch
+                {
+                    Undefined when descriptor.HasDefault => ConfigResult<object?>.Success(descriptor.DefaultValue),
+                    Undefined when descriptor.IsOptional => ConfigResult<object?>.Success(raw),
+                    not Undefined when descriptor.Kind == "any" => ConfigResult<object?>.Success(raw),
+                    int or long or double => ConfigResult<object?>.Success(raw),
+                    _ => ConfigResult<object?>.Failure("Rejected input.")
+                },
+                descriptor),
+            Apply = (_, _) =>
             {
-                Undefined when descriptor.HasDefault => ConfigResult<object?>.Success(descriptor.DefaultValue),
-                Undefined when descriptor.IsOptional => ConfigResult<object?>.Success(raw),
-                not Undefined when descriptor.Kind == "any" => ConfigResult<object?>.Success(raw),
-                int or long or double => ConfigResult<object?>.Success(raw),
-                _ => ConfigResult<object?>.Failure("Rejected input.")
-            }, descriptor),
-            Apply = (_, _) => { }
+            }
         };
         var resolver = new StaticModuleResolver().Register("worker", plugin);
         const string entries = "- {id: omitted, name: worker}\n- {id: explicit, name: worker, config: null}";
@@ -54,8 +58,13 @@ public sealed class ConfigurationDocumentTests
             using var standalone = JsonDocument.Parse(ConfigurationSchemaExporter.ToJsonSchema(descriptor).Document);
             var entry = document.RootElement.GetProperty("x-cordis").GetProperty("entries")[0];
             var key = entry.GetProperty("configRef").GetString()!.Split('/')[^1];
-            var valueSchema = document.RootElement.GetProperty("$defs").GetProperty(key).GetProperty("$defs").GetProperty("node0");
-            Assert.True(JsonElement.DeepEquals(standalone.RootElement.GetProperty("$defs").GetProperty("node0"), valueSchema));
+            var valueSchema = document
+                .RootElement.GetProperty("$defs")
+                .GetProperty(key)
+                .GetProperty("$defs")
+                .GetProperty("node0");
+            Assert.True(
+                JsonElement.DeepEquals(standalone.RootElement.GetProperty("$defs").GetProperty("node0"), valueSchema));
         }
         finally
         {
@@ -77,7 +86,9 @@ public sealed class ConfigurationDocumentTests
 
             using var document = JsonDocument.Parse(result.Document);
             var entries = document.RootElement.GetProperty("x-cordis").GetProperty("entries").EnumerateArray();
-            Assert.Equal(new[] { "absent", "error", "schema" }, entries.Select(row => row.GetProperty("status").GetString()));
+            Assert.Equal(
+                new[] { "absent", "error", "schema" },
+                entries.Select(row => row.GetProperty("status").GetString()));
             Assert.False(result.Complete);
             Assert.Equal(new[] { "native" }, resolver.NativeImports);
         }
@@ -105,12 +116,20 @@ public sealed class ConfigurationDocumentTests
             var refresh = await ProfileComposition.RefreshAsync(launch);
             await File.WriteAllTextAsync(patch, "- insert: [{ id: later, name: second }]");
             var resolver = new StaticModuleResolver().Register("first", new Plugin<object?>());
-            var result = await ConfigurationSchemaDiscovery.DiscoverDocumentAsync(refresh, launch.Profile.Name, root, resolver);
+            var result = await ConfigurationSchemaDiscovery.DiscoverDocumentAsync(
+                refresh,
+                launch.Profile.Name,
+                root,
+                resolver);
             using var document = JsonDocument.Parse(result.Document);
             var metadata = document.RootElement.GetProperty("x-cordis");
-            Assert.Equal("selected", Assert.Single(metadata.GetProperty("entries").EnumerateArray()).GetProperty("id").GetString());
+            Assert.Equal(
+                "selected",
+                Assert.Single(metadata.GetProperty("entries").EnumerateArray()).GetProperty("id").GetString());
             Assert.False(result.Complete);
-            Assert.Contains(result.Diagnostics, message => message.Contains("missing-bundle", StringComparison.Ordinal));
+            Assert.Contains(
+                result.Diagnostics,
+                message => message.Contains("missing-bundle", StringComparison.Ordinal));
         }
         finally
         {
@@ -120,25 +139,35 @@ public sealed class ConfigurationDocumentTests
 
     private sealed class MixedResolver : IModuleResolver, IConfigurationSchemaProjectionResolver
     {
-        public List<string> NativeImports { get; } = [];
+        public List<string> NativeImports
+        {
+            get;
+        } = [];
 
         public ValueTask<ResolvedConfigurationSchema?> TryResolveSchemaAsync(
-            string specifier, Uri baseUri, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult<ResolvedConfigurationSchema?>(specifier switch
-            {
-                "absent" => new("foreign/absent", null, null),
-                "broken" => throw new InvalidDataException("Foreign declaration could not be read."),
-                _ => null
-            });
+            string specifier,
+            Uri baseUri,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<ResolvedConfigurationSchema?>(
+                specifier switch
+                {
+                    "absent" => new("foreign/absent", null, null),
+                    "broken" => throw new InvalidDataException("Foreign declaration could not be read."),
+                    _ => null
+                });
 
         public ValueTask<ResolvedModule> ResolveAsync(
-            string specifier, Uri baseUri, CancellationToken cancellationToken = default)
+            string specifier,
+            Uri baseUri,
+            CancellationToken cancellationToken = default)
         {
             NativeImports.Add(specifier);
-            return ValueTask.FromResult(new ResolvedModule(new Plugin<object?>
-            {
-                Configuration = new(raw => ConfigResult<object?>.Success(raw), ConfigDescriptor.Number())
-            }));
+            return ValueTask.FromResult(
+                new ResolvedModule(
+                    new Plugin<object?>
+                    {
+                        Configuration = new(raw => ConfigResult<object?>.Success(raw), ConfigDescriptor.Number())
+                    }));
         }
     }
 
