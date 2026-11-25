@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
+using System.Reflection.PortableExecutable;
 using System.Security;
 using System.Text;
 using System.Text.Json;
@@ -127,6 +128,14 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             await File.ReadAllTextAsync(Path.Combine(completed, "web", "module.mjs")));
         var release = await ClrLocalProject.QueryAsync(author, "Release");
         Assert.Throws<FileNotFoundException>(() => release.ResolveOutput());
+        Assert.True(File.Exists(Path.Combine(completed, "IndependentPlugin.pdb")));
+        await RunAsync(author, "build", "-c", "Release", "--no-restore", "-p:DebugType=embedded");
+        var embedded = release.ResolveOutput();
+        Assert.False(File.Exists(Path.Combine(embedded, "IndependentPlugin.pdb")));
+        using (var assembly = File.OpenRead(Path.Combine(embedded, "IndependentPlugin.dll")))
+        using (var pe = new PEReader(assembly))
+            Assert.Contains(pe.ReadDebugDirectory(), entry => entry.Type == DebugDirectoryEntryType.EmbeddedPortablePdb);
+
 
         await using var resolver = new ClrModuleResolver(sharedContracts: [typeof(ConfigObject<>).Assembly]);
         await using var root = new Context();

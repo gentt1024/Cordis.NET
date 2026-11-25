@@ -58,10 +58,7 @@ foreach (var line in File.ReadLines(inputs))
     files[relative] = source;
 }
 
-foreach (var filename in new[]
-         {
-             assembly, Path.ChangeExtension(assembly, ".deps.json"), Path.ChangeExtension(assembly, ".pdb")
-         })
+foreach (var filename in new[] { assembly, Path.ChangeExtension(assembly, ".deps.json") })
     if (!files.ContainsKey(filename))
         throw new InvalidDataException($"Missing required local CLR output '{filename}' for '{project}'.");
 

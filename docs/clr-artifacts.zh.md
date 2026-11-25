@@ -8,7 +8,7 @@
 
 使用开发版 Cordis.NET.Clr，将 `cordis.plugin.json` 放在入口工程旁。如果根目录有多个工程，在该文件的 `project` 字段指定相对入口工程路径。入口工程在根目录下的子目录时，在工程里将 `CordisLocalPluginRoot` 设为源码根。插件入口选择单一目标框架。
 
-运行 `dotnet build -c Debug`，或在 IDE 中选择同一配置。完成目标收集 SDK 运行文件、PDB、deps 文件、私有依赖、模型和已声明的 Web 输出。其他资产用 `CordisLocalFile` 声明，并设置相对 `TargetPath`。将必须成功的生成步骤列入 `CordisLocalOutputDependsOn`，这样生成失败就不会发布该模块的新输出。纯 CLR 工程只需要 .NET SDK。
+运行 `dotnet build -c Debug`，或在 IDE 中选择同一配置。完成目标收集 SDK 运行文件、SDK 生成的独立 PDB、deps 文件、私有依赖、模型和已声明的 Web 输出。其他资产用 `CordisLocalFile` 声明，并设置相对 `TargetPath`。将必须成功的生成步骤列入 `CordisLocalOutputDependsOn`，这样生成失败就不会发布该模块的新输出。纯 CLR 工程只需要 .NET SDK。
 
 `ClrLocalProject.QueryAsync(root, configuration)` 查询包 ID、入口工程与目标框架，不执行构建。`ResolveOutput()` 核验该配置上一次完成的运行输出。MSBuild 调用方可查询 `CordisGetLocalOutput`。输出缺失或损坏会得到诊断。模块完成回执只覆盖该工程。启动器须等整次构建成功退出后再启动。若自定义目标安排在模块完成之后，它可能在模块指针更新后失败。
 
