@@ -4,7 +4,7 @@ English | [中文](validation.zh.md)
 
 ## Current release and source
 
-The current source targets [0.2.1-alpha.3](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3), correcting closed generic saved-model Web contracts while retaining the earlier generation and Host-default fixes. The matching release page owns its final tag, package/symbol hashes, browser archives and formal run. Earlier PR and local-candidate results do not replace those release receipts.
+The current source targets [0.2.1-alpha.4](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.4), adding authorized local CLR sources, profile schema documents and shared browser modules. The matching release page owns its final tag, package/symbol hashes, browser archives and formal run. Earlier PR and local-candidate results do not replace those release receipts.
 
 The preceding [0.2.1-alpha.2 release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2) passed all 18 jobs in [formal run 41412379531](https://github.com/gentt1024/Cordis.NET/actions/runs/41412379531) at tag commit `4da57d783d77f31ee94839fce099183a06ad3367`. Its public package and archive verification remains attached to alpha.2, not this correction.
 

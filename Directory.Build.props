@@ -9,12 +9,12 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.2.1-alpha.3</Version>
+    <Version>0.2.1-alpha.4</Version>
     <Authors>gentt1024 and Cordis.NET contributors</Authors>
     <Description>A native .NET implementation of the pinned DeepSeek Harness Cordis model.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>dotnet;plugin-system;modularity;cordis</PackageTags>
-    <PackageReleaseNotes>Correct closed generic DTO projection in saved-model Web contracts through existing common bindings and distinct constructed Schema definitions. Preserve referenced-model ownership, nested nullability and conditional output omission. Rebuild Host, SDK and plugins with matching packages. Fixed DSH baseline, runtime protocols and existing converter boundaries unchanged.</PackageReleaseNotes>
+    <PackageReleaseNotes>Build CLR plugins from local source, manage profile dependencies offline and register trusted workspaces through a running Host. Compose Entry and patch configuration schemas from a prepared profile. Distribute the matching browser SDK with its shared modules. See the changelog for migration and validation details.</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/gentt1024/Cordis.NET.git</RepositoryUrl>
     <PackageProjectUrl>https://github.com/gentt1024/Cordis.NET</PackageProjectUrl>

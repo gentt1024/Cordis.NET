@@ -9,7 +9,7 @@
 使用 .NET 10 SDK，并保持 Cordis.NET 包版本一致。
 
 ```console
-dotnet add package Cordis.NET.Extensions --version 0.2.1-alpha.3
+dotnet add package Cordis.NET.Extensions --version 0.2.1-alpha.4
 ```
 
 ## 按任务使用

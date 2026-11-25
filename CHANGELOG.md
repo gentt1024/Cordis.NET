@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1-alpha.4]
+
+- Use ordinary Debug and Release builds for local CLR plugins. Profiles retain the selected project across processes and distinguish a completed build from a failed or missing output. Hosts can opt in to online source inspection and registration with separate read, evaluation, save and activation decisions. Source checkouts remain after removal.
+- Manage offline profile dependencies using NuGet and use the existing profile lifecycle to prepare, apply and release application resources. Query the persisted selection and active plugins separately after a disconnect.
+- Export the root Entry and patch JSON Schema from one prepared profile, including partial results and diagnostics. Inspect browser plugin declarations without applying the plugin.
+- Use the matching browser SDK and author tools. Deploy all shared chunks. The SDK uses published Cordis, Loader, Connection and UI Slots packages and retains the two documented module lifecycle adaptations. The Connection dependency brings a Zod audit finding into the install tree. The browser build uses its client entry; see the release evidence for the selected batch.
+- Resolve the Roslyn assemblies from the active build host for SDK and Visual Studio generation while preserving incremental skipping. The repository uses SDK 10.0.114.
+
 ## [0.2.1-alpha.3]
 
 - Correct saved-model Web projection of closed generic DTOs. Reuse common argument substitution, distinguish constructed Schema definitions including nested nullability, and preserve conditional output omission. External declarations continue to use their owning reference models.

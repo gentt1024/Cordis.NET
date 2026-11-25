@@ -9,10 +9,10 @@
 安装已发布归档，供包 import 与声明使用：
 
 ```console
-npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.3/cordis-net-client-modules-0.2.1-alpha.3.tgz
+npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.4/cordis-net-client-modules-0.2.1-alpha.4.tgz
 ```
 
-直接在浏览器加载时，将完整构建运行时目录放在 `/client-runtime` 等页面同源路径下，保留模块、声明与 `LICENSES.txt`。[ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md)展示原生 Host 制品映射。运行时与作者工具归档职责不同，均位于[对应发行](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3)。
+直接在浏览器加载时，将完整构建运行时目录放在 `/client-runtime` 等页面同源路径下，保留模块、声明与 `LICENSES.txt`。[ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md)展示原生 Host 制品映射。运行时与作者工具归档职责不同，均位于[对应发行](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.4)。
 
 构建 SDK 时，npm 锁固定 Core、Cosmokit、Loader、Slots 和 Connection 的公开包。浏览器从同一 SDK 目录加载入口和共享的 `shared-*.mjs`，插件通过 shell 模块表得到同一个 Context、Service 和 Slots。部署时复制整个运行时目录。保留的 modules 源码按 Git 提交和文件摘要记录两处修正，覆盖激活失败后的显式恢复和通知重入时的接纳结果。
 
