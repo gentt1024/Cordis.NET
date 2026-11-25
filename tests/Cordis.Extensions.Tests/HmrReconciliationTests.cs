@@ -14,6 +14,8 @@ public sealed class HmrReconciliationTests(Xunit.Abstractions.ITestOutputHelper 
     [InlineData("webserver", true)]
     public async Task Best_effort_reconciliation_retains_eager_options_and_recovers(string id, bool asynchronous)
     {
+        // Waiting for a refresh outcome includes the first JavaScript engine initialization.
+        var refreshTimeout = TimeSpan.FromSeconds(30);
         var clock = Stopwatch.StartNew();
         Action<string> trace = stage => output.WriteLine($"HMR timing: {clock.Elapsed.TotalSeconds:F3}s {stage}");
         trace("setup begin");
@@ -103,7 +105,7 @@ public sealed class HmrReconciliationTests(Xunit.Abstractions.ITestOutputHelper 
                 await File.WriteAllTextAsync(user, text);
                 native.Change("cordis.patch.yml");
                 trace("event signalled");
-                return await outcomes.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+                return await outcomes.Reader.ReadAsync().AsTask().WaitAsync(refreshTimeout);
             }
 
             Entry Row() => include.Store[id];
@@ -123,7 +125,7 @@ public sealed class HmrReconciliationTests(Xunit.Abstractions.ITestOutputHelper 
             Assert.Equal(3, failures);
             File.Delete(user);
             native.Change("cordis.patch.yml");
-            Assert.Null(await outcomes.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.Null(await outcomes.Reader.ReadAsync().AsTask().WaitAsync(refreshTimeout));
             Assert.Equal("generated", ((EntryOptions)Row().Options.Config!)["value"]);
             await watch.DisposeAsync();
             await using var defaultWatch = hmr.WatchConfig(user, () => Refresh(true));
