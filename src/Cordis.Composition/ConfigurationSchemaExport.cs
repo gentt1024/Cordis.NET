@@ -335,32 +335,6 @@ public static class ConfigurationSchemaExporter
             if (node.Annotations.GetValueOrDefault("role") is "secret")
                 schema["writeOnly"] = true;
             ProjectConstraints(node, schema, index, diagnostics);
-            if (localReferences is not null)
-            {
-                schema = node.IsOptional || node.HasDefault
-                    ? new()
-                    {
-                        ["anyOf"] = new JsonArray(
-                            schema,
-                            new JsonObject
-                            {
-                                ["type"] = "null"
-                            })
-                    }
-                    : new()
-                    {
-                        ["allOf"] = new JsonArray(
-                            schema,
-                            new JsonObject
-                            {
-                                ["not"] = new JsonObject
-                                {
-                                    ["type"] = "null"
-                                }
-                            })
-                    };
-            }
-
             definitions["node" + index] = schema;
         }
 

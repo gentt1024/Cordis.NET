@@ -5,6 +5,64 @@ namespace Cordis.Composition.Tests;
 
 public sealed class ConfigurationDocumentTests
 {
+    [Theory]
+    [InlineData("required-any", false, true)]
+    [InlineData("optional-number", true, false)]
+    [InlineData("default-number", true, false)]
+    public async Task Native_config_preserves_the_declared_value_domain_when_presence_changes(
+        string declaration,
+        bool acceptsMissing,
+        bool acceptsNull)
+    {
+        var descriptor = declaration switch
+        {
+            "required-any" => ConfigDescriptor.Any(),
+            "optional-number" => ConfigDescriptor.Number().Optional(),
+            _ => ConfigDescriptor.Number().Default(1)
+        };
+        var plugin = new Plugin<object?>
+        {
+            Configuration = new(raw => raw switch
+            {
+                Undefined when descriptor.HasDefault => ConfigResult<object?>.Success(descriptor.DefaultValue),
+                Undefined when descriptor.IsOptional => ConfigResult<object?>.Success(raw),
+                not Undefined when descriptor.Kind == "any" => ConfigResult<object?>.Success(raw),
+                int or long or double => ConfigResult<object?>.Success(raw),
+                _ => ConfigResult<object?>.Failure("Rejected input.")
+            }, descriptor),
+            Apply = (_, _) => { }
+        };
+        var resolver = new StaticModuleResolver().Register("worker", plugin);
+        const string entries = "- {id: omitted, name: worker}\n- {id: explicit, name: worker, config: null}";
+        await using var context = new Context();
+        await context.RunAsync(async ctx =>
+        {
+            var loader = new Loader(ctx, resolver);
+            await loader.Root.UpdateAsync(ConfigurationFile.ParseEntries(entries));
+            await loader.WaitAsync();
+            Assert.Equal(acceptsMissing, loader.Resolve("omitted").Fiber!.State == FiberState.Active);
+            Assert.Equal(acceptsNull, loader.Resolve("explicit").Fiber!.State == FiberState.Active);
+        });
+
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".yml");
+        try
+        {
+            await File.WriteAllTextAsync(root, entries);
+            var export = await ConfigurationSchemaDiscovery.DiscoverDocumentAsync("default", root, resolver);
+            Assert.True(export.Complete);
+            using var document = JsonDocument.Parse(export.Document);
+            using var standalone = JsonDocument.Parse(ConfigurationSchemaExporter.ToJsonSchema(descriptor).Document);
+            var entry = document.RootElement.GetProperty("x-cordis").GetProperty("entries")[0];
+            var key = entry.GetProperty("configRef").GetString()!.Split('/')[^1];
+            var valueSchema = document.RootElement.GetProperty("$defs").GetProperty(key).GetProperty("$defs").GetProperty("node0");
+            Assert.True(JsonElement.DeepEquals(standalone.RootElement.GetProperty("$defs").GetProperty("node0"), valueSchema));
+        }
+        finally
+        {
+            File.Delete(root);
+        }
+    }
+
     [Fact]
     public async Task A_claimed_declaration_never_falls_back_to_another_module_resolver()
     {
