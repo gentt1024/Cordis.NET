@@ -14,22 +14,42 @@ public sealed class DevelopmentBuildProcessTests
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var command = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh";
         string[] arguments = OperatingSystem.IsWindows()
-            ? ["/d", "/c", "echo ready & ping -n 1000 127.0.0.1 >nul"]
-            : ["-c", "printf 'ready\\n'; sleep 1000"];
+            ? ["/d", "/c", "echo ready & echo emitted>stdout-emitted & ping -n 1000 127.0.0.1 >nul"]
+            : ["-c", "printf 'ready\\n'; : > stdout-emitted; sleep 1000"];
         var running = DevelopmentBuildProcess.RunAsync(
             command,
             arguments,
             directory,
             record,
-            _ =>
+            line =>
             {
-                ready.TrySetResult();
+                if (!line.StandardError && line.Text.TrimEnd() == "ready")
+                    ready.TrySetResult();
                 return Task.CompletedTask;
             },
             stop.Token);
         try
         {
-            await ready.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Task first;
+            try
+            {
+                first = await Task.WhenAny(ready.Task, running).WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            catch (TimeoutException error)
+            {
+                var emitted = File.Exists(Path.Combine(directory, "stdout-emitted"));
+                var hasRunRecord = File.Exists(record);
+                throw new TimeoutException(
+                    $"No stdout readiness line within 10 seconds. Child wrote the stdout marker: {emitted}. Run record present: {hasRunRecord}.",
+                    error);
+            }
+
+            if (first == running)
+            {
+                await running;
+                Assert.Fail("Development tool exited before its live output callback.");
+            }
+
             var original = await File.ReadAllTextAsync(record);
             var refusal = await Assert.ThrowsAsync<IOException>(() => DevelopmentBuildProcess.RunAsync(
                 "dotnet",
