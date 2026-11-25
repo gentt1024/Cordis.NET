@@ -416,26 +416,46 @@ public sealed class HmrCoordinator : IAsyncDisposable
             }
 
             List<string>? reloaded = scope is null ? null : [];
-            foreach (var (entry, module, dependencies) in modules)
-            {
-                if (_closing)
-                    return;
-                if (!dependencies.Overlaps(paths))
-                    continue;
-                await module.Replace().ConfigureAwait(false);
-                if (reloaded is null)
-                    Reloaded?.Invoke(entry);
-                else
-                    reloaded.Add(entry);
-            }
-
-            if (scope is not null)
-                await scope.CommittedAsync();
             try
             {
+                foreach (var (entry, module, dependencies) in modules)
+                {
+                    if (_closing)
+                        return;
+                    if (!dependencies.Overlaps(paths))
+                        continue;
+                    await module.Replace().ConfigureAwait(false);
+                    if (reloaded is null)
+                        Reloaded?.Invoke(entry);
+                    else
+                        reloaded.Add(entry);
+                }
+
+                if (scope is not null)
+                    await scope.CommittedAsync();
+            }
+            finally
+            {
+                // Successful replacements remain active even when a later module fails.
                 if (reloaded is not null)
                     foreach (var entry in reloaded)
-                        Reloaded?.Invoke(entry);
+                    {
+                        try
+                        {
+                            Reloaded?.Invoke(entry);
+                        }
+                        catch (Exception error)
+                        {
+                            Report(
+                                new InvalidOperationException(
+                                    $"Module '{entry}' reloaded, but its notification failed.",
+                                    error));
+                        }
+                    }
+            }
+
+            try
+            {
                 foreach (var path in paths)
                     if (!modules.Any(module => module.Dependencies.Contains(path)))
                         Changed?.Invoke(path);

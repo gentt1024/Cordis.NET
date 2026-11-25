@@ -892,6 +892,7 @@ public sealed class ProfileSessionTests
 
         var file = Path.Combine(scenario.Directory, "module.dll");
         var hmr = session.Hmr!;
+        hmr.Reloaded += _ => events.Add("reloaded");
         var fail = true;
         hmr.RegisterModule(
             file,
@@ -910,7 +911,88 @@ public sealed class ProfileSessionTests
         events.Clear();
         fail = false;
         await hmr.NotifyChangedAsync(file);
-        Assert.Equal(new[] { "replace", "published", "released" }, events);
+        Assert.Equal(new[] { "replace", "published", "reloaded", "released" }, events);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task A_successful_module_reload_is_reported_when_the_next_module_fails(
+        bool withLease,
+        bool observerFails)
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        await File.AppendAllTextAsync(scenario.Config, "- id: b\n  name: second\n");
+        var second = new Plugin<object?>
+        {
+            Apply = (_, _) =>
+            {
+            }
+        };
+        scenario.Resolver.Register("second", second);
+        var events = new List<string>();
+        var launch = scenario.Launch with
+        {
+            PrepareApplyAsync = withLease
+                ? request => Task.FromResult<IProfileApplyLease>(
+                    new TestLease(() => Record(request, "published"), () => Record(request, "released")))
+                : null
+        };
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            launch,
+            scenario.Resolver,
+            enableHmr: true);
+        var loader = session.Loader;
+        var hmr = session.Hmr!;
+        var first = loader.Resolve("root:p").Module!.Plugin;
+        var replacement = new Plugin<string>
+        {
+            Apply = (ctx, _) => ctx.Provide("value", "v2")
+        };
+        var failure = new InvalidOperationException("second module failed to activate");
+        var broken = new Plugin<object?>
+        {
+            Apply = (_, _) => throw failure
+        };
+        var shared = Path.Combine(scenario.Directory, "shared.dll");
+        hmr.RegisterModule(
+            Path.Combine(scenario.Directory, "a.dll"),
+            () => loader.ReplacePluginAsync(first, replacement),
+            [shared]);
+        hmr.RegisterModule(
+            Path.Combine(scenario.Directory, "b.dll"),
+            () => loader.ReplacePluginAsync(second, broken),
+            [shared]);
+        var notificationFailure = new IOException("reload observer failed");
+        var diagnostics = new List<Exception>();
+        hmr.Error += diagnostics.Add;
+        hmr.Changed += path => events.Add(Path.GetFileName(path));
+        hmr.Reloaded += path =>
+        {
+            events.Add(Path.GetFileName(path));
+            if (observerFails)
+                throw notificationFailure;
+        };
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            hmr.NotifyChangedAsync([shared, Path.Combine(scenario.Directory, "unrelated.dll")]));
+
+        Assert.Same(failure, error);
+        Assert.Same(replacement, loader.Resolve("root:p").Module!.Plugin);
+        Assert.Equal(FiberState.Active, loader.Resolve("root:p").Fiber!.State);
+        Assert.Same(second, loader.Resolve("root:b").Module!.Plugin);
+        Assert.Equal(FiberState.Active, loader.Resolve("root:b").Fiber!.State);
+        Assert.Equal(withLease ? new[] { "a.dll", "released" } : new[] { "a.dll" }, events);
+        if (observerFails)
+            Assert.Same(notificationFailure, Assert.Single(diagnostics).InnerException);
+
+        void Record(ProfileApplyRequest request, string outcome)
+        {
+            if (request.Kind == ProfileApplyKind.Modules)
+                events.Add(outcome);
+        }
     }
 
     private sealed class TestLease(Action commit, Action release) : IProfileApplyLease
