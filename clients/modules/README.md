@@ -14,6 +14,8 @@ npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alp
 
 For direct browser loading, serve the complete built runtime directory at a same-origin path such as `/client-runtime`. Keep its modules, declarations and `LICENSES.txt` together. [ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md) shows native Host artifact mapping. Runtime and author-tool archives have separate roles and are both on the [matching release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3).
 
+The SDK build resolves public Core, Cosmokit, Loader, Slots and Connection packages from its npm lock. Serve the entire runtime directory, including the shared `shared-*.mjs` chunks. The shell module table gives plugins the same Context, Service and Slots objects as the host page. The retained modules sources record the Git baseline and file hashes for two fixes, explicit recovery after failed activation and stable release admission during reentrant notification.
+
 ## Build a plugin for the Loader
 
 Follow the [author-tool tutorial](https://github.com/gentt1024/Cordis.NET/blob/main/clients/tools/README.md) to create a plugin and produce `client.js` with its manifest. The classic registration script receives the registry's `require`, and its exported `apply` runs through the Loader. Register DOM, listeners and other cleanup with `ctx.effect`. Package-local dynamic chunks are unsupported by this build entry; independent `ClientArtifact` consumers retain their separate format.
@@ -71,3 +73,21 @@ node scripts/verify-client-module-types.mjs artifacts/client-modules
 ```
 
 Source and license identities are recorded in `vendor/provenance.json`. Adapted files retain original and local hashes with reasons. For the browser transport check, start `node scripts/client-modules-browser-host.mjs` and open its printed origin at `/shared`. The injected-transport check is `node scripts/verify-client-shared-modules.mjs`; a Node result is not a browser result, and neither alone proves complete native Host composition.
+
+## Inspect a plugin declaration
+
+A build containing `inspectClientModule` can inspect one trusted client factory or shell export before application startup. Provide the Host graph, its HTTP(S) base URL, the module specifier and the same shell externals as boot. Supply a transport that delivers the real artifact's registration to the callback for this call. The SDK uses its normal module table and export unwrapping without mounting a Context. There is no page-global registration to install or restore.
+
+```ts
+const result = await inspectClientModule({
+  graph, baseUrl, specifier, staticModules,
+  loadBundle: (url, register) => loadTrustedArtifact(url, register),
+})
+const config = result.config
+if ((config.status === 'schema' || config.status === 'portable') && config.portable.status === 'schema') {
+  const { document, acceptsMissing, limitations } = config.portable
+  consumeInputSchema(document, acceptsMissing, limitations)
+}
+```
+
+Here `loadTrustedArtifact` belongs to the host and executes the selected factory script with `__ModuleLoader__.load` bound to `register`. Static shell exports can be supplied directly in `staticModules`. Keep declaration modules independent of application startup and DOM setup. Factory execution and reading Config getters can have effects. The inspector returns the original module exports. A missing Config is `absent`, a non-standard Config is `unsupported`, and import or getter failures reject the call. An exported Standard Schema validator is available as `config.schema` when the status is `schema`. To transfer a declaration to another runtime, read `config.portable`. A Standard JSON Schema input converter can provide a draft 2020-12 document even if the declaration has no validator (status `portable`). JSON values alone do not specify whether the outer config may be omitted, so the converter reports `acceptsMissing: 'unknown'`. For native DSH Schemastery, pass the app-boot exports `isNativeConfigSchema`, `createConfigProjector` and `LOADER_EXPRESSION_SCHEMA` together in `nativeConfigProjection`. This preserves the upstream declaration's definitions, omission decision and limitations. A validator without either projection reports `portable.status === 'unsupported'`. A .NET host can supply the document, omission decision and limitations through `IConfigurationSchemaProjectionResolver`.

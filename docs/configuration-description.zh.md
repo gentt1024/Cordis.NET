@@ -6,7 +6,7 @@
 
 ## 选择声明 API
 
-Plugin<T>、ConfigSchema<T> 与配置引用使用 Core，ConfigObject<T>、Loader、Settings 和导出／发现辅助接口使用 Composition。以下 API 已包含在发布的 `0.2.1-alpha.1` 中，包与工具须匹配。这是普通插件配置，与 [Remote 输入默认值](authoring.zh.md#remote-输入的静态数据默认值)不同。
+Plugin<T>、ConfigSchema<T> 与配置引用使用 Core，ConfigObject<T>、Loader、Settings 和导出／发现辅助接口使用 Composition。配置声明 API 已包含在 `0.2.1-alpha.1` 中。下文的 profile 文档导出需要含有 `DiscoverDocumentAsync` 的较新构建。请使用配套的包与工具。这是普通插件配置，与 [Remote 输入默认值](authoring.zh.md#remote-输入的静态数据默认值)不同。
 
 完整数据对象使用 ConfigObject<T> 与完整字段列表，每个 Field 关联原始键、descriptor 和纯值投影；辅助接口提供实时绑定、普通比较及包含默认值的完整简化。每个字段都须声明。嵌套实时路径、不透明值或自定义相等／转换使用 ConfigSchema<T>，标量可直接使用 Plugin<T>.Config。
 
@@ -205,3 +205,34 @@ foreach (var entry in catalog.Entries)
 DiscoverAsync 遍历原生 group／include，解析相对 include 路径，缺失文件使用 literal 初始数据而不写文件。它报告循环和 import 失败，保留仍有效的兄弟条目；禁用条目也提供声明，源码文件名消除位置 ID 歧义。自定义树载体产生明确的不支持遍历诊断；含 `__jsExpr` 的原生 group／include 整体保持不透明，包括其兄弟 path 数据。
 
 发现不创建 Context 或 Loader，不调用 Apply、ResolveConfig、表达式 evaluator 或 lazy builder；模块 import 与可选 CaptureConfiguration 是可信作者代码，可以执行。发现不是沙箱或第二套校验引擎。[当前支持](development.zh.md#当前支持与发行状态)与[生成支持范围](development.zh.md#生成后端支持范围)分别说明发行／平台和模型后端边界。
+
+### 校验条目列表或补丁文件
+
+传入已准备好的 profile launch、条目列表文件名和宿主实际使用的模块解析器。launch 按运行时顺序提供 bundle、profile、home 和命令行各层。下面的 CLI 片段在某个插件声明失败时仍输出文档。命令入口应在写标准输出前处理 profile 准备失败或根文件读取、解析异常。
+
+```csharp
+var result = await ConfigurationSchemaDiscovery.DiscoverDocumentAsync(
+    launch, configurationPath, resolver, cancellationToken);
+Console.WriteLine(result.Document);
+foreach (var diagnostic in result.Diagnostics)
+    Console.Error.WriteLine(diagnostic);
+return result.Complete ? 0 : 1;
+```
+
+用整份文档的根校验解析后的条目数组。校验覆盖层时，让校验器引用**同一文档**中的 `#/$defs/patchList`，以便解析局部引用。对根树中已知 ID 提供 `config` 会替换整个值。include 有独立的 ID 索引。缺少已收集声明的插件名以及后续补丁才会引入的 ID 保持开放。
+
+`x-cordis.entries` 给出结构位置和声明状态，`x-cordis.diagnostics` 给出收集或投影限制。同名插件在不同树中解析到不同声明时，文档接受这些声明的并集，并标记为部分结果。完整发现可以返回成功，配置仍须通过运行时检查。导入与声明捕获使用应用提供的解析器；使用多种模块运行时的应用负责接入各自的声明。
+
+### 提供其他模块运行时的声明
+
+在传入 discovery 的模块解析器上实现 `IConfigurationSchemaProjectionResolver`。对于 CLR 负责解析的模块，从 `TryResolveSchemaAsync` 返回 null。对于本解析器负责的模块，返回 `ResolvedConfigurationSchema`，给出实际解析的导出身份、格式为 `json-schema-2020-12` 的 `ConfigurationSchemaExport`，以及条目是否允许省略 config。只有成功导入且确定没有声明时才将 Schema 设为 null。不支持的声明和导入异常均产生带条目位置的诊断。
+
+提供自包含的 draft 2020-12 输入 Schema。嵌入时保留内部资源、锚点和指针引用。引用的资源必须随声明提供。省略规则未知时将 `AcceptsMissing` 设为 null。若投影有局限，将 `Complete` 设为 false 并给出诊断。Cordis 在 config 根位置接受 Loader 表达式；嵌套位置的表达式和校验约束由传入的投影描述。一次发现期间，同一模块身份应指向同一声明。
+
+### 检查选中的浏览器制品
+
+导出 Schema 时，准备一次 `ProfileRefresh`，按其中的配置层选择客户端包。将选择结果和部署解析器传给 `ClientModuleCatalog.CaptureAsync`。对图中的每个条目，用 `FindArtifact(entry.Id, entry.Revision).OpenRead()` 读取已捕获的 factory。查不到匹配项表示所选字节不可用。通过 `staticModules` 提供的 shell 模块应从选中的 shell 构建读取导出。
+
+调用 `inspectClientModule`，传入该图、对应修订的 factory 字节，以及客户端启动时使用的 shell 外部模块。对于原生 Schemastery，将官方 app-boot 导出的 `isNativeConfigSchema`、`createConfigProjector` 和 `LOADER_EXPRESSION_SCHEMA` 传给 `nativeConfigProjection`。这一步由作者工具进程导入可信代码。只解析 CLR 声明的 Host 可以直接调用发现接口。
+
+将返回的声明绑定到实际解析的导出和已捕获的图；若使用 shell 提供的模块，还须绑定该 shell 构建。将声明适配器和最初的刷新结果传给 `DiscoverDocumentAsync(refresh, profileName, filename, resolver)`。发现过程复用有序补丁层和跳过的 bundle 诊断，并在发现时读取根条目文件及其 include。如果在使用当前结果前，选择、图或参与解析的 shell 已变化，应重新检查新选择。同名模块在本地构建和已安装包中可以有不同的 Config Schema。[客户端 SDK 检查接口](../clients/modules/README.zh.md)

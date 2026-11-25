@@ -15,8 +15,8 @@
       "default": "./lib/access.mjs"
     },
     "./slots": {
-      "types": "./lib/types/vendor/slots/index.d.ts",
-      "default": "./lib/client.mjs"
+      "types": "./lib/types/npm/@deepseek-ai/dsh-client-ui-slots/index.d.ts",
+      "default": "./lib/slots.mjs"
     },
     "./management": {
       "types": "./lib/types/standard/management.d.ts",
@@ -41,7 +41,14 @@
     "typecheck": "node ../../scripts/build-client-modules.mjs --types-only"
   },
   "devDependencies": {
-    "@standard-schema/spec": "1.0.0",
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.6",
+    "@deepseek-ai/cosmokit": "1.8.6",
+    "@deepseek-ai/dsh-client-connection": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-store": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-package-manifest": "0.2.1-rc.2",
+    "@standard-schema/spec": "1.1.0",
     "@types/node": "22.19.0",
     "@types/prop-types": "15.7.12",
     "@types/react": "18.3.1",

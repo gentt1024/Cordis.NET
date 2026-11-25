@@ -47,6 +47,6 @@ dotnet run --project examples/Composition/Composition.csproj
 
 ## Project scope
 
-Behavior follows the fixed revision in [upstream.lock.json](upstream.lock.json), currently DSH `0.2.1-rc.2` with vendored Cordis `4.0.4`. [Compatibility](docs/compatibility.md) records the .NET adaptations and supported interoperability. Arbitrary TypeScript plugins are not a supported .NET deployment format.
+Behavior follows the fixed revision in [upstream.lock.json](upstream.lock.json), currently DSH `0.2.1-rc.2` with vendored Cordis `4.0.5`. [Compatibility](docs/compatibility.md) records the .NET adaptations and supported interoperability. Arbitrary TypeScript plugins are not a supported .NET deployment format.
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse or Microsoft. It is an early preview; public APIs may change before a stable release. Published package and tag identities remain fixed.

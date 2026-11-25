@@ -222,7 +222,7 @@ carrier.streams.at(-1).error()
 await until(()=>errors.length===2,'Owner terminal error reported')
 assert.equal(mount.global(read).getSnapshot(),true,'Owner answers survive terminal failure')
 await mount.dispose()
-console.log('PASS real generated namespace + TypertConnection + ConnectionController recovery, generation fencing and fresh remount')
+console.log('PASS real generated namespace + TypertConnection + installed Connection recovery, generation fencing and fresh remount')
 
 for (const [name, frames] of [
   ['delta-before-baseline',[{type:'upsert',grant:{resource,actions:[read]}}]],

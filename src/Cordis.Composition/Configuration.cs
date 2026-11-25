@@ -339,12 +339,10 @@ public static class EntryPatches
         {
             if (patch.TryGetValue("insert", out var insertion) && Data.Truthy(insertion))
             {
-                var inserted = Data.Entries(insertion);
-                if (patch.Id.Length == 0)
-                    result.AddRange(inserted);
-                else
+                EntryOptions? target = null;
+                if (patch.Id.Length > 0)
                 {
-                    if (!index.TryGetValue(patch.Id, out var target))
+                    if (!index.TryGetValue(patch.Id, out target))
                     {
                         warn?.Invoke($"patch insert: entry {Quote(patch.Id)} not found");
                         continue;
@@ -355,7 +353,13 @@ public static class EntryPatches
                         warn?.Invoke($"patch insert: entry {Quote(patch.Id)} is not a group");
                         continue;
                     }
+                }
 
+                var inserted = Data.Entries(insertion);
+                if (target is null)
+                    result.AddRange(inserted);
+                else
+                {
                     var children = target.Config is IEnumerable<object?> ? Data.Entries(target.Config) : [];
                     children.AddRange(inserted);
                     target.Config = children;

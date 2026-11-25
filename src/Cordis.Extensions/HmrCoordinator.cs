@@ -21,6 +21,13 @@ public sealed class HmrCoordinator : IAsyncDisposable
 
     private readonly object _gate = new();
     private readonly AsyncLocal<bool> _executing = new();
+
+    internal Func<ProfileApplyRequest, Task<IProfileApplyLease>>? PrepareApplyAsync
+    {
+        get;
+        set;
+    }
+
     internal bool IsExecuting => _executing.Value;
     private Task _tail = Task.CompletedTask;
     private bool _closing;
@@ -394,6 +401,12 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 modules = _modules.Select(pair => (pair.Key, pair.Value, DependencyClosure(pair.Key))).ToArray();
             }
 
+            if (paths.Count == 0)
+                return;
+            await using var scope = await ProfileApplyScope.PrepareAsync(
+                PrepareApplyAsync,
+                new(frameworkChanged ? ProfileApplyKind.Restart : ProfileApplyKind.Modules, null, paths.ToArray()),
+                Report);
             if (frameworkChanged)
             {
                 if (RestartHost is null)
@@ -402,6 +415,7 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 return;
             }
 
+            List<string>? reloaded = scope is null ? null : [];
             foreach (var (entry, module, dependencies) in modules)
             {
                 if (_closing)
@@ -409,12 +423,30 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 if (!dependencies.Overlaps(paths))
                     continue;
                 await module.Replace().ConfigureAwait(false);
-                Reloaded?.Invoke(entry);
+                if (reloaded is null)
+                    Reloaded?.Invoke(entry);
+                else
+                    reloaded.Add(entry);
             }
 
-            foreach (var path in paths)
-                if (!modules.Any(module => module.Dependencies.Contains(path)))
-                    Changed?.Invoke(path);
+            if (scope is not null)
+                await scope.CommittedAsync();
+            try
+            {
+                if (reloaded is not null)
+                    foreach (var entry in reloaded)
+                        Reloaded?.Invoke(entry);
+                foreach (var path in paths)
+                    if (!modules.Any(module => module.Dependencies.Contains(path)))
+                        Changed?.Invoke(path);
+            }
+            catch (Exception error) when (scope is not null)
+            {
+                Report(
+                    new InvalidOperationException(
+                        "The module batch committed, but change notification failed.",
+                        error));
+            }
         });
 
     internal static string CanonicalPath(string filename) => ResolvePath(filename, File.GetAttributes);

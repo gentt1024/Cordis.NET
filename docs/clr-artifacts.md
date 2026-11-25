@@ -4,6 +4,14 @@ English | [中文](clr-artifacts.zh.md)
 
 Load complete stable artifacts directly, preserve their shared contracts, and retire them through their owners. Starting another process or collectible AssemblyLoadContext does not require another bundle copy. Dynamic CLR loading requires an ordinary .NET runtime.
 
+## Run a plugin from its source tree
+
+Use the development version of Cordis.NET.Clr. Place `cordis.plugin.json` next to the entry project. A root containing several projects declares its relative entry `project` in that file. An entry project below the root sets `CordisLocalPluginRoot` to the root. Select one target framework for the entry project.
+
+Run `dotnet build -c Debug` or select the same configuration in your IDE. The completion target collects the SDK runtime files, PDB, deps file, private dependencies, model and declared Web output. Include other assets with `CordisLocalFile` and a relative `TargetPath`. List required producer targets in `CordisLocalOutputDependsOn` so a failed producer prevents publication. A pure CLR project needs only the .NET SDK.
+
+Use `ClrLocalProject.QueryAsync(root, configuration)` to obtain the package ID, entry project and framework without building. Its `ResolveOutput()` verifies the last completed output for that configuration. MSBuild callers can query `CordisGetLocalOutput`. Missing or damaged output produces a diagnostic. Module completion has project scope. A launcher must check the exit status of its entire build before starting. A custom target scheduled after module completion can still fail after the module pointer has advanced.
+
 ## Prepare the package and Host
 
 <a id="standard-package-workflow"></a>
@@ -35,7 +43,7 @@ Logical removal preserves bytes for retained references, delayed loads, Workers 
 Stop every Host, Worker and other consumer first. Then call `DotnetPluginToolchain.DeleteRetainedArtifactAsync(profileDirectory, name, version)` or use the CLI:
 
 ```console
-cordis delete-retained <profile> <name> <version>
+cordis delete-retained <profile> <name> <exact-version-or-graph>
 ```
 
 A profile referencing the exact version refuses deletion; the CLI also refuses a running standard CLI host. The API holds the existing `package.json.cordis-lock` writer lock while checking references and deleting, and refuses a conflicting coordinated writer. Invalid or unreadable manifests leave the artifact unchanged. The deployment owner must exclude external consumers and writers that ignore this protocol. A failure reports the remaining path; there is no automatic scan or GC-triggered deletion.

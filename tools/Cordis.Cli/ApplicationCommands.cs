@@ -17,11 +17,12 @@ internal static class ApplicationCommands
         {
             if (arguments.Length == 0)
                 throw new ArgumentException(
-                    "Usage: cordis run <profile> [--source <feed>] [--url http://127.0.0.1:port --authorization-env NAME] [--allow-build Name@Version] [-- application arguments]");
+                    "Usage: cordis run <profile> [--configuration Debug|Release] [--source <feed>] [--url http://127.0.0.1:port --authorization-env NAME] [--allow-build Name@Version] [-- application arguments]");
             var profile = Path.GetFullPath(arguments[0]);
             var sources = new List<string>();
             var applicationArguments = new List<string>();
             var builds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var configurationName = "Debug";
             var settings = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             string? address = null;
             string? authorization = null;
@@ -34,7 +35,8 @@ internal static class ApplicationCommands
                     break;
                 }
 
-                if (option is not ("--source" or "--url" or "--authorization-env" or "--allow-build" or "--settings"))
+                if (option is not ("--source" or "--url" or "--authorization-env" or "--allow-build" or "--settings"
+                    or "--configuration"))
                 {
                     // The first application token starts an opaque remainder, just as
                     // the fixed launcher does; later flags belong to the application.
@@ -46,6 +48,9 @@ internal static class ApplicationCommands
                     throw new ArgumentException("An option value is missing: " + option);
                 switch (option)
                 {
+                    case "--configuration":
+                        configurationName = arguments[index];
+                        break;
                     case "--source":
                         sources.Add(arguments[index]);
                         break;
@@ -85,7 +90,11 @@ internal static class ApplicationCommands
             if (!File.Exists(configuration))
                 await File.WriteAllTextAsync(configuration, "[]\n");
             await using var resolver = new ClrModuleResolver([typeof(ConfigObject<>).Assembly]);
-            using var toolchain = new DotnetPluginToolchain(profile, resolver, sources);
+            using var toolchain = await DotnetPluginToolchain.OpenForRunAsync(
+                profile,
+                resolver,
+                sources,
+                configurationName);
             var launch = new ProfileLaunch(
                 await Profiles.LoadAsync(profile, new Dictionary<string, string>(), toolchain.Bundles),
                 Path.Combine(profile, ".cordis", "home"),
@@ -94,7 +103,8 @@ internal static class ApplicationCommands
                 toolchain.Bundles)
             {
                 CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName,
-                ManifestLocator = toolchain.LocateManifest
+                ManifestLocator = toolchain.LocateManifest,
+                RefreshPackageRoutesAsync = toolchain.RefreshProfileRoutesAsync
             };
             // The ordinary .NET host supplies process lifetime; only an explicitly requested
             // management endpoint creates a web server. Neither host parses application arguments.
@@ -177,6 +187,8 @@ internal static class ApplicationCommands
                     return await exit;
                 await host.StartAsync();
                 Console.WriteLine("Profile running: " + profile);
+                foreach (var (name, directory) in toolchain.Bundles)
+                    Console.WriteLine($"CLR package route: {name} -> {directory}");
                 if (host is WebApplication web)
                     Console.WriteLine("Management: " + web.Urls.Single() + "/cordis");
                 var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();

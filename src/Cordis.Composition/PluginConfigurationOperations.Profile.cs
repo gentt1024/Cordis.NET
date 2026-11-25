@@ -79,6 +79,29 @@ public sealed partial class PluginConfigurationOperations
             ConfigurationFile.Parse(text, true) as EntryOptions ??
             throw new FormatException("Profile must be a JSON object."));
 
+    /// <summary>Admit the saved selection and return the exact composition to apply in the running session.</summary>
+    /// <remarks>Call inside the session lifecycle queue after preparing import routes and before changing running entries.</remarks>
+    public async Task<ProfileCandidate> AdmitSavedProfileAsync(PackageManifest expectedManifest)
+    {
+        var (inputs, candidate) = await CaptureSavedAsync(expectedManifest);
+        await AdmitCandidateAsync(inputs, candidate);
+        return candidate;
+    }
+
+    /// <summary>Capture the saved effective root without invoking a management admission callback or saving any files.</summary>
+    public async Task<ProfileCandidate> CaptureSavedProfileAsync(PackageManifest expectedManifest) =>
+        (await CaptureSavedAsync(expectedManifest)).Candidate;
+
+    private async Task<(ProfileInputs Inputs, ProfileCandidate Candidate)> CaptureSavedAsync(
+        PackageManifest expectedManifest)
+    {
+        var inputs = await CaptureProfileAsync();
+        var saved = ParseManifest(await inputs.ReadAsync(ManifestPath));
+        if (ConfigurationFile.Write(saved.Raw, true) != ConfigurationFile.Write(expectedManifest.Raw, true))
+            throw new Refusal("profile-conflict");
+        return (inputs, await CreateCandidateAsync(inputs, saved));
+    }
+
     private async Task<ProfileInputs> CaptureProfileAsync()
     {
         var inputs = new ProfileInputs(launch);

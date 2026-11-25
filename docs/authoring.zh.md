@@ -172,6 +172,8 @@ const result = await settings['settings/openSettingsDocument']({})
 
 包与 bundle 选择的产品政策通过 `session.ConfigurationOperations.AdmitProfileAsync` 设置。回调接收 `ProfileCandidate.ManifestJson`（拟保存的确切文本）、`ConfigurationJson`（不执行表达式的有效原始根条目），以及包含来源层和跳过选择的独立 `Composition` 视图。安装时，`Package` 还提供准备目录及计划发布目录，政策可在 Publish 前读取产物；其他操作中它为 null。抛出异常即拒绝。应校验库提供的候选，不再在 `IProfilePackageToolchain.PublishAsync` 中重新读 Profile 并预测另一份候选。准入期间不要重入配置操作。产品自身政策输入须保持稳定直到操作结束；此回调不冻结外部 SDK 或应用状态。`ProfileSession` 自动提供候选应用路径。
 
+运行中的 Host 要为配置或代码变更准备外部资源，可在 `ProfileSession.StartAsync` 前设置 `launch = launch with { PrepareApplyAsync = PrepareAsync }`。实现 `Task<IProfileApplyLease> PrepareAsync(ProfileApplyRequest request)`，在 `Configuration` 请求中读取已捕获的根配置，在 `Modules` 请求中读取变更文件路径。应用持有租约时准备下一批资源，在 `CommittedAsync` 中发布，在 `DisposeAsync` 中释放。对于 `Restart`，框架在重启回调返回后释放租约。通过会话诊断回调观察发布错误。需要文件监视等待应用启动时，传入 `applicationReady`。这些回调在会话队列内执行，请勿从回调重入队列。
+
 启用准入并自定义协调时，在自定义 `ReconcileAsync` 后设置 `ReconcileCandidateAsync`。只替换 `ReconcileAsync` 不会让它参与准入。依赖移除准入发生在 toolchain 释放运行时映射之前，拒绝后可能保留另行批准的取消选择结果。
 
 用 `ReadProfileAsync` 读取 metadata 草稿基线，保留返回的 `Revision`，再以 `SaveProfileMetadataAsync(text, revision)` 提交编辑后的 JSON。保存会排在安装之后等待，以 `profile-conflict` 拒绝失效修订；保留用户草稿，由产品决定下一请求。dependencies 和 `dsh` 仍由既有包、选择和兼容操作拥有。这些方法不增加未经认证的传输入口，等待/冲突交互仍需产品接受。

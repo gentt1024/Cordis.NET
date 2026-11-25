@@ -6,8 +6,8 @@ namespace Cordis.Composition;
 /// <summary>A data-only declaration projection, with omissions that require the captured runtime validator.</summary>
 /// <param name="Format">The serialized document vocabulary.</param>
 /// <param name="Document">The standalone JSON document.</param>
-/// <param name="Complete">Whether acceptance and normalization are fully represented; arbitrary native validators always require runtime validation.</param>
-/// <param name="Diagnostics">Explicit limitations of the projection.</param>
+/// <param name="Complete">For a profile document, whether discovery and structural projection completed without missing or ambiguous declarations. Standalone descriptor exports retain runtime validation limitations.</param>
+/// <param name="Diagnostics">Collection diagnostics and limitations of the projection.</param>
 public sealed record ConfigurationSchemaExport(
     string Format,
     string Document,
@@ -158,6 +158,55 @@ public static class ConfigurationSchemaExporter
     {
         ArgumentNullException.ThrowIfNull(descriptor);
         var diagnostics = Limitations();
+        var document = new JsonObject
+        {
+            ["$schema"] = "https://json-schema.org/draft/2020-12/schema",
+            ["$ref"] = "#/$defs/node0",
+            ["$defs"] = JsonDefinitions(descriptor, omitDefaults, diagnostics, null),
+            ["x-cordis"] = new JsonObject
+            {
+                ["complete"] = false,
+                ["validation"] = "runtime",
+                ["diagnostics"] =
+                    new JsonArray(diagnostics.Select(message => (JsonNode?)JsonValue.Create(message)).ToArray())
+            },
+        };
+        return new("json-schema-2020-12", document.ToJsonString(), false, diagnostics.AsReadOnly());
+    }
+
+    // The document builder prefixes only the references produced here, never reference-shaped author metadata.
+    internal static JsonObject ProjectLoaderInput(
+        ConfigDescriptor descriptor,
+        List<string> diagnostics,
+        List<JsonObject> localReferences)
+    {
+        var reference = new JsonObject
+        {
+            ["$ref"] = "#/$defs/node0"
+        };
+        localReferences.Add(reference);
+        var root = WithLoaderExpression(reference);
+        root["$defs"] = JsonDefinitions(descriptor, false, diagnostics, localReferences);
+        return root;
+    }
+
+    private static JsonObject WithLoaderExpression(JsonObject input) =>
+        new()
+        {
+            ["anyOf"] = new JsonArray(
+                input,
+                new JsonObject
+                {
+                    ["$ref"] = "#/$defs/loaderExpression"
+                })
+        };
+
+    private static JsonObject JsonDefinitions(
+        ConfigDescriptor descriptor,
+        bool omitDefaults,
+        List<string> diagnostics,
+        List<JsonObject>? localReferences)
+    {
         var nodes = new List<ConfigDescriptor>();
         var ids = new Dictionary<ConfigDescriptor, int>(ReferenceEqualityComparer.Instance);
 
@@ -171,11 +220,17 @@ public static class ConfigurationSchemaExporter
             return id;
         }
 
-        JsonObject Ref(ConfigDescriptor node) =>
-            new()
+        JsonObject Ref(ConfigDescriptor node, bool value = false)
+        {
+            var reference = new JsonObject
             {
                 ["$ref"] = "#/$defs/node" + Id(node)
             };
+            if (localReferences is null)
+                return reference;
+            localReferences.Add(reference);
+            return value ? WithLoaderExpression(reference) : reference;
+        }
 
         Id(descriptor);
         var definitions = new JsonObject();
@@ -198,7 +253,7 @@ public static class ConfigurationSchemaExporter
                     {
                         if (omitDefaults && child.Annotations.GetValueOrDefault("hidden") is true)
                             continue;
-                        properties[name] = Ref(child);
+                        properties[name] = Ref(child, true);
                         if (!child.IsOptional && !child.HasDefault &&
                             !(omitDefaults && child.Annotations.GetValueOrDefault("role") is "secret"))
                             required.Add((JsonNode?)JsonValue.Create(name));
@@ -211,12 +266,12 @@ public static class ConfigurationSchemaExporter
                 case "array":
                     schema["type"] = "array";
                     if (node.Inner is not null)
-                        schema["items"] = Ref(node.Inner);
+                        schema["items"] = Ref(node.Inner, true);
                     break;
                 case "dict":
                     schema["type"] = "object";
                     if (node.Inner is not null)
-                        schema["additionalProperties"] = Ref(node.Inner);
+                        schema["additionalProperties"] = Ref(node.Inner, true);
                     if (node.Key is not null)
                         schema["propertyNames"] = Ref(node.Key);
                     break;
@@ -224,7 +279,7 @@ public static class ConfigurationSchemaExporter
                     schema["type"] = "array";
                     if (node.Children.Count > 0)
                         schema["prefixItems"] =
-                            new JsonArray(node.Children.Select(child => (JsonNode?)Ref(child)).ToArray());
+                            new JsonArray(node.Children.Select(child => (JsonNode?)Ref(child, true)).ToArray());
                     schema["minItems"] =
                         node
                             .Children.Select((child, position) =>
@@ -242,10 +297,10 @@ public static class ConfigurationSchemaExporter
                     diagnostics.Add($"node {index}: branch selection and conversion require the captured validator.");
                     break;
                 case "lazy" when node.Inner is not null:
-                    schema["$ref"] = "#/$defs/node" + Id(node.Inner);
+                    schema = Ref(node.Inner);
                     break;
                 case "transform" when node.Inner is not null:
-                    schema["$ref"] = "#/$defs/node" + Id(node.Inner);
+                    schema = Ref(node.Inner);
                     diagnostics.Add($"node {index}: transform callback acceptance and normalization are omitted.");
                     break;
                 case "any":
@@ -280,23 +335,36 @@ public static class ConfigurationSchemaExporter
             if (node.Annotations.GetValueOrDefault("role") is "secret")
                 schema["writeOnly"] = true;
             ProjectConstraints(node, schema, index, diagnostics);
+            if (localReferences is not null)
+            {
+                schema = node.IsOptional || node.HasDefault
+                    ? new()
+                    {
+                        ["anyOf"] = new JsonArray(
+                            schema,
+                            new JsonObject
+                            {
+                                ["type"] = "null"
+                            })
+                    }
+                    : new()
+                    {
+                        ["allOf"] = new JsonArray(
+                            schema,
+                            new JsonObject
+                            {
+                                ["not"] = new JsonObject
+                                {
+                                    ["type"] = "null"
+                                }
+                            })
+                    };
+            }
+
             definitions["node" + index] = schema;
         }
 
-        var document = new JsonObject
-        {
-            ["$schema"] = "https://json-schema.org/draft/2020-12/schema",
-            ["$ref"] = "#/$defs/node0",
-            ["$defs"] = definitions,
-            ["x-cordis"] = new JsonObject
-            {
-                ["complete"] = false,
-                ["validation"] = "runtime",
-                ["diagnostics"] =
-                    new JsonArray(diagnostics.Select(message => (JsonNode?)JsonValue.Create(message)).ToArray())
-            },
-        };
-        return new("json-schema-2020-12", document.ToJsonString(), false, diagnostics.AsReadOnly());
+        return definitions;
     }
 
     private static List<string> Limitations() =>

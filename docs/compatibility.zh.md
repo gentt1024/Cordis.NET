@@ -2,6 +2,26 @@
 
 [English](compatibility.md) | 中文
 
+## 浏览器 SDK 的依赖边界
+
+浏览器 SDK 将 DSH 插件图接到 .NET Host。Cordis.NET 负责生成的协议客户端、管理订阅、生命周期接线和声明桥。应用选择自己的 shell 模块、renderer、认证和界面。普通 CLR 插件通过 .NET 运行时、Composition、Profile、CLR 部署、Hosting 和 Remote 工作，无需安装 Node。
+
+`upstream.lock.json` 的 Git 提交固定行为对照。客户端的 npm 锁记录实际分发的 JS 包及其完整性摘要。vendor 清单按文件记录保留的来源和本地改动。包摘要用于核对 registry 字节；兼容性由独立安装的 SDK 与独立构建的插件在实际模块表上验证。
+
+当前基线需保留两项 modules 修正。激活失败后显式选择旧修订时，应重新装载并启用选中的代码。发布通知同步重入时，外层调用应保留自己的接纳结果。替代包在受支持的 SDK 组合中通过这两项场景后，才可退出相应修补。
+
+固定的 Connection npm 包还声明了服务端依赖 Zod。安装端审计在 `zod@4.4.3` 及其 Connection 依赖链上报告同一条高危公告。浏览器 SDK 选择 Connection 的客户端条件入口，构建输入清单可核对该入口引用的 Schemastery 和实际分发的模块。[GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)
+
+## Profile 配置 Schema
+
+文档导出按 DSH `0.2.1-rc.2` 的 `packages/boot/app-boot/src/config-schema` 工作。条目名选择已捕获的输入声明；根补丁的 ID 指向最后一个编入索引的同名 ID。include 使用独立的目标索引。诊断路径标识组合后树中的条目位置。.NET 由宿主解析器和作者提供的描述符给出插件声明。是否允许省略取自作者声明的 Optional 和 Default；默认值的有效性由作者负责。插入目标 ID 不存在或指向非 group 条目时，加载器给出警告并跳过其子项；被接纳的插入必须包含合法条目。静态投影会报告缺失或只能近似表达的约束；校验回调和表达式留到应用配置时执行。参见[配置发现](configuration-description.zh.md#校验条目列表或补丁文件)。
+
+## 离线 profile 包操作和本地 CLR 构建
+
+固定 DSH 的插件管理器以调用者当前目录解析相对来源，按顺序选中新加入的 bundle，并保留已停用依赖的状态。CLR 适配器在 profile dependencies 中保存绝对逻辑 `link:`。源码工程按配置提供经核验的构建输出，首次构建之前就可以登记。登记或移除不改作者工程的编译引用，源码文件由作者管理。
+
+NuGet 为每个安装根独立解析依赖。省略版本的 add 将最新稳定版本精确保存，显式版本投影为 NuGet 精确要求。显式 NuGet 范围保留原声明和标准锁，选中的还原图随 bundle 选择保存在 `dsh.profile.restore`。离线写入成功只报告磁盘结果。实际生效或需要重启由运行会话自己的协调过程判定。在这条 CLR 接线上，若已有映射的运行输出位置改变，需要重启。执行包构建需要明确批准。CLR 命令支持文档列出的 NuGet 操作；Web 依赖使用 pnpm，Git 来源先单独 checkout 再登记。参见[本地 CLR 构建](clr-artifacts.zh.md)和 [CLI 操作](../tools/Cordis.Cli/README.zh.md)。
+
 ## SDK 安全维护，2026-11-05
 
 构建 SDK 固定为 10.0.114，随附 .NET 10.0.14，替换 SDK 10.0.111 及受 [GHSA-p3jp-9v83-76w9](https://github.com/advisories/GHSA-p3jp-9v83-76w9) 影响的 10.0.11 AOT 工具链。NuGet 审计与警告视为错误继续启用。此次维护保持 SDK 功能带、固定 DSH 基线、显式 PackageReference 版本和生成合同格式不变；编译器加载仍要求 Roslyn 程序集身份匹配。
@@ -329,6 +349,12 @@ Profile 安装现在对已失效的输入返回 `profile-conflict`，不再用 P
 
 `PluginConfigurationOperations.AdmitProfileAsync` 接收库持有的不可变 manifest 文本和原始根配置候选，组合仍使用现有 Profile/Include 逻辑。修改分离的 composition 视图不会改变保存候选。安装与 bundle 选择在发布/持久化前准入，并通过 `ProfileSession` 应用该候选；移除分别准入其持久步骤，其中删除依赖候选在工具解除运行时映射前准入。CLR 制品保留并单独报告，直至显式离线删除。拒绝第二步时，包保持已安装、已取消选择。重复选择仍在重新应用前准入。普通消费可以省略准入。仅使用旧 `ReconcileAsync` 的宿主在未启用产品准入时保留原回调；启用产品准入时必须支持候选 reconciliation，不能静默退回重新读盘组合。
 
+在同一部署内禁用某项注入服务的唯一提供者后，已启用的消费者可以等待该服务。若消费者是可选条目且没有运行错误，配置操作返回 `applied`，并在等待诊断中列出缺失的服务。再次提供该服务时，原配置即可激活消费者。固定 DSH 的 app-boot 在启动时审查必需条目；.NET 会话在运行中协调时也执行显式必需条目策略，并拒绝新出现的激活错误。部署代际发生变化时，仍按原规则检查此前活跃、替换后失活的保留条目。
+
+运行中的宿主可以在启动会话前设置 `ProfileLaunch.PrepareApplyAsync`。配置变更在会话既有队列内提供已捕获的有效根配置（`ProfileApplyRequest.Candidate`），包括 profile 和 home 补丁的文件监视。模块变更提供规范化的源码路径。准备阶段抛出异常会保留当前运行图。返回的 `IProfileApplyLease` 在协调整个过程中持有资源。框架在应用成功后调用 `CommittedAsync`，在成功、失败或请求重启后等待 `DisposeAsync` 完成。返回租约之前取得的资源由应用自行清理。发布、释放或提交后通知出错会通过会话诊断回调和 `Error` 事件报告，已提交的运行图继续生效。
+
+在启动参数上安装一次回调即可覆盖显式刷新和自动变更。业务活动检查和外部资源准备由应用负责。读取根配置时使用候选的 `ConfigurationJson`；嵌套 include 文件沿用各自的文件生命周期。管理接纳仍负责持久写入，运行时拒绝可能发生在保存成功之后。初次启动和重启后进程是否健康须分别观察。未设置回调时沿用固定 DSH 刷新行为。
+
 单条启停将拟写入的 user patch 纳入完整候选，使用同一准入边界。拒绝时不保存补丁、不执行 reconciliation；批准后先核对捕获输入，再保存并应用该候选。既有补丁编辑器保留注释和表达式语法，manifest 与 base 不变。这是对既有 .NET 产品准入适配的覆盖补齐：固定 DSH 的 `PluginManager.setPluginEnabled` 先写入再 reload，并明确在激活失败后保留已保存修改。准入拒绝与后续激活失败分别处理；保存后的激活失败仍保留请求补丁。不提供批量启停或自动回滚合同。
 
 即使 owner 配置比较相等，捕获的基础数据变化也会进入既有 Include 更新；未变化条目保留原 fiber。候选回调与赋值时的旧回调关联。宿主随后只替换 `ReconcileAsync` 时，未启用准入的操作仍执行该定制；启用准入则拒绝，直到宿主明确为此接线设置候选应用回调。
@@ -538,3 +564,5 @@ WriteAsString、AllowNamedFloatingPointLiterals 和未支持组合在影响投�
 空性／默认图现在只对递归遍历路径中同一泛型声明的活动使用点计预算，上限为 256。总图大小与兄弟实例不消耗该预算；已访问身份使普通递归终止。这项保护约束生成过程中的泛型递归展开，超过同一资源预算的有限路径仍会拒绝，不声称进行数学意义的终止判定。既有后端声明数量／深度预算和运行时默认遍历保护不变。
 
 编译前的 MSBuild 生成路线通过内容增量检查，避免在输入未变且输出完整时再次启动编译器。命中时仍注册生成源码和模型，重新生成前使本地成功回执失效。源码／模型列表、显式引用及 XML 旁车文档、生成选项、编译器／SDK 文件和输出内容参与检查；输出缺失或生成失败不能复用成功回执。这项 .NET 构建接线不改变固定 DSH 的声明与生成语义。
+
+浏览器包还支持经固定模块注册表读取声明。工具提供 Host 图、产物加载函数与 shell 模块。检查过程执行模块 factory 并读取声明。宿主选择受信代码。检查器支持 Standard JSON Schema 输入转换器和可选的 DSH 原生投影器。声明发现接口接收生成的文档，对无法投影的部分给出诊断。参见[读取插件声明](../clients/modules/README.zh.md#读取插件声明)。

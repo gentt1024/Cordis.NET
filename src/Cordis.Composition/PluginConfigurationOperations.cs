@@ -177,48 +177,27 @@ public sealed partial class PluginConfigurationOperations(
             return (PackageManifest.Read(Path.Combine(packageDirectory, "package.json")), packageDirectory);
         }
 
-        var selected = after
-            .Bundles.Where(name =>
-                !oldDependencies.Contains(name) && !dependencies.Contains(name) ||
-                dependencies.Contains(name) && Resolve(name).Manifest.HasBundleDeclaration)
+        var edits = oldDependencies
+            .Except(dependencies)
+            .Select(name => (name, false, false))
             .ToList();
-        var plain = new List<string>();
         foreach (var name in dependencies)
         {
-            if (oldDependencies.Contains(name))
+            if (oldDependencies.Contains(name) && !after.Bundles.Contains(name))
                 continue;
             var package = Resolve(name);
-            if (!package.Manifest.HasBundleDeclaration)
-            {
-                plain.Add(name);
-                continue;
-            }
-
-            await Profiles.ReadBundleAsync(name, package.Directory, package.Manifest);
-            if (!selected.Contains(name))
-                selected.Add(name);
+            var bundle = package.Manifest.HasBundleDeclaration;
+            if (bundle && !oldDependencies.Contains(name))
+                await Profiles.ReadBundleAsync(name, package.Directory, package.Manifest);
+            edits.Add((name, true, bundle));
         }
 
+        var (selected, plain) = ReconcileSelection(after.Bundles, oldDependencies, edits);
         if (!selected.SequenceEqual(after.Bundles))
-        {
-            var raw = (EntryOptions)Data.Clone(after.Raw)!;
-            if (raw.GetValueOrDefault("dsh") is not EntryOptions dsh)
-                raw["dsh"] = dsh = new();
-            if (dsh.GetValueOrDefault("profile") is not EntryOptions profile)
-                dsh["profile"] = profile = new();
-            profile["bundles"] = selected;
-            var temporary = manifestPath + ".tmp-" + Guid.NewGuid().ToString("N");
-            try
-            {
-                await File.WriteAllTextAsync(temporary, ConfigurationFile.Write(raw, true));
-                File.Move(temporary, manifestPath, true);
-            }
-            finally
-            {
-                if (File.Exists(temporary))
-                    File.Delete(temporary);
-            }
-        }
+            await ReplaceManifestAsync(
+                manifestPath,
+                ConfigurationFile.Write(WithBundles(after, selected).Raw, true),
+                CancellationToken.None);
 
         return new(ProfileMaintenance.Inventory(directory, installedPackages, installationBundles), plain);
     }
@@ -592,7 +571,10 @@ public sealed partial class PluginConfigurationOperations(
         }
     }
 
-    private async Task<FileStream> AcquireFileLockAsync(CancellationToken cancellationToken)
+    private Task<FileStream> AcquireFileLockAsync(CancellationToken cancellationToken) =>
+        AcquireFileLockAsync(ManifestPath, cancellationToken);
+
+    private static async Task<FileStream> AcquireFileLockAsync(string manifestPath, CancellationToken cancellationToken)
     {
         var started = System.Diagnostics.Stopwatch.StartNew();
         while (true)
@@ -601,7 +583,7 @@ public sealed partial class PluginConfigurationOperations(
             try
             {
                 return new FileStream(
-                    ManifestPath + ".cordis-lock",
+                    manifestPath + ".cordis-lock",
                     FileMode.OpenOrCreate,
                     FileAccess.ReadWrite,
                     FileShare.None,

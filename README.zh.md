@@ -47,6 +47,6 @@ dotnet run --project examples/Composition/Composition.csproj
 
 ## 项目范围
 
-行为依据 [upstream.lock.json](upstream.lock.json) 固定的版本，目前为 DSH `0.2.1-rc.2`，其中 vendored Cordis 为 `4.0.4`。[兼容说明](docs/compatibility.zh.md)记录 .NET 适配和互通范围。任意 TypeScript 插件不属于受支持的 .NET 部署格式。
+行为依据 [upstream.lock.json](upstream.lock.json) 固定的版本，目前为 DSH `0.2.1-rc.2`，其中 vendored Cordis 为 `4.0.5`。[兼容说明](docs/compatibility.zh.md)记录 .NET 适配和互通范围。任意 TypeScript 插件不属于受支持的 .NET 部署格式。
 
 Cordis.NET 独立维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。目前仍是早期预览，公共 API 在稳定版前可能调整；已发布包与 tag 的身份保持不变。

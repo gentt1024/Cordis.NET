@@ -10,7 +10,7 @@
 |---|---|---|
 | 行为目标 | `deepseek-ai/deepseek-harness` | `687f282e8625c6b8d11ff58211a90524be2e4317` |
 | Harness 发布标签 | DeepSeek Harness | `0.2.1-rc.2` |
-| Vendored 包 | `@deepseek-ai/cordis` | `4.0.4` |
+| Vendored 包 | `@deepseek-ai/cordis` | `4.0.5` |
 | Core 与 loader 来源 | `cordiverse/cordis` | `56b3d4f725681cf4556c1a8695a709cc3b6eed74` |
 | 上游记录的扩展来源 | `deepseek-harness/cordis` | `abb0a307cb1d3b0947f455d590cf5ba922d4caa4` |
 

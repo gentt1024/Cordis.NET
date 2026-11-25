@@ -25,6 +25,21 @@ cordis preview cordis.yml --patch cordis.patch.yml --json
 
 替换为实际文件路径。文件校验成功不证明服务、依赖或 JavaScript 表达式一定能成功激活。
 
+## 离线管理 Profile 依赖
+
+这些命令使用开发版 CLI。首次成功 add 可以建立 profile。来源需要明确指定，相对路径以当前命令的工作目录为准。
+
+```console
+cordis plugin --profile dev add ./examples/ManagedPlugin
+dotnet build examples/ManagedPlugin -c Debug
+cordis plugin --profile dev list
+cordis run dev --configuration Debug
+```
+
+使用包源时传入 `--source <feed>`，并用 `--allow-build ID@version` 批准精确版本的包构建。例如，`add Example.ManagedPlugin@1.0.0-alpha.1` 固定版本；省略版本时选择最新稳定版。NuGet 范围要加引号，如 `"My.Plugin@[1.0,2.0)"`。显式路径 `./file.nupkg` 选中该归档。每个根有独立的 NuGet 锁和私有依赖。命令接受 NuGet 声明和本地根目录；Git 来源先单独 checkout，Web workspace、标签与脚本命令使用 pnpm。
+
+`install` 按保存的声明还原，`update [ID]` 重新解析范围，`why ID` 查询已记录的 NuGet 依赖图，`remove ID` 撤销来源。移除会保留本地源码和部署文件。安装普通库不会选中 bundle；编译引用由作者工程声明。以前通过在线管理安装的精确版本仍可从已验证目录运行。首次通过离线 install 为它生成标准 NuGet 锁时，需要显式包源和构建批准。离线命令报告 profile 是否改变。运行中的激活和通知结果应从 Host 单独核对。
+
 ## 运行 CLR Profile
 
 先按[托管应用示例](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md)构建本地源。下方命令使用其中的 `artifacts/managed-feed` 和包身份。创建单独的 CLI Profile，CLI 不提供该示例的浏览器映射。在两个终端中设置相同授权值：
@@ -41,7 +56,7 @@ $env:CORDIS_MANAGEMENT = 'Bearer local-development-token'
 cordis run artifacts/cli-profile --source artifacts/managed-feed --url http://127.0.0.1:5080 --authorization-env CORDIS_MANAGEMENT --allow-build Example.ManagedPlugin@1.0.0-alpha.1 --settings example.managedplugin=limit,credential
 ```
 
-保持该 Host 运行，另一个进程不能同时拥有同一 Profile。离线文件操作前先停止 Host。这条路线在普通运行时加载 CLR 代码，静态 AOT 应用使用库并通过重新发布更新代码。
+保持该 Host 运行，另一个进程不能同时拥有同一 Profile。离线修改包声明使用 profile manifest 的写锁。物理删除保留文件前应先停止所有消费者。这条路线在普通运行时加载 CLR 代码，静态 AOT 应用使用库并通过重新发布更新代码。
 
 ## 检查、安装与移除插件
 
@@ -76,6 +91,6 @@ cordis remove http://127.0.0.1:5080/cordis Example.ManagedPlugin --authorization
 
 ## 离线删除保留文件
 
-先停止所有 Host、Worker 和其他消费者，再运行 `cordis delete-retained <profile> <package> <version>`，删除无引用版本及其回执。见[保留文件归属](https://github.com/gentt1024/Cordis.NET/blob/main/docs/clr-artifacts.zh.md)。
+先停止所有 Host、Worker 和其他消费者，再运行 `cordis delete-retained <profile> <package> <exact-version-or-graph>`，删除无引用的部署及其回执。离线部署使用保存的恢复图 ID。见[保留文件归属](https://github.com/gentt1024/Cordis.NET/blob/main/docs/clr-artifacts.zh.md)。
 
 Cordis.NET 独立维护，不是 DeepSeek、Cordiverse 或 Microsoft 的官方项目。

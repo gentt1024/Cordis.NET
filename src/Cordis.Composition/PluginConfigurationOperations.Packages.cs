@@ -277,6 +277,7 @@ public sealed partial class PluginConfigurationOperations
                 if (raw.GetValueOrDefault("dependencies") is not EntryOptions dependencies)
                     raw["dependencies"] = dependencies = new();
                 dependencies[prepared.Name] = prepared.Version;
+                SetRestoreGraph(raw, prepared.Name, null);
                 var candidate = await CreateCandidateAsync(
                     inputs,
                     WithBundles(
@@ -445,6 +446,7 @@ public sealed partial class PluginConfigurationOperations
                     var removalInputs = await CaptureProfileAsync();
                     var raw = ParseManifest(await removalInputs.ReadAsync(ManifestPath)).Raw;
                     (raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.Remove(name);
+                    SetRestoreGraph(raw, name, null);
                     var removalCandidate = await CreateCandidateAsync(removalInputs, new(raw));
                     await AdmitCandidateAsync(removalInputs, removalCandidate);
                     removalInputs.PlanRemoval(name);

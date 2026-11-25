@@ -6,7 +6,7 @@ if (args.Length > 0 && args[0] == "delete-retained")
     if (args.Length != 4)
     {
         Console.Error.WriteLine(
-            "Usage: cordis delete-retained <profile> <package> <version>. Stop all hosts and Workers first.");
+            "Usage: cordis delete-retained <profile> <package> <exact-version-or-graph>. Stop all hosts and Workers first.");
         return 2;
     }
 
@@ -31,6 +31,8 @@ if (args.Length > 0 && args[0] == "delete-retained")
     }
 }
 
+if (args.Length > 0 && args[0] == "plugin")
+    return await ProfilePackageCommands.RunAsync(args[1..]);
 if (args.Length > 0 && args[0] == "run")
     return await ApplicationCommands.RunAsync(args[1..]);
 if (args.Length > 0 && args[0] is "state" or "plugins" or "bundles" or "inspect" or "install" or "remove" or "enable"

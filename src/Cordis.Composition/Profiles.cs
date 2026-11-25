@@ -143,6 +143,39 @@ public sealed class PackageManifest
 
     private IDictionary<string, object?>? Dsh => Raw.GetValueOrDefault("dsh") as IDictionary<string, object?>;
 
+    /// <summary>Explicit source roots saved by the author. Build outputs are resolved separately for the requested configuration.</summary>
+    public IReadOnlyList<DeploymentLinkedRoot> LinkedRoots =>
+        (Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?> ?? new EntryOptions())
+        .Where(pair => pair.Value is string value && value.StartsWith("link:", StringComparison.Ordinal))
+        .Select(pair => new DeploymentLinkedRoot(pair.Key, LinkDirectory((string)pair.Value!)))
+        .ToArray();
+
+    internal static string LinkDirectory(string declaration)
+    {
+        var path = declaration["link:".Length..];
+        if (!Path.IsPathFullyQualified(path))
+            throw new FormatException($"Profile source '{declaration}' must contain an absolute path.");
+        return Path.GetFullPath(path);
+    }
+
+    /// <summary>Per-dependency immutable restore graph identities selected with the package declarations.</summary>
+    public IReadOnlyDictionary<string, string> RestoreGraphs
+    {
+        get
+        {
+            var value =
+                (Dsh?.GetValueOrDefault("profile") as IDictionary<string, object?>)?.GetValueOrDefault("restore");
+            if (value is null)
+                return new Dictionary<string, string>();
+            if (value is not IDictionary<string, object?> graphs)
+                throw new FormatException("dsh.profile.restore must be an object.");
+            return graphs.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value as string ?? throw new FormatException("A restore graph identity must be a string."),
+                StringComparer.Ordinal);
+        }
+    }
+
     /// <summary>
     /// Gets the bundle patch value.
     /// </summary>
@@ -227,28 +260,51 @@ public static class Profiles
     public static void Initialize(string directory, IReadOnlyList<string> bundles)
     {
         System.IO.Directory.CreateDirectory(directory);
-        var manifest = Path.Combine(directory, "package.json");
-        if (!File.Exists(manifest))
-            File.WriteAllText(
-                manifest,
-                ConfigurationFile.Write(
-                    new EntryOptions
-                    {
-                        ["name"] = "dsh-profile-" + Path.GetFileName(directory),
-                        ["private"] = true,
-                        ["dependencies"] = new EntryOptions(),
-                        ["dsh"] = new EntryOptions
-                        {
-                            ["profile"] = new EntryOptions
-                            {
-                                ["bundles"] = bundles
-                            }
-                        }
-                    },
-                    true));
-        var patch = Path.Combine(directory, "cordis.patch.yml");
-        if (!File.Exists(patch))
-            File.WriteAllText(patch, "[]\n");
+        InitializePatch(directory);
+        InitializeFile(
+            Path.Combine(directory, "package.json"),
+            ConfigurationFile.Write(DefaultManifest(directory, bundles).Raw, true));
+    }
+
+    internal static PackageManifest DefaultManifest(string directory, IReadOnlyList<string> bundles) => new(
+        new EntryOptions
+        {
+            ["name"] = "dsh-profile-" + Path.GetFileName(directory),
+            ["private"] = true,
+            ["dependencies"] = new EntryOptions(),
+            ["dsh"] = new EntryOptions
+            {
+                ["profile"] = new EntryOptions
+                {
+                    ["bundles"] = bundles
+                }
+            }
+        });
+
+    internal static void InitializePatch(string directory) =>
+        InitializeFile(Path.Combine(directory, "cordis.patch.yml"), "[]\n");
+
+    private static void InitializeFile(string path, string text)
+    {
+        if (File.Exists(path))
+            return;
+        var temporary = path + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporary, text);
+            try
+            {
+                File.Move(temporary, path);
+            }
+            catch (IOException) when (File.Exists(path))
+            {
+                // Another initializer already published the complete file.
+            }
+        }
+        finally
+        {
+            File.Delete(temporary);
+        }
     }
 
     /// <summary>Installation mappings have priority over profile mappings for bundle layers.</summary>

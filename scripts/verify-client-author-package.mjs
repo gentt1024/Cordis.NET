@@ -6,7 +6,7 @@ import { createServer } from 'node:http'
 import { mkdir, mkdtemp, readFile, readdir, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -45,8 +45,14 @@ import svg from './image.svg'
 import png from './image.png'
 import webp from './image.webp'
 import { marker } from '@example/shared'
-export const observed = { classes, inline, marker, images: { svg, png, webp } }
+import { Context, Service } from '@cordis-net/client-modules'
+import { SlotCore } from '@cordis-net/client-modules/slots'
+export const observed = { classes, inline, marker, Context, Service, SlotCore, images: { svg, png, webp } }
+export function contribution() { return null }
 export function apply(ctx) {
+  const slots = ctx.get('shellSlots')
+  if (!(ctx instanceof Context) || !(slots instanceof SlotCore)) throw new Error('SDK runtime identity differs from shell')
+  ctx.effect(() => slots.register({ name: 'root', registrant: 'independent-author' }, contribution))
   ctx.provide('fixture', observed)
   ctx.effect(() => {
     const sheet = document.createElement('style')
@@ -172,9 +178,21 @@ let registered
 const marker = { value: 'shell-owned singleton' }
 runInNewContext(bytes.toString(), { __ModuleLoader__: { load(value) { registered = value } } })
 assert.equal(registered.id, manifest.name)
-let requests = 0
-const plugin = registered.factory(request => { requests++; assert.equal(request, '@example/shared'); return { marker } })
-assert.equal(requests, 1)
+const sdk = await import(pathToFileURL(resolve(runtime, 'client.mjs')).href)
+const slotExports = await import(pathToFileURL(resolve(runtime, 'slots.mjs')).href)
+const shellModules = new Map([
+  ['@example/shared', { marker }], ['@cordis-net/client-modules', sdk], ['@cordis-net/client-modules/slots', slotExports],
+])
+const requests = []
+const plugin = registered.factory(request => {
+  assert.ok(shellModules.has(request), request)
+  requests.push(request)
+  return shellModules.get(request)
+})
+assert.deepEqual(requests.sort(), [...shellModules.keys()].sort())
+assert.equal(plugin.observed.Context, sdk.Context)
+assert.equal(plugin.observed.Service, sdk.Service)
+assert.equal(plugin.observed.SlotCore, slotExports.SlotCore)
 assert.equal(plugin.observed.marker, marker)
 assert.match(plugin.observed.classes.panel, /_panel$/)
 assert.match(plugin.observed.inline, /font-weight:700/)
@@ -202,16 +220,21 @@ if (!serve && !headless) {
   const html = `<!doctype html><meta charset="utf-8"><title>Installed Cordis author consumer</title>
 <h1>Installed author package</h1><pre id="result">Running real browser lifecycle checks</pre>
 <script type="module">
-import { bootClientModules } from '/runtime/client.mjs'
+import { bootClientModules, Context, Service } from '/runtime/client.mjs'
+import { SlotCore } from '/runtime/slots.mjs'
 const results=[];let client
 function check(condition,message){if(!condition)throw new Error(message);results.push(message)}
 globalThis.authorCleanup=[]
 try {
   const marker={value:'shell-owned singleton'}
   const graph=${JSON.stringify(snapshot)}
-  client=await bootClientModules({graph,staticModules:{'@example/shared':{marker}}})
+  const shellSlots=new SlotCore()
+  client=await bootClientModules({graph,configure(ctx){ctx.provide('shellSlots',shellSlots)},staticModules:{'@example/shared':{marker}}})
   check(client.state.getSnapshot().failures.length===0,'plugin activated')
   check(client.context.get('fixture').marker===marker,'external singleton retained')
+  const author=client.context.get('fixture')
+  check(author.Context===Context&&author.Service===Service&&author.SlotCore===SlotCore,'independent plugin uses shell Context, Service and SlotCore')
+  check(shellSlots.entries('root').length===1,'shell observes the plugin slot contribution')
   const expectedImages=${JSON.stringify(Object.fromEntries(Object.entries(images).map(([extension, image]) =>
     [extension, { type: image.type, base64: image.bytes.toString('base64') }])))}
   for(const [extension,expected] of Object.entries(expectedImages)){
@@ -230,11 +253,14 @@ try {
   check(getComputedStyle(document.querySelector('#author-element')).fontWeight==='700','inline CSS effect applied')
   check(getComputedStyle(document.body).getPropertyValue('--author-global').trim()==='ready','global CSS applied')
   await client.disconnect()
+  check(shellSlots.entries('root').length===0,'withdrawal disposes the slot contribution')
   check(globalThis.authorCleanup[0]===2,'effect cleanup precedes loader style removal')
   check(styles()===0&&!document.querySelector('#author-element')&&!document.querySelector('[data-inline-owner]'),'withdrawal releases styles and DOM')
   await client.sync(graph)
+  check(shellSlots.entries('root').length===1,'reload registers the slot contribution once')
   check(styles()===2&&document.querySelector('#author-element'),'reload restores owned styles and DOM')
   await client.dispose()
+  check(shellSlots.entries('root').length===0,'final disposal clears the slot registry')
   check(styles()===0&&globalThis.authorCleanup.length===2&&!document.querySelector('#author-element'),'final disposal releases all contributions')
   document.querySelector('#result').textContent='PASS\\n'+results.join('\\n')
   await fetch('/result',{method:'POST',body:JSON.stringify({status:'passed',checks:results})})

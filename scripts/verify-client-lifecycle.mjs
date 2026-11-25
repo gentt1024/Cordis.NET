@@ -42,7 +42,7 @@ const transport = {
 }
 // The controller's recovery and plugin ownership are tested through the shared
 // mux client. The fixture controls only socket frames, not notification semantics.
-function notifications() {
+function notifications(structural = false) {
   class Socket extends EventTarget {
     calls = new Map()
     closed = false
@@ -83,7 +83,9 @@ function notifications() {
   }
   const connection = new TypertConnection('http://localhost/remote', fetch, url => new Socket(url))
   const owner = new Context()
-  const remote = createEvents(owner, connection)
+  const eventContext = structural ? { root: {}, on: owner.on.bind(owner), parallel: owner.parallel.bind(owner),
+    waterfall: owner.waterfall.bind(owner) } : owner
+  const remote = createEvents(eventContext, connection)
   return { ...remote, async dispose() { await remote.dispose(); await connection.dispose(); await owner.fiber.dispose() } }
 }
 const modules = await bootClientModules({ graph, loadBundle })
@@ -182,7 +184,7 @@ const network = new EventTarget()
 network.navigator = { onLine: false }
 globalThis.window = network
 const streamCount = streams.length
-const networkNotifications = notifications()
+const networkNotifications = notifications(true)
 const networkClient = createManagementClient({ events: networkNotifications, recovery, transport })
 await delay(20)
 assert.equal(streams.length, streamCount, 'Offline startup must not open the carrier')

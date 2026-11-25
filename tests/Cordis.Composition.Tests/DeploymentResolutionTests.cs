@@ -132,6 +132,43 @@ public sealed class DeploymentResolutionTests
     }
 
     [Fact]
+    public async Task Saved_source_survives_reopen_and_only_resolves_through_its_explicit_output()
+    {
+        using var f = new Fixture();
+        var root = f.Package("work/linked", "linked");
+        var output = f.Package("built/Debug", "linked");
+        var path = Path.Combine(f.Active, "package.json");
+        var change = await PluginConfigurationOperations.CommitDeployedPackagesAsync(
+            f.Active,
+            await File.ReadAllTextAsync(path),
+            [new("linked", "link:" + root, true)]);
+        Assert.True(change.Changed);
+        Assert.Equal(["linked"], PackageManifest.Read(path).Bundles);
+        var parent = new Uri(Path.Combine(f.Active, "entry.cs"));
+        var empty = DeploymentGeneration.Create(f.Installation, f.Profiles, f.Profile(), f.Resolve);
+        Assert.Equal(new DeploymentLinkedRoot("linked", root), Assert.Single(empty.LinkedRoots));
+        Assert.Null(
+            new DeploymentPackageResolver(empty, local: (_, _) => "stale-fallback").PackageDirectory("linked", parent));
+        var ready = DeploymentGeneration.Create(
+            f.Installation,
+            f.Profiles,
+            f.Profile(),
+            f.Resolve,
+            new Dictionary<string, string>
+            {
+                ["linked"] = output
+            });
+        Assert.Equal(output, new DeploymentPackageResolver(ready).PackageDirectory("linked", parent));
+        await PluginConfigurationOperations.CommitDeployedPackagesAsync(
+            f.Active,
+            await File.ReadAllTextAsync(path),
+            [new("linked", null, false)]);
+        Assert.Empty(PackageManifest.Read(path).LinkedRoots);
+        Assert.Empty(PackageManifest.Read(path).Bundles);
+        Assert.True(File.Exists(Path.Combine(root, "package.json")));
+    }
+
+    [Fact]
     public void ComputesImmutableGraphWithoutMaterialization()
     {
         using var f = new Fixture();

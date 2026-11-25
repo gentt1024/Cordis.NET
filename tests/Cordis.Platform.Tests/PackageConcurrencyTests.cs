@@ -403,6 +403,8 @@ public sealed partial class PackageManagementTests
         Assert.False(result.Selected);
         Assert.Equal("failed", result.Application);
         Assert.Equal(edited, await File.ReadAllTextAsync(path));
+        await host.Session.RefreshAsync();
+        Assert.DoesNotContain("IndependentPlugin", host.Toolchain.Bundles.Keys);
         var retry = await owner.RemovePackageAsync(host.Toolchain, "independentplugin");
         Assert.Null(retry.Error);
         Assert.Equal("applied", retry.Application);

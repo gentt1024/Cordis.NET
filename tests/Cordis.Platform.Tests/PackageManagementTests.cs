@@ -98,6 +98,60 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", Feed, "-p:Version=3.0.0");
     }
 
+    [Fact]
+    public async Task Local_project_loads_only_complete_output_for_the_requested_configuration()
+    {
+        var author = Path.Combine(directory, "author");
+        var tools = Path.Combine(AppContext.BaseDirectory, "fixtures", "local-build");
+        var assets = Path.Combine(author, "web.mjs");
+        await File.WriteAllTextAsync(assets, "export const version = 1;");
+        await File.WriteAllTextAsync(
+            Path.Combine(author, "Directory.Build.targets"),
+            $$"""
+              <Project>
+                <PropertyGroup><_CordisClrBuildTool>{{SecurityElement.Escape(Path.Combine(tools, "Cordis.Clr.Build.dll"))}}</_CordisClrBuildTool></PropertyGroup>
+                <Import Project="{{SecurityElement.Escape(Path.Combine(tools, "Cordis.NET.Clr.targets"))}}" />
+                <ItemGroup><CordisLocalFile Include="web.mjs" TargetPath="web/module.mjs" /></ItemGroup>
+              </Project>
+              """);
+        await File.WriteAllTextAsync(
+            Path.Combine(author, "cordis.plugin.json"),
+            """{"assembly":"IndependentPlugin.dll","entryType":"Entry"}""");
+        var debug = await ClrLocalProject.QueryAsync(author);
+        Assert.Equal("IndependentPlugin", debug.PackageId);
+        Assert.Throws<FileNotFoundException>(() => debug.ResolveOutput());
+        await RunAsync(author, "build", "-c", "Debug");
+        var completed = debug.ResolveOutput();
+        Assert.Equal(
+            "export const version = 1;",
+            await File.ReadAllTextAsync(Path.Combine(completed, "web", "module.mjs")));
+        var release = await ClrLocalProject.QueryAsync(author, "Release");
+        Assert.Throws<FileNotFoundException>(() => release.ResolveOutput());
+
+        await using var resolver = new ClrModuleResolver(sharedContracts: [typeof(ConfigObject<>).Assembly]);
+        await using var root = new Context();
+        resolver.Register("fixture", new(completed, "IndependentPlugin.dll", "Entry"));
+        await root.RunAsync(async context =>
+        {
+            var module = await resolver.ResolveAsync("fixture", new Uri(Path.Combine(completed, "package.json")));
+            var fiber = context.Plugin(module.Plugin);
+            await fiber.WaitAsync();
+            Assert.Equal("v1", Assert.IsType<Func<string>>(context.Get("installed-code"))());
+        });
+
+        File.Delete(assets);
+        var failure = await RunDotnetAsync(author, "build", "-c", "Debug", "--no-restore");
+        Assert.NotEqual(0, failure.ExitCode);
+        Assert.Contains("web.mjs", failure.Output);
+        Assert.Equal(completed, debug.ResolveOutput());
+        await File.WriteAllTextAsync(assets, "export const version = 2;");
+        await RunAsync(author, "build", "-c", "Release");
+        Assert.NotEqual(completed, release.ResolveOutput());
+        Assert.Equal(completed, debug.ResolveOutput());
+        await File.WriteAllTextAsync(Path.Combine(release.ResolveOutput(), "web", "module.mjs"), "corrupt");
+        Assert.Throws<InvalidDataException>(() => release.ResolveOutput());
+    }
+
     [Theory]
     [InlineData(true, false)]
     [InlineData(false, false)]
@@ -1111,6 +1165,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             RuntimeIdentity = runtime,
             CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName,
             ManifestLocator = toolchain.LocateManifest,
+            RefreshPackageRoutesAsync = toolchain.RefreshProfileRoutesAsync,
         };
         var session = await ProfileSession.StartAsync(config, launch, resolver, enableHmr: enableHmr);
         return new(profile, resolver, toolchain, session);
@@ -1132,6 +1187,12 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
 
     private static async Task RunAsync(string directory, params string[] arguments)
     {
+        var result = await RunDotnetAsync(directory, arguments);
+        Assert.True(result.ExitCode == 0, result.Output);
+    }
+
+    private static async Task<(int ExitCode, string Output)> RunDotnetAsync(string directory, params string[] arguments)
+    {
         var start = new ProcessStartInfo("dotnet")
         {
             WorkingDirectory = directory,
@@ -1146,7 +1207,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
-        Assert.True(process.ExitCode == 0, await output + await error);
+        return (process.ExitCode, await output + await error);
     }
 
     public Task DisposeAsync()

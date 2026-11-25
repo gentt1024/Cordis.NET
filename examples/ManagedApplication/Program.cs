@@ -158,7 +158,14 @@ foreach (var (name, contracts) in new[] { ("settings", settingsContracts), ("man
 }
 
 app.MapGet("/", () => Results.File(Path.Combine(app.Environment.ContentRootPath, "index.html"), "text/html"));
-app.MapGet("/client-runtime/client.mjs", () => Results.File(Path.Combine(runtime, "client.mjs"), "text/javascript"));
+// Serve the browser SDK entries and their shared chunks from this deployment.
+foreach (var path in Directory.EnumerateFiles(runtime, "*.mjs", SearchOption.TopDirectoryOnly))
+{
+    var name = Path.GetFileName(path);
+    if (name is "cordis-remote.mjs" or "events.mjs" or "settings.mjs" or "management.mjs")
+        continue;
+    app.MapGet("/client-runtime/" + name, () => Results.File(path, "text/javascript"));
+}
 app.MapGet("/client-runtime/LICENSES.txt", () => Results.File(Path.Combine(runtime, "LICENSES.txt"), "text/plain"));
 
 // Refreshed runs inside the session queue. Capture is queued afterwards so catalog publication

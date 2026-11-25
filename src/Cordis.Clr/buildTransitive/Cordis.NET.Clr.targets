@@ -14,4 +14,43 @@
       <EmbeddedResource Include="$(IntermediateOutputPath)CordisHostFrameworks.txt" LogicalName="Cordis.Clr.HostFrameworks.txt" />
     </ItemGroup>
   </Target>
+  <PropertyGroup>
+    <CordisLocalPluginRoot Condition="'$(CordisLocalPluginRoot)' == ''">$(MSBuildProjectDirectory)</CordisLocalPluginRoot>
+    <_CordisPluginRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(CordisLocalPluginRoot)'))</_CordisPluginRoot>
+    <_CordisPluginDeclaration Condition="Exists('$(_CordisPluginRoot)/cordis.plugin.json')">$([MSBuild]::NormalizePath('$(_CordisPluginRoot)', 'cordis.plugin.json'))</_CordisPluginDeclaration>
+    <_CordisClrBuildTool Condition="'$(_CordisClrBuildTool)' == ''">$(MSBuildThisFileDirectory)../tools/net10.0/build/Cordis.Clr.Build.dll</_CordisClrBuildTool>
+    <_CordisClrBuildHost Condition="'$(DotNetHostPath)' != ''">$(DotNetHostPath)</_CordisClrBuildHost>
+    <_CordisClrBuildHost Condition="'$(_CordisClrBuildHost)' == ''">dotnet</_CordisClrBuildHost>
+  </PropertyGroup>
+
+  <!-- Runtime files come from the SDK publish item graph, not a directory scan of stale build output.
+       Authors can add completed resources through CordisLocalFile with a relative TargetPath. -->
+  <Target Name="CordisCompleteLocalOutput" AfterTargets="Build"
+          DependsOnTargets="$(CordisLocalOutputDependsOn);ComputeFilesToPublish"
+          Condition="'$(_CordisPluginDeclaration)' != '' and '$(TargetFramework)' != '' and '$(DesignTimeBuild)' != 'true' and '$(IsCrossTargetingBuild)' != 'true'">
+    <ItemGroup>
+      <_CordisLocalInputs Include="@(ResolvedFileToPublish)" />
+      <_CordisLocalInputs Include="@(CordisLocalFile)" RelativePath="%(CordisLocalFile.TargetPath)" />
+      <_CordisLocalInputs Include="$(CordisTypertModelPath)" RelativePath="cordis/typert/$(AssemblyName).cordis.model.json"
+                          Condition="'@(CordisTypertModelRoot)' != '' or '$(_CordisTypertAuthoredService)' != ''" />
+      <_CordisLocalWeb Include="$(_CordisTypertWebFiles)" Condition="'$(CordisTypertWebModel)' != ''" />
+      <_CordisLocalInputs Include="@(_CordisLocalWeb)" RelativePath="cordis/typert/web/%(_CordisLocalWeb.Filename)%(_CordisLocalWeb.Extension)" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)cordis-local-files.txt"
+                      Lines="@(_CordisLocalInputs->'%(FullPath)|%(RelativePath)')" Overwrite="true" Encoding="UTF-8" WriteOnlyWhenDifferent="true" />
+    <ItemGroup><FileWrites Include="$(IntermediateOutputPath)cordis-local-files.txt" /></ItemGroup>
+    <Exec Command="&quot;$(_CordisClrBuildHost)&quot; &quot;$(_CordisClrBuildTool)&quot; &quot;$(MSBuildProjectFullPath)&quot; &quot;$(_CordisPluginDeclaration)&quot; &quot;$(Configuration)&quot; &quot;$(TargetFramework)&quot; &quot;$(RuntimeIdentifier)&quot; &quot;$(PackageId)&quot; &quot;$(Version)&quot; &quot;$(TargetFileName)&quot; &quot;$(IntermediateOutputPath)cordis-local-files.txt&quot; complete" />
+  </Target>
+
+  <Target Name="CordisGetLocalOutput" Returns="@(_CordisLocalOutput)">
+    <Error Condition="'$(_CordisPluginDeclaration)' == '' or '$(TargetFramework)' == ''" Text="A local CLR plugin declaration and a single TargetFramework are required." />
+    <Exec ConsoleToMsBuild="true" Command="&quot;$(_CordisClrBuildHost)&quot; &quot;$(_CordisClrBuildTool)&quot; &quot;$(MSBuildProjectFullPath)&quot; &quot;$(_CordisPluginDeclaration)&quot; &quot;$(Configuration)&quot; &quot;$(TargetFramework)&quot; &quot;$(RuntimeIdentifier)&quot; &quot;$(PackageId)&quot; &quot;$(Version)&quot; &quot;$(TargetFileName)&quot; &quot;-&quot; query">
+      <Output TaskParameter="ConsoleOutput" ItemName="_CordisLocalOutputPath" />
+    </Exec>
+    <ItemGroup>
+      <_CordisLocalOutput Include="@(_CordisLocalOutputPath)" ProjectFile="$(MSBuildProjectFullPath)" PackageId="$(PackageId)"
+                          ProjectVersion="$(Version)" SourceRoot="$(_CordisPluginRoot)" Configuration="$(Configuration)" TargetFramework="$(TargetFramework)"
+                          CompletionId="$([System.IO.Path]::GetFileName($([System.IO.Path]::GetDirectoryName('%(_CordisLocalOutputPath.Identity)'))))" />
+    </ItemGroup>
+  </Target>
 </Project>

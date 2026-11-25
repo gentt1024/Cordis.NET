@@ -46,9 +46,8 @@ for (const name of ['management', 'settings', 'events', 'collections', 'decision
 const { run } = await import(pathToFileURL(resolve(output, 'compiled/Client.js')).href)
 const contextFile = resolve(output, 'cordis-context.mjs')
 await requireTools('esbuild').build({
-  entryPoints: [resolve(root, 'clients/modules/vendor/cordis/src/index.ts')],
+  absWorkingDir: resolve(root, 'clients/modules'), entryPoints: ['@deepseek-ai/cordis'],
   bundle: true, format: 'esm', platform: 'browser', outfile: contextFile, legalComments: 'eof',
-  alias: { '@deepseek-ai/cosmokit': resolve(root, 'clients/modules/vendor/cosmokit/src/index.ts') },
 })
 const { Context } = await import(pathToFileURL(contextFile).href)
 await run(origin, () => new Context())
