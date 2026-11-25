@@ -6,20 +6,68 @@ public sealed partial class DotnetPluginToolchain
 {
     /// <summary>Open the saved CLR routes for a new Host using the requested build configuration.</summary>
     /// <remarks>Installation-owned names take precedence. Local sources are queried without running Build.</remarks>
-    public static async Task<DotnetPluginToolchain> OpenForRunAsync(
+    public static Task<DotnetPluginToolchain> OpenForRunAsync(
         string profileDirectory,
         ClrModuleResolver resolver,
         IEnumerable<string> sources,
         string configuration = "Debug",
         IReadOnlyDictionary<string, string>? installationBundles = null,
         string dotnetCommand = "dotnet",
+        CancellationToken cancellationToken = default) =>
+        OpenForRunCoreAsync(
+            profileDirectory,
+            resolver,
+            sources,
+            null,
+            configuration,
+            installationBundles,
+            dotnetCommand,
+            cancellationToken);
+
+    /// <summary>Open a Host with its durable authorization policy for local CLR sources.</summary>
+    public static Task<DotnetPluginToolchain> OpenForRunAsync(
+        string profileDirectory,
+        ClrModuleResolver resolver,
+        IEnumerable<string> sources,
+        LocalSourcePolicy localSourcePolicy,
+        string configuration = "Debug",
+        IReadOnlyDictionary<string, string>? installationBundles = null,
+        string dotnetCommand = "dotnet",
         CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(localSourcePolicy);
+        ArgumentNullException.ThrowIfNull(localSourcePolicy.Authorize);
+        if (!Path.IsPathFullyQualified(localSourcePolicy.Workspace))
+            throw new ArgumentException(
+                "Local-source policy needs an absolute Host workspace.",
+                nameof(localSourcePolicy));
+        return OpenForRunCoreAsync(
+            profileDirectory,
+            resolver,
+            sources,
+            localSourcePolicy,
+            configuration,
+            installationBundles,
+            ResolveHostDotnet(dotnetCommand),
+            cancellationToken);
+    }
+
+    private static async Task<DotnetPluginToolchain> OpenForRunCoreAsync(
+        string profileDirectory,
+        ClrModuleResolver resolver,
+        IEnumerable<string> sources,
+        LocalSourcePolicy? policy,
+        string configuration,
+        IReadOnlyDictionary<string, string>? installationBundles,
+        string dotnetCommand,
+        CancellationToken cancellationToken)
     {
         var toolchain = OpenOffline(profileDirectory, resolver, sources, dotnetCommand);
         try
         {
             toolchain.configuration = configuration;
             toolchain.installationBundles = installationBundles;
+            toolchain.localSourcePolicy = policy;
             await toolchain.RefreshRoutesAsync(
                 PackageManifest.Read(Path.Combine(profileDirectory, "package.json")),
                 cancellationToken);
@@ -46,18 +94,49 @@ public sealed partial class DotnetPluginToolchain
 
     private async Task RefreshRoutesAsync(PackageManifest manifest, CancellationToken token)
     {
+        var managed = manifest.ManagedLocalSources;
+        if (managed.Count > 0)
+            RequireLocalSourcePolicy();
         var routes = InstalledRoutes(manifest);
         foreach (var link in manifest.LinkedRoots)
         {
             if (installationBundles?.ContainsKey(link.Name) == true)
                 continue;
             var selected = manifest.Bundles.Contains(link.Name);
+            if (localSourcePolicy is not null)
+            {
+                managed.TryGetValue(link.Name, out var saved);
+                if (!selected && saved is not null)
+                    continue;
+                if (saved is not null && saved.Configuration != configuration)
+                    throw new InvalidOperationException(
+                        "The registered local source requires a different Host configuration.");
+                var facts = await InspectSourceAsync(
+                    null,
+                    new(link.Directory, configuration),
+                    saved,
+                    requireBundle: selected || saved is not null,
+                    token);
+                if (facts is not null)
+                    CheckProjectIdentity(link.Name, facts.PackageId);
+                if (facts?.OutputDirectory is null)
+                {
+                    if (selected)
+                        throw new FileNotFoundException("Build the selected local CLR project before activating it.");
+                    continue;
+                }
+
+                await AuthorizeFactsAsync(null, LocalSourceStage.Activate, facts, token);
+                routes.Add(link.Name, new(facts.OutputDirectory, BundleSource.CompletedLocalBuild, facts));
+                continue;
+            }
+
             try
             {
                 var project = await ClrLocalProject.QueryAsync(link.Directory, configuration, dotnet, token);
                 CheckProjectIdentity(link.Name, project.PackageId);
                 if (project.IsBundle || selected)
-                    routes.Add(link.Name, (project.ResolveOutput(), true));
+                    routes.Add(link.Name, new(project.ResolveOutput(), BundleSource.CompletedLocalBuild));
             }
             catch (IOException error) when (!selected && error is FileNotFoundException or DirectoryNotFoundException)
             {
@@ -65,16 +144,16 @@ public sealed partial class DotnetPluginToolchain
             }
         }
 
-        foreach (var (id, directory) in bundles)
+        var pathComparison =
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        foreach (var (id, active) in activeRoutes)
         {
-            if (!routes.TryGetValue(id, out var selected) ||
-                (!string.Equals(
-                        directory,
-                        selected.Directory,
-                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) &&
-                    !IsDeferredOnlineRoute(id, directory, selected.Directory, manifest)))
-                throw new DeploymentRestartRequiredException(
-                    $"The saved source for '{id}' changed. Restart to load the selected output.");
+            if (routes.TryGetValue(id, out var selected) &&
+                (string.Equals(active.Directory, selected.Directory, pathComparison) ||
+                    active.AuthorizedSource is null && selected.Source == BundleSource.ProfileVersionDirectory))
+                continue; // Online version-directory updates keep the active route until restart.
+            throw new DeploymentRestartRequiredException(
+                $"The saved source for '{id}' changed. Restart to load the selected output.");
         }
 
         // A removal can withdraw exports before its manifest save conflicts. Keep them withdrawn on retry.
@@ -84,9 +163,9 @@ public sealed partial class DotnetPluginToolchain
         RegisterRoutes(routes);
     }
 
-    private Dictionary<string, (string Directory, bool Verified)> InstalledRoutes(PackageManifest manifest)
+    private Dictionary<string, BundleRoute> InstalledRoutes(PackageManifest manifest)
     {
-        var routes = new Dictionary<string, (string Directory, bool Verified)>(StringComparer.OrdinalIgnoreCase);
+        var routes = new Dictionary<string, BundleRoute>(StringComparer.OrdinalIgnoreCase);
         foreach (var (name, value) in Dependencies(manifest))
         {
             if (installationBundles?.ContainsKey(name) == true || value is not string declaration)
@@ -97,7 +176,7 @@ public sealed partial class DotnetPluginToolchain
                 {
                     var package = ReadProfilePackage(name, declaration, graph);
                     if (package.IsBundle)
-                        routes.Add(name, (package.Directory, true));
+                        routes.Add(name, new(package.Directory, BundleSource.LockedRestoreGraph));
                 }
                 catch (IOException error) when (!manifest.Bundles.Contains(name) &&
                                                 error is FileNotFoundException or DirectoryNotFoundException)
@@ -111,7 +190,7 @@ public sealed partial class DotnetPluginToolchain
                 if (Directory.Exists(directory))
                 {
                     RequireOwned(directory, profileDirectory);
-                    routes.Add(name, (directory, false));
+                    routes.Add(name, new(directory, BundleSource.ProfileVersionDirectory));
                 }
             }
         }
@@ -119,18 +198,19 @@ public sealed partial class DotnetPluginToolchain
         return routes;
     }
 
-    private void RegisterSavedProfile(PackageManifest manifest) => RegisterRoutes(InstalledRoutes(manifest));
+    private void RegisterSavedProfile(PackageManifest manifest)
+    {
+        if (manifest.ManagedLocalSources.Count > 0)
+            RequireLocalSourcePolicy();
+        RegisterRoutes(InstalledRoutes(manifest));
+    }
 
-    private void RegisterRoutes(Dictionary<string, (string Directory, bool Verified)> routes)
+    private void RegisterRoutes(Dictionary<string, BundleRoute> routes)
     {
         foreach (var (name, route) in routes)
         {
-            if (bundles.ContainsKey(name))
-                continue;
-            if (route.Verified)
-                RegisterVerifiedBundle(name, route.Directory);
-            else
-                Register(name, route.Directory);
+            if (!activeRoutes.ContainsKey(name))
+                Register(name, route);
         }
     }
 
@@ -155,9 +235,16 @@ public sealed partial class DotnetPluginToolchain
             throw new ArgumentException("Specify at least one package or local source.", nameof(specifications));
         var requests = specifications.Select(ParseSpecification).ToArray();
         var (text, manifest) = await ReadProfileAsync(cancellationToken, allowNew: true);
+        var managed = manifest.ManagedLocalSources;
         var edits = new List<ProfilePackageEdit>();
         foreach (var (source, version, local) in requests)
         {
+            if (managed.ContainsKey(source) || local && manifest.LinkedRoots.Any(link =>
+                    managed.ContainsKey(link.Name) && SameSourcePath(
+                        Path.TrimEndingDirectorySeparator(link.Directory),
+                        Path.TrimEndingDirectorySeparator(source))))
+                throw new InvalidOperationException(
+                    "Remove the managed source before replacing it with an offline dependency.");
             ProfilePackageEdit edit;
             if (local && !source.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
             {
@@ -179,6 +266,9 @@ public sealed partial class DotnetPluginToolchain
             }
 
             var name = SavedName(manifest, edit.Name);
+            if (managed.ContainsKey(name))
+                throw new InvalidOperationException(
+                    "Remove the managed source before replacing it with an offline dependency.");
             if (edits.Any(existing => existing.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
                 throw new ArgumentException("The same package was specified twice: " + name);
             edits.Add(
@@ -204,6 +294,7 @@ public sealed partial class DotnetPluginToolchain
     {
         var (text, manifest) = await ReadProfileAsync(cancellationToken);
         var dependencies = Dependencies(manifest);
+        var managed = manifest.ManagedLocalSources;
         var edits = new List<ProfilePackageEdit>();
         if (name is not null)
         {
@@ -216,6 +307,13 @@ public sealed partial class DotnetPluginToolchain
         {
             if (name is not null && id != name)
                 continue;
+            if (managed.ContainsKey(id))
+            {
+                if (name is not null)
+                    throw new InvalidOperationException("A managed local source requires its Host policy.");
+                continue;
+            }
+
             if (value is not string declaration)
                 throw new FormatException("Expected a string dependency declaration for " + id);
             var graph = manifest.RestoreGraphs.GetValueOrDefault(id);

@@ -23,6 +23,20 @@ export function connection(client: ManagementClient) { return client.connection.
 export function readConfiguration(client: ManagementClient) { return client.readConfiguration('root:plugin') }
 export function compatibility(client: PluginManager) { return client['pluginManager/listVersionExemptions']({}) }
 export function install(client: PluginManager, input: Parameters<PluginManager['pluginManager/installBundle']>[0]) { return client['pluginManager/installBundle'](input) }
+export async function registerSource(client: PluginManager, source: string, requestId: string) {
+  const request = { source, configuration: 'Debug' }
+  const checked = await client['pluginManager/inspectLocalSource']({ request })
+  if (!checked.ok) throw checked.error
+  return client['pluginManager/registerLocalSource']({
+    request, options: { requestId, inspectionId: checked.value.inspectionId, enabled: checked.value.outputStatus === 'ready' },
+  })
+}
+export function registrationAfterReconnect(client: PluginManager, requestId: string) {
+  return client['pluginManager/waitForLocalSource']({ requestId })
+}
+export function savedSource(client: PluginManager, name: string) {
+  return client['pluginManager/readRegisteredLocalSource']({ name })
+}
 export function connect(notifications: Notifications) { return createManagementClient({ events: notifications }) }
 `)
 await writeFile(resolve(directory, 'shell.ts'), `import { bootClientModules, inspectClientModule, type ClientModules, type ClientReleaseChange, type WebBootRelease, type WebBootGraph } from '@cordis-net/client-modules'

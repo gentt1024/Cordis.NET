@@ -33,10 +33,11 @@ return 0;
 static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string secondBundle)
 {
     // The host references shared contracts and the CLR adapter, never the provider implementation.
-    await using var resolver = new ClrModuleResolver([typeof(IProbeRegistry).Assembly]);
-    resolver.Register("probes", Definition(firstBundle));
-    await using (var root = new Context())
+    var resolver = new ClrModuleResolver([typeof(IProbeRegistry).Assembly]);
+    await using (resolver)
     {
+        resolver.Register("probes", Definition(firstBundle));
+        await using var root = new Context();
         Loader? loader = null;
         Fiber? connection = null;
         Fiber? worker = null;
@@ -85,8 +86,6 @@ static async Task<ClrUnloadObservation[]> RunAsync(string firstBundle, string se
     }
 
     Console.WriteLine("root lifecycle cleanup complete");
-    // Stop fibers before retiring the resolver's last implementation.
-    await resolver.DisposeAsync();
     return resolver.Unloads.ToArray();
 }
 

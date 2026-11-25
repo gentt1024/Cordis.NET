@@ -66,33 +66,47 @@ internal sealed class ConfigurationDocumentBuilder
     private readonly List<(string Level, string? Path, string Message)> _diagnostics = [];
     private bool _complete = true;
 
-    internal void Add(
+    internal void AddCarrier(string path, string? id, string name, string tree, bool target) =>
+        AddEntry(path, id, name, tree, "absent", target, tree == "group" ? "entryList" : "includeConfig");
+
+    internal void AddUnresolved(string path, string? id, string? name, bool target) =>
+        AddEntry(path, id, name, null, "error", target, "unknownConfig");
+
+    internal void AddUnsupportedProjection(string path, string? id, string name, bool target, string reason)
+    {
+        AddEntry(path, id, name, null, "unsupported", target, "unknownConfig");
+        Report("error", path, reason);
+    }
+
+    internal void AddNative(
         string path,
         string? id,
-        string? name,
-        ConfigDescriptor? descriptor,
-        string? tree,
-        string status,
+        string name,
         bool target,
-        IPlugin? owner = null)
+        IPlugin owner,
+        ConfigDescriptor? descriptor,
+        string? traversalDiagnostic)
     {
-        var definition = tree switch
-        {
-            "group" => "entryList",
-            "include" => "includeConfig",
-            _ => "unknownConfig"
-        };
-        if (tree is null && descriptor is not null)
+        if (descriptor is null)
+            AddEntry(
+                path,
+                id,
+                name,
+                null,
+                traversalDiagnostic is null ? "absent" : "unsupported",
+                target,
+                "unknownConfig");
+        else
         {
             var limitations = new List<string>();
-            ArgumentNullException.ThrowIfNull(owner);
-            definition = AddDeclaration(owner, descriptor, limitations);
-            status = limitations.Count > 0 ? "partial" : "schema";
+            var definition = AddDeclaration(owner, descriptor, limitations);
             foreach (var message in limitations)
                 Report("warning", path, message);
+            AddEntry(path, id, name, null, limitations.Count > 0 ? "partial" : "schema", target, definition);
         }
 
-        AddEntry(path, id, name, tree, status, target, definition);
+        if (traversalDiagnostic is not null)
+            Report("error", path, traversalDiagnostic);
     }
 
     internal void AddProjection(

@@ -2,6 +2,10 @@
 
 [English](compatibility.md) | 中文
 
+## 在线本地 CLR 来源
+
+DSH 管理端支持检查和登记本地路径。NuGet 归档检查读取包元数据，本地 MSBuild 项目求值会使用 Host 账户。Cordis.NET 为此提供单独的本地源码操作，Host 指定工作区、稳定调用主体和策略。在线登记的链接记录确切入口项目和构建配置，后续使用须经过当前授权。完成回执的哈希标识产物字节；能够写入源码、imports、工具和产物的人均在 Host 的信任边界内。见[通过运行中的 Host 登记本地源码](clr-artifacts.zh.md#通过运行中的-host-登记本地源码)。
+
 ## 浏览器 SDK 的依赖边界
 
 浏览器 SDK 将 DSH 插件图接到 .NET Host。Cordis.NET 负责生成的协议客户端、管理订阅、生命周期接线和声明桥。应用选择自己的 shell 模块、renderer、认证和界面。普通 CLR 插件通过 .NET 运行时、Composition、Profile、CLR 部署、Hosting 和 Remote 工作，无需安装 Node。

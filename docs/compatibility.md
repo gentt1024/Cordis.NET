@@ -2,6 +2,10 @@
 
 English | [中文](compatibility.zh.md)
 
+## Online local CLR sources
+
+DSH's manager accepts a local path for inspection and registration. A NuGet archive inspection reads package metadata; evaluating a local MSBuild project uses the Host account. Cordis.NET therefore exposes explicit local-source operations. The Host supplies a workspace, stable caller identity and policy. An online-managed link records the exact project and configuration; using it again requires current authorization. Source receipt hashes identify output bytes. Developers with write access to the source, imports, tools and outputs remain in the Host trust boundary. See [registering a local source](clr-artifacts.md#register-a-local-source-through-a-running-host).
+
 ## Browser SDK dependency boundary
 
 The browser SDK connects a DSH plugin graph to a .NET Host. Cordis.NET owns the generated protocol clients, management subscriptions, lifecycle integration and declaration bridge. Applications select their shell modules, renderer, authentication and UI. Ordinary CLR plugins use the .NET runtime, Composition, Profile, CLR deployment, Hosting and Remote without installing Node.

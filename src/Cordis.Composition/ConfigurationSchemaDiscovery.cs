@@ -37,7 +37,7 @@ public static class ConfigurationSchemaDiscovery
         IReadOnlyList<ConfigurationLayer>? layers = null,
         CancellationToken cancellationToken = default)
     {
-        var collector = new Collector(resolver, null, cancellationToken);
+        var collector = new Collector(resolver, CollectionMode.Catalog, cancellationToken);
         await collector.ReadAsync(filename, layers);
         return new(collector.Entries.AsReadOnly(), collector.Diagnostics.AsReadOnly());
     }
@@ -93,18 +93,24 @@ public static class ConfigurationSchemaDiscovery
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(profile);
-        var document = new ConfigurationDocumentBuilder();
+        var collector = new Collector(resolver, CollectionMode.Document, cancellationToken);
         foreach (var bundle in skipped)
-            document.Report("error", null, $"Selected profile bundle '{bundle.Name}' could not be loaded.");
-        await new Collector(resolver, document, cancellationToken).ReadAsync(filename, layers);
-        return document.Build(profile);
+            collector.Document.Report("error", null, $"Selected profile bundle '{bundle.Name}' could not be loaded.");
+        await collector.ReadAsync(filename, layers);
+        return collector.Document.Build(profile);
     }
 
-    private sealed class Collector(
-        IModuleResolver resolver,
-        ConfigurationDocumentBuilder? document,
-        CancellationToken cancellationToken)
+    private enum CollectionMode
     {
+        Catalog,
+        Document
+    }
+
+    private sealed class Collector(IModuleResolver resolver, CollectionMode mode, CancellationToken cancellationToken)
+    {
+        private ConfigurationDocumentBuilder? document;
+        public ConfigurationDocumentBuilder Document => document ??= new();
+
         public List<DiscoveredConfigurationSchema> Entries
         {
             get;
@@ -171,12 +177,12 @@ public static class ConfigurationSchemaDiscovery
                         raw = initial;
                     }
 
-                    IEnumerable<object?> rows = document is null ? Data.Entries(raw) : List(raw);
+                    IEnumerable<object?> rows = mode == CollectionMode.Catalog ? Data.Entries(raw) : List(raw);
                     if (patches is { Count: > 0 })
                     {
                         try
                         {
-                            if (document is not null)
+                            if (mode == CollectionMode.Document)
                             {
                                 rows = PrepareIndexedRows(rows);
                                 patches = patches
@@ -196,11 +202,7 @@ public static class ConfigurationSchemaDiscovery
                             rows = EntryPatches.Apply(
                                 Data.Entries(rows),
                                 patches,
-                                warning =>
-                                {
-                                    Diagnostics.Add(file + ": " + warning);
-                                    document?.Report("warning", ownerPath, warning);
-                                });
+                                warning => ReportSource("warning", file, ownerPath, warning));
                         }
                         catch (FormatException error) when (ownerPath is not null)
                         {
@@ -210,7 +212,7 @@ public static class ConfigurationSchemaDiscovery
                         }
                     }
 
-                    if (ownerPath is null && document is not null)
+                    if (ownerPath is null && mode == CollectionMode.Document)
                         IndexTargets(rows, "", new(ReferenceEqualityComparer.Instance));
                     await WalkAsync(rows, file, ids, ownerPath is null ? "" : ownerPath + "/include");
                 }
@@ -220,11 +222,18 @@ public static class ConfigurationSchemaDiscovery
                 }
             }
             catch (Exception error) when (error is not OperationCanceledException &&
-                                          (ownerPath is not null || document is null))
+                                          (ownerPath is not null || mode == CollectionMode.Catalog))
             {
-                Diagnostics.Add(file + ": " + error.Message);
-                document?.Report("error", ownerPath, error.Message);
+                ReportSource("error", file, ownerPath, error.Message);
             }
+        }
+
+        private void ReportSource(string level, string file, string? position, string message)
+        {
+            if (mode == CollectionMode.Catalog)
+                Diagnostics.Add(file + ": " + message);
+            else
+                Document.Report(level, position, message);
         }
 
         private static IEnumerable<object?> List(object? value) =>
@@ -316,7 +325,7 @@ public static class ConfigurationSchemaDiscovery
                     {
                         if (row is null)
                             throw new FormatException("Each entry must be a mapping with a literal plugin name.");
-                        if (document is not null)
+                        if (mode == CollectionMode.Document)
                         {
                             if (name is null)
                                 throw new FormatException("Each entry must be a mapping with a literal plugin name.");
@@ -327,17 +336,22 @@ public static class ConfigurationSchemaDiscovery
                     }
                     catch (FormatException error)
                     {
-                        document?.Add(position, literalId, name, null, null, "error", false);
+                        if (mode == CollectionMode.Document)
+                            Document.AddUnresolved(position, literalId, name, false);
                         EntryError(row, entryId, name, file, position, error.Message);
                         continue;
                     }
 
                     if (tree is not null)
                     {
-                        document?.Add(position, literalId, name, null, tree, "absent", target);
-                        if (document is not null && !row.ContainsKey("config") && !row.Group &&
-                            (row.Disabled is true || Expression(row.Disabled)))
-                            continue;
+                        if (mode == CollectionMode.Document)
+                        {
+                            Document.AddCarrier(position, literalId, name, tree, target);
+                            if (!row.ContainsKey("config") && !row.Group &&
+                                (row.Disabled is true || Expression(row.Disabled)))
+                                continue;
+                        }
+
                         try
                         {
                             if (Expression(row.Config))
@@ -357,50 +371,28 @@ public static class ConfigurationSchemaDiscovery
 
                     try
                     {
-                        if (document is not null && name.StartsWith("cordis:", StringComparison.Ordinal))
-                            throw new NotSupportedException($"Unknown Cordis builtin '{name}'.");
-                        if (document is not null && resolver is IConfigurationSchemaProjectionResolver projections)
+                        if (mode == CollectionMode.Document)
                         {
-                            try
-                            {
-                                var projection = await projections.TryResolveSchemaAsync(
-                                    name,
-                                    baseUri,
-                                    cancellationToken);
-                                if (projection is not null)
-                                {
-                                    document.AddProjection(position, literalId, name, target, projection);
-                                    continue;
-                                }
-                            }
-                            catch (NotSupportedException error)
-                            {
-                                document.Add(position, literalId, name, null, null, "unsupported", target);
-                                document.Report("error", position, error.Message);
+                            if (name.StartsWith("cordis:", StringComparison.Ordinal))
+                                throw new NotSupportedException($"Unknown Cordis builtin '{name}'.");
+                            if (await TryCollectProjectionAsync(position, literalId, name, target, baseUri))
                                 continue;
-                            }
                         }
 
                         var plugin = (await resolver.ResolveAsync(name, baseUri, cancellationToken)).Plugin;
                         var captured = (plugin as IConfigurationPlugin)?.CaptureConfiguration();
-                        var unsupported = plugin is ITreeCarrierPlugin;
-                        var diagnostic = unsupported
+                        var diagnostic = plugin is ITreeCarrierPlugin
                             ? "Custom tree carrier has no native static traversal contract."
                             : null;
-                        if (document is not null)
-                        {
-                            document.Add(
+                        if (mode == CollectionMode.Document)
+                            Document.AddNative(
                                 position,
                                 literalId,
                                 name,
-                                captured?.Descriptor,
-                                null,
-                                unsupported ? "unsupported" : captured is null ? "absent" : "schema",
                                 target,
-                                plugin);
-                            if (diagnostic is not null)
-                                document.Report("error", position, diagnostic);
-                        }
+                                plugin,
+                                captured?.Descriptor,
+                                diagnostic);
                         else
                             Entries.Add(
                                 new(
@@ -420,7 +412,8 @@ public static class ConfigurationSchemaDiscovery
                     }
                     catch (Exception error) when (error is not OperationCanceledException)
                     {
-                        document?.Add(position, literalId, name, null, null, "error", target);
+                        if (mode == CollectionMode.Document)
+                            Document.AddUnresolved(position, literalId, name, target);
                         EntryError(row, entryId, name, file, position, error.Message);
                     }
                 }
@@ -431,6 +424,30 @@ public static class ConfigurationSchemaDiscovery
             }
         }
 
+        private async ValueTask<bool> TryCollectProjectionAsync(
+            string position,
+            string? id,
+            string name,
+            bool target,
+            Uri baseUri)
+        {
+            if (resolver is not IConfigurationSchemaProjectionResolver projections)
+                return false;
+            try
+            {
+                var projection = await projections.TryResolveSchemaAsync(name, baseUri, cancellationToken);
+                if (projection is null)
+                    return false;
+                Document.AddProjection(position, id, name, target, projection);
+            }
+            catch (NotSupportedException error)
+            {
+                Document.AddUnsupportedProjection(position, id, name, target, error.Message);
+            }
+
+            return true;
+        }
+
         private void EntryError(
             EntryOptions? row,
             string id,
@@ -439,10 +456,10 @@ public static class ConfigurationSchemaDiscovery
             string position,
             string message)
         {
-            if (document is null)
+            if (mode == CollectionMode.Catalog)
                 Entries.Add(new(id, name ?? "", file, Data.Truthy(row?.Disabled), null, null, message));
             else
-                document.Report("error", position, message);
+                Document.Report("error", position, message);
         }
 
         private static void ValidateMetadata(EntryOptions row)
@@ -462,7 +479,7 @@ public static class ConfigurationSchemaDiscovery
             string path;
             object? initial;
             List<EntryOptions>? patches;
-            if (document is null)
+            if (mode == CollectionMode.Catalog)
                 config = IncludeOptions.From(config);
             if (config is IncludeOptions options)
                 (path, initial, patches) = (options.Path, options.Initial, options.Patches);
@@ -475,7 +492,7 @@ public static class ConfigurationSchemaDiscovery
             else
                 throw new FormatException("Include config requires a literal path.");
 
-            if (document is not null && patches is not null)
+            if (mode == CollectionMode.Document && patches is not null)
                 foreach (var patch in patches)
                 {
                     if (Expression(patch))

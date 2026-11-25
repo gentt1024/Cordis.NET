@@ -102,10 +102,11 @@ public sealed partial class PluginConfigurationOperations
         return (inputs, await CreateCandidateAsync(inputs, saved));
     }
 
-    private async Task<ProfileInputs> CaptureProfileAsync()
+    private async Task<ProfileInputs> CaptureProfileAsync(Action<PackageManifest>? inspectManifest = null)
     {
         var inputs = new ProfileInputs(launch);
         var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
+        inspectManifest?.Invoke(manifest);
         await inputs.ReadAsync(include.Filename);
         await inputs.ReadOptionalAsync(Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename));
         await ProfileComposition.RefreshAsync(inputs.Launch, manifest, inputs.ReadAsync);
@@ -117,16 +118,18 @@ public sealed partial class PluginConfigurationOperations
         ProfileInputs inputs,
         PackageManifest manifest,
         PreparedPackage? prepared = null,
-        string? userPatch = null)
+        string? userPatch = null,
+        LocalSourceFacts? source = null)
     {
         var proposal = inputs.Launch;
-        if (prepared is not null)
+        var directory = prepared?.PublicationDirectory ?? prepared?.Directory ?? source?.OutputDirectory;
+        if (directory is not null)
         {
             var local = new Dictionary<string, string>(
                 proposal.LocalBundles ?? new Dictionary<string, string>(),
                 StringComparer.Ordinal)
             {
-                [prepared.Name] = Path.GetFullPath(prepared.PublicationDirectory ?? prepared.Directory)
+                [prepared?.Name ?? source!.PackageId] = Path.GetFullPath(directory)
             };
             proposal = proposal with
             {
@@ -163,12 +166,18 @@ public sealed partial class PluginConfigurationOperations
         await inputs.VerifyAsync();
     }
 
-    private async Task SaveCandidateAsync(ProfileInputs inputs, ProfileCandidate candidate, bool published = false)
+    private async Task SaveCandidateAsync(
+        ProfileInputs inputs,
+        ProfileCandidate candidate,
+        bool published = false,
+        Func<Task>? verifyPrepared = null)
     {
         var temporary = ManifestPath + ".tmp-" + Guid.NewGuid().ToString("N");
         try
         {
             await File.WriteAllTextAsync(temporary, candidate.ManifestJson);
+            if (verifyPrepared is not null)
+                await verifyPrepared();
             await inputs.VerifyAsync(published);
             File.Move(temporary, ManifestPath, true);
         }

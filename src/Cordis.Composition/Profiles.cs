@@ -150,6 +150,63 @@ public sealed class PackageManifest
         .Select(pair => new DeploymentLinkedRoot(pair.Key, LinkDirectory((string)pair.Value!)))
         .ToArray();
 
+    /// <summary>Project/configuration identities saved by online registration. Each reopen needs a fresh host decision.</summary>
+    public IReadOnlyDictionary<string, ManagedLocalSource> ManagedLocalSources
+    {
+        get
+        {
+            var sources = ManagedSources(Raw, false);
+            var result = new Dictionary<string, ManagedLocalSource>(StringComparer.OrdinalIgnoreCase);
+            if (sources is null)
+                return result;
+            var linkedNames = LinkedRoots.Select(link => link.Name).ToHashSet(StringComparer.Ordinal);
+            foreach (var (name, value) in sources)
+            {
+                if (!linkedNames.Contains(name))
+                    throw new FormatException($"Managed source '{name}' requires a matching absolute link dependency.");
+                if (value is not EntryOptions entry || entry.GetValueOrDefault("project") is not string project ||
+                    !Path.IsPathFullyQualified(project) ||
+                    entry.GetValueOrDefault("configuration") is not string configuration ||
+                    string.IsNullOrWhiteSpace(configuration))
+                    throw new FormatException($"Invalid managed source selection for '{name}'.");
+                result.Add(name, new(project, configuration));
+            }
+
+            return result;
+        }
+    }
+
+    internal static void SetManagedLocalSource(EntryOptions raw, string name, ManagedLocalSource? source)
+    {
+        var records = ManagedSources(raw, source is not null);
+        if (source is null)
+            records?.Remove(name);
+        else
+            records![name] = new EntryOptions
+            {
+                ["project"] = source.ProjectFile,
+                ["configuration"] = source.Configuration
+            };
+    }
+
+    private static EntryOptions? ManagedSources(EntryOptions raw, bool create)
+    {
+        var fields = raw;
+        foreach (var key in new[] { "dsh", "profile", "localSources" })
+        {
+            if (!fields.TryGetValue(key, out var value))
+            {
+                if (!create)
+                    return null;
+                fields[key] = value = new EntryOptions();
+            }
+
+            fields = value as EntryOptions ?? throw new FormatException($"Profile field '{key}' must be an object.");
+        }
+
+        return fields;
+    }
+
     internal static string LinkDirectory(string declaration)
     {
         var path = declaration["link:".Length..];

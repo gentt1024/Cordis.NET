@@ -40,12 +40,19 @@ public sealed partial class PluginConfigurationOperations
             create: edits.Any(edit => edit.Declaration is not null));
         var previousNames = dependencies?.Keys.ToHashSet(StringComparer.Ordinal) ??
             new HashSet<string>(StringComparer.Ordinal);
+        var managedSources = next.ManagedLocalSources;
         var touched = new HashSet<string>(StringComparer.Ordinal);
         foreach (var edit in edits)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(edit.Name);
             if (!touched.Add(edit.Name))
                 throw new ArgumentException($"Duplicate edit for '{edit.Name}'.", nameof(edits));
+            if (managedSources.ContainsKey(edit.Name) &&
+                (!previousNames.Contains(edit.Name) || edit.Declaration is not null &&
+                    (!edit.Bundle || !Equals(dependencies?.GetValueOrDefault(edit.Name), edit.Declaration) ||
+                        edit.RestoreGraph is not null)))
+                throw new InvalidOperationException(
+                    "source-authorization-required: explicitly remove the managed source before replacing it.");
             if (edit.Declaration is null)
                 dependencies?.Remove(edit.Name);
             else
@@ -65,6 +72,8 @@ public sealed partial class PluginConfigurationOperations
 
             if (edit.RestoreGraph is not null && edit.Declaration is null)
                 throw new ArgumentException("A removed package cannot select a restore graph.", nameof(edits));
+            if (edit.Declaration is null || !edit.Declaration.StartsWith("link:", StringComparison.Ordinal))
+                PackageManifest.SetManagedLocalSource(next.Raw, edit.Name, null);
             SetRestoreGraph(next.Raw, edit.Name, edit.RestoreGraph);
         }
 

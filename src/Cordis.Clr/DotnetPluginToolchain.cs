@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -15,7 +15,7 @@ namespace Cordis.Clr;
 [RequiresDynamicCode(
     "NuGet plugin deployment uses the ordinary CLR; Native AOT applications must republish static plugins.")]
 [RequiresUnreferencedCode("External plugin entry types are explicitly named in package metadata.")]
-public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, IDisposable
+public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, IProfileLocalSourceToolchain, IDisposable
 {
     private readonly string profileDirectory;
     private readonly string packagesDirectory;
@@ -28,7 +28,7 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
         Timeout = TimeSpan.FromMinutes(2)
     };
 
-    private readonly Dictionary<string, string> bundles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, BundleRoute> activeRoutes = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> withdrawn = new(StringComparer.OrdinalIgnoreCase);
     private readonly string[] sources;
 
@@ -62,7 +62,7 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
         this.resolver = resolver;
         dotnet = dotnetCommand;
         this.sources = sources.Select(NormalizeSource).Distinct(StringComparer.Ordinal).ToArray();
-        Bundles = new ReadOnlyDictionary<string, string>(bundles);
+        Bundles = new BundleDirectories(activeRoutes);
         if (register)
             RegisterSavedProfile(PackageManifest.Read(Path.Combine(this.profileDirectory, "package.json")));
     }
@@ -83,7 +83,7 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
         var dependencies =
             PackageManifest.Read(Path.Combine(profileDirectory, "package.json")).Raw.GetValueOrDefault("dependencies")
                 as IDictionary<string, object?>;
-        return bundles
+        return activeRoutes
             .Keys.Concat(withdrawn)
             .Concat(dependencies?.Keys ?? [])
             .FirstOrDefault(existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase)) ?? name;
@@ -103,8 +103,8 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
         if (specifier.StartsWith("nuget:", StringComparison.Ordinal))
         {
             var name = specifier["nuget:".Length..].Split('/')[0];
-            if (bundles.TryGetValue(name, out var directory))
-                return PackageManifest.Read(Path.Combine(directory, "package.json"));
+            if (activeRoutes.TryGetValue(name, out var route))
+                return PackageManifest.Read(Path.Combine(route.Directory, "package.json"));
         }
 
         return DshProfilePolicy.LocateManifest(specifier, parent);
@@ -306,8 +306,8 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
                     "package-moved");
             try
             {
-                if (!bundles.ContainsKey(package.Name))
-                    Register(package.Name, destination);
+                if (!activeRoutes.ContainsKey(package.Name))
+                    Register(package.Name, new(destination, BundleSource.ProfileVersionDirectory));
                 Directory.Delete(package.Directory, recursive: true);
             }
             catch (Exception error)
@@ -334,8 +334,8 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
             published = true;
             BundleFiles.Record(destination);
             // Existing routes stay bound to their running version until a fresh resolver reads the saved dependency.
-            if (!bundles.ContainsKey(package.Name))
-                Register(package.Name, destination);
+            if (!activeRoutes.ContainsKey(package.Name))
+                Register(package.Name, new(destination, BundleSource.ProfileVersionDirectory));
             else
                 BundleFiles.Verify(destination);
         }
@@ -355,7 +355,7 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
     /// <inheritdoc />
     public async Task RemoveAsync(string name, CancellationToken cancellationToken = default)
     {
-        if (!bundles.TryGetValue(name, out var directory))
+        if (!activeRoutes.TryGetValue(name, out var route))
         {
             if (!withdrawn.Contains(name))
                 throw new KeyNotFoundException("No profile-owned CLR deployment is registered.");
@@ -364,9 +364,9 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        VerifyRegisteredBundle(name, directory);
+        VerifyRegisteredBundle(name, route);
         var metadata = (EntryOptions)ConfigurationFile.Parse(
-            File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
+            File.ReadAllText(Path.Combine(route.Directory, "cordis.plugin.json")),
             true)!;
         foreach (var (subpath, _) in ReadExports(metadata))
         {
@@ -374,12 +374,11 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
             await resolver.RemoveAsync(ModuleName(name, subpath), CancellationToken.None);
         }
 
-        var registeredName = bundles.Keys.First(existing => string.Equals(
+        var registeredName = activeRoutes.Keys.First(existing => string.Equals(
             existing,
             name,
             StringComparison.OrdinalIgnoreCase));
-        bundles.Remove(name);
-        verifiedBundles.Remove(name);
+        activeRoutes.Remove(name);
         withdrawn.Add(registeredName);
         // Keep artifacts: other processes, lazy loads and Workers may still use the files.
     }
@@ -390,11 +389,11 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!bundles.TryGetValue(name, out var directory))
+        if (!activeRoutes.TryGetValue(name, out var route))
             return Task.FromResult<IReadOnlyList<ResolvedModule>>([]);
-        VerifyRegisteredBundle(name, directory);
+        VerifyRegisteredBundle(name, route);
         var metadata = (EntryOptions)ConfigurationFile.Parse(
-            File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
+            File.ReadAllText(Path.Combine(route.Directory, "cordis.plugin.json")),
             true)!;
         return resolver.GetLoadedModulesAsync(
             ReadExports(metadata).Select(export => ModuleName(name, export.Subpath)).ToArray(),
@@ -439,52 +438,63 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
             throw new InvalidDataException("The deployed package identity differs from its version directory.");
     }
 
-    private bool IsDeferredOnlineRoute(
-        string name,
-        string activeDirectory,
-        string selectedDirectory,
-        PackageManifest manifest)
+    // The selected local build and restore graph validate their identities while resolving their outputs.
+    // A version directory must instead match its profile-owned location and manifest version.
+    private enum BundleSource
     {
-        var savedName = SavedName(manifest, name);
-        if (manifest.RestoreGraphs.ContainsKey(savedName) ||
-            !Dependencies(manifest).TryGetValue(savedName, out var saved) ||
-            saved is not string version || !ValidIdentity(savedName, version))
+        ProfileVersionDirectory,
+        LockedRestoreGraph,
+        CompletedLocalBuild
+    }
+
+    private sealed record BundleRoute(string Directory, BundleSource Source, LocalSourceFacts? AuthorizedSource = null);
+
+    // ProfileLaunch holds this live view while installs and removals update the route table.
+    private sealed class BundleDirectories(Dictionary<string, BundleRoute> routes)
+        : IReadOnlyDictionary<string, string>
+    {
+        public int Count => routes.Count;
+        public IEnumerable<string> Keys => routes.Keys;
+        public IEnumerable<string> Values => routes.Values.Select(route => route.Directory);
+        public string this[string name] => routes[name].Directory;
+        public bool ContainsKey(string name) => routes.ContainsKey(name);
+
+        public bool TryGetValue(string name, [MaybeNullWhen(false)] out string directory)
+        {
+            if (routes.TryGetValue(name, out var route))
+            {
+                directory = route.Directory;
+                return true;
+            }
+
+            directory = null;
             return false;
+        }
 
-        // Online updates retain their running exact deployment until restart.
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        return !string.Equals(activeDirectory, selectedDirectory, comparison) &&
-            string.Equals(PackageDirectory(savedName, version), selectedDirectory, comparison);
+        public IEnumerator<KeyValuePair<string, string>> GetEnumerator() =>
+            routes.Select(pair => KeyValuePair.Create(pair.Key, pair.Value.Directory)).GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    private void Register(string name, string directory)
+    private void VerifyRegisteredBundle(string name, BundleRoute route)
     {
-        BundleFiles.Verify(directory);
-        VerifyDeploymentIdentity(name, directory);
-        RegisterExports(name, directory);
-    }
-
-    private readonly Dictionary<string, string> verifiedBundles = new(StringComparer.OrdinalIgnoreCase);
-
-    private void RegisterVerifiedBundle(string name, string directory)
-    {
-        RegisterExports(name, directory);
-        verifiedBundles[name] = directory;
-    }
-
-    private void VerifyRegisteredBundle(string name, string directory)
-    {
-        if (!verifiedBundles.TryGetValue(name, out var verified))
+        var directory = route.Directory;
+        if (route.Source == BundleSource.ProfileVersionDirectory)
         {
             RequireOwned(directory, packagesDirectory);
-            BundleFiles.Verify(directory);
-            VerifyDeploymentIdentity(name, directory);
+            VerifyVersionDirectory(name, directory);
             return;
         }
 
-        if (!string.Equals(verified, directory, StringComparison.Ordinal))
-            throw new InvalidDataException("The registered bundle directory changed.");
-        BundleFiles.Verify(directory);
+        if (route.AuthorizedSource?.OutputIdentity is { } identity)
+        {
+            CheckPhysicalPath(directory);
+            LocalBuildFiles.VerifyIdentity(directory, identity);
+        }
+        else
+            BundleFiles.Verify(directory);
+
         if (!string.Equals(
                 PackageManifest.Read(Path.Combine(directory, "package.json")).Raw.GetValueOrDefault("name") as string,
                 name,
@@ -492,8 +502,20 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
             throw new InvalidDataException("The registered bundle has a different package identity.");
     }
 
-    private void RegisterExports(string name, string directory)
+    private void VerifyVersionDirectory(string name, string directory)
     {
+        BundleFiles.Verify(directory);
+        VerifyDeploymentIdentity(name, directory);
+    }
+
+    private void Register(string name, BundleRoute route)
+    {
+        var directory = route.Directory;
+        if (route.AuthorizedSource is { } facts)
+            VerifySourceSelection(facts);
+        if (route.Source == BundleSource.ProfileVersionDirectory)
+            VerifyVersionDirectory(name, directory);
+
         var metadata = (EntryOptions)ConfigurationFile.Parse(
             File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
             true)!;
@@ -501,7 +523,7 @@ public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, ID
             resolver.Register(
                 ModuleName(name, subpath),
                 new(directory, RequiredString(metadata, "assembly"), entryType));
-        bundles.Add(name, directory);
+        activeRoutes.Add(name, route);
         withdrawn.Remove(name);
     }
 

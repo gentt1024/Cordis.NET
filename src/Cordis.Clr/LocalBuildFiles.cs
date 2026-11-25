@@ -54,21 +54,34 @@ internal static class LocalBuildFiles
     {
         path = Path.GetFullPath(path);
         owner = Path.TrimEndingDirectorySeparator(Path.GetFullPath(owner));
+        var relative = Within(path, owner);
+        var part = owner;
+        RejectLink(part);
+        if (relative == ".")
+            return;
+        foreach (var segment in relative.Split(Path.DirectorySeparatorChar))
+        {
+            part = Path.Combine(part, segment);
+            RejectLink(part);
+        }
+    }
+
+    internal static string Within(string path, string owner)
+    {
         var relative = Path.GetRelativePath(owner, path);
         if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(
                 ".." + Path.DirectorySeparatorChar,
                 StringComparison.Ordinal))
             throw new InvalidDataException($"'{path}' is outside '{owner}'.");
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        for (string? part = path;part != null;part = Path.GetDirectoryName(part))
-        {
-            var info = new FileInfo(part);
-            if (info.LinkTarget != null || (File.Exists(part) || Directory.Exists(part)) &&
-                (File.GetAttributes(part) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("Local CLR output paths must not traverse links: " + part);
-            if (string.Equals(part, owner, comparison))
-                break;
-        }
+        return relative;
+    }
+
+    private static void RejectLink(string part)
+    {
+        var info = new FileInfo(part);
+        if (info.LinkTarget != null || (File.Exists(part) || Directory.Exists(part)) &&
+            (File.GetAttributes(part) & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("Local CLR output paths must not traverse links: " + part);
     }
 
     internal static string Location(string root, string project, string configuration, string framework, string runtime)
@@ -88,25 +101,53 @@ internal static class LocalBuildFiles
         return location;
     }
 
-    internal static string Resolve(string root, string project, string configuration, string framework, string runtime)
+    internal static string Resolve(
+        string root,
+        string project,
+        string configuration,
+        string framework,
+        string runtime) =>
+        ReadOutput(root, project, configuration, framework, runtime, allowMissing: false)!.Value.Directory;
+
+    internal static (string Directory, string Identity)? ReadOutput(
+        string root,
+        string project,
+        string configuration,
+        string framework,
+        string runtime,
+        bool allowMissing)
     {
         var location = Location(root, project, configuration, framework, runtime);
         var pointer = Path.Combine(location, "current");
         CheckPath(pointer, location);
-        if (!File.Exists(pointer))
+        string identity;
+        try
+        {
+            identity = File.ReadAllText(pointer).Trim();
+        }
+        catch (IOException error) when (error is FileNotFoundException or DirectoryNotFoundException)
+        {
+            if (allowMissing)
+                return null;
             throw new FileNotFoundException(
                 $"No completed CLR output for '{project}' ({configuration}, {framework}). Build this project first.",
                 pointer);
-        var identity = File.ReadAllText(pointer).Trim();
+        }
+
         if (identity.Length != 64 || !identity.All(char.IsAsciiHexDigit))
             throw new InvalidDataException("Invalid local CLR completion identity.");
         var directory = Path.Combine(location, identity, "bundle");
         CheckPath(directory, location);
+        VerifyIdentity(directory, identity);
+        return (directory, identity);
+    }
+
+    internal static void VerifyIdentity(string directory, string identity)
+    {
         var receipt = BundleFiles.ReceiptPath(directory);
-        CheckPath(receipt, location);
+        CheckPath(receipt, Path.GetDirectoryName(directory)!);
         if (Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(receipt))) != identity)
             throw new InvalidDataException("The local CLR completion identity differs from its receipt.");
         BundleFiles.Verify(directory);
-        return directory;
     }
 }

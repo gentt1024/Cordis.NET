@@ -3,23 +3,13 @@ import { createServer } from 'node:http'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
-import { runInNewContext, runInThisContext } from 'node:vm'
+import { runInThisContext } from 'node:vm'
 
 // Execute real factory scripts fetched through HTTP, using the public package wrapper.
 const loads = [], factories = [], starts = [], stops = []
 const server = createServer((request, response) => {
   const revision = new URL(request.url, 'http://localhost').searchParams.get('rev')
   response.setHeader('content-type', 'text/javascript')
-  if (new URL(request.url, 'http://localhost').pathname === '/inspect.js') {
-    response.end(`globalThis.__ModuleLoader__.load({id:'panel', factory(require) {
-      const probe = require('@fixture/release');
-      probe.factories++;
-      const plugin = { apply() { probe.starts++; } };
-      if (probe.config) Object.defineProperty(plugin, 'Config', { get: probe.config });
-      return probe.namespace = { default: plugin };
-    }});`)
-    return
-  }
   response.end(`globalThis.__ModuleLoader__.load({id:'panel',factory(require) {
     const probe = require('@fixture/release');
     const revision = ${JSON.stringify(revision)};
@@ -36,7 +26,7 @@ const origin = `http://127.0.0.1:${server.address().port}`
 globalThis.location = new URL(origin)
 globalThis.document = { querySelectorAll() { return [] } }
 const runtime = resolve(process.argv[2] ?? 'clients/modules/lib')
-const { bootClientModules, createManagementClient, Context, inspectClientModule } = await import(pathToFileURL(resolve(runtime, 'client.mjs')).href)
+const { bootClientModules, createManagementClient, Context } = await import(pathToFileURL(resolve(runtime, 'client.mjs')).href)
 const { createEvents } = await import(pathToFileURL(resolve(runtime, 'events.mjs')).href)
 const { TypertConnection } = await import(pathToFileURL(resolve(runtime, 'cordis-remote.mjs')).href)
 const page = { version: '1.2.3', commit: 'fixed' }
@@ -71,42 +61,6 @@ let modules
 try {
   modules = await boot(graph('one'))
   const stable = modules.context.get('panel')
-  {
-    const liveFacade = globalThis.__ModuleLoader__
-    const liveRegister = liveFacade.load
-    const inspection = graph('inspect')
-    inspection.entries[0].url = inspection.batches[0].url = '/inspect.js?rev=inspect'
-    const probe = { factories: 0, starts: 0 }
-    const options = { graph: inspection, baseUrl: origin, specifier: 'panel/client',
-      staticModules: { '@fixture/release': probe },
-      async loadBundle(url, register) {
-        assert.equal(globalThis.__ModuleLoader__, liveFacade)
-        assert.equal(liveFacade.load, liveRegister)
-        const response = await fetch(new URL(url, origin))
-        assert.equal(response.status, 200)
-        runInNewContext(await response.text(), { __ModuleLoader__: { load: register } }, { filename: url })
-      } }
-    const schema = { '~standard': { version: 1, vendor: 'example', validate() { throw new Error('validation ran during inspection') } } }
-    probe.config = () => schema
-    const found = await inspectClientModule(options)
-    assert.equal(found.exports, probe.namespace)
-    assert.equal(found.config.status, 'schema')
-    assert.equal(found.config.schema, schema)
-    delete probe.config
-    assert.equal((await inspectClientModule(options)).config.status, 'absent')
-    probe.config = () => ({ description: 'data without a Standard Schema declaration' })
-    const unsupported = (await inspectClientModule(options)).config
-    assert.equal(unsupported.status, 'unsupported')
-    assert.ok(typeof unsupported.diagnostic === 'string' && unsupported.diagnostic.length > 0)
-    probe.config = () => { throw new Error('inspection Config getter failed') }
-    await assert.rejects(inspectClientModule(options), /inspection Config getter failed/)
-    await assert.rejects(inspectClientModule({ ...options, specifier: 'missing/client' }))
-    assert.equal(probe.factories, 4)
-    assert.equal(probe.starts, 0)
-    assert.equal(globalThis.__ModuleLoader__, liveFacade)
-    assert.equal(liveFacade.load, liveRegister)
-    assert.equal(modules.context.get('panel'), stable)
-  }
   const observable = modules.releaseChange
   let announcements = 0, stateChanges = 0
   const unsubscribe = observable.subscribe(() => { announcements++ })

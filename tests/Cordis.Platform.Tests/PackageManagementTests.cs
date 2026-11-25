@@ -103,21 +103,8 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     public async Task Local_project_loads_only_complete_output_for_the_requested_configuration()
     {
         var author = Path.Combine(directory, "author");
-        var tools = Path.Combine(AppContext.BaseDirectory, "fixtures", "local-build");
         var assets = Path.Combine(author, "web.mjs");
-        await File.WriteAllTextAsync(assets, "export const version = 1;");
-        await File.WriteAllTextAsync(
-            Path.Combine(author, "Directory.Build.targets"),
-            $$"""
-              <Project>
-                <PropertyGroup><_CordisClrBuildTool>{{SecurityElement.Escape(Path.Combine(tools, "Cordis.Clr.Build.dll"))}}</_CordisClrBuildTool></PropertyGroup>
-                <Import Project="{{SecurityElement.Escape(Path.Combine(tools, "Cordis.NET.Clr.targets"))}}" />
-                <ItemGroup><CordisLocalFile Include="web.mjs" TargetPath="web/module.mjs" /></ItemGroup>
-              </Project>
-              """);
-        await File.WriteAllTextAsync(
-            Path.Combine(author, "cordis.plugin.json"),
-            """{"assembly":"IndependentPlugin.dll","entryType":"Entry"}""");
+        await PrepareLocalProjectAsync(author);
         var debug = await ClrLocalProject.QueryAsync(author);
         Assert.Equal("IndependentPlugin", debug.PackageId);
         Assert.Throws<FileNotFoundException>(() => debug.ResolveOutput());
@@ -757,6 +744,22 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         client.DefaultRequestHeaders.Add(
             "If-Cordis-Generation",
             state.RootElement.GetProperty("generation").GetString());
+        using var local = await PostRemoteAsync(
+            client,
+            "/remote/pluginManager/inspectLocalSource",
+            new
+            {
+                args = new
+                {
+                    request = new LocalSourceRequest("author", "Debug")
+                }
+            });
+        local.EnsureSuccessStatusCode();
+        using var localReply = JsonDocument.Parse(await local.Content.ReadAsStringAsync());
+        Assert.False(localReply.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+        Assert.Equal(
+            "plugin-manager/local-source-disabled",
+            localReply.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
         var request = new PackageRequest("IndependentPlugin", "1.0.0", Feed);
         using var inspectResponse = await PostRemoteAsync(
             client,
@@ -1150,7 +1153,9 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         DshRuntimeIdentity? runtime = null,
         string? profileDirectory = null,
         IReadOnlyDictionary<string, string>? installationBundles = null,
-        bool enableHmr = false)
+        bool enableHmr = false,
+        LocalSourcePolicy? localSourcePolicy = null,
+        string dotnetCommand = "dotnet")
     {
         var root = profileDirectory is null
             ? Directory.CreateDirectory(Path.Combine(directory, Guid.NewGuid().ToString("N"))).FullName
@@ -1162,7 +1167,15 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         if (!File.Exists(config))
             await File.WriteAllTextAsync(config, "[]\n");
         var resolver = new ClrModuleResolver(Path.Combine(root, "shadow"), [typeof(ConfigObject<>).Assembly]);
-        var toolchain = new DotnetPluginToolchain(profile, resolver, sources ?? [Feed]);
+        var toolchain = localSourcePolicy is null
+            ? new DotnetPluginToolchain(profile, resolver, sources ?? [Feed])
+            : await DotnetPluginToolchain.OpenForRunAsync(
+                profile,
+                resolver,
+                sources ?? [Feed],
+                localSourcePolicy,
+                installationBundles: installationBundles,
+                dotnetCommand: dotnetCommand);
         var launch = new ProfileLaunch(
             await Profiles.LoadAsync(
                 profile,

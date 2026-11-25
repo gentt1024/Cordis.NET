@@ -98,6 +98,14 @@ public partial class PluginManager : Service
     private readonly Func<Context, PluginManagementPermission, Task<bool>> authorize;
     private volatile bool closed;
 
+    /// <summary>Maps the authenticated caller to its stable local-source authorization scope.
+    /// Leaving this unset disables the online local-source methods. Clients cannot supply this identity.</summary>
+    public Func<Context, string?>? LocalSourceSubject
+    {
+        get;
+        init;
+    }
+
     /// <summary>Mount generated management with the host's resource and build policy.</summary>
     /// <remarks>A missing dynamic toolchain still permits inventory and enablement. Package execution then refuses
     /// with an actionable diagnostic; static applications change code by republishing.</remarks>
@@ -132,6 +140,7 @@ public partial class PluginManager : Service
         operations = provider.operations;
         packages = provider.packages;
         authorize = provider.authorize;
+        LocalSourceSubject = provider.LocalSourceSubject;
     }
 
     /// <summary>Keep the caller's Context while sharing the existing operations and host policy.</summary>
@@ -202,6 +211,73 @@ public partial class PluginManager : Service
         return await RequirePackages().InspectAsync(request, cancellationToken);
     }
 
+    private (IProfileLocalSourceToolchain Toolchain, string Subject) LocalSourceCaller()
+    {
+        if (packages is not IProfileLocalSourceToolchain toolchain || LocalSourceSubject is null)
+            throw new RemoteError(
+                "plugin-manager/local-source-disabled",
+                "This host has not enabled online local sources.");
+        var subject = LocalSourceSubject(Caller);
+        if (string.IsNullOrWhiteSpace(subject))
+            throw new RemoteError("plugin-manager/forbidden", "The caller has no local-source authorization scope.");
+        operations.RequireSourceToolchain(toolchain);
+        return (toolchain, subject);
+    }
+
+    /// <summary>Inspect a project under the host's local-source policy. The host authorizes MSBuild evaluation separately.</summary>
+    [RemoteMethod("inspectLocalSource")]
+    public async Task<LocalSourceInspection> InspectLocalSourceAsync(
+        LocalSourceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        await PermitAsync("inspect-local-source");
+        var (toolchain, subject) = LocalSourceCaller();
+        return await operations.InspectLocalSourceAsync(toolchain, subject, request, cancellationToken);
+    }
+
+    /// <summary>Register the logical link using its caller-bound inspection ID. Losing the response does not cancel registration.</summary>
+    [RemoteMethod("registerLocalSource")]
+    public async Task<PackageChange> RegisterLocalSourceAsync(
+        LocalSourceRequest request,
+        LocalSourceRegistration options)
+    {
+        await PermitAsync("register-local-source", mutation: true);
+        var (toolchain, subject) = LocalSourceCaller();
+        return await operations.RegisterLocalSourceAsync(toolchain, subject, request, options);
+    }
+
+    /// <summary>Read persisted location and selection after host authorization. No project evaluation is required.</summary>
+    [RemoteMethod("readRegisteredLocalSource")]
+    public async Task<RegisteredLocalSource?> ReadRegisteredLocalSourceAsync(
+        string name,
+        CancellationToken cancellationToken = default)
+    {
+        await PermitAsync("read-local-source", name);
+        var (toolchain, subject) = LocalSourceCaller();
+        var source = await operations.ReadRegisteredLocalSourceAsync(name, cancellationToken);
+        if (source is not null)
+            await toolchain.AuthorizeLocalSourceReadAsync(subject, source, cancellationToken);
+        return source;
+    }
+
+    /// <summary>Observe a registration still active for this principal. If absent, query saved and running state.</summary>
+    [RemoteMethod("waitForLocalSource")]
+    public async Task<PackageChange?> WaitForLocalSourceAsync(string requestId)
+    {
+        await PermitAsync("register-local-source");
+        var (_, subject) = LocalSourceCaller();
+        return await operations.WaitForLocalSourceAsync(subject, requestId);
+    }
+
+    /// <summary>Cancel this principal's preparation; after the commit boundary cancellation can be too late.</summary>
+    [RemoteMethod("cancelLocalSource")]
+    public async Task<PluginInstallCancellation> CancelLocalSourceAsync(string requestId)
+    {
+        await PermitAsync("register-local-source", mutation: true);
+        var (_, subject) = LocalSourceCaller();
+        return new(await operations.CancelLocalSourceAsync(subject, requestId));
+    }
+
     /// <summary>Save plugin enablement and apply the existing reload policy.</summary>
     [RemoteMethod("setPluginEnabled")]
     public async Task<PluginManagerChange> SetPluginEnabledAsync(string id, bool enabled)
@@ -215,6 +291,14 @@ public partial class PluginManager : Service
     public async Task<PluginManagerChange> SetBundleEnabledAsync(string name, bool enabled)
     {
         await PermitAsync("manage", name, mutation: true);
+        var source = await operations.ReadRegisteredLocalSourceAsync(name);
+        if (source is not null)
+        {
+            var (toolchain, subject) = LocalSourceCaller();
+            await toolchain.AuthorizeLocalSourceReadAsync(subject, source, default);
+            return Project(await operations.SetLocalSourceEnabledAsync(toolchain, subject, source, enabled));
+        }
+
         return Project(await operations.SetBundleEnabledAsync(name, enabled));
     }
 
@@ -357,6 +441,10 @@ public partial class PluginManager : Service
 [JsonSerializable(typeof(IReadOnlyList<PluginManagerPlugin>))]
 [JsonSerializable(typeof(IReadOnlyList<BundleConfigurationInfo>))]
 [JsonSerializable(typeof(IReadOnlyList<string>))]
+[JsonSerializable(typeof(LocalSourceRequest))]
+[JsonSerializable(typeof(LocalSourceRegistration))]
+[JsonSerializable(typeof(LocalSourceInspection))]
+[JsonSerializable(typeof(RegisteredLocalSource))]
 [JsonSerializable(typeof(PackageRequest))]
 [JsonSerializable(typeof(PackageInspection))]
 [JsonSerializable(typeof(PackageChange))]

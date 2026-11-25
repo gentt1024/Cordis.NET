@@ -80,6 +80,6 @@ Use Stop compiler in the page to cancel a worker. It waits for child termination
 
 ## Stop and retain the example state
 
-Stop the Host with Ctrl+C and wait for it to exit before reusing the profile or deleting retained files. Shutdown closes the same worker owners and waits for catalog work. Prior build directories are retained. Logical package removal does not delete installed CLR bytes; follow [offline deletion](../../docs/clr-artifacts.md#delete-retained-files-offline).
+Stop the Host with Ctrl+C and wait for it to exit before reusing the profile or deleting retained files. The HTTP server stops accepting requests. The Host detaches the refresh callback on the profile queue, stops the compiler workers, and waits for pending catalog publications. It then disposes the web application and profile session, releases the CLR toolchain and resolver, and closes the profile lock last. Prior build directories are retained. Logical package removal does not delete installed CLR bytes; follow [offline deletion](../../docs/clr-artifacts.md#delete-retained-files-offline).
 
 A deployed application can serve precompiled browser bytes without author sources or Node. This source walkthrough does not establish new packaged, cross-platform, AOT or browser acceptance.

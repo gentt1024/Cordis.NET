@@ -229,11 +229,10 @@ void QueueCapture()
     TrackCapture(refresh);
 }
 
-session.Refreshed += QueueCapture;
-
 var workers = new Dictionary<string, DevelopmentWorker>(StringComparer.Ordinal);
 var builds = new ConcurrentDictionary<string, DevelopmentStatus>(StringComparer.Ordinal);
-foreach (var author in watchSources)
+
+async Task StartCompilerAsync(string author)
 {
     var name = ReadName(author);
     if (!clientPackages.ContainsKey(name) || workers.ContainsKey(name))
@@ -399,15 +398,30 @@ app.MapPost(
         await worker.DisposeAsync();
         return Results.NoContent();
     });
+session.Refreshed += QueueCapture;
 try
 {
-    await app.RunAsync();
+    foreach (var author in watchSources)
+        await StartCompilerAsync(author);
+    await app.StartAsync();
+    await app.WaitForShutdownAsync();
 }
 finally
 {
-    session.Refreshed -= QueueCapture;
-    await Task.WhenAll(workers.Values.Select(async worker => await worker.DisposeAsync()));
-    await Task.WhenAll(captures.Keys);
+    // Detach on the same queue as the callback so no refresh can enqueue work after the drain.
+    await session.ConfigurationOperations.RunExclusiveAsync!(() =>
+    {
+        session.Refreshed -= QueueCapture;
+        return Task.CompletedTask;
+    });
+    try
+    {
+        await Task.WhenAll(workers.Values.Select(async worker => await worker.DisposeAsync()));
+    }
+    finally
+    {
+        await Task.WhenAll(captures.Keys);
+    }
 }
 
 sealed record DevelopmentStatus(string Name, string Phase, string? Revision, string? Diagnostic);

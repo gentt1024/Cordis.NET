@@ -75,6 +75,17 @@ public sealed class ClrLocalProject
     {
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(sourceRoot));
         var project = LocalBuildFiles.SelectProject(root, out var bundle);
+        return await QuerySelectedAsync(root, project, bundle, configuration, dotnet, cancellationToken);
+    }
+
+    internal static async Task<ClrLocalProject> QuerySelectedAsync(
+        string root,
+        string project,
+        bool bundle,
+        string configuration,
+        string dotnet,
+        CancellationToken cancellationToken)
+    {
         // MSBuild treats several punctuation characters as separators in command-line properties.
         if (!Regex.IsMatch(configuration, @"\A[A-Za-z0-9_][A-Za-z0-9_. -]*\z", RegexOptions.CultureInvariant))
             throw new ArgumentException("Invalid MSBuild configuration.", nameof(configuration));
@@ -85,7 +96,7 @@ public sealed class ClrLocalProject
             await DotnetPackageProcess.RunAsync(
                 dotnet,
                 [
-                    "msbuild", project, "-nologo", "-p:Configuration=" + configuration,
+                    "msbuild", project, "-noAutoResponse", "-nologo", "-p:Configuration=" + configuration,
                     "-getProperty:PackageId,Version,Configuration,TargetFramework,TargetFrameworks,RuntimeIdentifier",
                     "-getResultOutputFile:" + result
                 ],
@@ -109,7 +120,9 @@ public sealed class ClrLocalProject
     }
 
     /// <summary>Verify and return this configuration's last complete immutable output.</summary>
-    public string ResolveOutput()
+    public string ResolveOutput() => ReadOutput(allowMissing: false)!.Value.Directory;
+
+    internal (string Directory, string Identity)? ReadOutput(bool allowMissing, bool verifyVersion = false)
     {
         if (!IsBundle)
             throw new InvalidOperationException($"'{SourceRoot}' declares no CLR plugin.");
@@ -117,18 +130,28 @@ public sealed class ClrLocalProject
         if (!File.Exists(ProjectFile) || !File.Exists(Path.Combine(SourceRoot, "cordis.plugin.json")))
             throw new FileNotFoundException(
                 $"Local plugin source no longer exists: '{ProjectFile}' in '{SourceRoot}'.");
-        var directory = LocalBuildFiles.Resolve(
+        var output = LocalBuildFiles.ReadOutput(
             SourceRoot,
             ProjectFile,
             Configuration,
             TargetFramework,
-            RuntimeIdentifier);
-        using var manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(directory, "package.json")));
+            RuntimeIdentifier,
+            allowMissing);
+        if (output is null)
+            return null;
+        using var manifest =
+            JsonDocument.Parse(File.ReadAllBytes(Path.Combine(output.Value.Directory, "package.json")));
         if (!string.Equals(
                 manifest.RootElement.GetProperty("name").GetString(),
                 PackageId,
                 StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("The local output's saved package name differs from the selected project.");
-        return directory;
+        if (verifyVersion && !string.Equals(
+                manifest.RootElement.GetProperty("version").GetString(),
+                Version,
+                StringComparison.Ordinal))
+            throw new InvalidDataException(
+                "The completed output has a different version. Rebuild the selected project.");
+        return output;
     }
 }
