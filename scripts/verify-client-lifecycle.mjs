@@ -91,6 +91,20 @@ function notifications(structural = false) {
 const modules = await bootClientModules({ graph, loadBundle })
 const initial = modules.context.get('panel')
 const notificationClient = notifications()
+const badRecovery = { backoffBaseMs: 0 }
+assert.throws(() => createManagementClient({ events: notificationClient, recovery: badRecovery }), /backoffBaseMs/)
+assert.equal(streams.length, 0, 'Invalid recovery never opens the selected event stream')
+const startupFailure = new Error('test owner refused connection activation')
+const removeRefusal = notificationClient.context.on('internal/config', () => { throw startupFailure })
+const refused = createManagementClient({ events: notificationClient, transport, recovery })
+try {
+  await until(() => refused.connection.getSnapshot().diagnostic === startupFailure.message, 'Activation failure is visible to management')
+  assert.equal(refused.connection.getSnapshot().phase, 'disconnected')
+} finally { removeRefusal(); await refused.close() }
+const stoppedDuringStartup = createManagementClient({ events: notificationClient, transport, recovery })
+await stoppedDuringStartup.close()
+assert.deepEqual(stoppedDuringStartup.connection.getSnapshot(), {phase:'closed'})
+assert.equal(streams.length, 0, 'Refused and canceled startups leave the borrowed event carrier unopened')
 const client = createManagementClient({ modules, events: notificationClient, transport, recovery })
 try {
   await until(() => client.connection.getSnapshot().phase === 'connected', 'Initial notification handshake')

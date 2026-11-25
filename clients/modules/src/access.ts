@@ -205,6 +205,8 @@ export async function mountAccess(options: AccessMountOptions): Promise<ClientAc
   let withdraw: (() => void | Promise<void>) | undefined
   let dispose: () => Promise<void>
   try {
+    controller = startNativeConnection(context, { recovery: options.recovery }, () => consume)
+    await controller.started
     const service: ClientRemoteAccess = { source: (kind, id, action) => state.source(kind, id, action), global: action => state.global(action) }
     // These effects are collected under one owner so Fiber disposal observes the same ordering.
     const lifetime = context.effect(function* () {
@@ -214,12 +216,11 @@ export async function mountAccess(options: AccessMountOptions): Promise<ClientAc
       yield stopFollow
     }, 'remote-access.client.mount')
     dispose = () => closing ??= Promise.resolve(lifetime())
-    controller = startNativeConnection(context, { recovery: options.recovery }, () => consume)
     return { state, ...service, reconnect() { if (!stopped && !terminal) controller?.reconnect() }, dispose }
   } catch (error) {
-    await stopFollow()
-    await withdraw?.()
-    await mounted.dispose()
+    for (const release of [stopFollow, withdraw, () => mounted.dispose()]) {
+      try { await release?.() } catch (cleanupError) { context.logger.error('access mount cleanup failed', cleanupError) }
+    }
     throw error
   }
 }

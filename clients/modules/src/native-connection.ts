@@ -1,33 +1,38 @@
-import type { Context } from '@deepseek-ai/cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { installConnection, type ConnectionGenerationSource, type ConnectionHandle, type ConnectionInstallOptions,
   type ConnectionSinks } from '@deepseek-ai/dsh-client-connection/client'
 
 /** Each native subscription owns its own source on the caller's Cordis root. */
-export function startNativeConnection(context: Context, options: ConnectionInstallOptions,
+export function startNativeConnection(context: Context | undefined, options: ConnectionInstallOptions,
   source: (handle: ConnectionHandle) => ConnectionGenerationSource, sinks: ConnectionSinks = {}) {
-  let handle: ConnectionHandle | undefined
+  const parent = context ?? new Context()
+  let handle: ConnectionHandle
   let withdraw: (() => void) | undefined
   let pending = Promise.resolve()
-  const fiber = context.isolate('connection').plugin({
-    name: 'native-connection',
-    apply(owner: Context) {
-      installConnection(owner, options)
-      // The service belongs to this still-loading fiber.
-      const installed: ConnectionHandle = owner.get('connection', false)
-      handle = installed
-      const run = source(installed)
-      withdraw = installed.registerGenerationSource((signal, ready) => pending = run(signal, ready))
-      owner.effect(() => () => { withdraw?.(); return pending }, 'native-connection.source')
-      installed.start(sinks)
-    },
-  })
-  return {
-    reconnect() { handle?.reconnect() },
-    async stop() {
-      withdraw?.()
-      // Parent unload may already have invoked the fiber disposer. Both paths
-      // must wait for the source before a borrowed native namespace is withdrawn.
-      await Promise.all([pending, fiber.dispose()])
-    },
+  // The child fiber provides a distinct service and effect owner even when
+  // management and access are mounted on the same caller fiber.
+  const fiber = parent.isolate('connection').plugin({ name: 'native-connection', apply() {} })
+  async function stop() {
+    withdraw?.()
+    try { await Promise.all([pending, fiber.dispose()]) }
+    finally { if (!context) await parent.fiber.dispose() }
   }
+  const cleanupFailedStart = () => stop().catch(reason => parent.logger.error(reason))
+  try {
+    // Connection validates recovery in start(). Run it before returning to the caller.
+    installConnection(fiber.ctx, options)
+    handle = fiber.ctx.get('connection', false)
+    const run = source(handle)
+    withdraw = handle.registerGenerationSource(async (signal, ready) => {
+      await fiber.await()
+      if (!signal.aborted) await (pending = run(signal, ready))
+    })
+    fiber.ctx.effect(() => () => { withdraw?.(); return pending }, 'native-connection.source')
+    handle.start(sinks)
+  } catch (error) {
+    void cleanupFailedStart()
+    throw error
+  }
+  const started = fiber.await().catch(async error => { await cleanupFailedStart(); throw error })
+  return { started, reconnect: () => handle.reconnect(), stop }
 }

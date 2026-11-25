@@ -175,6 +175,27 @@ const errors = []
 const management = await mountManagement(context, carrier.connection)
 const managementNamespace = context.get('remote.pluginManager')
 assert.ok(managementNamespace)
+const refuseMount = async (invalidRecovery, reason, owner = context) => {
+  await assert.rejects(mountAccess({context:owner,connection:carrier.connection,recovery:invalidRecovery}), reason)
+  assert.equal(context.get('remoteAccess'),undefined,'Failed mount withdraws the access service')
+  assert.equal(context.get('remote.remoteAccess'),undefined,'Failed mount withdraws its generated namespace')
+  assert.ok(context.get('remote.pluginManager'),'Failed mount preserves the sibling namespace')
+}
+let cleanupFailures = 0
+const failingCleanup = context.extend({effect(setup,label) {
+  if (label !== 'remote-access.client.remote') return context.effect(setup,label)
+  return context.effect(async () => {
+    const dispose = await setup()
+    return async () => { await dispose(); cleanupFailures++; throw new Error('test remote cleanup failed') }
+  },label)
+}})
+await refuseMount({backoffBaseMs:0}, /backoffBaseMs/, failingCleanup)
+assert.equal(cleanupFailures,1,'Secondary cleanup failure preserves the initialization error')
+const startupFailure = new Error('test owner refused access activation')
+const removeRefusal = context.on('internal/config', () => { throw startupFailure })
+try { await refuseMount(recovery, error => error === startupFailure) }
+finally { removeRefusal() }
+assert.equal(carrier.streams.length,0,'Failed starts never open a native follow')
 let mount = await mountAccess({context,connection:carrier.connection,recovery,failed:error=>errors.push(error)})
 const answer = mount.source('project','one',read)
 assert.equal(context.remoteAccess.source('project','one',read),answer)

@@ -100,7 +100,6 @@ export function createManagementClient(options: ManagementClientOptions): Manage
   const caller = options.events.context
   const borrowed = modules?.context ?? (Context.is(caller) ? caller : Context.is(caller.root) ? caller.root : undefined)
   // A standalone generated event client may expose only the RemoteEventContext protocol.
-  const owner = borrowed ?? new Context()
   const request = options.transport?.fetch ?? fetch
   const publish = (next: ManagementConnection): void => {
     snapshot = next
@@ -204,8 +203,11 @@ export function createManagementClient(options: ManagementClientOptions): Manage
       signal.removeEventListener('abort', abort)
     }
   }
-  const controller = startNativeConnection(owner, { transport: { rpc: snapshots }, recovery: options.recovery }, connect, {
+  const controller = startNativeConnection(borrowed, { transport: { rpc: snapshots }, recovery: options.recovery }, connect, {
     onStateChange(phase) { if (!closed && phase !== 'connected') publish({ phase }) },
+  })
+  void controller.started.catch(error => {
+    if (!closed) publish({ phase: 'disconnected', diagnostic: error instanceof Error ? error.message : String(error) })
   })
   return {
     connection: { getSnapshot: () => snapshot, subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener) } } },
@@ -229,10 +231,7 @@ export function createManagementClient(options: ManagementClientOptions): Manage
       readController.abort()
       closing = Promise.resolve().then(async () => {
         try { await Promise.all([stopped, refresh.catch(() => {}), modules?.disconnect()]) }
-        finally {
-          listeners.clear(); events.clear()
-          if (!borrowed) await owner.fiber.dispose()
-        }
+        finally { listeners.clear(); events.clear() }
       })
       publish({ phase: 'closed' })
       return closing

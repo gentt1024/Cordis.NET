@@ -14,13 +14,15 @@
 
 ## Profile 配置 Schema
 
-文档导出按 DSH `0.2.1-rc.2` 的 `packages/boot/app-boot/src/config-schema` 工作。条目名选择已捕获的输入声明；根补丁的 ID 指向最后一个编入索引的同名 ID。include 使用独立的目标索引。诊断路径标识组合后树中的条目位置。.NET 由宿主解析器和作者提供的描述符给出插件声明。是否允许省略取自作者声明的 Optional 和 Default；默认值的有效性由作者负责。插入目标 ID 不存在或指向非 group 条目时，加载器给出警告并跳过其子项；被接纳的插入必须包含合法条目。静态投影会报告缺失或只能近似表达的约束；校验回调和表达式留到应用配置时执行。参见[配置发现](configuration-description.zh.md#校验条目列表或补丁文件)。
+文档导出按 DSH `0.2.1-rc.2` 的 `packages/boot/app-boot/src/config-schema` 工作。条目名选择已捕获的输入声明；根补丁的 ID 指向最后一个编入索引的同名 ID。include 使用独立的目标索引。诊断路径标识组合后树中的条目位置。.NET 由宿主解析器和作者提供的描述符给出插件声明。是否允许省略取自作者声明的 Optional 和 Default；显式 null 是否有效由值的 schema 决定；默认值的有效性由作者负责。插入目标 ID 不存在或指向非 group 条目时，加载器给出警告并跳过其子项；被接纳的插入必须包含合法条目。静态投影会报告缺失或只能近似表达的约束；校验回调和表达式留到应用配置时执行。参见[配置发现](configuration-description.zh.md#校验条目列表或补丁文件)。
 
 ## 离线 profile 包操作和本地 CLR 构建
 
 固定 DSH 的插件管理器以调用者当前目录解析相对来源，按顺序选中新加入的 bundle，并保留已停用依赖的状态。CLR 适配器在 profile dependencies 中保存绝对逻辑 `link:`。源码工程按配置提供经核验的构建输出，首次构建之前就可以登记。登记或移除不改作者工程的编译引用，源码文件由作者管理。
 
 NuGet 为每个安装根独立解析依赖。省略版本的 add 将最新稳定版本精确保存，显式版本投影为 NuGet 精确要求。显式 NuGet 范围保留原声明和标准锁，选中的还原图随 bundle 选择保存在 `dsh.profile.restore`。离线写入成功只报告磁盘结果。实际生效或需要重启由运行会话自己的协调过程判定。在这条 CLR 接线上，若已有映射的运行输出位置改变，需要重启。执行包构建需要明确批准。CLR 命令支持文档列出的 NuGet 操作；Web 依赖使用 pnpm，Git 来源先单独 checkout 再登记。参见[本地 CLR 构建](clr-artifacts.zh.md)和 [CLI 操作](../tools/Cordis.Cli/README.zh.md)。
+
+宿主提供 apply 租约时，HMR 会通知每个已成功重载的模块，即使同批后续模块失败。整批成功后才调用租约的发布回调，成功和失败都会释放租约。客户端 SDK 通过公开的管理和 access 入口传递 Connection 初始化错误。
 
 ## SDK 安全维护，2026-11-05
 
