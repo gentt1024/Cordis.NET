@@ -294,6 +294,25 @@ def consume_http_package(directory, rid, version, aot, env):
         run(f"http-consumer-{mode}-republished-run", [replacement / executable, "two"], replacement, env)
 
 
+def consume_portable_packages(rid, package_dir, client_artifacts, aot):
+    deployment_dir = Path(tempfile.mkdtemp(prefix="clr-deployment-", dir=ROOT / "artifacts"))
+    run("clr-deployment", [sys.executable, "scripts/verify-clr-deployment.py", "--dotnet", shutil.which("dotnet"),
+        "--rid", rid, "--packages", package_dir, "--output", deployment_dir])
+    run("clr-multi-entry", [sys.executable, "scripts/verify-clr-multi-entry.py", "--dotnet", shutil.which("dotnet"),
+        "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="clr-multi-entry-", dir=OUT)])
+    run("typert-package-consumer", [sys.executable, "scripts/verify-typert.py", "--dotnet", shutil.which("dotnet"),
+        "--packages", package_dir, "--runtime", client_artifacts,
+        "--output", tempfile.mkdtemp(prefix="typert-consumer-", dir=OUT), *(["--aot"] if aot else [])])
+    for name in ("remote-identity", "remote-access", "access-client"):
+        run(name + "-package-consumer", [sys.executable, "scripts/verify-" + name + ".py",
+            "--dotnet", shutil.which("dotnet"), "--packages", package_dir,
+            "--output", tempfile.mkdtemp(prefix=name + "-", dir=OUT)])
+    run("remote-metadata-package-consumer", [sys.executable, "scripts/verify-remote-metadata.py", "--dotnet", shutil.which("dotnet"),
+        "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="remote-metadata-", dir=OUT)])
+    run("typert-dotnet-settings", [sys.executable, "scripts/verify-typert-dotnet.py", "--dotnet", shutil.which("dotnet"),
+        "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="typert-dotnet-settings-", dir=OUT), *(["--aot"] if aot else [])])
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dsh", type=Path)
@@ -303,7 +322,12 @@ def main():
     parser.add_argument("--aot", action="store_true")
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--package-output", type=Path, help="Write and validate the exact package batch in this directory")
+    parser.add_argument("--defer-portable-consumers", action="store_true",
+                        help="Linux CI: run the CLR, Typert and Remote package consumers in the required portable job")
     options = parser.parse_args()
+    if options.defer_portable_consumers and not (
+            sys.platform.startswith("linux") and options.package and options.aot and options.package_output):
+        parser.error("--defer-portable-consumers requires a Linux --package --aot producer with --package-output")
     source_identity = locked_identity() if options.dsh else None
     if options.defer_upstream_source_tests and not options.dsh:
         parser.error("Deferred source tests require --dsh")
@@ -430,22 +454,11 @@ def main():
             package_hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                               for path in sorted(package_dir.iterdir()) if path.is_file()}
             consume_packages(rid, package_dir, version, options.aot)
-            deployment_dir = Path(tempfile.mkdtemp(prefix="clr-deployment-", dir=ROOT / "artifacts"))
-            run("clr-deployment", [sys.executable, "scripts/verify-clr-deployment.py", "--dotnet", shutil.which("dotnet"),
-                "--rid", rid, "--packages", package_dir, "--output", deployment_dir])
-            run("clr-multi-entry", [sys.executable, "scripts/verify-clr-multi-entry.py", "--dotnet", shutil.which("dotnet"),
-                "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="clr-multi-entry-", dir=OUT)])
-            run("typert-package-consumer", [sys.executable, "scripts/verify-typert.py", "--dotnet", shutil.which("dotnet"),
-                "--packages", package_dir, "--runtime", client_artifacts,
-                "--output", tempfile.mkdtemp(prefix="typert-consumer-", dir=OUT), *(["--aot"] if options.aot else [])])
-            for name in ("remote-identity", "remote-access", "access-client"):
-                run(name + "-package-consumer", [sys.executable, "scripts/verify-" + name + ".py",
-                    "--dotnet", shutil.which("dotnet"), "--packages", package_dir,
-                    "--output", tempfile.mkdtemp(prefix=name + "-", dir=OUT)])
-            run("remote-metadata-package-consumer", [sys.executable, "scripts/verify-remote-metadata.py", "--dotnet", shutil.which("dotnet"),
-                "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="remote-metadata-", dir=OUT)])
-            run("typert-dotnet-settings", [sys.executable, "scripts/verify-typert-dotnet.py", "--dotnet", shutil.which("dotnet"),
-                "--packages", package_dir, "--output", tempfile.mkdtemp(prefix="typert-dotnet-settings-", dir=OUT), *(["--aot"] if options.aot else [])])
+            if options.defer_portable_consumers:
+                steps.append({"name": "portable-package-consumers", "status": "deferred-to-required-linux-consumer"})
+                print("Linux package consumers will run against the downloaded batch in portable-authoring.", flush=True)
+            else:
+                consume_portable_packages(rid, package_dir, client_artifacts, options.aot)
             assert package_hashes == {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                                       for path in sorted(package_dir.iterdir()) if path.is_file()}, "Package batch changed during consumption"
             steps.append({"name": "package-batch-unchanged", "exitCode": 0, "sha256": package_hashes})

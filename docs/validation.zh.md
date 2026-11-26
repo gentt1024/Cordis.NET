@@ -8,6 +8,8 @@
 
 在 PR 和发行工作流中，Linux runtime 验证成功并上传该批制品后，portable 消费作业即可启动。消费端用生产者回执核对检出提交、运行编号和尝试次数，以及包、客户端运行时和作者工具的摘要。Windows runtime 独立执行。PR 的两项必需检查和发行封存作业都要求两个平台的 runtime、上游源码检查及本轮调度的全部 portable 消费作业通过。
 
+常规 Linux CI 将 CLR 部署与多入口、Typert 和 Remote 包消费交给 portable 作业。它安装下载的 Linux 批次并执行同一组消费脚本，包括 Typert Native AOT 调用方。生产端仍验证包内容、符号、独立 HTTP 调用及 JIT/AOT，再记录批次摘要。Windows 同时验证自产包和下载的 Linux 包。本地包验证和正式 tag 发行均执行完整生产端检查。
+
 此前的 [0.2.1-alpha.2](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2) 在 tag 提交 `4da57d783d77f31ee94839fce099183a06ad3367` 的[正式运行 41412379531](https://github.com/gentt1024/Cordis.NET/actions/runs/41412379531) 上通过全部 18 个作业。其公共包和归档核验仍归属 alpha.2，不归属这次修正。
 
 此前的 [0.2.1-alpha.1](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) 于 2026-10-27 发行。[正式运行](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986)在 tag 提交 `a2728c7e929a01a586fc714d9b397eaf9549e153` 上的 18 个作业全部通过，该证据仍归属 alpha.1。

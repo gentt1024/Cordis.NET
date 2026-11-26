@@ -111,7 +111,8 @@ jobs:
         shell: bash
         run: |
           python scripts/check-docs.py
-          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --defer-upstream-source-tests --aot --package --package-output artifacts/ci-packages
+          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --defer-upstream-source-tests --aot --package --package-output artifacts/ci-packages \
+            ${{ runner.os == 'Linux' && '--defer-portable-consumers' || '' }}
           python scripts/verify-authoring.py --verification artifacts/verification/verification.json --aot --packages artifacts/ci-packages
       - name: Record same-batch authoring inputs
         if: runner.os == 'Linux'
@@ -178,26 +179,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            platform: Windows
-          - os: ubuntu-24.04
-            platform: Linux
+        os: [windows-latest, ubuntu-24.04]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
-        with:
-          python-version: '3.13'
-      # Keep independent source evidence even when another required gate fails.
-      - name: Require every runtime and upstream job
+      - name: Require both runtimes, upstream and portable consumers
         if: always()
         env:
           LINUX_RESULT: ${{ needs.runtime-linux.result }}
           WINDOWS_RESULT: ${{ needs.runtime-windows.result }}
           UPSTREAM_RESULT: ${{ needs.upstream.result }}
           AUTHORING_RESULT: ${{ needs.portable-authoring.result }}
-        run: |
-          test "$LINUX_RESULT" = success && test "$WINDOWS_RESULT" = success && test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
+        run: >-
+          test "$LINUX_RESULT" = success && test "$WINDOWS_RESULT" = success &&
+          test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
