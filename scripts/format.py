@@ -56,12 +56,15 @@ def format_files(root, files, check):
     previous = snapshot()
     run("dotnet", "tool", "restore")
     run("dotnet", "restore", "Cordis.slnx", "--locked-mode")
-    for label, action in (
+    stages = [
         ("jb cleanupcode", cleanup),
         ("dotnet format whitespace", lambda: roslyn(".", "--folder")),
         ("dotnet format whitespace (solution symbols)", lambda: roslyn("Cordis.slnx", "--no-restore")),
-        ("jb cleanupcode (repeat)", cleanup),
-    ):
+    ]
+    # Check mode fails on the first changed byte. Only write mode needs to recheck its formatted output.
+    if not check:
+        stages.append(("jb cleanupcode (repeat)", cleanup))
+    for label, action in stages:
         print(f"RUN {label}", flush=True)
         action()
         current = snapshot()

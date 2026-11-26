@@ -112,8 +112,25 @@ class FormattingTests(unittest.TestCase):
 
         result, _ = self.check(dotnet)
         self.assertEqual(0, result)
-        self.assertEqual(4, len(stages))
+        self.assertEqual(["tool", "format", "format"], [command[1] for command in stages])
+        self.assertIn("--folder", stages[1])
+        self.assertIn("Cordis.slnx", stages[2])
         self.assertEqual(original, {p: p.read_bytes() for p in self.root.rglob("*") if p.is_file()})
+
+    def test_write_mode_rejects_a_second_cleanup_that_changes_the_formatted_source(self):
+        cleanups = 0
+
+        def dotnet(command, cwd, check):
+            nonlocal cleanups
+            if "cleanupcode" in command:
+                cleanups += 1
+                (cwd / "Tracked.cs").write_text(f"class Pass{cleanups} {{ }}\n")
+
+        output = io.StringIO()
+        with patch("subprocess.run", side_effect=dotnet), contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            result = self.formatter.format_files(self.root, ["Tracked.cs"], check=False)
+        self.assertEqual(1, result)
+        self.assertIn("FAIL jb cleanupcode (repeat)", output.getvalue())
 
     def test_later_formatter_disagreement_fails_without_touching_source(self):
         def dotnet(command, cwd):

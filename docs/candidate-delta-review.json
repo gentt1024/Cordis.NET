@@ -308,7 +308,7 @@
     "tests/Cordis.Platform.Tests/ClrPackageReinstallTests.cs": "8cddb96f1514c5920c601624f0101463cb3dfd1e6e3f0bfa7b889053946fb996",
     "tests/Cordis.Platform.Tests/ManagementTransportTests.cs": "794d62060ab69b52ba364b56f67398cabaee3ef5466002822713b6dc85001a8e",
     "tests/Cordis.Platform.Tests/PackageHotReinstallTests.cs": "076e827c2e2398bf274dbc85693a780eefb0e1e95418af64bf7bd70130685b92",
-    "tests/Cordis.Platform.Tests/PackageManagementTests.cs": "f07a29fccfd84d4d1ab8b5a365c490d0f3bf4d411cd20a40d28694aaffdcc3bf",
+    "tests/Cordis.Platform.Tests/PackageManagementTests.cs": "72a2172dd5ad0fb9541d0b2d57a3ab3b40b9f4b4f70a53584f0e98b79fa4d142",
     "tests/Cordis.Platform.Tests/PackageUpdateTests.cs": "38475af481b5d3a618477609405b317177ebe36eb35db62cc5a06964fa29783a",
     "tests/Cordis.Platform.Tests/RemoteCarrierTests.cs": "a34bb9352771382ae47fa785e0063dbcb0189321473937938ca6ce2f17531786",
     "tests/Cordis.Platform.Tests/TypertGeneratedInfoTests.cs": "13772b688d093ccb3674c9f3557e05909bd683a61392caa815a567735858cded",

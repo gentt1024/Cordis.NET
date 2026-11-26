@@ -17,17 +17,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  runtime:
+  runtime-linux:
     outputs:
       release-tag: ${{ steps.sdk.outputs.release-tag }}
-    name: runtime (${{ matrix.os }})
+    name: runtime (ubuntu-24.04)
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
-    steps:
+    runs-on: ubuntu-24.04
+    env:
+      ARTIFACT_PLATFORM: ubuntu-24.04
+    steps: &runtime-steps
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
@@ -113,7 +111,8 @@ jobs:
         shell: bash
         run: |
           python scripts/check-docs.py
-          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --defer-upstream-source-tests --aot --package --package-output artifacts/ci-packages
+          python scripts/verify.py --dsh ../dsh-reference --origin ../upstream-cordis --defer-upstream-source-tests --aot --package --package-output artifacts/ci-packages \
+            ${{ runner.os == 'Linux' && '--defer-portable-consumers' || '' }}
           python scripts/verify-authoring.py --verification artifacts/verification/verification.json --aot --packages artifacts/ci-packages
       - name: Record same-batch authoring inputs
         if: runner.os == 'Linux'
@@ -135,7 +134,7 @@ jobs:
       - name: Preserve validated packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: validated-packages-${{ matrix.os }}
+          name: validated-packages-${{ env.ARTIFACT_PLATFORM }}
           path: artifacts/ci-packages
           if-no-files-found: error
           retention-days: 14
@@ -143,7 +142,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: evidence-${{ matrix.os }}
+          name: evidence-${{ env.ARTIFACT_PLATFORM }}
           path: |
             artifacts/verification
             artifacts/ci-source.json
@@ -153,12 +152,20 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  runtime-windows:
+    name: runtime (windows-latest)
+    timeout-minutes: 60
+    runs-on: windows-latest
+    env:
+      ARTIFACT_PLATFORM: windows-latest
+    steps: *runtime-steps
+
   portable-authoring:
-    needs: runtime
+    needs: runtime-linux
     uses: ./.github/workflows/portable-authoring.yml
     with:
       checkout-ref: ${{ github.sha }}
-      release-tag: ${{ needs.runtime.outputs.release-tag }}
+      release-tag: ${{ needs.runtime-linux.outputs.release-tag }}
       package-artifact: validated-packages-ubuntu-24.04
 
   upstream:
@@ -168,29 +175,20 @@ jobs:
   verify:
     name: verify (${{ matrix.os }})
     if: always()
-    needs: [runtime, upstream, portable-authoring]
+    needs: [runtime-linux, runtime-windows, upstream, portable-authoring]
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            platform: Windows
-          - os: ubuntu-24.04
-            platform: Linux
+        os: [windows-latest, ubuntu-24.04]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
-        with:
-          python-version: '3.13'
-      # Keep independent source evidence even when another required gate fails.
-      - name: Require every runtime and upstream job
+      - name: Require both runtimes, upstream and portable consumers
         if: always()
         env:
-          RUNTIME_RESULT: ${{ needs.runtime.result }}
+          LINUX_RESULT: ${{ needs.runtime-linux.result }}
+          WINDOWS_RESULT: ${{ needs.runtime-windows.result }}
           UPSTREAM_RESULT: ${{ needs.upstream.result }}
           AUTHORING_RESULT: ${{ needs.portable-authoring.result }}
-        run: |
-          test "$RUNTIME_RESULT" = success && test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
+        run: >-
+          test "$LINUX_RESULT" = success && test "$WINDOWS_RESULT" = success &&
+          test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success

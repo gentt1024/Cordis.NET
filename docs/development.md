@@ -173,7 +173,7 @@ python scripts/format.py
 python scripts/format.py --check
 ```
 
-The script restores the repository-local JetBrains ReSharper GlobalTools version from `dotnet-tools.json` and the solution's locked dependencies. It runs `jb cleanupcode` with `Built-in: Reformat Code` on repository C# files, then `dotnet format whitespace` in folder and solution modes, then CleanupCode again. Solution mode covers conditional compilation branches. Every stage uses the same explicit C# file list, including fixtures and tools outside the solution. Each later stage must leave the previous output unchanged.
+The script restores the repository-local JetBrains ReSharper GlobalTools version from `dotnet-tools.json` and the solution's locked dependencies. It runs `jb cleanupcode` with `Built-in: Reformat Code` on repository C# files, then `dotnet format whitespace` in folder and solution modes. Write mode repeats CleanupCode to check that its output is stable. In check mode, a change at any stage fails immediately. Solution mode covers conditional compilation branches. Every stage uses the same explicit C# file list, including fixtures and tools outside the solution. Each later stage must leave the previous output unchanged.
 
 `--check` copies current tracked and non-ignored new files, including configuration and uncommitted edits, to a temporary directory. Restore and formatting run there; nothing is written back to the working tree. Any stage changing the copied C# files fails the check. Files resolving outside the repository are rejected. CI runs this check on Windows and Linux. Git and Python are required.
 
