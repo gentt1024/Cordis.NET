@@ -173,7 +173,7 @@ python scripts/format.py
 python scripts/format.py --check
 ```
 
-脚本按 `dotnet-tools.json` 还原仓库本地固定版本的 JetBrains ReSharper GlobalTools，并按锁文件还原 solution 依赖。它对仓库 C# 文件依次执行使用 `Built-in: Reformat Code` 的 `jb cleanupcode`、文件夹和 solution 两种模式的 `dotnet format whitespace`，再执行一次 CleanupCode。solution 模式覆盖条件编译分支。各阶段都使用同一份明确的 C# 文件清单，包含 solution 外的 fixture 和工具源码。后续每一步都必须保持前一步的输出不变。
+脚本按 `dotnet-tools.json` 还原仓库本地固定版本的 JetBrains ReSharper GlobalTools，并按锁文件还原 solution 依赖。它对仓库 C# 文件依次执行使用 `Built-in: Reformat Code` 的 `jb cleanupcode`、文件夹和 solution 两种模式的 `dotnet format whitespace`。写入模式会再执行一次 CleanupCode，确认格式化结果稳定。检查模式下，任一阶段改动文件内容就会失败。solution 模式覆盖条件编译分支。各阶段都使用同一份明确的 C# 文件清单，包含 solution 外的 fixture 和工具源码。后续每一步都必须保持前一步的输出不变。
 
 `--check` 将当前已跟踪文件和未被忽略的新增文件复制到临时目录，包括配置和未提交的改动。依赖还原和格式化均在副本中执行，不向原工作区写回任何内容。任一步修改副本中的 C# 文件都会使检查失败。解析后位于仓库外的文件会被拒绝。CI 在 Windows 和 Linux 上执行此检查。运行需要 Git 和 Python。
 
