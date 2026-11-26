@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
+using System.Reflection.PortableExecutable;
 using System.Security;
 using System.Text;
 using System.Text.Json;
@@ -96,6 +97,57 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                 "</ItemGroup>",
                 "<None Include=\"Reject.targets\" Pack=\"true\" PackagePath=\"buildTransitive/IndependentPlugin.targets\" /></ItemGroup>"));
         await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", Feed, "-p:Version=3.0.0");
+    }
+
+    [Fact]
+    public async Task Local_project_loads_only_complete_output_for_the_requested_configuration()
+    {
+        var author = Path.Combine(directory, "author");
+        var assets = Path.Combine(author, "web.mjs");
+        await PrepareLocalProjectAsync(author);
+        var debug = await ClrLocalProject.QueryAsync(author);
+        Assert.Equal("IndependentPlugin", debug.PackageId);
+        Assert.Throws<FileNotFoundException>(() => debug.ResolveOutput());
+        await RunAsync(author, "build", "-c", "Debug");
+        var completed = debug.ResolveOutput();
+        Assert.Equal(
+            "export const version = 1;",
+            await File.ReadAllTextAsync(Path.Combine(completed, "web", "module.mjs")));
+        var release = await ClrLocalProject.QueryAsync(author, "Release");
+        Assert.Throws<FileNotFoundException>(() => release.ResolveOutput());
+        Assert.True(File.Exists(Path.Combine(completed, "IndependentPlugin.pdb")));
+        await RunAsync(author, "build", "-c", "Release", "--no-restore", "-p:DebugType=embedded");
+        var embedded = release.ResolveOutput();
+        Assert.False(File.Exists(Path.Combine(embedded, "IndependentPlugin.pdb")));
+        using (var assembly = File.OpenRead(Path.Combine(embedded, "IndependentPlugin.dll")))
+        using (var pe = new PEReader(assembly))
+            Assert.Contains(
+                pe.ReadDebugDirectory(),
+                entry => entry.Type == DebugDirectoryEntryType.EmbeddedPortablePdb);
+
+
+        await using var resolver = new ClrModuleResolver(sharedContracts: [typeof(ConfigObject<>).Assembly]);
+        await using var root = new Context();
+        resolver.Register("fixture", new(completed, "IndependentPlugin.dll", "Entry"));
+        await root.RunAsync(async context =>
+        {
+            var module = await resolver.ResolveAsync("fixture", new Uri(Path.Combine(completed, "package.json")));
+            var fiber = context.Plugin(module.Plugin);
+            await fiber.WaitAsync();
+            Assert.Equal("v1", Assert.IsType<Func<string>>(context.Get("installed-code"))());
+        });
+
+        File.Delete(assets);
+        var failure = await RunDotnetAsync(author, "build", "-c", "Debug", "--no-restore");
+        Assert.NotEqual(0, failure.ExitCode);
+        Assert.Contains("web.mjs", failure.Output);
+        Assert.Equal(completed, debug.ResolveOutput());
+        await File.WriteAllTextAsync(assets, "export const version = 2;");
+        await RunAsync(author, "build", "-c", "Release");
+        Assert.NotEqual(completed, release.ResolveOutput());
+        Assert.Equal(completed, debug.ResolveOutput());
+        await File.WriteAllTextAsync(Path.Combine(release.ResolveOutput(), "web", "module.mjs"), "corrupt");
+        Assert.Throws<InvalidDataException>(() => release.ResolveOutput());
     }
 
     [Theory]
@@ -692,6 +744,22 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         client.DefaultRequestHeaders.Add(
             "If-Cordis-Generation",
             state.RootElement.GetProperty("generation").GetString());
+        using var local = await PostRemoteAsync(
+            client,
+            "/remote/pluginManager/inspectLocalSource",
+            new
+            {
+                args = new
+                {
+                    request = new LocalSourceRequest("author", "Debug")
+                }
+            });
+        local.EnsureSuccessStatusCode();
+        using var localReply = JsonDocument.Parse(await local.Content.ReadAsStringAsync());
+        Assert.False(localReply.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
+        Assert.Equal(
+            "plugin-manager/local-source-disabled",
+            localReply.RootElement.GetProperty("result").GetProperty("error").GetProperty("code").GetString());
         var request = new PackageRequest("IndependentPlugin", "1.0.0", Feed);
         using var inspectResponse = await PostRemoteAsync(
             client,
@@ -1085,7 +1153,9 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         DshRuntimeIdentity? runtime = null,
         string? profileDirectory = null,
         IReadOnlyDictionary<string, string>? installationBundles = null,
-        bool enableHmr = false)
+        bool enableHmr = false,
+        LocalSourcePolicy? localSourcePolicy = null,
+        string dotnetCommand = "dotnet")
     {
         var root = profileDirectory is null
             ? Directory.CreateDirectory(Path.Combine(directory, Guid.NewGuid().ToString("N"))).FullName
@@ -1097,7 +1167,15 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         if (!File.Exists(config))
             await File.WriteAllTextAsync(config, "[]\n");
         var resolver = new ClrModuleResolver(Path.Combine(root, "shadow"), [typeof(ConfigObject<>).Assembly]);
-        var toolchain = new DotnetPluginToolchain(profile, resolver, sources ?? [Feed]);
+        var toolchain = localSourcePolicy is null
+            ? new DotnetPluginToolchain(profile, resolver, sources ?? [Feed])
+            : await DotnetPluginToolchain.OpenForRunAsync(
+                profile,
+                resolver,
+                sources ?? [Feed],
+                localSourcePolicy,
+                installationBundles: installationBundles,
+                dotnetCommand: dotnetCommand);
         var launch = new ProfileLaunch(
             await Profiles.LoadAsync(
                 profile,
@@ -1111,6 +1189,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             RuntimeIdentity = runtime,
             CompatibilityPackageName = DotnetPluginToolchain.NormalizeCompatibilityPackageName,
             ManifestLocator = toolchain.LocateManifest,
+            RefreshPackageRoutesAsync = toolchain.RefreshProfileRoutesAsync,
         };
         var session = await ProfileSession.StartAsync(config, launch, resolver, enableHmr: enableHmr);
         return new(profile, resolver, toolchain, session);
@@ -1132,6 +1211,12 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
 
     private static async Task RunAsync(string directory, params string[] arguments)
     {
+        var result = await RunDotnetAsync(directory, arguments);
+        Assert.True(result.ExitCode == 0, result.Output);
+    }
+
+    private static async Task<(int ExitCode, string Output)> RunDotnetAsync(string directory, params string[] arguments)
+    {
         var start = new ProcessStartInfo("dotnet")
         {
             WorkingDirectory = directory,
@@ -1146,7 +1231,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
-        Assert.True(process.ExitCode == 0, await output + await error);
+        return (process.ExitCode, await output + await error);
     }
 
     public Task DisposeAsync()

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Cordis.Clr/BundleFiles.cs;../../src/Cordis.Clr/LocalBuildFiles.cs;../../src/Cordis.Clr/ClrBundleMetadata.cs" Link="%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

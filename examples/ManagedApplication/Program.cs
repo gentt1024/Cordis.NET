@@ -158,7 +158,15 @@ foreach (var (name, contracts) in new[] { ("settings", settingsContracts), ("man
 }
 
 app.MapGet("/", () => Results.File(Path.Combine(app.Environment.ContentRootPath, "index.html"), "text/html"));
-app.MapGet("/client-runtime/client.mjs", () => Results.File(Path.Combine(runtime, "client.mjs"), "text/javascript"));
+// Serve the browser SDK entries and their shared chunks from this deployment.
+foreach (var path in Directory.EnumerateFiles(runtime, "*.mjs", SearchOption.TopDirectoryOnly))
+{
+    var name = Path.GetFileName(path);
+    if (name is "cordis-remote.mjs" or "events.mjs" or "settings.mjs" or "management.mjs")
+        continue;
+    app.MapGet("/client-runtime/" + name, () => Results.File(path, "text/javascript"));
+}
+
 app.MapGet("/client-runtime/LICENSES.txt", () => Results.File(Path.Combine(runtime, "LICENSES.txt"), "text/plain"));
 
 // Refreshed runs inside the session queue. Capture is queued afterwards so catalog publication
@@ -221,11 +229,10 @@ void QueueCapture()
     TrackCapture(refresh);
 }
 
-session.Refreshed += QueueCapture;
-
 var workers = new Dictionary<string, DevelopmentWorker>(StringComparer.Ordinal);
 var builds = new ConcurrentDictionary<string, DevelopmentStatus>(StringComparer.Ordinal);
-foreach (var author in watchSources)
+
+async Task StartCompilerAsync(string author)
 {
     var name = ReadName(author);
     if (!clientPackages.ContainsKey(name) || workers.ContainsKey(name))
@@ -391,15 +398,30 @@ app.MapPost(
         await worker.DisposeAsync();
         return Results.NoContent();
     });
+session.Refreshed += QueueCapture;
 try
 {
-    await app.RunAsync();
+    foreach (var author in watchSources)
+        await StartCompilerAsync(author);
+    await app.StartAsync();
+    await app.WaitForShutdownAsync();
 }
 finally
 {
-    session.Refreshed -= QueueCapture;
-    await Task.WhenAll(workers.Values.Select(async worker => await worker.DisposeAsync()));
-    await Task.WhenAll(captures.Keys);
+    // Detach on the same queue as the callback so no refresh can enqueue work after the drain.
+    await session.ConfigurationOperations.RunExclusiveAsync!(() =>
+    {
+        session.Refreshed -= QueueCapture;
+        return Task.CompletedTask;
+    });
+    try
+    {
+        await Task.WhenAll(workers.Values.Select(async worker => await worker.DisposeAsync()));
+    }
+    finally
+    {
+        await Task.WhenAll(captures.Keys);
+    }
 }
 
 sealed record DevelopmentStatus(string Name, string Phase, string? Revision, string? Diagnostic);

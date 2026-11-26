@@ -8,16 +8,16 @@ The project is a faithful, idiomatic .NET port of the DSH-maintained Cordis runt
 
 ## Get started
 
-Install the preview version selected by this source revision, `0.2.1-alpha.3`, in a .NET 10 application:
+Install the preview version selected by this source revision, `0.2.1-alpha.4`, in a .NET 10 application:
 
 ```console
 dotnet new console -n MyApp -f net10.0
-dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.3
+dotnet add MyApp package Cordis.NET.Core --version 0.2.1-alpha.4
 ```
 
 Follow [your first plugin](docs/getting-started.md) for the complete program, expected output and shutdown. No repository checkout is required.
 
-The [release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3) provides browser runtime and author-tool archives, checksums and validation evidence. Use matching versions of the Cordis.NET packages and generated tools. This version supports closed generic DTOs in generated Web contracts, alongside incremental generation and Host input defaults from referenced assemblies. The release page determines publication status; see [release and source status](docs/development.md#current-support-and-release-status).
+The [release page](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.4) provides browser runtime and author-tool archives, checksums and validation evidence. Use matching versions of the Cordis.NET packages and generated tools. This version adds local CLR source management, profile schema documents and a browser SDK built on shared Cordis modules. The release page determines publication status; see [release and source status](docs/development.md#current-support-and-release-status).
 
 ## Choose what to add
 
@@ -47,6 +47,6 @@ dotnet run --project examples/Composition/Composition.csproj
 
 ## Project scope
 
-Behavior follows the fixed revision in [upstream.lock.json](upstream.lock.json), currently DSH `0.2.1-rc.2` with vendored Cordis `4.0.4`. [Compatibility](docs/compatibility.md) records the .NET adaptations and supported interoperability. Arbitrary TypeScript plugins are not a supported .NET deployment format.
+Behavior follows the fixed revision in [upstream.lock.json](upstream.lock.json), currently DSH `0.2.1-rc.2` with vendored Cordis `4.0.5`. [Compatibility](docs/compatibility.md) records the .NET adaptations and supported interoperability. Arbitrary TypeScript plugins are not a supported .NET deployment format.
 
 Cordis.NET is independently maintained and is not an official project of DeepSeek, Cordiverse or Microsoft. It is an early preview; public APIs may change before a stable release. Published package and tag identities remain fixed.

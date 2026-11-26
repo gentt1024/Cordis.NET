@@ -258,19 +258,18 @@
     }
   },
   "nativeFiles": {
-    "clients/modules/src/access.ts": "9ec6435eb07a6ba0d3b8f99f2de520b59acadf3b9310f73292b0f4ca27e612df",
-    "clients/modules/src/index.ts": "8dcd5cf8ac0dbfe262395623af2a17a2f7d9fffef666bd2bcc2aa0226486687b",
+    "clients/modules/package-lock.json": "935824afdc8c2eae06daca5d0766a8c667a9a55a8dc924afdcb79b13188b6706",
+    "clients/modules/src/access.ts": "8a31bf9e61045c7df40ad366675b00bf713beb5be009595b23917d7bf0960a8a",
+    "clients/modules/src/index.ts": "d828afc07b3d119d45f5ae0d4023f2ea3bed27ca3353d10d67a63adbbf1ab896",
     "clients/modules/vendor/modules/release-change.ts": "3327808c3ca5c8ada4d22ff81572f91e54be32e908c05d3890253ec5992f85fa",
     "clients/modules/vendor/modules/system.ts": "0953d346d3a642c3cde2b72b19a23f96d4285c8394a3774d5b64cc24c4d2de84",
-    "clients/modules/vendor/slots/index.ts": "273e5148f5e66220edaefa2ccd3302625372802123802400f93af008074473e0",
-    "clients/modules/vendor/slots/renderer.ts": "9b518a8dccdd5955e54a419fec3a8cce9de6b8ba824b0d199bb958a47411d9d9",
     "clients/tools/build.mjs": "a2f4d49bc41b7e78dfe09f582d992f8d9a2ee21fd4eddce6cc010b8effefdc0a",
     "scripts/typert_declaration_consumer.py": "076a5a03502662153e96a53fccfdfb81978c903b2a9e68ddc2cad6a71a1afdc5",
     "scripts/verify-access-client.py": "58e9f4752309976527702628b16efb5c6b08e7257edb7f2219ee8396bd0ade11",
-    "scripts/verify-client-access.mjs": "f036c6ea2d711870f249e61cbc337bc173d6b59d759882b00e954e5182fed2e2",
-    "scripts/verify-client-author-package.mjs": "61cd865b502b6046f07d4bdc0799642c973317beb495c9c679d1c1625944ad6d",
+    "scripts/verify-client-access.mjs": "51b1f8a99777f725fa7dff492ce200ad91502ae6788c19809c00c9f5c46fd6a0",
+    "scripts/verify-client-author-package.mjs": "07c2c9cd0ba1cd32cf3a02873f5c1ee5c87b554fb1194d489c25e2952fac3acf",
     "scripts/verify-client-author-watch.mjs": "b4e0f17a05f55fc1b89cb81708551fd58c3e3b8b8e5a21ae7fe56800e91882fd",
-    "scripts/verify-client-module-types.mjs": "b5e4f47f98ddcd31483a431d5fa5005a6a5b1146f4b4ad33d52113a4d17ef38f",
+    "scripts/verify-client-module-types.mjs": "76ce8a08246584965da958443940058acf8b009c489cf3588570b546eb83a492",
     "scripts/verify-client-release-browser.py": "4709077bf2d2fe147eb3ea202c792a231aaf446b5dce87c6cafe834825957399",
     "scripts/verify-client-release.mjs": "eee0447eec29c580cb624c1d3f3478e15c7e34c3300f58a6da8a9017aa3a8030",
     "scripts/verify-client-safety.mjs": "4c267421aa4610738d60644b3d610abf55ac0a244165c296cb20f356ce27e081",
@@ -292,7 +291,7 @@
     "src/Cordis.Composition/TypertRemoteAccessClient.cs": "11ebe4884555b371f06d9306acca0d8274a83543bc60d02389e4e7ae3d3970d0",
     "src/Cordis.Composition/TypertRemoteInfo.cs": "f5bddcb7649e229fd5ea4c9950bf102487356b5ffe92a081877b76bad0ad3185",
     "tests/Cordis.Composition.Tests/ClientModuleCatalogTests.cs": "2a33c5e73af9af82e1d1ec94951ab88e9b4add219307d141ddc31ccf21ef70b9",
-    "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs": "e176d79a5808f5a69a55dd2eb5ca34421b2cf2ceb62418b2083a876c8baa220b",
+    "tests/Cordis.Composition.Tests/DeploymentResolutionTests.cs": "d4854ddf406b41f67ee7faaa7f4b23704c4646095e9b9596db9fd57b7c457fc2",
     "tests/Cordis.Composition.Tests/DshProfilePolicyTests.cs": "d22437a8c128d7d176735014be037422db8239d6337d5cdb1e421ebb326cb895",
     "tests/Cordis.Composition.Tests/ModuleIdentityTests.cs": "71e62f514581953a5ff7ac6164d72afb4b101b148aed9fa24e570c812640a2c9",
     "tests/Cordis.Composition.Tests/PluginManagerPersistenceTests.cs": "15321cdd5b0cdce8bb97ac627bbed1bcfa892e22d1b7d4e80a78731226bd39fe",
@@ -309,11 +308,11 @@
     "tests/Cordis.Platform.Tests/ClrPackageReinstallTests.cs": "8cddb96f1514c5920c601624f0101463cb3dfd1e6e3f0bfa7b889053946fb996",
     "tests/Cordis.Platform.Tests/ManagementTransportTests.cs": "794d62060ab69b52ba364b56f67398cabaee3ef5466002822713b6dc85001a8e",
     "tests/Cordis.Platform.Tests/PackageHotReinstallTests.cs": "076e827c2e2398bf274dbc85693a780eefb0e1e95418af64bf7bd70130685b92",
-    "tests/Cordis.Platform.Tests/PackageManagementTests.cs": "3a705783ccb9fb1d51b3d99241ce9f647cbe578074edc02cd70792af2e430e77",
+    "tests/Cordis.Platform.Tests/PackageManagementTests.cs": "f07a29fccfd84d4d1ab8b5a365c490d0f3bf4d411cd20a40d28694aaffdcc3bf",
     "tests/Cordis.Platform.Tests/PackageUpdateTests.cs": "38475af481b5d3a618477609405b317177ebe36eb35db62cc5a06964fa29783a",
     "tests/Cordis.Platform.Tests/RemoteCarrierTests.cs": "a34bb9352771382ae47fa785e0063dbcb0189321473937938ca6ce2f17531786",
     "tests/Cordis.Platform.Tests/TypertGeneratedInfoTests.cs": "13772b688d093ccb3674c9f3557e05909bd683a61392caa815a567735858cded",
-    "tests/fixtures/ClientReleaseBrowser/index.html": "640ef749b3771eb4fb2401d1532d63d41f86ce713ecc7919d666f289fb0e8971",
+    "tests/fixtures/ClientReleaseBrowser/index.html": "098d8a9b65fdf1c80ad119e8b9170afe965d3a813347d2114554d4c848e0b67b",
     "tests/fixtures/DeclarationModel/SharedConsumer.cs": "d1e227117bc4512d5643fdadfe8a0198d0e2e937bb45af9f03fac71e809bc60f",
     "tools/Cordis.Typert.Compiler/WebProjection.cs": "ee4c12abcb5aaae4004455b5662729dd1c4cfba21e9b0997113e5885936c15ed",
     "tools/Cordis.Typert.Generator/Model/DotnetProjectionEmitter.Info.cs": "a36e992fbb3a257488651314b09bca69880dba4b47a8e7da7115e0d86126fa1d"
@@ -1148,7 +1147,7 @@
           "file": "tests/Cordis.Composition.Tests/ModuleIdentityTests.cs",
           "method": "Shared_callback_wrappers_replace_each_runtime_fiber_once_and_restore_the_actual_import",
           "assertions": [
-            "Distinct Plugin wrappers share Identity; explicit previous\u2192successor pair per entry; stop:one/stop:two/first:one/second:two exactly once; active fibers and Module pointers checked."
+            "Distinct Plugin wrappers share Identity; explicit previous→successor pair per entry; stop:one/stop:two/first:one/second:two exactly once; active fibers and Module pointers checked."
           ]
         },
         {

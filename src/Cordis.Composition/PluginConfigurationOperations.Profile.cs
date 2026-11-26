@@ -79,10 +79,34 @@ public sealed partial class PluginConfigurationOperations
             ConfigurationFile.Parse(text, true) as EntryOptions ??
             throw new FormatException("Profile must be a JSON object."));
 
-    private async Task<ProfileInputs> CaptureProfileAsync()
+    /// <summary>Admit the saved selection and return the exact composition to apply in the running session.</summary>
+    /// <remarks>Call inside the session lifecycle queue after preparing import routes and before changing running entries.</remarks>
+    public async Task<ProfileCandidate> AdmitSavedProfileAsync(PackageManifest expectedManifest)
+    {
+        var (inputs, candidate) = await CaptureSavedAsync(expectedManifest);
+        await AdmitCandidateAsync(inputs, candidate);
+        return candidate;
+    }
+
+    /// <summary>Capture the saved effective root without invoking a management admission callback or saving any files.</summary>
+    public async Task<ProfileCandidate> CaptureSavedProfileAsync(PackageManifest expectedManifest) =>
+        (await CaptureSavedAsync(expectedManifest)).Candidate;
+
+    private async Task<(ProfileInputs Inputs, ProfileCandidate Candidate)> CaptureSavedAsync(
+        PackageManifest expectedManifest)
+    {
+        var inputs = await CaptureProfileAsync();
+        var saved = ParseManifest(await inputs.ReadAsync(ManifestPath));
+        if (ConfigurationFile.Write(saved.Raw, true) != ConfigurationFile.Write(expectedManifest.Raw, true))
+            throw new Refusal("profile-conflict");
+        return (inputs, await CreateCandidateAsync(inputs, saved));
+    }
+
+    private async Task<ProfileInputs> CaptureProfileAsync(Action<PackageManifest>? inspectManifest = null)
     {
         var inputs = new ProfileInputs(launch);
         var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
+        inspectManifest?.Invoke(manifest);
         await inputs.ReadAsync(include.Filename);
         await inputs.ReadOptionalAsync(Path.Combine(launch.Profile.Directory, DshProfilePolicy.CompatibilityFilename));
         await ProfileComposition.RefreshAsync(inputs.Launch, manifest, inputs.ReadAsync);
@@ -94,16 +118,18 @@ public sealed partial class PluginConfigurationOperations
         ProfileInputs inputs,
         PackageManifest manifest,
         PreparedPackage? prepared = null,
-        string? userPatch = null)
+        string? userPatch = null,
+        LocalSourceFacts? source = null)
     {
         var proposal = inputs.Launch;
-        if (prepared is not null)
+        var directory = prepared?.PublicationDirectory ?? prepared?.Directory ?? source?.OutputDirectory;
+        if (directory is not null)
         {
             var local = new Dictionary<string, string>(
                 proposal.LocalBundles ?? new Dictionary<string, string>(),
                 StringComparer.Ordinal)
             {
-                [prepared.Name] = Path.GetFullPath(prepared.PublicationDirectory ?? prepared.Directory)
+                [prepared?.Name ?? source!.PackageId] = Path.GetFullPath(directory)
             };
             proposal = proposal with
             {
@@ -140,12 +166,18 @@ public sealed partial class PluginConfigurationOperations
         await inputs.VerifyAsync();
     }
 
-    private async Task SaveCandidateAsync(ProfileInputs inputs, ProfileCandidate candidate, bool published = false)
+    private async Task SaveCandidateAsync(
+        ProfileInputs inputs,
+        ProfileCandidate candidate,
+        bool published = false,
+        Func<Task>? verifyPrepared = null)
     {
         var temporary = ManifestPath + ".tmp-" + Guid.NewGuid().ToString("N");
         try
         {
             await File.WriteAllTextAsync(temporary, candidate.ManifestJson);
+            if (verifyPrepared is not null)
+                await verifyPrepared();
             await inputs.VerifyAsync(published);
             File.Move(temporary, ManifestPath, true);
         }

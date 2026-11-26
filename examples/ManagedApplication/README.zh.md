@@ -80,6 +80,6 @@ dotnet run --project examples/ManagedApplication -- artifacts/managed-profile ar
 
 ## 退出并保留示例状态
 
-使用 Ctrl+C 停止 Host，等退出后再复用 Profile 或删除保留文件。退出关闭同一批 worker 所有者并等待 catalog 工作，旧构建目录保留。逻辑移除包不删除已安装 CLR 字节，见[离线删除](../../docs/clr-artifacts.zh.md#离线删除保留文件)。
+使用 Ctrl+C 停止 Host，等退出后再复用 Profile 或删除保留文件。退出时，HTTP 服务器停止接受请求。Host 在 Profile 队列内取消刷新订阅，停止编译 worker，并等待已排入队列的 catalog 发布操作结束。随后依次释放 Web 应用、Profile 会话、CLR 工具链和解析器，最后关闭 Profile 锁。旧构建目录保留。逻辑移除包不删除已安装 CLR 字节，见[离线删除](../../docs/clr-artifacts.zh.md#离线删除保留文件)。
 
 部署应用可提供预编译浏览器字节，不需要作者源码或 Node。本源码流程不构成新的包、跨平台、AOT 或浏览器验收。

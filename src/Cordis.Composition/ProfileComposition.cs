@@ -48,6 +48,23 @@ public sealed record ProfileLaunch(
         get;
         init;
     }
+
+    /// <summary>Prepare optional application resources before a running session applies a profile or code change.</summary>
+    /// <remarks>Runs inside session coordination. Throw to refuse before graph mutation; release any resources
+    /// not yet handed to the session. The initial mount remains the responsibility of the application.</remarks>
+    public Func<ProfileApplyRequest, Task<IProfileApplyLease>>? PrepareApplyAsync
+    {
+        get;
+        init;
+    }
+
+    /// <summary>Inspect the saved package routes before startup or session recomposition. Update safe mappings or signal a required restart.</summary>
+    /// <remarks>Runs inside lifecycle coordination. The adapter must not acquire the profile writer lock or re-enter the session.</remarks>
+    public Func<PackageManifest, Task>? RefreshPackageRoutesAsync
+    {
+        get;
+        init;
+    }
 }
 
 /// <summary>
@@ -78,11 +95,12 @@ public sealed record ProfileRefresh(IReadOnlyList<ConfigurationLayer> Layers, IR
 public static class ProfileComposition
 {
     /// <summary>Re-read bundle/profile/home sources while retaining the launch-time overlay values.</summary>
-    public static async Task<ProfileRefresh> RefreshAsync(ProfileLaunch launch)
-        => await RefreshAsync(
-            launch,
-            PackageManifest.Read(Path.Combine(launch.Profile.Directory, "package.json")),
-            path => File.ReadAllTextAsync(path));
+    public static Task<ProfileRefresh> RefreshAsync(ProfileLaunch launch) =>
+        RefreshAsync(launch, PackageManifest.Read(Path.Combine(launch.Profile.Directory, "package.json")));
+
+    /// <summary>Compose the selection from the same manifest snapshot used to prepare its package routes.</summary>
+    public static Task<ProfileRefresh> RefreshAsync(ProfileLaunch launch, PackageManifest manifest) =>
+        RefreshAsync(launch, manifest, path => File.ReadAllTextAsync(path));
 
     internal static async Task<ProfileRefresh> RefreshAsync(
         ProfileLaunch launch,

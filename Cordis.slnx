@@ -40,6 +40,7 @@
   </Folder>
   <Folder Name="/Tools/">
     <Project Path="tools/Cordis.ClientAssets/Cordis.ClientAssets.csproj" />
+    <Project Path="tools/Cordis.Clr.Build/Cordis.Clr.Build.csproj" />
     <Project Path="tools/Cordis.Typert.Compiler/Cordis.Typert.Compiler.csproj" />
     <Project Path="tools/Cordis.Typert.Generator/Cordis.Typert.Generator.csproj" />
     <Project Path="tools/Cordis.ApiCheck/Cordis.ApiCheck.csproj" />

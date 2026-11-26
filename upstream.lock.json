@@ -10,7 +10,7 @@
   "cordis": {
     "path": "vendor/cordis",
     "packageName": "@deepseek-ai/cordis",
-    "packageVersion": "4.0.4"
+    "packageVersion": "4.0.5"
   },
   "sourceOrigins": [
     {

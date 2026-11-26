@@ -23,9 +23,23 @@ export function connection(client: ManagementClient) { return client.connection.
 export function readConfiguration(client: ManagementClient) { return client.readConfiguration('root:plugin') }
 export function compatibility(client: PluginManager) { return client['pluginManager/listVersionExemptions']({}) }
 export function install(client: PluginManager, input: Parameters<PluginManager['pluginManager/installBundle']>[0]) { return client['pluginManager/installBundle'](input) }
+export async function registerSource(client: PluginManager, source: string, requestId: string) {
+  const request = { source, configuration: 'Debug' }
+  const checked = await client['pluginManager/inspectLocalSource']({ request })
+  if (!checked.ok) throw checked.error
+  return client['pluginManager/registerLocalSource']({
+    request, options: { requestId, inspectionId: checked.value.inspectionId, enabled: checked.value.outputStatus === 'ready' },
+  })
+}
+export function registrationAfterReconnect(client: PluginManager, requestId: string) {
+  return client['pluginManager/waitForLocalSource']({ requestId })
+}
+export function savedSource(client: PluginManager, name: string) {
+  return client['pluginManager/readRegisteredLocalSource']({ name })
+}
 export function connect(notifications: Notifications) { return createManagementClient({ events: notifications }) }
 `)
-await writeFile(resolve(directory, 'shell.ts'), `import { bootClientModules, type ClientModules, type ClientReleaseChange, type WebBootRelease, type WebBootGraph } from '@cordis-net/client-modules'
+await writeFile(resolve(directory, 'shell.ts'), `import { bootClientModules, inspectClientModule, type ClientModules, type ClientReleaseChange, type WebBootRelease, type WebBootGraph } from '@cordis-net/client-modules'
 const shared = { name: 'page-owned singleton' }
 const release: WebBootRelease = { version: 'app', commit: 'build' }
 const versionOnly: WebBootRelease = { version: 'app' }
@@ -46,9 +60,33 @@ export function watchRelease(modules: ClientModules): () => void {
 export function boot(graph: unknown, loadBundle: (url: string) => Promise<void>) {
   return bootClientModules({ graph, staticModules: { '@example/shell': shared, '@example/shell/tools': { part: shared } }, loadBundle })
 }
+export async function inspect(graph: WebBootGraph) {
+  const result = await inspectClientModule({ graph, baseUrl: 'https://example.test/', specifier: 'example/client',
+    staticModules: { '@example/shell': shared }, async loadBundle(url, register) {
+      const scriptUrl: string = url
+      register({ id: 'example', factory: require => ({ host: require('@example/shell'), scriptUrl }) })
+    } })
+  // @ts-expect-error An imported namespace must be narrowed by its consumer.
+  result.exports.apply()
+  if (result.config.status === 'schema') {
+    const version: 1 = result.config.schema['~standard'].version
+    return { version, vendor: result.config.schema['~standard'].vendor }
+  }
+  if (result.config.status === 'unsupported') return result.config.diagnostic
+  // @ts-expect-error An absent declaration has no schema.
+  return result.config.schema
+}
 void [versionOnly, initial, missingVersion, numericVersion]
 `)
-await writeFile(resolve(directory, 'slots.ts'), `import type { HostObservable, KeyedStandardSource, SlotEntryDef, SlotSpec } from '@cordis-net/client-modules/slots'
+await writeFile(resolve(directory, 'slots.ts'), `import type { SlotCore } from '@cordis-net/client-modules'
+import type { HostObservable, KeyedStandardSource, SlotEntryDef, SlotSpec } from '@cordis-net/client-modules/slots'
+declare module '@cordis-net/client-modules/slots' {
+  interface SlotMap { 'author.panel': { kind: 'single', scope: 'root' } }
+}
+declare const slots: SlotCore
+const authorSpec: 'single' | undefined = slots.spec('author.panel')?.kind
+// @ts-expect-error The SDK root sees only declared slot keys.
+slots.spec('undeclared.panel')
 const inline: SlotEntryDef = { kind: 'single', scope: 'root', inline: true }
 const block: SlotEntryDef = { kind: 'single', scope: 'root' }
 const spec: SlotSpec<SlotEntryDef> = { kind: 'single', scope: 'root', inline: true }
@@ -70,7 +108,7 @@ source('item', 1)
 source()
 // @ts-expect-error Required member parameters cannot implement an optional member contract.
 const requiredMember: KeyedStandardSource = (key: string, member: string) => undefined
-void [inline, block, spec, blockSpec, invalidEntry, invalidSpec, legacy, keyed, member, requiredMember]
+void [authorSpec, inline, block, spec, blockSpec, invalidEntry, invalidSpec, legacy, keyed, member, requiredMember]
 `)
 const program = ts.createProgram(['client.ts', 'management.ts', 'shell.ts', 'slots.ts'].map(name => resolve(directory, name)), {
   noEmit: true, strict: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022,

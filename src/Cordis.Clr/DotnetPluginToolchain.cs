@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -15,7 +15,7 @@ namespace Cordis.Clr;
 [RequiresDynamicCode(
     "NuGet plugin deployment uses the ordinary CLR; Native AOT applications must republish static plugins.")]
 [RequiresUnreferencedCode("External plugin entry types are explicitly named in package metadata.")]
-public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposable
+public sealed partial class DotnetPluginToolchain : IProfilePackageToolchain, IProfileLocalSourceToolchain, IDisposable
 {
     private readonly string profileDirectory;
     private readonly string packagesDirectory;
@@ -28,7 +28,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         Timeout = TimeSpan.FromMinutes(2)
     };
 
-    private readonly Dictionary<string, string> bundles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, BundleRoute> activeRoutes = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> withdrawn = new(StringComparer.OrdinalIgnoreCase);
     private readonly string[] sources;
 
@@ -38,7 +38,23 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         string profileDirectory,
         ClrModuleResolver resolver,
         IEnumerable<string> sources,
-        string dotnetCommand = "dotnet")
+        string dotnetCommand = "dotnet") : this(profileDirectory, resolver, sources, dotnetCommand, true)
+    {
+    }
+
+    /// <summary>Open only the acquisition adapter. Missing deployments need not be loaded to repair the profile.</summary>
+    public static DotnetPluginToolchain OpenOffline(
+        string profileDirectory,
+        ClrModuleResolver resolver,
+        IEnumerable<string> sources,
+        string dotnetCommand = "dotnet") => new(profileDirectory, resolver, sources, dotnetCommand, false);
+
+    private DotnetPluginToolchain(
+        string profileDirectory,
+        ClrModuleResolver resolver,
+        IEnumerable<string> sources,
+        string dotnetCommand,
+        bool register)
     {
         this.profileDirectory = Path.GetFullPath(profileDirectory);
         packagesDirectory = Path.Combine(this.profileDirectory, ".cordis", "packages");
@@ -46,22 +62,9 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         this.resolver = resolver;
         dotnet = dotnetCommand;
         this.sources = sources.Select(NormalizeSource).Distinct(StringComparer.Ordinal).ToArray();
-        Bundles = new ReadOnlyDictionary<string, string>(bundles);
-        if (PackageManifest
-                .Read(Path.Combine(this.profileDirectory, "package.json"))
-                .Raw.GetValueOrDefault("dependencies") is IDictionary<string, object?> dependencies)
-            foreach (var (name, version) in dependencies)
-            {
-                // Profiles may also contain npm or host-owned dependencies. Only this adapter's
-                // exact NuGet identities can name one of its managed deployment directories.
-                if (version is not string exactVersion || !ValidIdentity(name, exactVersion))
-                    continue;
-                var directory = PackageDirectory(name, exactVersion);
-                if (!Directory.Exists(directory))
-                    continue;
-                RequireOwned(directory, this.profileDirectory);
-                Register(name, directory);
-            }
+        Bundles = new BundleDirectories(activeRoutes);
+        if (register)
+            RegisterSavedProfile(PackageManifest.Read(Path.Combine(this.profileDirectory, "package.json")));
     }
 
     /// <summary>Supply this live read-only map as ProfileLaunch.LocalBundles. Removal releases the package route.</summary>
@@ -80,7 +83,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         var dependencies =
             PackageManifest.Read(Path.Combine(profileDirectory, "package.json")).Raw.GetValueOrDefault("dependencies")
                 as IDictionary<string, object?>;
-        return bundles
+        return activeRoutes
             .Keys.Concat(withdrawn)
             .Concat(dependencies?.Keys ?? [])
             .FirstOrDefault(existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase)) ?? name;
@@ -100,8 +103,8 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         if (specifier.StartsWith("nuget:", StringComparison.Ordinal))
         {
             var name = specifier["nuget:".Length..].Split('/')[0];
-            if (bundles.TryGetValue(name, out var directory))
-                return PackageManifest.Read(Path.Combine(directory, "package.json"));
+            if (activeRoutes.TryGetValue(name, out var route))
+                return PackageManifest.Read(Path.Combine(route.Directory, "package.json"));
         }
 
         return DshProfilePolicy.LocateManifest(specifier, parent);
@@ -116,22 +119,23 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         var bytes = await AcquireAsync(request, cancellationToken);
         using var archive = new ZipArchive(new MemoryStream(bytes));
         var metadata = ReadMetadata(archive, request);
+        return CreateInspection(request, Convert.ToHexString(SHA256.HashData(bytes)), metadata);
+    }
+
+    private static PackageInspection CreateInspection(PackageRequest request, string hash, EntryOptions? metadata)
+    {
         var manifest = new EntryOptions
         {
             ["name"] = request.Name,
-            ["version"] = request.Version
+            ["version"] = request.Version,
         };
-        if (metadata.TryGetValue("peerDependencies", out var peers))
+        if (metadata?.TryGetValue("peerDependencies", out var peers) == true)
             manifest["peerDependencies"] = peers;
-        if (metadata.TryGetValue("engines", out var engines))
+        if (metadata?.TryGetValue("engines", out var engines) == true)
             manifest["engines"] = engines;
-        return new(
-            request,
-            Convert.ToHexString(SHA256.HashData(bytes)),
-            metadata.GetValueOrDefault("description") as string ?? "",
-            true)
+        return new(request, hash, metadata?.GetValueOrDefault("description") as string ?? "", true)
         {
-            ManifestJson = ConfigurationFile.Write(manifest, true),
+            ManifestJson = ConfigurationFile.Write(manifest, true)
         };
     }
 
@@ -194,54 +198,12 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                 Path.Combine(feed, request.Name + "." + request.Version + ".nupkg"),
                 bytes,
                 cancellationToken);
-            var project = new XDocument(
-                new XElement(
-                    "Project",
-                    new XAttribute("Sdk", "Microsoft.NET.Sdk"),
-                    new XElement(
-                        "PropertyGroup",
-                        new XElement("TargetFramework", "net10.0"),
-                        new XElement("CopyLocalLockFileAssemblies", "true"),
-                        new XElement("DebugType", "none"),
-                        new XElement("ManagePackageVersionsCentrally", "false"),
-                        new XElement("ImportDirectoryBuildProps", "false"),
-                        new XElement("ImportDirectoryBuildTargets", "false"),
-                        new XElement("RestorePackagesPath", Path.Combine(work, "cache"))),
-                    new XElement(
-                        "ItemGroup",
-                        new XElement(
-                            "PackageReference",
-                            new XAttribute("Include", request.Name),
-                            new XAttribute("Version", request.Version)))));
-            var projectPath = Path.Combine(work, "PluginDeployment.csproj");
-            await File.WriteAllTextAsync(projectPath, project.ToString(), cancellationToken);
-            var configuration = new XDocument(
-                new XElement(
-                    "configuration",
-                    new XElement(
-                        "packageSources",
-                        new XElement("clear"),
-                        new[] { feed }
-                            .Concat(sources)
-                            .Select((value, index) => new XElement(
-                                "add",
-                                new XAttribute("key", "source" + index),
-                                new XAttribute("value", value)))),
-                    new XElement(
-                        "packageSourceMapping",
-                        new XElement("clear"),
-                        new XElement(
-                            "packageSource",
-                            new XAttribute("key", "source0"),
-                            new XElement("package", new XAttribute("pattern", request.Name))),
-                        sources.Select((_, index) => new XElement(
-                            "packageSource",
-                            new XAttribute("key", "source" + (index + 1)),
-                            new XElement("package", new XAttribute("pattern", "*")))))));
-            await File.WriteAllTextAsync(
-                Path.Combine(work, "NuGet.Config"),
-                configuration.ToString(),
+            var projectPath = await WriteRestoreProjectAsync(
+                work,
+                request.Name,
+                "[" + request.Version + "]",
                 cancellationToken);
+            await WriteNuGetConfigAsync(work, request.Name, feed, cancellationToken);
             var outputDirectory = Path.Combine(work, "bundle");
             await DotnetPackageProcess.RunAsync(
                 dotnet,
@@ -257,6 +219,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                     Path.Combine(work, "NuGet.Config"),
                     "-p:ImportDirectoryBuildProps=false",
                     "-p:ImportDirectoryBuildTargets=false",
+                    "-p:ImportDirectoryPackagesProps=false",
                     "-p:ManagePackageVersionsCentrally=false",
                     "-p:UseSharedCompilation=false"
                 ],
@@ -275,63 +238,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                     SHA256.HashData(await File.ReadAllBytesAsync(restoredArchive, cancellationToken))) !=
                 inspection.ContentHash)
                 throw new InvalidOperationException("The restored root package differs from the inspected archive.");
-            var assembly = RequiredString(metadata, "assembly");
-            _ = ReadExports(metadata);
-            if (Path.GetFileName(assembly) != assembly ||
-                !assembly.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
-                !File.Exists(Path.Combine(outputDirectory, assembly)))
-                throw new FormatException("The declared plugin assembly must be a published DLL filename.");
-            var patches = metadata.GetValueOrDefault("patches") is IEnumerable<object?> rows
-                ? Data.Entries(rows)
-                : new List<EntryOptions>
-                {
-                    new()
-                    {
-                        ["insert"] = new List<object?>
-                        {
-                            new EntryOptions
-                            {
-                                Id = request.Name.ToLowerInvariant(),
-                                Name = ModuleName(request.Name),
-                                Config = new EntryOptions()
-                            }
-                        }
-                    }
-                };
-            await File.WriteAllTextAsync(
-                Path.Combine(outputDirectory, "cordis.patch.yml"),
-                ConfigurationFile.Write(patches),
-                cancellationToken);
-            var manifest = new EntryOptions
-            {
-                ["name"] = request.Name,
-                ["version"] = request.Version,
-                ["description"] = inspection.Description,
-                ["dsh"] = new EntryOptions
-                {
-                    ["bundle"] = new EntryOptions
-                    {
-                        ["patch"] = "cordis.patch.yml"
-                    }
-                },
-            };
-            if (metadata.TryGetValue("peerDependencies", out var peers))
-                manifest["peerDependencies"] = peers;
-            if (metadata.TryGetValue("engines", out var engines))
-                manifest["engines"] = engines;
-            await File.WriteAllTextAsync(
-                Path.Combine(outputDirectory, "package.json"),
-                ConfigurationFile.Write(manifest, true),
-                cancellationToken);
-            await File.WriteAllTextAsync(
-                Path.Combine(outputDirectory, "cordis.plugin.json"),
-                ConfigurationFile.Write(metadata, true),
-                cancellationToken);
-            // ADR starts from the declared plugin DLL, not the SDK's preparation project.
-            File.Copy(
-                Path.Combine(outputDirectory, "PluginDeployment.deps.json"),
-                Path.Combine(outputDirectory, Path.ChangeExtension(assembly, ".deps.json")),
-                overwrite: true);
+            await WritePluginBundleAsync(outputDirectory, request, metadata, inspection.Description, cancellationToken);
             return new(request.Name, request.Version, outputDirectory)
             {
                 PublicationDirectory = PackageDirectory(request.Name, request.Version)
@@ -341,6 +248,42 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         {
             throw new PackageToolException(error.Message, work, cancelled: error is OperationCanceledException);
         }
+    }
+
+    private static async Task WritePluginBundleAsync(
+        string outputDirectory,
+        PackageRequest request,
+        EntryOptions metadata,
+        string description,
+        CancellationToken cancellationToken)
+    {
+        var assembly = RequiredString(metadata, "assembly");
+        _ = ReadExports(metadata);
+        if (Path.GetFileName(assembly) != assembly ||
+            !assembly.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
+            !File.Exists(Path.Combine(outputDirectory, assembly)))
+            throw new FormatException("The declared plugin assembly must be a published DLL filename.");
+        object patches = metadata.GetValueOrDefault("patches") is IEnumerable<object?> rows
+            ? Data.Entries(rows)
+            : ClrBundleMetadata.DefaultPatches(request.Name);
+        await File.WriteAllTextAsync(
+            Path.Combine(outputDirectory, "cordis.patch.yml"),
+            ConfigurationFile.Write(patches),
+            cancellationToken);
+        var manifest = ClrBundleMetadata.Manifest(request.Name, request.Version, description, metadata);
+        await File.WriteAllTextAsync(
+            Path.Combine(outputDirectory, "package.json"),
+            ConfigurationFile.Write(manifest, true),
+            cancellationToken);
+        await File.WriteAllTextAsync(
+            Path.Combine(outputDirectory, "cordis.plugin.json"),
+            ConfigurationFile.Write(metadata, true),
+            cancellationToken);
+        // ADR starts from the declared plugin DLL, not the SDK's preparation project.
+        File.Copy(
+            Path.Combine(outputDirectory, "PluginDeployment.deps.json"),
+            Path.Combine(outputDirectory, Path.ChangeExtension(assembly, ".deps.json")),
+            overwrite: true);
     }
 
     /// <inheritdoc />
@@ -363,8 +306,8 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                     "package-moved");
             try
             {
-                if (!bundles.ContainsKey(package.Name))
-                    Register(package.Name, destination);
+                if (!activeRoutes.ContainsKey(package.Name))
+                    Register(package.Name, new(destination, BundleSource.ProfileVersionDirectory));
                 Directory.Delete(package.Directory, recursive: true);
             }
             catch (Exception error)
@@ -391,8 +334,8 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             published = true;
             BundleFiles.Record(destination);
             // Existing routes stay bound to their running version until a fresh resolver reads the saved dependency.
-            if (!bundles.ContainsKey(package.Name))
-                Register(package.Name, destination);
+            if (!activeRoutes.ContainsKey(package.Name))
+                Register(package.Name, new(destination, BundleSource.ProfileVersionDirectory));
             else
                 BundleFiles.Verify(destination);
         }
@@ -412,7 +355,7 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     /// <inheritdoc />
     public async Task RemoveAsync(string name, CancellationToken cancellationToken = default)
     {
-        if (!bundles.TryGetValue(name, out var directory))
+        if (!activeRoutes.TryGetValue(name, out var route))
         {
             if (!withdrawn.Contains(name))
                 throw new KeyNotFoundException("No profile-owned CLR deployment is registered.");
@@ -421,11 +364,9 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        RequireOwned(directory, packagesDirectory);
-        BundleFiles.Verify(directory);
-        VerifyDeploymentIdentity(name, directory);
+        VerifyRegisteredBundle(name, route);
         var metadata = (EntryOptions)ConfigurationFile.Parse(
-            File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
+            File.ReadAllText(Path.Combine(route.Directory, "cordis.plugin.json")),
             true)!;
         foreach (var (subpath, _) in ReadExports(metadata))
         {
@@ -433,11 +374,11 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             await resolver.RemoveAsync(ModuleName(name, subpath), CancellationToken.None);
         }
 
-        var registeredName = bundles.Keys.First(existing => string.Equals(
+        var registeredName = activeRoutes.Keys.First(existing => string.Equals(
             existing,
             name,
             StringComparison.OrdinalIgnoreCase));
-        bundles.Remove(name);
+        activeRoutes.Remove(name);
         withdrawn.Add(registeredName);
         // Keep artifacts: other processes, lazy loads and Workers may still use the files.
     }
@@ -448,12 +389,11 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!bundles.TryGetValue(name, out var directory))
+        if (!activeRoutes.TryGetValue(name, out var route))
             return Task.FromResult<IReadOnlyList<ResolvedModule>>([]);
-        RequireOwned(directory, packagesDirectory);
-        BundleFiles.Verify(directory);
+        VerifyRegisteredBundle(name, route);
         var metadata = (EntryOptions)ConfigurationFile.Parse(
-            File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
+            File.ReadAllText(Path.Combine(route.Directory, "cordis.plugin.json")),
             true)!;
         return resolver.GetLoadedModulesAsync(
             ReadExports(metadata).Select(export => ModuleName(name, export.Subpath)).ToArray(),
@@ -498,10 +438,84 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             throw new InvalidDataException("The deployed package identity differs from its version directory.");
     }
 
-    private void Register(string name, string directory)
+    // The selected local build and restore graph validate their identities while resolving their outputs.
+    // A version directory must instead match its profile-owned location and manifest version.
+    private enum BundleSource
+    {
+        ProfileVersionDirectory,
+        LockedRestoreGraph,
+        CompletedLocalBuild
+    }
+
+    private sealed record BundleRoute(string Directory, BundleSource Source, LocalSourceFacts? AuthorizedSource = null);
+
+    // ProfileLaunch holds this live view while installs and removals update the route table.
+    private sealed class BundleDirectories(Dictionary<string, BundleRoute> routes)
+        : IReadOnlyDictionary<string, string>
+    {
+        public int Count => routes.Count;
+        public IEnumerable<string> Keys => routes.Keys;
+        public IEnumerable<string> Values => routes.Values.Select(route => route.Directory);
+        public string this[string name] => routes[name].Directory;
+        public bool ContainsKey(string name) => routes.ContainsKey(name);
+
+        public bool TryGetValue(string name, [MaybeNullWhen(false)] out string directory)
+        {
+            if (routes.TryGetValue(name, out var route))
+            {
+                directory = route.Directory;
+                return true;
+            }
+
+            directory = null;
+            return false;
+        }
+
+        public IEnumerator<KeyValuePair<string, string>> GetEnumerator() =>
+            routes.Select(pair => KeyValuePair.Create(pair.Key, pair.Value.Directory)).GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private void VerifyRegisteredBundle(string name, BundleRoute route)
+    {
+        var directory = route.Directory;
+        if (route.Source == BundleSource.ProfileVersionDirectory)
+        {
+            RequireOwned(directory, packagesDirectory);
+            VerifyVersionDirectory(name, directory);
+            return;
+        }
+
+        if (route.AuthorizedSource?.OutputIdentity is { } identity)
+        {
+            CheckPhysicalPath(directory);
+            LocalBuildFiles.VerifyIdentity(directory, identity);
+        }
+        else
+            BundleFiles.Verify(directory);
+
+        if (!string.Equals(
+                PackageManifest.Read(Path.Combine(directory, "package.json")).Raw.GetValueOrDefault("name") as string,
+                name,
+                StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("The registered bundle has a different package identity.");
+    }
+
+    private void VerifyVersionDirectory(string name, string directory)
     {
         BundleFiles.Verify(directory);
         VerifyDeploymentIdentity(name, directory);
+    }
+
+    private void Register(string name, BundleRoute route)
+    {
+        var directory = route.Directory;
+        if (route.AuthorizedSource is { } facts)
+            VerifySourceSelection(facts);
+        if (route.Source == BundleSource.ProfileVersionDirectory)
+            VerifyVersionDirectory(name, directory);
+
         var metadata = (EntryOptions)ConfigurationFile.Parse(
             File.ReadAllText(Path.Combine(directory, "cordis.plugin.json")),
             true)!;
@@ -509,11 +523,11 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             resolver.Register(
                 ModuleName(name, subpath),
                 new(directory, RequiredString(metadata, "assembly"), entryType));
-        bundles.Add(name, directory);
+        activeRoutes.Add(name, route);
         withdrawn.Remove(name);
     }
 
-    /// <summary>Physically delete one unreferenced version after all hosts, Workers and other file consumers have stopped.</summary>
+    /// <summary>Physically delete one unreferenced exact version or restore graph after all hosts, Workers and other owners have stopped.</summary>
     /// <remarks>This is an explicit offline deployment operation, not an ALC cleanup hook. It refuses an active
     /// profile writer under the existing lock protocol. The caller excludes other consumers and uncoordinated writers.
     /// A still-recorded version is refused. Failure may
@@ -525,17 +539,19 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ValidateIdentity(name, version);
+        var graph = IsGraph(version);
+        ValidateIdentity(name, graph ? "0.0.0" : version);
         var profile = Path.GetFullPath(profileDirectory);
         var directory = Path.Combine(
             profile,
             ".cordis",
-            "packages",
+            graph ? "nuget" : "packages",
             name.ToLowerInvariant(),
-            version.ToLowerInvariant());
+            graph ? version : version.ToLowerInvariant());
         RequireOwned(directory, profile);
-        var receipt = BundleFiles.ReceiptPath(directory);
-        RequireOwned(receipt, profile);
+        var receipt = graph ? null : BundleFiles.ReceiptPath(directory);
+        if (receipt is not null)
+            RequireOwned(receipt, profile);
         var manifestPath = Path.Combine(profile, "package.json");
         using var writer = new FileStream(
             manifestPath + ".cordis-lock",
@@ -544,8 +560,11 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
             FileShare.None,
             1,
             FileOptions.DeleteOnClose);
-        var manifest = PackageManifest.Read(manifestPath).Raw;
-        if (manifest.TryGetValue("dependencies", out var declaration))
+        var manifest = PackageManifest.Read(manifestPath);
+        if (graph && manifest.RestoreGraphs.Any(binding =>
+                binding.Key.Equals(name, StringComparison.OrdinalIgnoreCase) && binding.Value == version))
+            throw new InvalidOperationException("The profile still references this restore graph.");
+        if (!graph && manifest.Raw.TryGetValue("dependencies", out var declaration))
         {
             if (declaration is not IDictionary<string, object?> dependencies)
                 throw new FormatException("Profile dependencies must be an object when declared.");
@@ -570,13 +589,14 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
                 Directory.Delete(directory, recursive: true);
             }
 
-            File.Delete(receipt);
+            if (receipt is not null)
+                File.Delete(receipt);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             throw new PackageToolException(
                 error.Message,
-                Directory.Exists(directory) || File.Exists(directory) ? directory : receipt);
+                Directory.Exists(directory) || File.Exists(directory) ? directory : receipt ?? directory);
         }
 
         return Task.CompletedTask;
@@ -586,11 +606,16 @@ public sealed class DotnetPluginToolchain : IProfilePackageToolchain, IDisposabl
     public IReadOnlyList<string> GetRetainedDirectories(string name)
     {
         ValidateIdentity(name, "0.0.0");
-        var directory = Path.Combine(packagesDirectory, name.ToLowerInvariant());
-        RequireOwned(directory, profileDirectory);
-        return Directory.Exists(directory)
-            ? Directory.GetDirectories(directory).Order(StringComparer.Ordinal).ToArray()
-            : [];
+        var retained = new List<string>();
+        foreach (var root in new[] { packagesDirectory, Path.Combine(profileDirectory, ".cordis", "nuget") })
+        {
+            var directory = Path.Combine(root, name.ToLowerInvariant());
+            RequireOwned(directory, profileDirectory);
+            if (Directory.Exists(directory))
+                retained.AddRange(Directory.GetDirectories(directory).Order(StringComparer.Ordinal));
+        }
+
+        return retained;
     }
 
     private async Task<byte[]> AcquireAsync(PackageRequest request, CancellationToken token)

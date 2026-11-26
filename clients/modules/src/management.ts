@@ -1,4 +1,6 @@
-import { ConnectionController, type ConnectionRecoveryConfig, type ConnectionGenerationSource } from '@cordis-net/connection'
+import { Context } from '@deepseek-ai/cordis'
+import type { ClientConnectionRpc, ConnectionRecoveryConfig, ConnectionHandle, ConnectionHostInfo } from '@deepseek-ai/dsh-client-connection/client'
+import { startNativeConnection } from './native-connection.ts'
 import type { EventsClient, EventListeners } from '../.types/standard/events.js'
 import type { ClientModules } from './index.ts'
 
@@ -73,7 +75,7 @@ export interface ManagementClientOptions {
   readonly transport?: ManagementTransport
   readonly recovery?: ConnectionRecoveryConfig
 }
-export type { ConnectionRecoveryConfig } from '@cordis-net/connection'
+export type { ConnectionRecoveryConfig } from '@deepseek-ai/dsh-client-connection/client'
 
 /**
  * Recover one generated notification subscription over the fixed connection controller.
@@ -95,21 +97,37 @@ export function createManagementClient(options: ManagementClientOptions): Manage
   let refresh = Promise.resolve()
   let readController = new AbortController()
   const modules = options.modules
+  const caller = options.events.context
+  const borrowed = modules?.context ?? (Context.is(caller) ? caller : Context.is(caller.root) ? caller.root : undefined)
+  // A standalone generated event client may expose only the RemoteEventContext protocol.
   const request = options.transport?.fetch ?? fetch
   const publish = (next: ManagementConnection): void => {
     snapshot = next
     for (const listener of [...listeners]) { try { listener() } catch (error) { console.error('management: state subscriber failed', error) } }
   }
   const urlOf = (path: string): string => base.href + path
-  const read = async (path: string): Promise<unknown> => {
+  const read = async (path: string, signal = readController.signal): Promise<unknown> => {
     if (closed) throw new Error('Management is closed')
     const headers: Record<string, string> = eventGeneration === undefined ? {} : { 'If-Cordis-Generation': eventGeneration }
-    const response = await request(urlOf(path), { signal: readController.signal, credentials: 'same-origin', cache: 'no-store', headers })
+    const response = await request(urlOf(path), { signal, credentials: 'same-origin', cache: 'no-store', headers })
     if (!response.ok) throw new ManagementHttpError(response.status, await response.text())
     return response.json()
   }
-  const readState = async (): Promise<ManagementState> => {
-    const row = record(await read('/state'))
+  // The native Host serves snapshots as plain HTTP JSON. Supply that logical
+  // carrier to Connection so it never sends a DSH Gateway envelope to these routes.
+  const snapshots: ClientConnectionRpc = {
+    async call(channel, endpoint, _payload, signal) {
+      if (channel !== '/cordis' || (endpoint !== 'state' && endpoint !== 'client/graph')) throw new Error('Unknown management snapshot')
+      return { ok: true, value: await read('/' + endpoint, signal) }
+    },
+  }
+  async function snapshotValue(rpc: ClientConnectionRpc, endpoint: 'state' | 'client/graph'): Promise<unknown> {
+    const result = await rpc.call('/cordis', endpoint, undefined, readController.signal)
+    if (!result.ok) throw new Error(result.error.message)
+    return result.value
+  }
+  const readState = async (rpc = snapshots): Promise<ManagementState> => {
+    const row = record(await snapshotValue(rpc, 'state'))
     if (row.protocol !== 1) throw new Error('Unsupported management protocol')
     return { generation: text(row.generation), restartRequired: boolean(row.restartRequired),
       selectedBundles: texts(row.selectedBundles), loadedBundles: texts(row.loadedBundles) }
@@ -124,30 +142,31 @@ export function createManagementClient(options: ManagementClientOptions): Manage
     if (!response.ok) throw new ManagementHttpError(response.status, await response.text())
     try { return await response.json() } catch (error) { throw new ManagementOutcomeUnknown(path, error) }
   }
-  const connect: ConnectionGenerationSource = async (signal, ready) => {
+  const connect = (handle: ConnectionHandle) => async (signal: AbortSignal, ready: (host: ConnectionHostInfo) => void) => {
     if (signal.aborted || closed) return
     readController = new AbortController()
     eventGeneration = undefined
     let ended = false
     const abort = (): void => { epoch++; readController.abort() }
     signal.addEventListener('abort', abort, { once: true })
-    const synchronize = async (reconnect: boolean): Promise<void> => {
+    const synchronize = async (host?: ConnectionHostInfo): Promise<void> => {
       const token = ++epoch
-      if (reconnect) publish({ phase: 'connecting' })
+      if (host) publish({ phase: 'connecting' })
       refresh = refresh.catch(() => {}).then(async () => {
         if (ended || closed || signal.aborted || token !== epoch) return
-        const state = await readState()
+        const state = await readState(handle.rpc)
         if (ended || closed || signal.aborted || token !== epoch) return
         eventGeneration = state.generation
         if (modules !== undefined) {
-          const graph = await read('/client/graph')
+          const graph = await snapshotValue(handle.rpc, 'client/graph')
           if (ended || closed || signal.aborted || token !== epoch) return
-          if ((await readState()).generation !== state.generation) throw new Error('Host generation changed while reading the graph')
+          if ((await readState(handle.rpc)).generation !== state.generation) throw new Error('Host generation changed while reading the graph')
           if (ended || closed || signal.aborted || token !== epoch) return
           await modules.sync(graph)
         }
         if (ended || closed || signal.aborted || token !== epoch) return
-        ready({ home: '' })
+        if (host) ready(host)
+        if (ended || closed || signal.aborted || token !== epoch) return
         publish({ phase: 'connected', state })
       })
       await refresh
@@ -157,7 +176,8 @@ export function createManagementClient(options: ManagementClientOptions): Manage
     const receive = (event: ManagementEvent): void => {
       if (signal.aborted || ended || closed) return
       const delivery = async (): Promise<void> => {
-        if (!event.event.startsWith('plugin-manager/install-')) await synchronize(false)
+        if (!event.event.startsWith('plugin-manager/install-')) await synchronize()
+        if (ended || closed || signal.aborted) return
         for (const listener of [...events]) {
           try { listener(event) } catch (error) { console.error('management: event subscriber failed', error) }
         }
@@ -165,7 +185,6 @@ export function createManagementClient(options: ManagementClientOptions): Manage
       void delivery().catch((error: unknown) => { failure.abort(error) })
     }
     const on = options.events.on.bind(options.events)
-    const caller = options.events.context
     stop.push(on(caller, 'plugin-manager/changed', value => receive({ event: 'plugin-manager/changed', args: [value] })))
     stop.push(on(caller, 'plugin-manager/install-state', value => receive({ event: 'plugin-manager/install-state', args: [value] })))
     stop.push(on(caller, 'plugin-manager/install-log', value => receive({ event: 'plugin-manager/install-log', args: [value] })))
@@ -173,7 +192,7 @@ export function createManagementClient(options: ManagementClientOptions): Manage
     stop.push(on(caller, 'app-boot/config-reload', () => receive({ event: 'app-boot/config-reload', args: [] })))
     stop.push(on(caller, 'client-modules/changed', () => receive({ event: 'client-modules/changed', args: [] })))
     try {
-      await options.events.run(AbortSignal.any([signal, failure.signal]), async () => { await synchronize(true) })
+      await options.events.run(AbortSignal.any([signal, failure.signal]), synchronize)
       if (failure.signal.aborted) throw failure.signal.reason
     } catch (error) {
       if (!signal.aborted && !closed) publish({ phase: 'disconnected', diagnostic: error instanceof Error ? error.message : String(error) })
@@ -184,16 +203,12 @@ export function createManagementClient(options: ManagementClientOptions): Manage
       signal.removeEventListener('abort', abort)
     }
   }
-  const controller = new ConnectionController(connect, {
+  const controller = startNativeConnection(borrowed, { transport: { rpc: snapshots }, recovery: options.recovery }, connect, {
     onStateChange(phase) { if (!closed && phase !== 'connected') publish({ phase }) },
-  }, options.recovery)
-  const browser = typeof window === 'undefined' ? undefined : window
-  const online = (): void => { controller.setNetworkAvailable(true) }
-  const offline = (): void => { controller.setNetworkAvailable(false) }
-  if (browser?.navigator.onLine !== undefined) controller.setNetworkAvailable(browser.navigator.onLine)
-  browser?.addEventListener('online', online)
-  browser?.addEventListener('offline', offline)
-  controller.start()
+  })
+  void controller.started.catch(error => {
+    if (!closed) publish({ phase: 'disconnected', diagnostic: error instanceof Error ? error.message : String(error) })
+  })
   return {
     connection: { getSnapshot: () => snapshot, subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener) } } },
     subscribe(listener) { events.add(listener); return () => { events.delete(listener) } },
@@ -212,12 +227,10 @@ export function createManagementClient(options: ManagementClientOptions): Manage
       if (closing !== undefined) return closing
       closed = true
       epoch++
-      controller.stop()
-      browser?.removeEventListener('online', online)
-      browser?.removeEventListener('offline', offline)
+      const stopped = controller.stop()
       readController.abort()
       closing = Promise.resolve().then(async () => {
-        try { await Promise.all([refresh.catch(() => {}), modules?.disconnect()]) }
+        try { await Promise.all([stopped, refresh.catch(() => {}), modules?.disconnect()]) }
         finally { listeners.clear(); events.clear() }
       })
       publish({ phase: 'closed' })

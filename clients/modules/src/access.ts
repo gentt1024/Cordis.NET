@@ -1,5 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
-import { ConnectionController, type ConnectionRecoveryConfig } from '@cordis-net/connection'
+import type { ConnectionRecoveryConfig } from '@deepseek-ai/dsh-client-connection/client'
+import { startNativeConnection } from './native-connection.ts'
 import { mountRemote, resultCodecs, RemoteError, RemoteStreamCarrierError } from '../.types/standard/access-remote.js'
 import type { TypertConnection, RemoteOwner } from '../.types/standard/access-remote.js'
 
@@ -140,11 +141,11 @@ export async function mountAccess(options: AccessMountOptions): Promise<ClientAc
   let stopped = false
   let terminal = false
   let generation = 0
-  let pending = Promise.resolve()
+  let controller: ReturnType<typeof startNativeConnection> | undefined
   let closing: Promise<void> | undefined
   const fail = (error: unknown): void => {
     terminal = true
-    controller.stop()
+    void controller?.stop()
     state.unavailable()
     if (options.failed !== undefined) options.failed(error)
     else context.logger.error('access snapshot stream failed', error)
@@ -176,17 +177,12 @@ export async function mountAccess(options: AccessMountOptions): Promise<ClientAc
       if (!stopped && !signal.aborted && token === generation && !(error instanceof RemoteStreamCarrierError)) fail(error)
     } finally { await stream?.dispose() }
   }
-  const controller = new ConnectionController((signal, ready) => {
-    pending = consume(signal, ready)
-    return pending
-  }, {}, options.recovery)
   let stopping: Promise<void> | undefined
   const stopFollow = (): Promise<void> => {
     if (stopping !== undefined) return stopping
     stopped = true
     generation++
-    controller.stop()
-    return stopping = pending
+    return stopping = controller?.stop() ?? Promise.resolve()
   }
   // Native namespaces publish on the root, whose effects unload concurrently. Gate both
   // registrations through follow cleanup, retaining the actual root's shared namespace table.
@@ -209,6 +205,8 @@ export async function mountAccess(options: AccessMountOptions): Promise<ClientAc
   let withdraw: (() => void | Promise<void>) | undefined
   let dispose: () => Promise<void>
   try {
+    controller = startNativeConnection(context, { recovery: options.recovery }, () => consume)
+    await controller.started
     const service: ClientRemoteAccess = { source: (kind, id, action) => state.source(kind, id, action), global: action => state.global(action) }
     // These effects are collected under one owner so Fiber disposal observes the same ordering.
     const lifetime = context.effect(function* () {
@@ -218,12 +216,11 @@ export async function mountAccess(options: AccessMountOptions): Promise<ClientAc
       yield stopFollow
     }, 'remote-access.client.mount')
     dispose = () => closing ??= Promise.resolve(lifetime())
-    controller.start()
-    return { state, ...service, reconnect() { if (!stopped && !terminal) controller.reconnect() }, dispose }
+    return { state, ...service, reconnect() { if (!stopped && !terminal) controller?.reconnect() }, dispose }
   } catch (error) {
-    await stopFollow()
-    await withdraw?.()
-    await mounted.dispose()
+    for (const release of [stopFollow, withdraw, () => mounted.dispose()]) {
+      try { await release?.() } catch (cleanupError) { context.logger.error('access mount cleanup failed', cleanupError) }
+    }
     throw error
   }
 }

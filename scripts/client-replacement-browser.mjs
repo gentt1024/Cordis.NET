@@ -1,13 +1,13 @@
 import {createServer} from 'node:http'
-import {readFile} from 'node:fs/promises'
+import {readFile, readdir} from 'node:fs/promises'
 import {resolve} from 'node:path'
 import {bundleSource} from '../clients/modules/examples/replacement/check.mjs'
 
 // Serve the exact package installed by verify-client-replacement.mjs, without rebuilding it.
 const runtime = resolve(process.argv[2])
 const assets = new Map([
-  ...await Promise.all(['client', 'access', 'access-remote', 'cordis-remote'].map(async name =>
-    ['/' + name + '.mjs', await readFile(resolve(runtime, name + '.mjs'))])),
+  ...await Promise.all((await readdir(runtime)).filter(name => name.endsWith('.mjs')).map(async name =>
+    ['/' + name, await readFile(resolve(runtime, name))])),
   ['/check.mjs', await readFile(new URL('../clients/modules/examples/replacement/check.mjs', import.meta.url))],
 ])
 const page = `<!doctype html><meta charset="utf-8"><title>Browser target replacement</title>

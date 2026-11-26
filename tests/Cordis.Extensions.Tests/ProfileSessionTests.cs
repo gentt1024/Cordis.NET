@@ -7,6 +7,85 @@ namespace Cordis.Extensions.Tests;
 public sealed class ProfileSessionTests
 {
     [Fact]
+    public async Task Offline_selection_reopens_from_the_saved_graph_and_a_running_route_can_refuse_replacement()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var directory = scenario.Launch.Profile.Directory;
+        var manifestPath = Path.Combine(directory, "package.json");
+        foreach (var graph in new[] { "first", "second" })
+        {
+            var output = Directory.CreateDirectory(Path.Combine(scenario.Directory, graph)).FullName;
+            await File.WriteAllTextAsync(
+                Path.Combine(output, "package.json"),
+                """{"dsh":{"bundle":{"patch":"patch.yml"}}}""");
+            await File.WriteAllTextAsync(Path.Combine(output, "patch.yml"), $"- id: p\n  config: {graph}\n");
+        }
+
+        ProfileLaunch Launch()
+        {
+            var routes = new Dictionary<string, string>();
+            return scenario.Launch with
+            {
+                LocalBundles = routes,
+                RefreshPackageRoutesAsync = manifest =>
+                {
+                    if (manifest.RestoreGraphs.TryGetValue("added", out var graph))
+                    {
+                        var output = Path.Combine(scenario.Directory, graph);
+                        if (routes.TryGetValue("added", out var previous) && previous != output)
+                            throw new DeploymentRestartRequiredException("Changed package output.");
+                        routes["added"] = output;
+                    }
+
+                    return Task.CompletedTask;
+                }
+            };
+        }
+
+        await using (var running = await ProfileSession.StartAsync(scenario.Config, Launch(), scenario.Resolver))
+        {
+            await PluginConfigurationOperations.CommitDeployedPackagesAsync(
+                directory,
+                await File.ReadAllTextAsync(manifestPath),
+                [new("added", "[1,3)", true, "first")]);
+            Assert.Empty(running.LoadedBundles);
+            var saved = await File.ReadAllTextAsync(manifestPath);
+            var original = running.Loader.Resolve("root:p").Fiber;
+            var admissions = 0;
+            running.ConfigurationOperations.AdmitProfileAsync = proposed =>
+            {
+                Assert.Equal(["added"], proposed.Composition.SelectedBundles);
+                Assert.Contains("first", proposed.ConfigurationJson, StringComparison.Ordinal);
+                return ++admissions == 1
+                    ? Task.FromException(new InvalidOperationException("busy"))
+                    : Task.CompletedTask;
+            };
+            Assert.Equal(
+                "busy",
+                (await Assert.ThrowsAsync<InvalidOperationException>(() => running.RefreshAsync())).Message);
+            Assert.Equal(1, admissions);
+            Assert.Same(original, running.Loader.Resolve("root:p").Fiber);
+            Assert.Empty(running.SelectedBundles);
+            Assert.Equal(saved, await File.ReadAllTextAsync(manifestPath));
+            Assert.False((await running.RefreshAsync()).RequiresRestart);
+            Assert.Equal(2, admissions);
+            Assert.Equal(["added"], running.LoadedBundles);
+            await scenario.ExpectAsync("first");
+            var fiber = running.Loader.Resolve("root:p").Fiber;
+            await PluginConfigurationOperations.CommitDeployedPackagesAsync(
+                directory,
+                await File.ReadAllTextAsync(manifestPath),
+                [new("added", "[1,3)", true, "second")]);
+            Assert.Equal("package-moved", (await running.RefreshAsync()).RestartReason);
+            Assert.Same(fiber, running.Loader.Resolve("root:p").Fiber);
+        }
+
+        await using var reopened = await ProfileSession.StartAsync(scenario.Config, Launch(), scenario.Resolver);
+        Assert.Equal(["added"], reopened.LoadedBundles);
+        await scenario.ExpectAsync("second");
+    }
+
+    [Fact]
     public async Task Plugin_enablement_admits_the_complete_candidate_before_saving()
     {
         await using var scenario = await Scenario.CreateAsync();
@@ -101,8 +180,10 @@ public sealed class ProfileSessionTests
         await scenario.ExpectAsync("initial");
         await File.WriteAllTextAsync(scenario.Config, "- id: p\n  name: counter\n  config: approved\n" + stable);
         string? admitted = null;
+        var admissions = 0;
         session.ConfigurationOperations.AdmitProfileAsync = candidate =>
         {
+            admissions++;
             admitted = candidate.ConfigurationJson;
             return Task.CompletedTask;
         };
@@ -122,6 +203,7 @@ public sealed class ProfileSessionTests
             return Task.CompletedTask;
         });
         Assert.Equal(new[] { "approved", "approved" }, new[] { first, refreshed });
+        Assert.Equal(1, admissions);
         Assert.Same(stableFiber, session.Loader.Resolve("root:stable").Fiber);
         Assert.Equal(1, stableApplies);
     }
@@ -561,11 +643,19 @@ public sealed class ProfileSessionTests
             "{\"dsh\":{\"bundle\":{\"patch\":\"cordis.patch.yml\"}}}");
         await File.WriteAllTextAsync(Path.Combine(bundle, "cordis.patch.yml"), "- id: p\n  config: new-bundle\n");
         scenario.Mappings["new"] = bundle;
+        var admissions = 0;
+        session.ConfigurationOperations.AdmitProfileAsync = candidate =>
+        {
+            Assert.Equal(["new"], candidate.Composition.SelectedBundles);
+            admissions++;
+            return Task.CompletedTask;
+        };
         await scenario.WriteAsync(
             session,
             Path.Combine(scenario.Launch.Profile.Directory, "package.json"),
             "{\"dsh\":{\"profile\":{\"bundles\":[\"new\"]}}}");
         await scenario.ExpectAsync("new-bundle");
+        Assert.Equal(1, admissions);
         Assert.False(session.RequiresRestart);
         await session.Context.RunAsync(ctx =>
         {
@@ -692,6 +782,286 @@ public sealed class ProfileSessionTests
             .RunExclusiveAsync(async () => await session.DisposeAsync())
             .WaitAsync(TimeSpan.FromSeconds(10));
         await Assert.ThrowsAsync<ObjectDisposedException>(() => session.RefreshAsync());
+    }
+
+    [Fact]
+    public async Task Apply_lease_prepares_the_effective_root_and_reports_postcommit_publication_separately()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var reject = true;
+        var publishes = 0;
+        var releases = 0;
+        var proposals = new List<string>();
+        ProfileApplyRequest? last = null;
+        var launch = scenario.Launch with
+        {
+            PrepareApplyAsync = request =>
+            {
+                last = request;
+                var row = Assert.Single(
+                    ConfigurationFile.ParseEntries(request.Candidate!.ConfigurationJson, true),
+                    entry => entry.Id == "p");
+                proposals.Add((string)row.Config!);
+                if (reject)
+                    throw new InvalidOperationException("busy");
+                return Task.FromResult<IProfileApplyLease>(
+                    new TestLease(
+                        () =>
+                        {
+                            publishes++;
+                            throw new IOException("browser notification");
+                        },
+                        () => releases++));
+            }
+        };
+        var errors = new List<Exception>();
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            launch,
+            scenario.Resolver,
+            diagnostic: errors.Add);
+        var original = session.Loader.Resolve("root:p").Fiber;
+        await File.WriteAllTextAsync(scenario.HomePatch, "- id: p\n  config: changed\n");
+        var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => session.RefreshAsync());
+        Assert.Equal("busy", refused.Message);
+        Assert.Same(original, session.Loader.Resolve("root:p").Fiber);
+        Assert.Equal((0, 0), (publishes, releases));
+        reject = false;
+        await session.RefreshAsync();
+        await scenario.ExpectAsync("changed");
+        Assert.Equal(new[] { "changed", "changed" }, proposals);
+        Assert.Equal(ProfileApplyKind.Configuration, last!.Kind);
+        Assert.Equal((1, 1), (publishes, releases));
+        Assert.Contains(errors, e => e.InnerException?.Message == "browser notification");
+
+        var edit = await session.ConfigurationOperations.SetPluginEnabledAsync("root:p", false);
+        Assert.Equal("applied", edit.Application);
+        Assert.True(session.Loader.Resolve("root:p").Disabled);
+        Assert.Equal(
+            true,
+            Assert.Single(ConfigurationFile.ParseEntries(last.Candidate!.ConfigurationJson, true)).Disabled);
+        Assert.Equal((2, 2), (publishes, releases));
+
+        await File.AppendAllTextAsync(scenario.Config, "- id: broken\n  name: missing-plugin\n");
+        await Assert.ThrowsAsync<StartupException>(() => session.RefreshAsync());
+        Assert.Equal((2, 3), (publishes, releases));
+    }
+
+    [Fact]
+    public async Task Watch_and_module_changes_hold_the_lease_through_apply_and_release_after_failure()
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        var published = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var events = new List<string>();
+        var held = false;
+        var reject = false;
+        var launch = scenario.Launch with
+        {
+            PrepareApplyAsync = request =>
+            {
+                if (reject && request.Kind == ProfileApplyKind.Modules)
+                    throw new InvalidOperationException("busy");
+                Assert.False(held);
+                held = true;
+                return Task.FromResult<IProfileApplyLease>(
+                    new TestLease(
+                        () =>
+                        {
+                            if (request.Kind == ProfileApplyKind.Modules)
+                                events.Add("published");
+                            else if (request.Paths.Count > 0 &&
+                                     request.Candidate!.ConfigurationJson.Contains("watched", StringComparison.Ordinal))
+                                published.TrySetResult();
+                        },
+                        () =>
+                        {
+                            held = false;
+                            if (request.Kind == ProfileApplyKind.Modules)
+                                events.Add("released");
+                        }));
+            }
+        };
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            launch,
+            scenario.Resolver,
+            enableHmr: true);
+        await scenario.WriteAsync(session, scenario.ProfilePatch, "- id: p\n  config: watched\n");
+        await published.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await scenario.ExpectAsync("watched");
+
+        var file = Path.Combine(scenario.Directory, "module.dll");
+        var hmr = session.Hmr!;
+        hmr.Reloaded += _ => events.Add("reloaded");
+        var fail = true;
+        hmr.RegisterModule(
+            file,
+            () =>
+            {
+                Assert.True(held);
+                events.Add("replace");
+                return fail ? Task.FromException(new IOException("replacement")) : Task.CompletedTask;
+            });
+        reject = true;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => hmr.NotifyChangedAsync(file));
+        Assert.Empty(events);
+        reject = false;
+        await Assert.ThrowsAsync<IOException>(() => hmr.NotifyChangedAsync(file));
+        Assert.Equal(new[] { "replace", "released" }, events);
+        events.Clear();
+        fail = false;
+        await hmr.NotifyChangedAsync(file);
+        Assert.Equal(new[] { "replace", "published", "reloaded", "released" }, events);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task A_successful_module_reload_is_reported_when_the_next_module_fails(
+        bool withLease,
+        bool observerFails)
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        await File.AppendAllTextAsync(scenario.Config, "- id: b\n  name: second\n");
+        var second = new Plugin<object?>
+        {
+            Apply = (_, _) =>
+            {
+            }
+        };
+        scenario.Resolver.Register("second", second);
+        var events = new List<string>();
+        var launch = scenario.Launch with
+        {
+            PrepareApplyAsync = withLease
+                ? request => Task.FromResult<IProfileApplyLease>(
+                    new TestLease(() => Record(request, "published"), () => Record(request, "released")))
+                : null
+        };
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            launch,
+            scenario.Resolver,
+            enableHmr: true);
+        var loader = session.Loader;
+        var hmr = session.Hmr!;
+        var first = loader.Resolve("root:p").Module!.Plugin;
+        var replacement = new Plugin<string>
+        {
+            Apply = (ctx, _) => ctx.Provide("value", "v2")
+        };
+        var failure = new InvalidOperationException("second module failed to activate");
+        var broken = new Plugin<object?>
+        {
+            Apply = (_, _) => throw failure
+        };
+        var shared = Path.Combine(scenario.Directory, "shared.dll");
+        hmr.RegisterModule(
+            Path.Combine(scenario.Directory, "a.dll"),
+            () => loader.ReplacePluginAsync(first, replacement),
+            [shared]);
+        hmr.RegisterModule(
+            Path.Combine(scenario.Directory, "b.dll"),
+            () => loader.ReplacePluginAsync(second, broken),
+            [shared]);
+        var notificationFailure = new IOException("reload observer failed");
+        var diagnostics = new List<Exception>();
+        hmr.Error += diagnostics.Add;
+        hmr.Changed += path => events.Add(Path.GetFileName(path));
+        hmr.Reloaded += path =>
+        {
+            events.Add(Path.GetFileName(path));
+            if (observerFails)
+                throw notificationFailure;
+        };
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            hmr.NotifyChangedAsync([shared, Path.Combine(scenario.Directory, "unrelated.dll")]));
+
+        Assert.Same(failure, error);
+        Assert.Same(replacement, loader.Resolve("root:p").Module!.Plugin);
+        Assert.Equal(FiberState.Active, loader.Resolve("root:p").Fiber!.State);
+        Assert.Same(second, loader.Resolve("root:b").Module!.Plugin);
+        Assert.Equal(FiberState.Active, loader.Resolve("root:b").Fiber!.State);
+        Assert.Equal(withLease ? new[] { "a.dll", "released" } : new[] { "a.dll" }, events);
+        if (observerFails)
+            Assert.Same(notificationFailure, Assert.Single(diagnostics).InnerException);
+
+        void Record(ProfileApplyRequest request, string outcome)
+        {
+            if (request.Kind == ProfileApplyKind.Modules)
+                events.Add(outcome);
+        }
+    }
+
+    private sealed class TestLease(Action commit, Action release) : IProfileApplyLease
+    {
+        public Task CommittedAsync()
+        {
+            commit();
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            release();
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Withdrawing_a_provider_reports_a_waiting_consumer_and_replacement_reactivates_it(bool required)
+    {
+        await using var scenario = await Scenario.CreateAsync();
+        await File.AppendAllTextAsync(
+            scenario.Config,
+            "- id: consumer\n  name: consumer\n- id: replacement\n  name: counter\n  config: next\n  disabled: true\n");
+        var values = new List<string?>();
+        scenario.Resolver.Register(
+            "consumer",
+            new Plugin<object?>
+            {
+                Inject = ["value"],
+                Apply = (ctx, _) => values.Add(ctx.Get<string>("value"))
+            });
+        await using var session = await ProfileSession.StartAsync(
+            scenario.Config,
+            scenario.Launch,
+            scenario.Resolver,
+            required: required
+                ? new HashSet<string>
+                {
+                    "consumer"
+                }
+                : null);
+        Assert.Equal(new[] { "initial" }, values);
+
+        var disabled = await session.ConfigurationOperations.SetPluginEnabledAsync("root:p", false);
+        Assert.True(disabled.Changed);
+        Assert.Equal(FiberState.Pending, session.Loader.Resolve("root:consumer").Fiber!.State);
+        if (required)
+        {
+            Assert.Equal("failed", disabled.Application);
+            Assert.Contains("waiting for service: value", disabled.Diagnostic, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Equal("applied", disabled.Application);
+            var warning = Assert.Single(disabled.Warnings!);
+            Assert.Equal("root:consumer", warning.Id);
+            Assert.False(warning.Required);
+            Assert.Null(warning.Error);
+            Assert.Equal(FiberState.Pending, warning.State);
+            Assert.Equal(["value"], warning.Missing);
+        }
+
+        var enabled = await session.ConfigurationOperations.SetPluginEnabledAsync("root:replacement", true);
+        Assert.Equal("applied", enabled.Application);
+        Assert.Equal(FiberState.Active, session.Loader.Resolve("root:consumer").Fiber!.State);
+        Assert.Equal(new[] { "initial", "next" }, values);
     }
 
     private sealed class Scenario : IAsyncDisposable

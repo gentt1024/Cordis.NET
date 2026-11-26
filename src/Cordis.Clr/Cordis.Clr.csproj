@@ -2,6 +2,9 @@
   <PropertyGroup><GenerateDocumentationFile>true</GenerateDocumentationFile><IsPackable>true</IsPackable><IsAotCompatible>false</IsAotCompatible><IsTrimmable>false</IsTrimmable><PackageId>Cordis.NET.Clr</PackageId><Description>Managed assembly module loading and replacement for Cordis.NET.</Description></PropertyGroup>
   <ItemGroup><ProjectReference Include="../Cordis.Composition/Cordis.Composition.csproj" /></ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../tools/Cordis.Clr.Build/Cordis.Clr.Build.csproj" ReferenceOutputAssembly="false" PrivateAssets="all"
+                      GlobalPropertiesToRemove="PublishAot;PublishTrimmed;RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishSelfContained;PublishSingleFile;PublishReadyToRun;PublishReadyToRunComposite;IsAotCompatible;EnableAotAnalyzer;EnableTrimAnalyzer;TrimMode;UseAppHost" />
+    <None Include="../../tools/Cordis.Clr.Build/bin/$(Configuration)/net10.0/Cordis.Clr.Build.dll;../../tools/Cordis.Clr.Build/bin/$(Configuration)/net10.0/Cordis.Clr.Build.deps.json;../../tools/Cordis.Clr.Build/bin/$(Configuration)/net10.0/Cordis.Clr.Build.runtimeconfig.json;../../tools/Cordis.Clr.Build/bin/$(Configuration)/net10.0/Cordis.Clr.Build.pdb" Pack="true" PackagePath="tools/net10.0/build/" Visible="false" />
     <None Remove="buildTransitive/Cordis.NET.Clr.targets" />
     <None Include="buildTransitive/Cordis.NET.Clr.targets" Pack="true" PackagePath="buildTransitive/" />
   </ItemGroup>

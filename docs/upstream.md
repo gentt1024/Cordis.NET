@@ -10,7 +10,7 @@ The locked upstream commit is distinct from the locally assembled verification c
 |---|---|---|
 | Behavior target | `deepseek-ai/deepseek-harness` | `687f282e8625c6b8d11ff58211a90524be2e4317` |
 | Harness release label | DeepSeek Harness | `0.2.1-rc.2` |
-| Vendored package | `@deepseek-ai/cordis` | `4.0.4` |
+| Vendored package | `@deepseek-ai/cordis` | `4.0.5` |
 | Core and loader origin | `cordiverse/cordis` | `56b3d4f725681cf4556c1a8695a709cc3b6eed74` |
 | Extension origin recorded upstream | `deepseek-harness/cordis` | `abb0a307cb1d3b0947f455d590cf5ba922d4caa4` |
 

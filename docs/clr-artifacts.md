@@ -4,6 +4,31 @@ English | [中文](clr-artifacts.zh.md)
 
 Load complete stable artifacts directly, preserve their shared contracts, and retire them through their owners. Starting another process or collectible AssemblyLoadContext does not require another bundle copy. Dynamic CLR loading requires an ordinary .NET runtime.
 
+## Run a plugin from its source tree
+
+Use the development version of Cordis.NET.Clr. Place `cordis.plugin.json` next to the entry project. A root containing several projects declares its relative entry `project` in that file. An entry project below the root sets `CordisLocalPluginRoot` to the root. Select one target framework for the entry project.
+
+Run `dotnet build -c Debug` or select the same configuration in your IDE. The completion target collects the SDK runtime files, any external PDB produced by the SDK, the deps file, private dependencies, model and declared Web output. Include other assets with `CordisLocalFile` and a relative `TargetPath`. List required producer targets in `CordisLocalOutputDependsOn` so a failed producer prevents publication. A pure CLR project needs only the .NET SDK.
+
+Use `ClrLocalProject.QueryAsync(root, configuration)` to obtain the package ID, entry project and framework without building. Its `ResolveOutput()` verifies the last completed output for that configuration. MSBuild callers can query `CordisGetLocalOutput`. Missing or damaged output produces a diagnostic. Module completion has project scope. A launcher must check the exit status of its entire build before starting. A custom target scheduled after module completion can still fail after the module pointer has advanced.
+
+## Register a local source through a running Host
+
+Use this path for a trusted development workspace. Open the profile with the `DotnetPluginToolchain.OpenForRunAsync` overload taking a `LocalSourcePolicy`. Pass that toolchain to the management service and use `PluginManager.LocalSourceSubject` to map its authenticated caller to a stable principal. The policy workspace anchors relative input. Absolute input must also be inside that workspace. A policy can automatically admit an exclusively controlled root or decide for each exact project. The default Host exposes no online local-source authority.
+
+| Host decision | Information available |
+| --- | --- |
+| Read | Principal, profile, source root and requested configuration, before source content is opened. This decision also controls disclosure of saved locations. |
+| Evaluate | Exact selected project and configuration, before MSBuild starts. Project ID and target framework become available afterward. |
+| Register | Evaluated identity, selected output directory and receipt identity, or the absence of a successful build. |
+| Activate | The selected complete output for the Host configuration. Reopen and refresh run under the Host identity (null subject) and consult current policy. |
+
+Call `inspectLocalSource` with the source and configuration. Use its `inspectionId` in `registerLocalSource` with the same request, a new `requestId` and the desired `enabled` value. The inspection binds the principal, profile revision, project, configuration, evaluated identity and selected output to this Host lifetime. After a conflict, inspect again. A source awaiting its first build can be registered disabled. Build normally and enable it afterward. A damaged receipt is an error. Read the returned persistent selection and application outcome separately; a saved code change can require restart. The application outcome describes this request. A later file-watcher refresh can change the live entries. Query them again when reconnecting. Removal keeps the checkout.
+
+On a lost reply, call `waitForLocalSource` under the same identity. A null result indicates there is no matching active request. Read `readRegisteredLocalSource` for the durable source and `listPlugins` for running state before deciding what to do. `cancelLocalSource` can stop preparation; once committing starts it may report too late.
+
+The Host chooses the dotnet executable and query arguments. `-noAutoResponse` excludes automatic response files; MSBuild still evaluates project imports, property functions and SDK settings with the Host account's permissions. Trust the writers of these inputs and outputs before granting Evaluate or Activate. A receipt checks the consumed bytes. A saved link identifies a choice to reauthorize. Shared workspaces with untrusted writers require an independently controlled snapshot or execution environment. [Microsoft MSBuild security guidance](https://learn.microsoft.com/visualstudio/msbuild/msbuild-security-best-practices)
+
 ## Prepare the package and Host
 
 <a id="standard-package-workflow"></a>
@@ -35,7 +60,7 @@ Logical removal preserves bytes for retained references, delayed loads, Workers 
 Stop every Host, Worker and other consumer first. Then call `DotnetPluginToolchain.DeleteRetainedArtifactAsync(profileDirectory, name, version)` or use the CLI:
 
 ```console
-cordis delete-retained <profile> <name> <version>
+cordis delete-retained <profile> <name> <exact-version-or-graph>
 ```
 
 A profile referencing the exact version refuses deletion; the CLI also refuses a running standard CLI host. The API holds the existing `package.json.cordis-lock` writer lock while checking references and deleting, and refuses a conflicting coordinated writer. Invalid or unreadable manifests leave the artifact unchanged. The deployment owner must exclude external consumers and writers that ignore this protocol. A failure reports the remaining path; there is no automatic scan or GC-triggered deletion.

@@ -103,11 +103,8 @@ const server = createServer(async (request, response) => {
       : url.pathname === '/recovery' ? resolve(root, 'clients/modules/examples/recovery.html')
       : url.pathname === '/shared' ? resolve(root, 'clients/modules/examples/shared/index.html')
       : url.pathname === '/shared-check.mjs' ? resolve(root, 'clients/modules/examples/shared/check.mjs')
-      : url.pathname === '/client-runtime/client.mjs' ? resolve(runtime, 'client.mjs')
-      : url.pathname === '/client-runtime/access.mjs' ? resolve(runtime, 'access.mjs')
-      : url.pathname === '/client-runtime/access-remote.mjs' ? resolve(runtime, 'access-remote.mjs')
-      : url.pathname === '/client-runtime/cordis-remote.mjs' ? resolve(runtime, 'cordis-remote.mjs')
-      : url.pathname === '/client-runtime/events.mjs' ? resolve(runtime, 'events.mjs') : undefined
+      : /^\/client-runtime\/(?:client|access|access-remote|cordis-remote|events|settings|management|slots|shared-[A-Z0-9]{8})\.mjs$/.test(url.pathname)
+        ? resolve(runtime, url.pathname.slice('/client-runtime/'.length)) : undefined
     if (file === undefined) { response.writeHead(404); response.end(); return }
     response.writeHead(200, { 'content-type': ['/', '/shared', '/recovery'].includes(url.pathname) ? 'text/html' : 'text/javascript' })
     response.end(await readFile(file))

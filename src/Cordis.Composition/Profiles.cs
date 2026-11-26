@@ -143,6 +143,96 @@ public sealed class PackageManifest
 
     private IDictionary<string, object?>? Dsh => Raw.GetValueOrDefault("dsh") as IDictionary<string, object?>;
 
+    /// <summary>Explicit source roots saved by the author. Build outputs are resolved separately for the requested configuration.</summary>
+    public IReadOnlyList<DeploymentLinkedRoot> LinkedRoots =>
+        (Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?> ?? new EntryOptions())
+        .Where(pair => pair.Value is string value && value.StartsWith("link:", StringComparison.Ordinal))
+        .Select(pair => new DeploymentLinkedRoot(pair.Key, LinkDirectory((string)pair.Value!)))
+        .ToArray();
+
+    /// <summary>Project/configuration identities saved by online registration. Each reopen needs a fresh host decision.</summary>
+    public IReadOnlyDictionary<string, ManagedLocalSource> ManagedLocalSources
+    {
+        get
+        {
+            var sources = ManagedSources(Raw, false);
+            var result = new Dictionary<string, ManagedLocalSource>(StringComparer.OrdinalIgnoreCase);
+            if (sources is null)
+                return result;
+            var linkedNames = LinkedRoots.Select(link => link.Name).ToHashSet(StringComparer.Ordinal);
+            foreach (var (name, value) in sources)
+            {
+                if (!linkedNames.Contains(name))
+                    throw new FormatException($"Managed source '{name}' requires a matching absolute link dependency.");
+                if (value is not EntryOptions entry || entry.GetValueOrDefault("project") is not string project ||
+                    !Path.IsPathFullyQualified(project) ||
+                    entry.GetValueOrDefault("configuration") is not string configuration ||
+                    string.IsNullOrWhiteSpace(configuration))
+                    throw new FormatException($"Invalid managed source selection for '{name}'.");
+                result.Add(name, new(project, configuration));
+            }
+
+            return result;
+        }
+    }
+
+    internal static void SetManagedLocalSource(EntryOptions raw, string name, ManagedLocalSource? source)
+    {
+        var records = ManagedSources(raw, source is not null);
+        if (source is null)
+            records?.Remove(name);
+        else
+            records![name] = new EntryOptions
+            {
+                ["project"] = source.ProjectFile,
+                ["configuration"] = source.Configuration
+            };
+    }
+
+    private static EntryOptions? ManagedSources(EntryOptions raw, bool create)
+    {
+        var fields = raw;
+        foreach (var key in new[] { "dsh", "profile", "localSources" })
+        {
+            if (!fields.TryGetValue(key, out var value))
+            {
+                if (!create)
+                    return null;
+                fields[key] = value = new EntryOptions();
+            }
+
+            fields = value as EntryOptions ?? throw new FormatException($"Profile field '{key}' must be an object.");
+        }
+
+        return fields;
+    }
+
+    internal static string LinkDirectory(string declaration)
+    {
+        var path = declaration["link:".Length..];
+        if (!Path.IsPathFullyQualified(path))
+            throw new FormatException($"Profile source '{declaration}' must contain an absolute path.");
+        return Path.GetFullPath(path);
+    }
+
+    /// <summary>Per-dependency immutable restore graph identities selected with the package declarations.</summary>
+    public IReadOnlyDictionary<string, string> RestoreGraphs
+    {
+        get
+        {
+            var value =
+                (Dsh?.GetValueOrDefault("profile") as IDictionary<string, object?>)?.GetValueOrDefault("restore");
+            if (value is null)
+                return new Dictionary<string, string>();
+            if (value is not IDictionary<string, object?> graphs)
+                throw new FormatException("dsh.profile.restore must be an object.");
+            return graphs.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value as string ?? throw new FormatException("A restore graph identity must be a string."),
+                StringComparer.Ordinal);
+        }
+    }
+
     /// <summary>
     /// Gets the bundle patch value.
     /// </summary>
@@ -227,28 +317,51 @@ public static class Profiles
     public static void Initialize(string directory, IReadOnlyList<string> bundles)
     {
         System.IO.Directory.CreateDirectory(directory);
-        var manifest = Path.Combine(directory, "package.json");
-        if (!File.Exists(manifest))
-            File.WriteAllText(
-                manifest,
-                ConfigurationFile.Write(
-                    new EntryOptions
-                    {
-                        ["name"] = "dsh-profile-" + Path.GetFileName(directory),
-                        ["private"] = true,
-                        ["dependencies"] = new EntryOptions(),
-                        ["dsh"] = new EntryOptions
-                        {
-                            ["profile"] = new EntryOptions
-                            {
-                                ["bundles"] = bundles
-                            }
-                        }
-                    },
-                    true));
-        var patch = Path.Combine(directory, "cordis.patch.yml");
-        if (!File.Exists(patch))
-            File.WriteAllText(patch, "[]\n");
+        InitializePatch(directory);
+        InitializeFile(
+            Path.Combine(directory, "package.json"),
+            ConfigurationFile.Write(DefaultManifest(directory, bundles).Raw, true));
+    }
+
+    internal static PackageManifest DefaultManifest(string directory, IReadOnlyList<string> bundles) => new(
+        new EntryOptions
+        {
+            ["name"] = "dsh-profile-" + Path.GetFileName(directory),
+            ["private"] = true,
+            ["dependencies"] = new EntryOptions(),
+            ["dsh"] = new EntryOptions
+            {
+                ["profile"] = new EntryOptions
+                {
+                    ["bundles"] = bundles
+                }
+            }
+        });
+
+    internal static void InitializePatch(string directory) =>
+        InitializeFile(Path.Combine(directory, "cordis.patch.yml"), "[]\n");
+
+    private static void InitializeFile(string path, string text)
+    {
+        if (File.Exists(path))
+            return;
+        var temporary = path + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporary, text);
+            try
+            {
+                File.Move(temporary, path);
+            }
+            catch (IOException) when (File.Exists(path))
+            {
+                // Another initializer already published the complete file.
+            }
+        }
+        finally
+        {
+            File.Delete(temporary);
+        }
     }
 
     /// <summary>Installation mappings have priority over profile mappings for bundle layers.</summary>

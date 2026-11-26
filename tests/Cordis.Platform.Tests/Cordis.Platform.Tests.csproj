@@ -28,6 +28,7 @@
       <ProbeV1Fixture Include="../fixtures/ProbeV1/bin/$(Configuration)/net10.0/**/*" />
       <ProbeV2Fixture Include="../fixtures/ProbeV2/bin/$(Configuration)/net10.0/**/*" />
       <CliFixture Include="../../tools/Cordis.Cli/bin/$(Configuration)/net10.0/**/*" />
+      <ClrBuildFixture Include="../../src/Cordis.Clr/buildTransitive/Cordis.NET.Clr.targets;../../tools/Cordis.Clr.Build/bin/$(Configuration)/net10.0/Cordis.Clr.Build.*" />
     </ItemGroup>
     <Copy SourceFiles="@(V1Fixture)" DestinationFiles="@(V1Fixture->'$(OutDir)fixtures/v1/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(V1Fixture)" DestinationFiles="@(V1Fixture->'$(OutDir)fixtures/other-v1/%(RecursiveDir)%(Filename)%(Extension)')" />
@@ -36,5 +37,6 @@
     <Copy SourceFiles="@(ProbeV1Fixture)" DestinationFiles="@(ProbeV1Fixture->'$(OutDir)fixtures/probe-v1/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(ProbeV2Fixture)" DestinationFiles="@(ProbeV2Fixture->'$(OutDir)fixtures/probe-v2/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(CliFixture)" DestinationFiles="@(CliFixture->'$(OutDir)fixtures/cli/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(ClrBuildFixture)" DestinationFolder="$(OutDir)fixtures/local-build/" />
   </Target>
 </Project>

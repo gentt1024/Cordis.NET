@@ -9,10 +9,12 @@
 安装已发布归档，供包 import 与声明使用：
 
 ```console
-npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.3/cordis-net-client-modules-0.2.1-alpha.3.tgz
+npm install https://github.com/gentt1024/Cordis.NET/releases/download/v0.2.1-alpha.4/cordis-net-client-modules-0.2.1-alpha.4.tgz
 ```
 
-直接在浏览器加载时，将完整构建运行时目录放在 `/client-runtime` 等页面同源路径下，保留模块、声明与 `LICENSES.txt`。[ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md)展示原生 Host 制品映射。运行时与作者工具归档职责不同，均位于[对应发行](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3)。
+直接在浏览器加载时，将完整构建运行时目录放在 `/client-runtime` 等页面同源路径下，保留模块、声明与 `LICENSES.txt`。[ManagedApplication](https://github.com/gentt1024/Cordis.NET/blob/main/examples/ManagedApplication/README.md)展示原生 Host 制品映射。运行时与作者工具归档职责不同，均位于[对应发行](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.4)。
+
+构建 SDK 时，npm 锁固定 Core、Cosmokit、Loader、Slots 和 Connection 的公开包。浏览器从同一 SDK 目录加载入口和共享的 `shared-*.mjs`，插件通过 shell 模块表得到同一个 Context、Service 和 Slots。部署时复制整个运行时目录。保留的 modules 源码按 Git 提交和文件摘要记录两处修正，覆盖激活失败后的显式恢复和通知重入时的接纳结果。
 
 ## 为 Loader 构建插件
 
@@ -71,3 +73,21 @@ node scripts/verify-client-module-types.mjs artifacts/client-modules
 ```
 
 源码与许可身份记录于 `vendor/provenance.json`；本地适配保留原始及本地摘要与原因。浏览器传输检查启动 `node scripts/client-modules-browser-host.mjs` 后，打开其打印地址的 `/shared`。注入传输检查为 `node scripts/verify-client-shared-modules.mjs`；Node 结果不代表浏览器结果，两者单独都不证明完整原生 Host 组合。
+
+## 读取插件声明
+
+含有 `inspectClientModule` 的构建可以在应用启动前读取一个受信客户端 factory 或 shell 模块的导出。传入 Host 的图、HTTP(S) 基准 URL、模块名，以及启动时使用的 shell externals。加载函数将实际产物的注册交给本次调用的回调。SDK 复用运行时的模块表与导出解包规则，无需挂载 Context 或设置页面全局注册对象。
+
+```ts
+const result = await inspectClientModule({
+  graph, baseUrl, specifier, staticModules,
+  loadBundle: (url, register) => loadTrustedArtifact(url, register),
+})
+const config = result.config
+if ((config.status === 'schema' || config.status === 'portable') && config.portable.status === 'schema') {
+  const { document, acceptsMissing, limitations } = config.portable
+  consumeInputSchema(document, acceptsMissing, limitations)
+}
+```
+
+示例中的 `loadTrustedArtifact` 由宿主提供。它执行选定的真实 factory 脚本，将脚本所用的 `__ModuleLoader__.load` 绑定到 `register`。shell 的静态导出可直接放入 `staticModules`。声明模块应独立于应用启动和 DOM 初始化。factory 求值和读取 Config getter 可能有副作用。返回值保留原始模块导出。缺少 Config 时返回 `absent`，不符合标准的声明返回 `unsupported`，导入或 getter 失败会抛出异常。导出 Standard Schema 校验器时，状态为 `schema`，校验器保存在 `config.schema`。向其他运行时传递声明时读取 `config.portable`。仅提供 Standard JSON Schema 输入转换器也可产生 draft 2020-12 文档，此时状态为 `portable`。JSON 值不能表示外层 config 是否可省略，因此转换器返回 `acceptsMissing: 'unknown'`。对 DSH 原生 Schemastery，将 app-boot 的 `isNativeConfigSchema`、`createConfigProjector` 和 `LOADER_EXPRESSION_SCHEMA` 作为 `nativeConfigProjection` 传入，即可保留上游定义、可省略性和限制。仅有校验器时返回 `portable.status === 'unsupported'`。.NET 宿主可通过 `IConfigurationSchemaProjectionResolver` 传递文档、可省略性及限制。

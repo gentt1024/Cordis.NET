@@ -102,6 +102,12 @@ public sealed class DeploymentGeneration
         get;
     }
 
+    internal FrozenSet<string> UnresolvedLinks
+    {
+        get;
+        private init;
+    } = FrozenSet<string>.Empty;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DeploymentGeneration"/> type.
     /// </summary>
@@ -213,17 +219,28 @@ public sealed class DeploymentGeneration
         }
 
         var selectedLocals = new Dictionary<string, string>(StringComparer.Ordinal);
+        IReadOnlyList<DeploymentLinkedRoot> linkedRoots = [];
         if (profile is not null)
         {
             var manifestPath = Path.Combine(profile.Directory, "package.json");
             if (File.Exists(manifestPath))
-                foreach (var name in DependencyNames(ReadManifest(manifestPath)))
+            {
+                var manifest = PackageManifest.Read(manifestPath);
+                linkedRoots = manifest.LinkedRoots;
+                foreach (var name in new[] { "dependencies", "peerDependencies" }
+                             .SelectMany(key =>
+                                 (manifest.Raw.GetValueOrDefault(key) as EntryOptions)?.Keys.AsEnumerable() ?? []))
                     if (localPackages?.TryGetValue(name, out var directory) == true &&
                         File.Exists(Path.Combine(directory, "package.json")))
                         selectedLocals[name] = directory;
+            }
         }
 
-        return new(profilesDirectory, profile?.Directory, entries.Values, selectedLocals);
+        return new(profilesDirectory, profile?.Directory, entries.Values, selectedLocals, linkedRoots)
+        {
+            UnresolvedLinks =
+                linkedRoots.Select(link => link.Name).Except(selectedLocals.Keys).ToFrozenSet(StringComparer.Ordinal)
+        };
     }
 
     internal static JsonElement ReadManifest(string path)
@@ -514,6 +531,8 @@ public sealed class DeploymentPackageResolver
 
         if (active && generation.LocalPackages.TryGetValue(name, out var installed))
             return installed;
+        if (active && generation.UnresolvedLinks.Contains(name))
+            return null;
         if (local?.Invoke(name, parent) is { } nearest)
             return nearest;
         if (state.Entries.TryGetValue(name, out var entry) &&

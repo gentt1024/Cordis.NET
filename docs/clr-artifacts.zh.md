@@ -4,6 +4,31 @@
 
 直接加载完整稳定制品，保留共享合同，并通过所属生命周期退出。新进程或 collectible AssemblyLoadContext 不要求复制另一份 bundle。动态 CLR 加载需要普通 .NET 运行时。
 
+## 从源码目录运行插件
+
+使用开发版 Cordis.NET.Clr，将 `cordis.plugin.json` 放在入口工程旁。如果根目录有多个工程，在该文件的 `project` 字段指定相对入口工程路径。入口工程在根目录下的子目录时，在工程里将 `CordisLocalPluginRoot` 设为源码根。插件入口选择单一目标框架。
+
+运行 `dotnet build -c Debug`，或在 IDE 中选择同一配置。完成目标收集 SDK 运行文件、SDK 生成的独立 PDB、deps 文件、私有依赖、模型和已声明的 Web 输出。其他资产用 `CordisLocalFile` 声明，并设置相对 `TargetPath`。将必须成功的生成步骤列入 `CordisLocalOutputDependsOn`，这样生成失败就不会发布该模块的新输出。纯 CLR 工程只需要 .NET SDK。
+
+`ClrLocalProject.QueryAsync(root, configuration)` 查询包 ID、入口工程与目标框架，不执行构建。`ResolveOutput()` 核验该配置上一次完成的运行输出。MSBuild 调用方可查询 `CordisGetLocalOutput`。输出缺失或损坏会得到诊断。模块完成回执只覆盖该工程。启动器须等整次构建成功退出后再启动。若自定义目标安排在模块完成之后，它可能在模块指针更新后失败。
+
+## 通过运行中的 Host 登记本地源码
+
+此入口用于受信的开发工作区。用接收 `LocalSourcePolicy` 的 `DotnetPluginToolchain.OpenForRunAsync` 打开 profile，将同一个工具链交给管理服务，并用 `PluginManager.LocalSourceSubject` 从已认证的调用上下文取得稳定主体。相对路径以策略指定的工作区为基准，绝对路径也须在该工作区内。Host 可以自动放行写入者受信的独占工作区，也可以逐项目决定。默认 Host 关闭在线本地源码能力。
+
+| Host 的决定 | 可用事实 |
+| --- | --- |
+| Read | 在读取源码内容前核对主体、profile、源码根和配置。披露已保存路径也需要此权限。 |
+| Evaluate | 在启动 MSBuild 前核对确切入口项目和配置。包 ID 和目标框架在求值完成后取得。 |
+| Register | 核对求值身份、完成输出目录及回执标识，或确认项目尚无成功输出。 |
+| Activate | 核对 Host 配置选定的完整产物。重开、刷新以 Host 自身身份（subject 为 null）重新询问当前策略。 |
+
+调用 `inspectLocalSource`，传入来源与构建配置。用原请求、返回的 `inspectionId`、新的 `requestId` 和预期 `enabled` 值调用 `registerLocalSource`。本次检查绑定主体、profile 修订、入口项目、配置、求值身份和所选输出，在当前 Host 生命周期内有效。发生冲突后重新检查。首次构建前可以登记为停用，正常 Build 之后再启用。损坏的回执会报错。分别读取持久选择和运行结果，已保存的代码变更可能需要重启。应用结果描述本次请求。后续文件监听刷新可能改变活动条目，断线重连时请重新查询。移除来源会保留作者目录。
+
+若响应丢失，以同一主体调用 `waitForLocalSource`。null 表示当前没有匹配的活动请求。先用 `readRegisteredLocalSource` 查持久来源、用 `listPlugins` 查运行状态，再决定后续操作。`cancelLocalSource` 能取消准备阶段；进入提交阶段后可能返回 too-late。
+
+Host 选择 dotnet 工具和查询参数。`-noAutoResponse` 排除自动响应文件；项目 imports、属性函数和 SDK 配置仍以 Host 账户权限求值。授予 Evaluate 或 Activate 前，要确认这些输入及产物的写入者受信。回执校验消费的字节，保存的链接标识下次需要重新授权的来源。若共享写入者不受信，需要另外控制快照或执行环境。[Microsoft 的 MSBuild 安全建议](https://learn.microsoft.com/visualstudio/msbuild/msbuild-security-best-practices)
+
 ## 准备包与 Host
 
 <a id="标准包工作流"></a>
@@ -35,7 +60,7 @@ RemovePackageAsync 取消选择、等待自有 Fiber 结束，再移除 Profile 
 先停止所有 Host、Worker 和其他消费者，再调用 `DotnetPluginToolchain.DeleteRetainedArtifactAsync(profileDirectory, name, version)`，或使用 CLI：
 
 ```console
-cordis delete-retained <profile> <name> <version>
+cordis delete-retained <profile> <name> <exact-version-or-graph>
 ```
 
 Profile 仍引用精确版本时拒绝删除，CLI 还拒绝运行中的标准 CLI Host。API 在检查引用与删除期间持有既有 `package.json.cordis-lock` 写锁，拒绝冲突的协调写入者；manifest 损坏或不可读时保留制品。部署所有者须排除忽略该协议的外部消费者与写入者。失败报告剩余路径，不进行自动扫描或 GC 触发删除。

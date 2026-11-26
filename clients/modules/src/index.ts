@@ -1,6 +1,9 @@
+import { inspectConfig, type ClientConfigInspection, type ClientNativeConfigProjection } from './config-inspection.ts'
+export type { ClientConfigInspection, ClientNativeConfigProjection } from './config-inspection.ts'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import * as cordis from '@deepseek-ai/cordis'
 import * as cosmokit from '@deepseek-ai/cosmokit'
-import { bootClient } from '@cordis-net/web/boot-client'
+import { bootClient } from './boot.ts'
 import { ClientModuleSystem } from '@cordis-net/modules/system'
 import { parseBootManifest, readRelease, stripClientSuffix } from '@cordis-net/modules/manifest'
 import type { ClientModuleCreateOptions, ClientModuleLoaderTarget, WebBootGraph } from '@cordis-net/modules/manifest'
@@ -9,10 +12,10 @@ import { ReleaseChangeGate } from '@cordis-net/modules/release-change'
 import type { ClientReleaseChange } from '@cordis-net/modules/release-change'
 import * as management from './management.ts'
 import * as access from './access.ts'
-import * as slots from '@cordis-net/modules/slots'
+import * as slots from '@deepseek-ai/dsh-client-ui-slots'
 
 export { Context, Service } from '@deepseek-ai/cordis'
-export { SlotCore } from '@cordis-net/modules/slots'
+export { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 export type { Plugin } from '@deepseek-ai/cordis'
 export type { ClientEntryState } from '@cordis-net/modules/entries'
 export type { ClientReleaseChange } from '@cordis-net/modules/release-change'
@@ -63,15 +66,16 @@ export interface ClientModulesOptions {
 }
 
 /** Validate the fixed graph boundary and restrict executable script URLs to the page's origin. */
-function graphOf(wire: unknown): WebBootGraph {
+function graphOf(wire: unknown, baseUrl?: string): WebBootGraph {
   const manifest = parseBootManifest(wire)
   const entries = manifest.modules.map(row => ({
     id: row.id, url: row.url, rev: row.rev, inject: row.inject, external: row.external,
     immediately: manifest.plugins.find(plugin => plugin.id === row.id)?.immediately ?? false,
   }))
   for (const row of entries) {
-    const url = new URL(row.url, location.href)
-    if (url.origin !== location.origin || !['http:', 'https:'].includes(url.protocol)
+    const base = new URL(baseUrl ?? location.href)
+    const url = new URL(row.url, base)
+    if (url.origin !== (globalThis.location?.origin ?? base.origin) || !['http:', 'https:'].includes(url.protocol)
       || url.searchParams.get('rev') !== row.rev) {
       throw new Error(`client-modules: ${row.id} requires a same-origin revisioned script`)
     }
@@ -110,6 +114,59 @@ function without(graph: WebBootGraph, ids: ReadonlySet<string>): WebBootGraph {
   })) }
 }
 
+function registrationFacade(): ClientModuleLoaderTarget {
+  return {
+    mode: 'queue', pendingQueue: [],
+    load(registration) { this.pendingQueue.push(registration) },
+    create() { throw new Error('client-modules: the package entry owns bootstrap') },
+  }
+}
+
+function moduleSystem(graph: WebBootGraph, facade: ClientModuleLoaderTarget, options: Pick<ClientModulesOptions, 'staticModules' | 'loadBundle'>) {
+  return new ClientModuleSystem({
+    manifest: parseBootManifest(graph), registrationTarget: facade,
+    bootstrapModule: { id: '@cordis-net/client-modules', exports: {
+      ...management, SlotCore: slots.SlotCore, Context: cordis.Context, Service: cordis.Service, bootClientModules, inspectClientModule,
+    } },
+    staticModules: {
+      '@deepseek-ai/cordis': cordis, '@deepseek-ai/cosmokit': cosmokit, '@cordis-net/client-modules/slots': slots,
+      '@cordis-net/client-modules/access': access,
+      ...options.staticModules,
+    },
+    ...(options.loadBundle === undefined ? {} : { loadBundle: options.loadBundle }),
+  })
+}
+
+/** Inspect one trusted factory or shell module using the same SDK modules and graph as client boot. */
+export interface ClientModuleInspectionOptions<Native = never> extends Pick<ClientModulesOptions, 'graph' | 'staticModules'> {
+  /** Optional declaration tooling for upstream native Schemastery Config exports. */
+  readonly nativeConfigProjection?: ClientNativeConfigProjection<Native>
+  readonly specifier: string
+  /** Origin and URL base for revisioned graph resources in a tooling process without a page. */
+  readonly baseUrl: string
+  /** Load the selected artifact and deliver its registration to this inspection's private facade. */
+  readonly loadBundle: (url: string, register: ClientModuleLoaderTarget['load']) => Promise<void>
+}
+
+/**
+ * Import actual exports and read Config without mounting a Context or invoking its validator.
+ * Import, factory and getter exceptions reject the call. The caller owns artifact transport and any shell side effects.
+ */
+export async function inspectClientModule<Native = never>(options: ClientModuleInspectionOptions<Native>): Promise<{
+  readonly exports: unknown
+  readonly config: ClientConfigInspection
+}> {
+  const graph = graphOf(options.graph, options.baseUrl)
+  const facade = registrationFacade()
+  const modules = moduleSystem(graph, facade, {
+    staticModules: options.staticModules,
+    loadBundle: url => options.loadBundle(new URL(url, options.baseUrl).href, facade.load),
+  })
+  const exports = await modules.import(options.specifier)
+  const plugin: unknown = Loader.prototype.unwrapExports(exports)
+  return { exports, config: await inspectConfig(plugin, options.nativeConfigProjection) }
+}
+
 /**
  * Boot the fixed DSH module system over its existing Cordis Loader.
  * Factory bundles register through globalThis.__ModuleLoader__.load. Their apply functions own effects
@@ -121,23 +178,8 @@ export async function bootClientModules(options: ClientModulesOptions): Promise<
   if (globalThis.__ModuleLoader__ !== undefined) throw new Error('client-modules: this page already owns a module facade')
   let graph = graphOf(options.graph)
   const release = new ReleaseChangeGate(graph.release)
-  const facade: ClientModuleLoaderTarget = {
-    mode: 'queue', pendingQueue: [],
-    load(registration) { this.pendingQueue.push(registration) },
-    create() { throw new Error('client-modules: the package entry owns bootstrap') },
-  }
-  const modules = new ClientModuleSystem({
-    manifest: parseBootManifest(graph), registrationTarget: facade,
-    bootstrapModule: { id: '@cordis-net/client-modules', exports: {
-      ...management, SlotCore: slots.SlotCore, Context: cordis.Context, Service: cordis.Service, bootClientModules,
-    } },
-    staticModules: {
-      '@deepseek-ai/cordis': cordis, '@deepseek-ai/cosmokit': cosmokit, '@cordis-net/client-modules/slots': slots,
-      '@cordis-net/client-modules/access': access,
-      ...options.staticModules,
-    },
-    ...(options.loadBundle === undefined ? {} : { loadBundle: options.loadBundle }),
-  })
+  const facade = registrationFacade()
+  const modules = moduleSystem(graph, facade, options)
   const context = new cordis.Context()
   // Publish only after shell inputs and local construction succeed. A rejected bootstrap
   // must leave the page available for a retry; subsequent setup failures use the cleanup below.

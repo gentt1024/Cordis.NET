@@ -272,6 +272,92 @@ public sealed class ProductBoundaryTests
     }
 
     [Fact]
+    public async Task Prepared_offline_changes_compare_the_original_manifest_before_publication()
+    {
+        await using var f = new Fixture();
+        var directory = Path.Combine(Path.GetDirectoryName(f.Path)!, "profile");
+        var path = Path.Combine(directory, "package.json");
+        var first = new ProfilePackageEdit("first", "[1,3)", true, "graph-one");
+        await Assert.ThrowsAsync<FormatException>(() => PluginConfigurationOperations.CommitDeployedPackagesAsync(
+            directory,
+            null,
+            [new("broken", "link:relative", true)]));
+        Assert.False(File.Exists(path));
+        Assert.False(File.Exists(Path.Combine(directory, "cordis.patch.yml")));
+        var refusal = await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            PluginConfigurationOperations.CommitDeployedPackagesAsync(
+                directory,
+                null,
+                [first],
+                verifyPrepared: () =>
+                {
+                    Assert.ThrowsAny<IOException>(() => File.Open(
+                        path + ".cordis-lock",
+                        FileMode.Open,
+                        FileAccess.ReadWrite,
+                        FileShare.None));
+                    throw new FileNotFoundException("prepared graph was deleted");
+                }));
+        Assert.Equal("prepared graph was deleted", refusal.Message);
+        Assert.False(File.Exists(path));
+        Assert.False(File.Exists(Path.Combine(directory, "cordis.patch.yml")));
+        var created = await PluginConfigurationOperations.CommitDeployedPackagesAsync(
+            directory,
+            null,
+            [first, new("utility", "2.0.0", false)]);
+        Assert.Equal(["utility"], created.AddedPlainDependencies);
+        var disabled = PackageManifest.Read(path);
+        var original = await File.ReadAllTextAsync(path);
+        Assert.Equal("graph-one", disabled.RestoreGraphs["first"]);
+        Assert.Equal(["first"], disabled.Bundles);
+        Task<ProfilePackageSave> blocked;
+        using (File.Open(path + ".cordis-lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+        {
+            blocked = PluginConfigurationOperations.CommitDeployedPackagesAsync(
+                directory,
+                original,
+                [
+                    first with
+                    {
+                        RestoreGraph = "new-graph"
+                    }
+                ]);
+            Assert.False(blocked.IsCompleted);
+            ProfileMaintenance.WriteBundles(directory, disabled, ["builtin"]);
+        }
+
+        Assert.Contains(
+            "profile-conflict",
+            (await Assert.ThrowsAsync<InvalidOperationException>(() => blocked)).Message);
+        Assert.Equal("graph-one", PackageManifest.Read(path).RestoreGraphs["first"]);
+        var disabledText = await File.ReadAllTextAsync(path);
+        var result = await PluginConfigurationOperations.CommitDeployedPackagesAsync(
+            directory,
+            disabledText,
+            [
+                first with
+                {
+                    RestoreGraph = "new-graph"
+                },
+                new("second", "1.0.0", true)
+            ]);
+        Assert.True(result.Changed);
+        var reopened = PackageManifest.Read(path);
+        Assert.Equal(["builtin", "second"], reopened.Bundles);
+        Assert.Equal("new-graph", reopened.RestoreGraphs["first"]);
+        Assert.False(
+            (await PluginConfigurationOperations.CommitDeployedPackagesAsync(
+                directory,
+                await File.ReadAllTextAsync(path),
+                [
+                    first with
+                    {
+                        RestoreGraph = "new-graph"
+                    }
+                ])).Changed);
+    }
+
+    [Fact]
     public async Task ExternalDeploymentDoesNotActivateExistingDependencyThatGainsBundleMetadata()
     {
         var directory = Path.Combine(Path.GetTempPath(), "cordis-deploy-selection-" + Guid.NewGuid().ToString("N"));

@@ -19,6 +19,7 @@ public sealed class ProfileSession : IAsyncDisposable
     private readonly Func<Task<DeploymentGeneration>>? refreshDeployment;
     private readonly string[] profilePaths;
     private string? successfulProfileInputs;
+    private string? appliedRootJson;
     private Exception? retirementFailure;
     private bool disposed;
 
@@ -65,6 +66,7 @@ public sealed class ProfileSession : IAsyncDisposable
         ];
         Context = new Context(Report);
         Hmr = enableHmr ? queue : null;
+        queue.PrepareApplyAsync = launch.PrepareApplyAsync;
         queue.Error += Report;
         queue.Warning += LogWarning;
     }
@@ -197,7 +199,17 @@ public sealed class ProfileSession : IAsyncDisposable
         try
         {
             var inputs = await session.ProfileInputSnapshotAsync();
-            var refresh = await ProfileComposition.RefreshAsync(session.launch);
+            var manifest = PackageManifest.Read(Path.Combine(session.launch.Profile.Directory, "package.json"));
+            if (session.launch.RefreshPackageRoutesAsync is { } prepareRoutes)
+            {
+                await prepareRoutes(manifest);
+                session.acceptedLocal = new(
+                    launch.LocalBundles ?? new Dictionary<string, string>(),
+                    StringComparer.Ordinal);
+                session.successfulMappings = session.MappingSnapshot();
+            }
+
+            var refresh = await ProfileComposition.RefreshAsync(session.launch, manifest);
             await session.Context.RunAsync(async ctx =>
             {
                 // External Context disposal must close the session's background watchers too.
@@ -287,7 +299,8 @@ public sealed class ProfileSession : IAsyncDisposable
 
     private async Task<ProfileReloadResult> RefreshCoreAsync(
         IReadOnlySet<string>? editedEntries = null,
-        ProfileCandidate? candidate = null)
+        ProfileCandidate? candidate = null,
+        string? watchPath = null)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         try
@@ -312,10 +325,37 @@ public sealed class ProfileSession : IAsyncDisposable
             });
             var priorFailures = await ApplicationBoot.AuditAsync(Loader);
             var inputs = await ProfileInputSnapshotAsync();
+            var manifest = PackageManifest.Read(Path.Combine(launch.Profile.Directory, "package.json"));
+            var selectionChanged = !manifest.Bundles.SequenceEqual(SelectedBundles);
+            if (launch.RefreshPackageRoutesAsync is { } prepareRoutes &&
+                (watchPath is null || !PathComparer.Equals(watchPath, HmrCoordinator.CanonicalPath(profilePaths[0])) ||
+                    selectionChanged))
+            {
+                var candidateMappings = candidate is null ? null : MappingSnapshot();
+                try
+                {
+                    await prepareRoutes(manifest);
+                }
+                catch (DeploymentRestartRequiredException error)
+                {
+                    return await RequestRestartAsync(error.Reason);
+                }
+
+                if (candidateMappings is not null && candidateMappings != MappingSnapshot())
+                    return await RequestRestartAsync("package-moved");
+            }
+
+            if (candidate is null && selectionChanged && ConfigurationOperations.AdmitProfileAsync is not null)
+                candidate = await ConfigurationOperations.AdmitSavedProfileAsync(manifest);
+            var captured = candidate;
+            if (captured is null && launch.PrepareApplyAsync is not null)
+                captured = await ConfigurationOperations.CaptureSavedProfileAsync(manifest);
             var mappings = MappingSnapshot();
-            var refresh = candidate?.Composition ?? await ProfileComposition.RefreshAsync(launch);
+            var refresh = captured?.Composition ?? await ProfileComposition.RefreshAsync(launch, manifest);
             var patches = ProfileComposition.Flatten(refresh.Layers);
-            var configurationChanged = candidate is not null || inputs != successfulProfileInputs ||
+            var configurationChanged = candidate is not null ||
+                captured is not null && appliedRootJson != captured.ConfigurationJson ||
+                inputs != successfulProfileInputs ||
                 mappings != successfulMappings ||
                 ConfigurationFile.Write(patches, true) != ConfigurationFile.Write(Include.Options.Patches ?? [], true);
             var requiredEntries = new HashSet<string>(required ?? new HashSet<string>(), StringComparer.Ordinal);
@@ -323,32 +363,56 @@ public sealed class ProfileSession : IAsyncDisposable
                 requiredEntries.UnionWith(editedEntries);
             requiredEntries.UnionWith(NewBundleRequiredIds(refresh));
             DeploymentGeneration? successor = null;
-            try
+            var deploymentChanged = false;
+            if (refreshDeployment is not null)
             {
-                if (refreshDeployment is not null)
+                try
                 {
                     successor = await refreshDeployment();
                     packages!.ValidateReplacement(successor);
-                    configurationChanged |= !SameGeneration(packages.Generation, successor);
+                    deploymentChanged = !SameGeneration(packages.Generation, successor);
+                    configurationChanged |= deploymentChanged;
                 }
-                else if (MappingRestartReason() is { } reason)
+                catch (DeploymentRestartRequiredException error)
                 {
-                    return await RequestRestartAsync(reason);
+                    return await RequestRestartAsync(error.Reason);
                 }
             }
-            catch (DeploymentRestartRequiredException error)
+            else if (MappingRestartReason() is { } reason)
+                return await RequestRestartAsync(reason);
+
+            if (captured is not null && launch.PrepareApplyAsync is not null && watchPath is not null &&
+                !configurationChanged && priorFailures.Count == 0 && !RequiresRestart && LastError is null)
             {
-                return await RequestRestartAsync(error.Reason);
+                var changedInclude = false;
+                foreach (var include in await IncludesAsync())
+                {
+                    if (ReferenceEquals(include, Include))
+                        continue;
+                    if (!successfulInputs.TryGetValue(include.Filename, out var previous) ||
+                        previous != await File.ReadAllTextAsync(include.Filename))
+                    {
+                        changedInclude = true;
+                        break;
+                    }
+                }
+
+                if (!changedInclude)
+                    return new([], []);
             }
 
+            await using var scope = await ProfileApplyScope.PrepareAsync(
+                launch.PrepareApplyAsync,
+                new(ProfileApplyKind.Configuration, captured, watchPath is null ? [] : [watchPath]),
+                Report);
             if (successor is not null)
             {
-                var basis = candidate is null
+                var basis = captured is null
                     ? ConfigurationFile.ParseEntries(
                         await File.ReadAllTextAsync(Include.Filename),
                         Path.GetExtension(Include.Filename) == ".json")
-                    : ConfigurationFile.ParseEntries(candidate.ConfigurationJson, true);
-                var rows = candidate is null ? EntryPatches.Apply(basis, patches) : basis;
+                    : ConfigurationFile.ParseEntries(captured.ConfigurationJson, true);
+                var rows = captured is null ? EntryPatches.Apply(basis, patches) : basis;
                 var stopped = new List<StoppedRow>();
                 var cleanupFailed = false;
                 try
@@ -363,18 +427,18 @@ public sealed class ProfileSession : IAsyncDisposable
                     else
                         await RestoreRowsAsync(stopped);
                     if (error is DeploymentRestartRequiredException restart)
-                        return await RequestRestartAsync(restart.Reason);
+                        return await RequestRestartAsync(restart.Reason, scope);
                     throw;
                 }
             }
 
             if (configurationChanged)
             {
-                _ = candidate is null
+                _ = captured is null
                     ? await ApplicationBoot.ReconcileAsync(Include, patches, requiredEntries)
-                    : await ApplicationBoot.ReconcileAsync(Include, candidate, requiredEntries);
+                    : await ApplicationBoot.ReconcileAsync(Include, captured, requiredEntries);
                 await AcceptBundlesAsync(refresh);
-                successfulProfileInputs = candidate is null ? inputs : null;
+                successfulProfileInputs = candidate is null || scope is not null ? inputs : null;
                 successfulMappings = mappings;
                 acceptedInstallation = new(launch.InstallationBundles, StringComparer.Ordinal);
                 acceptedLocal = new(launch.LocalBundles ?? new Dictionary<string, string>(), StringComparer.Ordinal);
@@ -382,6 +446,8 @@ public sealed class ProfileSession : IAsyncDisposable
 
             foreach (var include in candidate is null ? await IncludesAsync() : Array.Empty<Include>())
             {
+                if (captured is not null && ReferenceEquals(include, Include))
+                    continue;
                 var text = await File.ReadAllTextAsync(include.Filename);
                 if (successfulInputs.TryGetValue(include.Filename, out var previous) && text == previous)
                     continue;
@@ -394,19 +460,33 @@ public sealed class ProfileSession : IAsyncDisposable
             }
 
             var warnings = await RetryFailedImportsAsync(priorEntries, requiredEntries);
-            await JudgeRefreshAsync(priorEntries, priorFailures, warnings);
+            await JudgeRefreshAsync(priorEntries, priorFailures, warnings, deploymentChanged);
             await WarnInactiveAsync(warnings);
             await SynchronizeWatchesAsync();
             RequiresRestart = false;
             LastError = null;
             LastSuccessfulRefresh = DateTimeOffset.UtcNow;
-            if (configurationChanged)
-                await Context.RunAsync(context =>
-                {
-                    context.Events.Emit("app-boot/config-reload");
-                    return Task.CompletedTask;
-                });
-            Refreshed?.Invoke();
+            appliedRootJson = captured?.ConfigurationJson;
+            if (scope is not null)
+                await scope.CommittedAsync();
+            try
+            {
+                if (configurationChanged)
+                    await Context.RunAsync(context =>
+                    {
+                        context.Events.Emit("app-boot/config-reload");
+                        return Task.CompletedTask;
+                    });
+                Refreshed?.Invoke();
+            }
+            catch (Exception error) when (scope is not null)
+            {
+                Report(
+                    new InvalidOperationException(
+                        "The running profile committed, but refresh notification failed.",
+                        error));
+            }
+
             return new(warnings, []);
         }
         catch (Exception error)
@@ -577,7 +657,8 @@ public sealed class ProfileSession : IAsyncDisposable
     private async Task JudgeRefreshAsync(
         IReadOnlyDictionary<string, EntrySnapshot> priorEntries,
         IReadOnlyList<EntryDiagnostic> priorFailures,
-        IReadOnlyList<EntryDiagnostic> failures)
+        IReadOnlyList<EntryDiagnostic> failures,
+        bool deploymentChanged)
     {
         EntryDiagnostic[] introduced = [];
         await Context.RunAsync(_ =>
@@ -585,6 +666,9 @@ public sealed class ProfileSession : IAsyncDisposable
             introduced = failures
                 .Where(failure =>
                 {
+                    // AuditAsync has already enforced the required entry set.
+                    if (!deploymentChanged && failure is { State: FiberState.Pending, Error: null, Missing.Count: > 0 })
+                        return false;
                     if (!priorEntries.TryGetValue(failure.Id, out var snapshot) || snapshot.State == FiberState.Active)
                         return true;
                     var entry = Loader.Resolve(failure.Id);
@@ -633,7 +717,11 @@ public sealed class ProfileSession : IAsyncDisposable
 
         foreach (var path in paths)
             if (!watches.ContainsKey(path))
-                watches.Add(path, queue.WatchConfig(path, () => RefreshCoreAsync()));
+                watches.Add(
+                    path,
+                    queue.WatchConfig(
+                        path,
+                        () => RefreshCoreAsync(watchPath: path)));
     }
 
     private async Task<string> ProfileInputSnapshotAsync()
@@ -707,8 +795,14 @@ public sealed class ProfileSession : IAsyncDisposable
             : null;
     }
 
-    private async Task<ProfileReloadResult> RequestRestartAsync(string reason)
+    private async Task<ProfileReloadResult> RequestRestartAsync(string reason, ProfileApplyScope? existingScope = null)
     {
+        await using var scope = existingScope is not null
+            ? null
+            : await ProfileApplyScope.PrepareAsync(
+                launch.PrepareApplyAsync,
+                new(ProfileApplyKind.Restart, null, []),
+                Report);
         RequiresRestart = true;
         RestartRequired?.Invoke();
         if (queue.RestartHost is { } restart)

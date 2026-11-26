@@ -61,7 +61,7 @@ public sealed partial class PluginConfigurationOperations
     }
 
     private readonly object installsGate = new();
-    private readonly Dictionary<string, ActiveInstall> installs = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string? Subject, string RequestId), ActiveInstall> installs = new();
     private bool packageOperationsClosed;
 
     /// <summary>Current operation progress. Subscribers receive no history and must query/wait after reconnecting.</summary>
@@ -100,6 +100,19 @@ public sealed partial class PluginConfigurationOperations
         ArgumentNullException.ThrowIfNull(toolchain);
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(authorizeBuildAsync);
+        return StartInstall(
+            null,
+            requestId,
+            cancellationToken,
+            active => InstallCoreAsync(toolchain, request, requestId, active, authorizeBuildAsync, enabled));
+    }
+
+    private Task<PackageChange> StartInstall(
+        string? subject,
+        string requestId,
+        CancellationToken cancellationToken,
+        Func<ActiveInstall, Task<PackageChange>> operation)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestId);
         var active = new ActiveInstall(cancellationToken);
         lock (installsGate)
@@ -110,7 +123,7 @@ public sealed partial class PluginConfigurationOperations
                 throw new ObjectDisposedException(nameof(PluginConfigurationOperations));
             }
 
-            if (!installs.TryAdd(requestId, active))
+            if (!installs.TryAdd((subject, requestId), active))
             {
                 active.Dispose();
                 throw new InvalidOperationException("An installation already owns this request ID.");
@@ -124,8 +137,7 @@ public sealed partial class PluginConfigurationOperations
         {
             try
             {
-                active.Completion.TrySetResult(
-                    await InstallCoreAsync(toolchain, request, requestId, active, authorizeBuildAsync, enabled));
+                active.Completion.TrySetResult(await operation(active));
             }
             catch (Exception error)
             {
@@ -134,7 +146,7 @@ public sealed partial class PluginConfigurationOperations
             finally
             {
                 lock (installsGate)
-                    installs.Remove(requestId);
+                    installs.Remove((subject, requestId));
                 active.Dispose();
             }
         }
@@ -158,22 +170,26 @@ public sealed partial class PluginConfigurationOperations
     }
 
     /// <summary>Wait for an operation active at lookup time. Null establishes neither success nor cancellation.</summary>
-    public Task<PackageChange?> WaitForInstallAsync(string requestId)
+    public Task<PackageChange?> WaitForInstallAsync(string requestId) => WaitForInstallAsync(null, requestId);
+
+    private Task<PackageChange?> WaitForInstallAsync(string? subject, string requestId)
     {
         lock (installsGate)
-            return installs.TryGetValue(requestId, out var active)
+            return installs.TryGetValue((subject, requestId), out var active)
                 ? ObserveAsync(active.Completion.Task)
                 : Task.FromResult<PackageChange?>(null);
         static async Task<PackageChange?> ObserveAsync(Task<PackageChange> task) => await task;
     }
 
     /// <summary>Cancel preparation and wait for process draining. Publication/activation returns too-late without cancelling.</summary>
-    public async Task<string> CancelInstallAsync(string requestId)
+    public Task<string> CancelInstallAsync(string requestId) => CancelInstallAsync(null, requestId);
+
+    private async Task<string> CancelInstallAsync(string? subject, string requestId)
     {
         Task<PackageChange> result;
         lock (installsGate)
         {
-            if (!installs.TryGetValue(requestId, out var active))
+            if (!installs.TryGetValue((subject, requestId), out var active))
                 return "not-running";
             if (active.Applying)
                 return "too-late";
@@ -199,6 +215,7 @@ public sealed partial class PluginConfigurationOperations
         var selected = false;
         PreparedPackage? prepared = null;
         var acquired = false;
+        var managedSource = false;
         try
         {
             await mutation.WaitAsync(token);
@@ -208,7 +225,15 @@ public sealed partial class PluginConfigurationOperations
             {
                 Name = toolchain.ResolvePackageName(request.Name)
             };
-            var inputs = await CaptureProfileAsync();
+            var inputs = await CaptureProfileAsync(current =>
+            {
+                managedSource = current.ManagedLocalSources.ContainsKey(request.Name);
+                if (managedSource)
+                {
+                    selected = current.Bundles.Contains(request.Name, StringComparer.OrdinalIgnoreCase);
+                    throw new Refusal("source-authorization-required");
+                }
+            });
             var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
             installed = HasPackageDirectory(request.Name);
             selected = manifest.Bundles.Contains(request.Name);
@@ -277,6 +302,7 @@ public sealed partial class PluginConfigurationOperations
                 if (raw.GetValueOrDefault("dependencies") is not EntryOptions dependencies)
                     raw["dependencies"] = dependencies = new();
                 dependencies[prepared.Name] = prepared.Version;
+                SetRestoreGraph(raw, prepared.Name, null);
                 var candidate = await CreateCandidateAsync(
                     inputs,
                     WithBundles(
@@ -334,6 +360,8 @@ public sealed partial class PluginConfigurationOperations
         }
         catch (Exception error)
         {
+            if (managedSource)
+                return new(requestId, request.Name, stage, true, selected, "failed", "source-authorization-required");
             var cancelled = error is OperationCanceledException or PackageToolException { Cancelled: true };
             var residuals = new List<string>();
             if (launch.LocalBundles?.TryGetValue(request.Name, out var published) == true &&
@@ -373,7 +401,8 @@ public sealed partial class PluginConfigurationOperations
         {
             if (acquired)
                 mutation.Release();
-            NotifyConfigurationChanged();
+            if (!managedSource)
+                NotifyConfigurationChanged();
         }
     }
 
@@ -390,6 +419,9 @@ public sealed partial class PluginConfigurationOperations
         var installed = false;
         var selected = false;
         var residuals = new List<string>();
+        var linked = false;
+        var managedSource = false;
+        var savedLinkChange = false;
         PackageChange result = null!;
         await ConfigurationTransactionAsync(
             async () =>
@@ -397,9 +429,24 @@ public sealed partial class PluginConfigurationOperations
                 try
                 {
                     name = toolchain.ResolvePackageName(name);
-                    var inputs = await CaptureProfileAsync();
+                    var inputs = await CaptureProfileAsync(current =>
+                    {
+                        managedSource = current.ManagedLocalSources.ContainsKey(name);
+                        if (managedSource)
+                        {
+                            installed = true;
+                            selected = current.Bundles.Contains(name, StringComparer.OrdinalIgnoreCase);
+                            linked = true;
+                        }
+                    });
                     installed = HasPackageDirectory(name);
-                    selected = ParseManifest(await inputs.ReadAsync(ManifestPath)).Bundles.Contains(name);
+                    var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
+                    var originalDeclaration =
+                        (manifest.Raw.GetValueOrDefault("dependencies") as EntryOptions)?.GetValueOrDefault(name);
+                    linked = managedSource || originalDeclaration is string declaration &&
+                        declaration.StartsWith("link:", StringComparison.Ordinal);
+                    var originalMarker = manifest.ManagedLocalSources.GetValueOrDefault(name);
+                    selected = manifest.Bundles.Contains(name);
                     var info = (await ListBundlesAsync()).SingleOrDefault(row => row.Name == name);
                     if (info?.ReadOnlyReason is not null)
                         throw new Refusal(info.ReadOnlyReason);
@@ -409,12 +456,17 @@ public sealed partial class PluginConfigurationOperations
                     if (RunExclusiveAsync is null && info.Rows.Any(row => row.EntryId is not null))
                         throw new Refusal("stop-profile");
                     await CheckPackageOwnershipAsync(toolchain, name, info, cancellationToken);
-                    var candidate = await WriteManifestAsync(
-                        inputs,
-                        manifest => WithBundles(manifest, manifest.Bundles.Where(bundle => bundle != name).ToArray()));
-                    selected = false;
-                    await inputs.VerifyAsync(savedManifest: candidate.ManifestJson);
-                    await ApplyCandidateAsync(candidate, null);
+                    if (selected || !linked)
+                    {
+                        var candidate = await WriteManifestAsync(
+                            inputs,
+                            current => WithBundles(current, current.Bundles.Where(bundle => bundle != name).ToArray()));
+                        savedLinkChange = linked && selected;
+                        selected = false;
+                        await inputs.VerifyAsync(savedManifest: candidate.ManifestJson);
+                        await ApplyCandidateAsync(candidate, null);
+                    }
+
                     await include.Context.RunAsync(_ =>
                     {
                         if (include
@@ -425,7 +477,8 @@ public sealed partial class PluginConfigurationOperations
                         return Task.CompletedTask;
                     });
                     stage = "remove";
-                    ReportPackageProgress("remove:" + name, stage);
+                    if (!linked)
+                        ReportPackageProgress("remove:" + name, stage);
                     cancellationToken.ThrowIfCancellationRequested();
                     if (!info.Installed)
                     {
@@ -443,16 +496,49 @@ public sealed partial class PluginConfigurationOperations
                     }
 
                     var removalInputs = await CaptureProfileAsync();
-                    var raw = ParseManifest(await removalInputs.ReadAsync(ManifestPath)).Raw;
-                    (raw.GetValueOrDefault("dependencies") as IDictionary<string, object?>)?.Remove(name);
+                    var currentManifest = ParseManifest(await removalInputs.ReadAsync(ManifestPath));
+                    var raw = currentManifest.Raw;
+                    var removalDependencies = raw.GetValueOrDefault("dependencies") as EntryOptions;
+                    if (!Equals(removalDependencies?.GetValueOrDefault(name), originalDeclaration) ||
+                        currentManifest.ManagedLocalSources.GetValueOrDefault(name) != originalMarker ||
+                        currentManifest.Bundles.Contains(name))
+                        throw new Refusal("profile-conflict");
+                    removalDependencies?.Remove(name);
+                    SetRestoreGraph(raw, name, null);
+                    PackageManifest.SetManagedLocalSource(raw, name, null);
                     var removalCandidate = await CreateCandidateAsync(removalInputs, new(raw));
                     await AdmitCandidateAsync(removalInputs, removalCandidate);
-                    removalInputs.PlanRemoval(name);
-                    await toolchain.RemoveAsync(name, cancellationToken);
-                    removedPackages[name] = toolchain.ResolvePackageName;
+                    if (!linked)
+                    {
+                        removalInputs.PlanRemoval(name);
+                        await toolchain.RemoveAsync(name, cancellationToken);
+                        removedPackages[name] = toolchain.ResolvePackageName;
+                    }
+
                     await SaveCandidateAsync(removalInputs, removalCandidate);
                     installed = false;
+                    if (linked)
+                    {
+                        savedLinkChange = true;
+                        removedPackages[name] = toolchain.ResolvePackageName;
+                    }
+
                     await ApplyCandidateAsync(removalCandidate, null);
+                    if (linked)
+                    {
+                        result = new(
+                            "",
+                            name,
+                            stage,
+                            false,
+                            false,
+                            RunExclusiveAsync is null ? "restart-required" : "applied")
+                        {
+                            RestartReason = RunExclusiveAsync is null ? "no-hmr" : null
+                        };
+                        return;
+                    }
+
                     if (launch.LocalBundles?.TryGetValue(name, out var retainedDirectory) == true &&
                         Directory.Exists(retainedDirectory))
                         residuals.Add(retainedDirectory);
@@ -475,10 +561,10 @@ public sealed partial class PluginConfigurationOperations
                 }
                 catch (Exception error)
                 {
-                    if (launch.LocalBundles?.TryGetValue(name, out var directory) == true &&
+                    if (!linked && launch.LocalBundles?.TryGetValue(name, out var directory) == true &&
                         Directory.Exists(directory))
                         residuals.Add(directory);
-                    var retentionDiagnostic = CollectRetainedDirectories(toolchain, name, residuals);
+                    var retentionDiagnostic = linked ? null : CollectRetainedDirectories(toolchain, name, residuals);
                     result = new(
                         "",
                         name,
@@ -488,7 +574,7 @@ public sealed partial class PluginConfigurationOperations
                         error is OperationCanceledException ? "cancelled" :
                         error is DeploymentRestartRequiredException ? "restart-required" : "failed",
                         error is Refusal refusal ? refusal.Code : "operation-error",
-                        error.Message + retentionDiagnostic,
+                        managedSource ? SourceDiagnostic(error) : error.Message + retentionDiagnostic,
                         residuals.AsReadOnly())
                     {
                         RestartReason = (error as DeploymentRestartRequiredException)?.Reason
@@ -496,7 +582,8 @@ public sealed partial class PluginConfigurationOperations
                 }
                 finally
                 {
-                    NotifyConfigurationChanged();
+                    if (!linked || savedLinkChange)
+                        NotifyConfigurationChanged();
                 }
             },
             cancellationToken);

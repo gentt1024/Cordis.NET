@@ -80,3 +80,32 @@ public sealed class ProfileCandidate
 
 /// <summary>A detached manifest and the input revision required by coordinated metadata saving.</summary>
 public sealed record ProfileDocument(string ManifestJson, string Revision);
+
+/// <summary>Work about to change the running profile.</summary>
+public enum ProfileApplyKind
+{
+    /// <summary>Reconcile the captured root profile and its includes.</summary>
+    Configuration,
+
+    /// <summary>Replace modules affected by changed source paths.</summary>
+    Modules,
+
+    /// <summary>Request a host restart.</summary>
+    Restart
+}
+
+/// <summary>Inputs presented to the application before the session changes the graph.</summary>
+/// <param name="Kind">The operation the session is about to perform.</param>
+/// <param name="Candidate">The exact effective root configuration for a configuration apply.</param>
+/// <param name="Paths">The watcher trigger or code batch. Explicit configuration refresh has no watcher path.</param>
+public sealed record ProfileApplyRequest(
+    ProfileApplyKind Kind,
+    ProfileCandidate? Candidate,
+    IReadOnlyList<string> Paths);
+
+/// <summary>Application resources held throughout one coordinated change. Dispose releases them on every exit.</summary>
+public interface IProfileApplyLease : IAsyncDisposable
+{
+    /// <summary>Publish the prepared application state after the running change succeeds. A restart only releases the lease.</summary>
+    Task CommittedAsync();
+}

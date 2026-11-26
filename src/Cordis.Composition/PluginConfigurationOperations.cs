@@ -177,48 +177,27 @@ public sealed partial class PluginConfigurationOperations(
             return (PackageManifest.Read(Path.Combine(packageDirectory, "package.json")), packageDirectory);
         }
 
-        var selected = after
-            .Bundles.Where(name =>
-                !oldDependencies.Contains(name) && !dependencies.Contains(name) ||
-                dependencies.Contains(name) && Resolve(name).Manifest.HasBundleDeclaration)
+        var edits = oldDependencies
+            .Except(dependencies)
+            .Select(name => (name, false, false))
             .ToList();
-        var plain = new List<string>();
         foreach (var name in dependencies)
         {
-            if (oldDependencies.Contains(name))
+            if (oldDependencies.Contains(name) && !after.Bundles.Contains(name))
                 continue;
             var package = Resolve(name);
-            if (!package.Manifest.HasBundleDeclaration)
-            {
-                plain.Add(name);
-                continue;
-            }
-
-            await Profiles.ReadBundleAsync(name, package.Directory, package.Manifest);
-            if (!selected.Contains(name))
-                selected.Add(name);
+            var bundle = package.Manifest.HasBundleDeclaration;
+            if (bundle && !oldDependencies.Contains(name))
+                await Profiles.ReadBundleAsync(name, package.Directory, package.Manifest);
+            edits.Add((name, true, bundle));
         }
 
+        var (selected, plain) = ReconcileSelection(after.Bundles, oldDependencies, edits);
         if (!selected.SequenceEqual(after.Bundles))
-        {
-            var raw = (EntryOptions)Data.Clone(after.Raw)!;
-            if (raw.GetValueOrDefault("dsh") is not EntryOptions dsh)
-                raw["dsh"] = dsh = new();
-            if (dsh.GetValueOrDefault("profile") is not EntryOptions profile)
-                dsh["profile"] = profile = new();
-            profile["bundles"] = selected;
-            var temporary = manifestPath + ".tmp-" + Guid.NewGuid().ToString("N");
-            try
-            {
-                await File.WriteAllTextAsync(temporary, ConfigurationFile.Write(raw, true));
-                File.Move(temporary, manifestPath, true);
-            }
-            finally
-            {
-                if (File.Exists(temporary))
-                    File.Delete(temporary);
-            }
-        }
+            await ReplaceManifestAsync(
+                manifestPath,
+                ConfigurationFile.Write(WithBundles(after, selected).Raw, true),
+                CancellationToken.None);
 
         return new(ProfileMaintenance.Inventory(directory, installedPackages, installationBundles), plain);
     }
@@ -228,8 +207,8 @@ public sealed partial class PluginConfigurationOperations(
     /// </summary>
     /// <remarks>Reads current profile sources without refreshing the runtime or evaluating configuration expressions.
     /// Protected or ambiguous entries remain listed with a read-only reason. Base configuration, profile manifest and user patch read or parse failures propagate.</remarks>
-    public async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync() =>
-        await ListPluginsAsync(await CaptureProfileAsync());
+    public Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync() =>
+        ReadInventoryAsync(ListPluginsAsync);
 
     private async Task<IReadOnlyList<PluginConfigurationInfo>> ListPluginsAsync(ProfileInputs inputs)
     {
@@ -281,10 +260,52 @@ public sealed partial class PluginConfigurationOperations(
     /// </summary>
     /// <remarks>Does not install packages or refresh the runtime. Individual bundle failures are returned as diagnostics;
     /// failures reading the profile manifest or obtaining runtime mappings propagate.</remarks>
-    public async Task<IReadOnlyList<BundleConfigurationInfo>> ListBundlesAsync()
+    public Task<IReadOnlyList<BundleConfigurationInfo>> ListBundlesAsync() =>
+        ReadInventoryAsync(ListBundlesAsync);
+
+    private async Task<IReadOnlyList<T>> ReadInventoryAsync<T>(Func<ProfileInputs, Task<IReadOnlyList<T>>> read)
     {
-        var inputs = await CaptureProfileAsync();
+        var hasManagedSources = false;
+        try
+        {
+            var inputs =
+                await CaptureProfileAsync(manifest => hasManagedSources = manifest.ManagedLocalSources.Count > 0);
+            return await read(inputs);
+        }
+        catch (Exception error) when (hasManagedSources && error is not OperationCanceledException)
+        {
+            throw new InvalidOperationException(SourceDiagnostic(error));
+        }
+    }
+
+    private string SourceDiagnostic(Exception error)
+    {
+        try
+        {
+            include.Context.Logger.Warn("Managed source operation: " + error.Message);
+        }
+        catch
+        {
+            // Logging must not alter the outcome of a profile operation.
+        }
+
+        return error switch
+        {
+            Refusal refusal => refusal.Code,
+            OperationCanceledException => "cancelled",
+            UnauthorizedAccessException => "source-access-denied",
+            FileNotFoundException or DirectoryNotFoundException => "source-not-found",
+            IOException => "source-io-error",
+            FormatException => "source-invalid-metadata",
+            DeploymentRestartRequiredException => "restart-required",
+            _ => "source-operation-failed"
+        };
+    }
+
+    private async Task<IReadOnlyList<BundleConfigurationInfo>> ListBundlesAsync(ProfileInputs inputs)
+    {
         var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
+        var managed = manifest.ManagedLocalSources;
         var dependencies = manifest.Raw.GetValueOrDefault("dependencies") as IDictionary<string, object?> ??
             new EntryOptions();
         var names = manifest
@@ -373,7 +394,7 @@ public sealed partial class PluginConfigurationOperations(
                             OptionalBundles.Contains(name),
                             removable && !managementBundles.ContainsKey(name),
                             managementBundles.ContainsKey(name) ? "management-required" : null,
-                            error.Message,
+                            managed.ContainsKey(name) ? SourceDiagnostic(error) : error.Message,
                             [],
                             []));
             }
@@ -485,6 +506,8 @@ public sealed partial class PluginConfigurationOperations(
                 var inputs = await CaptureProfileAsync();
                 var manifest = ParseManifest(await inputs.ReadAsync(ManifestPath));
                 var previous = manifest.Bundles;
+                if (manifest.ManagedLocalSources.ContainsKey(name))
+                    throw new Refusal("source-authorization-required");
                 if (!enabled && managementBundles.ContainsKey(name))
                     throw new Refusal("management-required");
                 var info = await ReadBundleAsync(name, inputs);
@@ -545,7 +568,8 @@ public sealed partial class PluginConfigurationOperations(
         bool enabled,
         string reason,
         Func<Task<(string? Application, IReadOnlyList<EntryDiagnostic> Warnings)>> operation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool notifyOnlyIfChanged = false)
     {
         await mutation.WaitAsync(cancellationToken);
         try
@@ -580,7 +604,8 @@ public sealed partial class PluginConfigurationOperations(
             }
 
             var changed = before != await DiskStateAsync();
-            NotifyConfigurationChanged(reason);
+            if (changed || !notifyOnlyIfChanged)
+                NotifyConfigurationChanged(reason);
             return new(changed, application, target, enabled, code, diagnostic, warnings)
             {
                 RestartReason = application == "restart-required" ? restartReason ?? "package-moved" : null
@@ -592,7 +617,10 @@ public sealed partial class PluginConfigurationOperations(
         }
     }
 
-    private async Task<FileStream> AcquireFileLockAsync(CancellationToken cancellationToken)
+    private Task<FileStream> AcquireFileLockAsync(CancellationToken cancellationToken) =>
+        AcquireFileLockAsync(ManifestPath, cancellationToken);
+
+    private static async Task<FileStream> AcquireFileLockAsync(string manifestPath, CancellationToken cancellationToken)
     {
         var started = System.Diagnostics.Stopwatch.StartNew();
         while (true)
@@ -601,7 +629,7 @@ public sealed partial class PluginConfigurationOperations(
             try
             {
                 return new FileStream(
-                    ManifestPath + ".cordis-lock",
+                    manifestPath + ".cordis-lock",
                     FileMode.OpenOrCreate,
                     FileAccess.ReadWrite,
                     FileShare.None,

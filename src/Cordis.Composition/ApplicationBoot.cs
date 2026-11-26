@@ -556,6 +556,7 @@ public static class ApplicationBoot
         var failures = await AuditAsync(loader);
         var introduced = failures
             .Where(failure => required?.Contains(failure.Id.Split(EntryTree.Separator)[^1]) == true ||
+                failure is not { State: FiberState.Pending, Error: null, Missing.Count: > 0 } &&
                 !previous.Any(old => old.Id == failure.Id && old.Module == failure.Module &&
                     old.State == failure.State && old.Error?.Message == failure.Error?.Message &&
                     old.Missing.SequenceEqual(failure.Missing) && snapshots.TryGetValue(old.Id, out var snapshot) &&

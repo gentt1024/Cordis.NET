@@ -6,7 +6,7 @@ Define one validator, describe the fields it accepts, and explicitly select valu
 
 ## Choose the declaration API
 
-Use Core for Plugin<T>, ConfigSchema<T> and configuration references. Add Composition for ConfigObject<T>, Loader, Settings and export/discovery helpers. The APIs below are included in published `0.2.1-alpha.1`; use matching packages and tools. This is ordinary plugin configuration, distinct from [Remote input defaults](authoring.md#static-data-defaults-on-remote-input).
+Use Core for Plugin<T>, ConfigSchema<T> and configuration references. Add Composition for ConfigObject<T>, Loader, Settings and export/discovery helpers. The configuration declaration APIs ship in `0.2.1-alpha.1`. The profile document export described below requires a newer build containing `DiscoverDocumentAsync`. Use matching packages and tools. This is ordinary plugin configuration, distinct from [Remote input defaults](authoring.md#static-data-defaults-on-remote-input).
 
 Use ConfigObject<T> for complete data objects with a field list. Each Field ties one raw key, descriptor and pure value projection together; the helper supplies live bindings, ordinary comparisons and complete simplification including defaults. Declare every field. Use ConfigSchema<T> directly for nested live paths, opaque values or custom equality/conversion. A scalar can use Plugin<T>.Config directly.
 
@@ -199,3 +199,34 @@ foreach (var entry in catalog.Entries)
 DiscoverAsync traverses native group/include entries, resolves relative include paths and uses literal initial data for a missing include without writing the file. It reports cycles and import failures while retaining surviving siblings. Disabled entries contribute declarations; source filename disambiguates positional IDs. Custom tree carriers produce an explicit unsupported traversal diagnostic. A native group/include containing `__jsExpr` remains opaque as a whole, including sibling path data.
 
 Discovery creates no Context or Loader and invokes no Apply, ResolveConfig, expression evaluator or lazy builder. Module import and optional CaptureConfiguration are trusted author code and can execute. Discovery is not a sandbox or another validation engine. [Current support](development.md#current-support-and-release-status) and [generation support](development.md#generation-backend-support) cover release/platform and model-backend boundaries.
+
+### Validate an entry list or a patch file
+
+Pass the prepared profile launch, the entry-list filename and the same module resolver that the host uses. The launch supplies the bundle, profile, home and command-line layers in application order. The following CLI fragment writes a document even when one declaration fails. Handle profile preparation and root-file exceptions at the command boundary, before writing to standard output.
+
+```csharp
+var result = await ConfigurationSchemaDiscovery.DiscoverDocumentAsync(
+    launch, configurationPath, resolver, cancellationToken);
+Console.WriteLine(result.Document);
+foreach (var diagnostic in result.Diagnostics)
+    Console.Error.WriteLine(diagnostic);
+return result.Complete ? 0 : 1;
+```
+
+Validate the parsed entry array against the document root. To validate an overlay, point the validator at `#/$defs/patchList` in the **same document** so its local references resolve. A patch that supplies `config` for a known root-tree ID replaces the whole value. An include has its own ID index. Plugin names without a collected declaration and IDs introduced by future patches stay open.
+
+Inspect `x-cordis.entries` for the structural path and declaration status and `x-cordis.diagnostics` for collection or projection limitations. Distinct declarations for the same name across trees produce a union and a partial result. A CLI can return success for complete discovery even if a later runtime check would reject a configuration. Import and capture use the application's resolver. Applications with multiple module runtimes supply the corresponding declaration adapters.
+
+### Supply a declaration from another module runtime
+
+Implement `IConfigurationSchemaProjectionResolver` on the module resolver passed to discovery. Return null from `TryResolveSchemaAsync` for a specifier owned by the CLR resolver. For an owned module return `ResolvedConfigurationSchema` with its resolved export identity, a `ConfigurationSchemaExport` in `json-schema-2020-12` format, and whether the entry can omit its config. Use a null schema only after a successful import confirms that the declaration is absent. An unsupported declaration and an import exception produce positioned diagnostics.
+
+Provide a self-contained draft 2020-12 input schema. Cordis preserves internal resource, anchor and pointer references when embedding it. Referenced resources must be present in that schema. Set `AcceptsMissing` to null for unknown omission behavior. Include any projection limitations in the export and set `Complete` to false. Cordis admits a Loader expression at the config root. Nested expression and validation semantics are properties of the supplied projection. The same module identity must identify the same declaration throughout discovery.
+
+### Inspect the selected browser artifact
+
+During a schema dump, prepare one `ProfileRefresh` and use its layers to select the client packages. Pass those selections and the deployment resolver to `ClientModuleCatalog.CaptureAsync`. For each graph entry, read the captured factory with `FindArtifact(entry.Id, entry.Revision).OpenRead()`. A missing match means the selected bytes are unavailable. For a shell module supplied through `staticModules`, inspect the export from the selected shell build.
+
+Run `inspectClientModule` with that graph, its revisioned factory bytes and the shell externals used by client boot. For native Schemastery, pass the official app-boot exports `isNativeConfigSchema`, `createConfigProjector` and `LOADER_EXPRESSION_SCHEMA` in `nativeConfigProjection`. The authoring process owns this trusted import. A Host that only resolves CLR declarations can call discovery directly.
+
+Bind the returned declaration to the resolved export and the captured graph, including the shell build when it supplies imports. Pass the adapter and the original refresh to `DiscoverDocumentAsync(refresh, profileName, filename, resolver)`. Discovery reuses the ordered layers and skipped-bundle diagnostics. It reads the root entry file and its includes at discovery time. If the selection, graph or contributing shell changes before a result is used as current, inspect the new selection. A local build and an installed package can expose different Config schemas under the same module name. [Client SDK inspection](../clients/modules/README.md)

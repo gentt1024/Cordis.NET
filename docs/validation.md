@@ -4,7 +4,7 @@ English | [中文](validation.zh.md)
 
 ## Current release and source
 
-The current source targets [0.2.1-alpha.3](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.3), correcting closed generic saved-model Web contracts while retaining the earlier generation and Host-default fixes. The matching release page owns its final tag, package/symbol hashes, browser archives and formal run. Earlier PR and local-candidate results do not replace those release receipts.
+The current source targets [0.2.1-alpha.4](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.4), adding authorized local CLR sources, profile schema documents and shared browser modules. The matching release page owns its final tag, package/symbol hashes, browser archives and formal run. Earlier PR and local-candidate results do not replace those release receipts.
 
 The preceding [0.2.1-alpha.2 release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2) passed all 18 jobs in [formal run 41412379531](https://github.com/gentt1024/Cordis.NET/actions/runs/41412379531) at tag commit `4da57d783d77f31ee94839fce099183a06ad3367`. Its public package and archive verification remains attached to alpha.2, not this correction.
 
@@ -269,7 +269,7 @@ Earlier releases retain their own evidence, including the [alpha.5.2 release](ht
 
 ## Accepted risks and evidence boundaries
 
-Cold Jint construction and native initialization can delay HMR refresh, queued work and draining shutdown. Historical timeouts remain failures. Sampling did not explain the entire delay or establish a latency bound. The ten-second regression remains unchanged; new failures still fail the gate. Missing progress, error publication or cleanup, or unacceptable real cold-start latency, requires concrete follow-up.
+Cold Jint construction and native initialization can delay HMR refresh, queued work and draining shutdown. Historical timeouts remain failures. Sampling did not explain the entire delay or establish a latency bound. The HMR reconciliation regression waits up to 30 seconds for each refresh outcome, including first use of the JavaScript engine. The original ten-second budget dates to the first public test. An isolated Windows run measured 20.742 seconds from expression entry to engine configuration, and a full local run measured 37.496 seconds for the same interval. The test still requires error publication, retained state, recovery and cleanup. The timing samples establish no product latency guarantee. Missing progress, error publication or cleanup, or unacceptable real cold-start latency, requires concrete follow-up.
 
 Windows/Ubuntu have full package and AOT validation. macOS has same-batch authoring/browser consumption only, not complete runtime, application or AOT acceptance. Rider acceptance does not cover other IDEs. Windows document opening proves system handoff, not editor contents or other desktop platforms. See the [maintenance guide](development.md) for backend restrictions and outstanding named UI integration evidence. Author-directory protection does not promise a hostile-filesystem sandbox.
 
