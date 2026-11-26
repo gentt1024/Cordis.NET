@@ -17,17 +17,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  runtime:
+  runtime-linux:
     outputs:
       release-tag: ${{ steps.sdk.outputs.release-tag }}
-    name: runtime (${{ matrix.os }})
+    name: runtime (ubuntu-24.04)
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
-    steps:
+    runs-on: ubuntu-24.04
+    env:
+      ARTIFACT_PLATFORM: ubuntu-24.04
+    steps: &runtime-steps
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
@@ -135,7 +133,7 @@ jobs:
       - name: Preserve validated packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: validated-packages-${{ matrix.os }}
+          name: validated-packages-${{ env.ARTIFACT_PLATFORM }}
           path: artifacts/ci-packages
           if-no-files-found: error
           retention-days: 14
@@ -143,7 +141,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: evidence-${{ matrix.os }}
+          name: evidence-${{ env.ARTIFACT_PLATFORM }}
           path: |
             artifacts/verification
             artifacts/ci-source.json
@@ -153,12 +151,20 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  runtime-windows:
+    name: runtime (windows-latest)
+    timeout-minutes: 60
+    runs-on: windows-latest
+    env:
+      ARTIFACT_PLATFORM: windows-latest
+    steps: *runtime-steps
+
   portable-authoring:
-    needs: runtime
+    needs: runtime-linux
     uses: ./.github/workflows/portable-authoring.yml
     with:
       checkout-ref: ${{ github.sha }}
-      release-tag: ${{ needs.runtime.outputs.release-tag }}
+      release-tag: ${{ needs.runtime-linux.outputs.release-tag }}
       package-artifact: validated-packages-ubuntu-24.04
 
   upstream:
@@ -168,7 +174,7 @@ jobs:
   verify:
     name: verify (${{ matrix.os }})
     if: always()
-    needs: [runtime, upstream, portable-authoring]
+    needs: [runtime-linux, runtime-windows, upstream, portable-authoring]
     strategy:
       fail-fast: false
       matrix:
@@ -189,8 +195,9 @@ jobs:
       - name: Require every runtime and upstream job
         if: always()
         env:
-          RUNTIME_RESULT: ${{ needs.runtime.result }}
+          LINUX_RESULT: ${{ needs.runtime-linux.result }}
+          WINDOWS_RESULT: ${{ needs.runtime-windows.result }}
           UPSTREAM_RESULT: ${{ needs.upstream.result }}
           AUTHORING_RESULT: ${{ needs.portable-authoring.result }}
         run: |
-          test "$RUNTIME_RESULT" = success && test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
+          test "$LINUX_RESULT" = success && test "$WINDOWS_RESULT" = success && test "$UPSTREAM_RESULT" = success && test "$AUTHORING_RESULT" = success
