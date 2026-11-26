@@ -396,7 +396,7 @@ def package_consumer(gate: Gate, package_dir: Path, version: str, rid: str, aot:
 
 def configuration_mutations(gate: Gate):
     # Run the unchanged public consumer against deliberately broken production helpers.
-    # Each copy is outside the checkout; the original source and contract assertions stay frozen.
+    # Only the isolated production source changes between builds; each rejection runs in a new process.
     mutations = (
         ("live-binding", "ConfigObject.cs", "descriptor.IsVolatile ? schema.WithVolatile(name, project) : schema", "schema", "requires an explicit typed projection"),
         ("ordinary-equality", "ConfigObject.cs", "!field.Descriptor.IsVolatile &&\n                !ConfigDescriptor.StrictEquals(field.Project(left), field.Project(right))", "field.Name.Length < 0", "ordinary effective change refuses live commit"),
@@ -404,30 +404,31 @@ def configuration_mutations(gate: Gate):
         ("revision-fence", "PluginConfigurationOperations.Edit.cs", "if (settings is null && revision != expectedRevision)\n                            throw new Refusal(\"conflict\");", "if (settings is null && revision.Length < 0)\n                            throw new Refusal(\"conflict\");", "profile field edit fences stale revisions"),
         ("field-validation", "PluginConfigurationOperations.Edit.cs", "else\n                            entry.Fiber!.ValidateConfiguration(next);", "else\n                        {\n                        }", "profile field edit validates before persistence"),
     )
-    files = source_hashes()
+    directory = standalone_directory("cordis-configuration-mutant-")
+    for relative in source_hashes():
+        # Only copy the production libraries, actual consumer, and their build inputs.
+        if not (relative.startswith(("src/", "tools/Cordis.Typert.Compiler/", "tools/Cordis.Typert.Generator/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/"))
+                or "/" not in relative):
+            continue
+        source = ROOT / relative
+        target = directory / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    consumer = directory / "examples/Probes/Probes.csproj"
+    gate.run("configuration-mutants-restore", ["dotnet", "restore", consumer, "--locked-mode"], directory)
     for name, production_file, before, after, expected in mutations:
-        directory = standalone_directory("cordis-configuration-mutant-")
-        for relative in files:
-            # Only copy the production libraries, actual consumer, and their build inputs.
-            if not (relative.startswith(("src/", "tools/Cordis.Typert.Compiler/", "tools/Cordis.Typert.Generator/", "examples/Probes/", "examples/Probes.Plugin/", "examples/Probes.Contracts/"))
-                    or "/" not in relative):
-                continue
-            source = ROOT / relative
-            target = directory / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, target)
         path = directory / "src/Cordis.Composition" / production_file
         text = path.read_text(encoding="utf-8")
         if text.count(before) != 1:
             raise RuntimeError(f"Mutation {name} no longer identifies exactly one production expression")
         path.write_text(text.replace(before, after), encoding="utf-8")
-        consumer = directory / "examples/Probes/Probes.csproj"
-        gate.run(f"configuration-mutant-{name}-restore", ["dotnet", "restore", consumer, "--locked-mode"], directory)
         gate.run(f"configuration-mutant-{name}-build", ["dotnet", "build", consumer, "-c", "Release", "--no-restore"], directory)
         gate.run(f"configuration-mutant-{name}-rejected", ["dotnet", "run", "--project", consumer, "-c", "Release", "--no-build", "--no-restore"],
                  directory, runtime_failure=expected)
         gate.record(f"configuration-mutant-{name}", sourceExpression=before, replacement=after,
                     expectedRejection=expected, consumerAssertionsChanged=False)
+        # The next build starts from the original source. On failure the isolated copy stays available.
+        shutil.copyfile(ROOT / "src/Cordis.Composition" / production_file, path)
 
 
 def application_client(gate: Gate, label: str, executable: Path, *, expected_failure=None, client_source=None):
