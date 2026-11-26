@@ -19,7 +19,8 @@ using Xunit;
 namespace Cordis.Platform.Tests;
 
 [Collection("Collectible CLR")]
-public sealed partial class PackageManagementTests : IAsyncLifetime
+public sealed partial class PackageManagementTests(PackageManagementTests.IndependentPluginPackages packages)
+    : IClassFixture<PackageManagementTests.IndependentPluginPackages>, IDisposable
 {
     private static Task<HttpResponseMessage> PostRemoteAsync(HttpClient client, string path, object payload) =>
         client.PostAsJsonAsync(
@@ -32,13 +33,40 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
                 payload
             });
 
-    private readonly string directory = Directory.CreateTempSubdirectory("cordis-package-consumer-").FullName;
+    private readonly string directory = packages.CreateConsumerDirectory();
     private string Feed => Path.Combine(directory, "feed");
 
-    public async Task InitializeAsync()
+    public sealed class IndependentPluginPackages : IAsyncLifetime
+    {
+        private readonly string directory = Directory.CreateTempSubdirectory("cordis-package-template-").FullName;
+
+        public Task InitializeAsync() => PackBaseVersionsAsync(directory);
+
+        internal string CreateConsumerDirectory()
+        {
+            var consumer = Directory.CreateTempSubdirectory("cordis-package-consumer-").FullName;
+            foreach (var name in new[] { "author", "feed" })
+            {
+                var destination = Directory.CreateDirectory(Path.Combine(consumer, name));
+                // Only project inputs and packages are copied. bin/obj belong to the original build.
+                foreach (var file in Directory.EnumerateFiles(Path.Combine(directory, name)))
+                    File.Copy(file, Path.Combine(destination.FullName, Path.GetFileName(file)));
+            }
+
+            return consumer;
+        }
+
+        public Task DisposeAsync()
+        {
+            Directory.Delete(directory, recursive: true);
+            return Task.CompletedTask;
+        }
+    }
+
+    private static async Task PackBaseVersionsAsync(string directory)
     {
         var author = Directory.CreateDirectory(Path.Combine(directory, "author")).FullName;
-        Directory.CreateDirectory(Feed);
+        var feed = Directory.CreateDirectory(Path.Combine(directory, "feed")).FullName;
 
         string Reference(Type type) =>
             $"<Reference Include=\"{type.Assembly.GetName().Name}\"><HintPath>{SecurityElement.Escape(type.Assembly.Location)}</HintPath><Private>false</Private></Reference>";
@@ -78,13 +106,13 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         await File.WriteAllTextAsync(
             Path.Combine(author, "cordis.plugin.json"),
             """{"assembly":"IndependentPlugin.dll","entryType":"Entry"}""");
-        await RunAsync(author, "pack", "-c", "Release", "-o", Feed);
+        await RunAsync(author, "pack", "-c", "Release", "-o", feed);
         await File.WriteAllTextAsync(
             Path.Combine(author, "cordis.plugin.json"),
             """
             {"assembly":"IndependentPlugin.dll","entryType":"Entry","patches":[{"insert":[{"id":"independentplugin","name":"nuget:independentplugin","config":{"limit":-1}}]}]}
             """);
-        await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", Feed, "-p:Version=2.0.0");
+        await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", feed, "-p:Version=2.0.0");
         await File.WriteAllTextAsync(
             Path.Combine(author, "Reject.targets"),
             """
@@ -96,7 +124,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             (await File.ReadAllTextAsync(projectPath)).Replace(
                 "</ItemGroup>",
                 "<None Include=\"Reject.targets\" Pack=\"true\" PackagePath=\"buildTransitive/IndependentPlugin.targets\" /></ItemGroup>"));
-        await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", Feed, "-p:Version=3.0.0");
+        await RunAsync(author, "pack", "-c", "Release", "--no-build", "-o", feed, "-p:Version=3.0.0");
     }
 
     [Fact]
@@ -468,6 +496,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
     private async Task<string> PackIncompatibleAsync(bool engines, string? metadata = null)
     {
         var author = Path.Combine(directory, "author");
+        await RunAsync(author, "build", "-c", "Release");
         var marker = Path.Combine(directory, "incompatible-build-marker.txt");
         await File.WriteAllTextAsync(
             Path.Combine(author, "cordis.plugin.json"),
@@ -1004,6 +1033,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
             """);
         await RunAsync(helper, "build", "-c", "Release");
         var author = Path.Combine(directory, "author");
+        await RunAsync(author, "build", "-c", "Release");
         await File.WriteAllTextAsync(
             Path.Combine(author, "Reject.targets"),
             """
@@ -1234,7 +1264,7 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         return (process.ExitCode, await output + await error);
     }
 
-    public Task DisposeAsync()
+    public void Dispose()
     {
         // Fixture cleanup may be deferred while a CLR loader still holds files after an unload request.
         try
@@ -1244,7 +1274,5 @@ public sealed partial class PackageManagementTests : IAsyncLifetime
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
         }
-
-        return Task.CompletedTask;
     }
 }
