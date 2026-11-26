@@ -2,6 +2,10 @@
 
 English | [中文](compatibility.zh.md)
 
+## 0.2.1-alpha.4 validation scope
+
+For this preview, Windows and Linux must consume the same Linux-built package, browser runtime and author-tool batch. macOS authoring and browser verification is deferred for this version. The default matrix for other versions includes macOS.
+
 ## Online local CLR sources
 
 DSH's manager accepts a local path for inspection and registration. A NuGet archive inspection reads package metadata; evaluating a local MSBuild project uses the Host account. Cordis.NET therefore exposes explicit local-source operations. The Host supplies a workspace, stable caller identity and policy. An online-managed link records the exact project and configuration; using it again requires current authorization. Source receipt hashes identify output bytes. Developers with write access to the source, imports, tools and outputs remain in the Host trust boundary. See [registering a local source](clr-artifacts.md#register-a-local-source-through-a-running-host).

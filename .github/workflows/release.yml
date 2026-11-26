@@ -155,6 +155,7 @@ jobs:
     uses: ./.github/workflows/portable-authoring.yml
     with:
       checkout-ref: ${{ inputs.tag }}
+      release-tag: ${{ inputs.tag }}
       package-artifact: release-package-batch-${{ inputs.tag }}-${{ github.sha }}
 
   upstream:

@@ -6,6 +6,9 @@ on:
       checkout-ref:
         required: true
         type: string
+      release-tag:
+        required: true
+        type: string
       package-artifact:
         required: true
         type: string
@@ -23,7 +26,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-24.04, macos-latest]
+        # Only alpha.4 defers macOS authoring and browser validation.
+        os: ${{ fromJSON(inputs.release-tag == 'v0.2.1-alpha.4' && '["windows-latest","ubuntu-24.04"]' || '["windows-latest","ubuntu-24.04","macos-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
