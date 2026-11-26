@@ -295,6 +295,8 @@ def consume_http_package(directory, rid, version, aot, env):
 
 
 def consume_portable_packages(rid, package_dir, client_artifacts, aot):
+    # Linux CI defers this entire group. Add a consumer here only when verify-portable-authoring.py
+    # runs the same script on the downloaded batch with the same RID and AOT coverage.
     deployment_dir = Path(tempfile.mkdtemp(prefix="clr-deployment-", dir=ROOT / "artifacts"))
     run("clr-deployment", [sys.executable, "scripts/verify-clr-deployment.py", "--dotnet", shutil.which("dotnet"),
         "--rid", rid, "--packages", package_dir, "--output", deployment_dir])

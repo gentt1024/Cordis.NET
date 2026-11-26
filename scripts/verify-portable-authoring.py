@@ -83,6 +83,8 @@ def main():
     result = {'status': 'failed', 'producer': producer, 'consumerPlatform': platform.system(),
               'checkoutCommit': commit, 'steps': [], 'aotRequested': options.aot}
     aot = ['--aot'] if options.aot else []
+    # Linux also owns every check in verify.consume_portable_packages. Review both sides
+    # when changing a consumer, its platform condition, or its AOT arguments.
     commands = [
         ('client-safety', ['node', 'scripts/verify-client-safety.mjs', str(runtime),
                            str(output / 'client-safety')]),

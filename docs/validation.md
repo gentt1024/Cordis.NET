@@ -10,6 +10,8 @@ In PR and release workflows, portable consumers start once Linux runtime validat
 
 In the regular Linux CI run, the portable job owns the CLR deployment and multi-entry, Typert, and Remote package consumers. It installs the downloaded Linux batch and runs the same consumer scripts, including the Typert Native AOT callers. The producer still exercises the package contents, symbols, independent HTTP consumers, and JIT/AOT before recording the batch hashes. Windows validates its own packages as well as the downloaded Linux batch. Local package verification and tagged releases run the full producer suite.
 
+Keep new package checks on the producer by default. Move a check into `consume_portable_packages` in `scripts/verify.py` only after confirming that `scripts/verify-portable-authoring.py` runs the same script on the downloaded Linux batch with equivalent inputs, RID and AOT options. If either invocation changes, review its counterpart.
+
 The preceding [0.2.1-alpha.2 release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.2) passed all 18 jobs in [formal run 41412379531](https://github.com/gentt1024/Cordis.NET/actions/runs/41412379531) at tag commit `4da57d783d77f31ee94839fce099183a06ad3367`. Its public package and archive verification remains attached to alpha.2, not this correction.
 
 The earlier [0.2.1-alpha.1 release](https://github.com/gentt1024/Cordis.NET/releases/tag/v0.2.1-alpha.1) was published on 2026-10-27. Its [formal run](https://github.com/gentt1024/Cordis.NET/actions/runs/40428314986) passed all 18 jobs at tag commit `a2728c7e929a01a586fc714d9b397eaf9549e153`; that evidence remains attached to alpha.1.
