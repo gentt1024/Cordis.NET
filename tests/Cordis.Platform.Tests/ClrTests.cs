@@ -376,15 +376,29 @@ public sealed class ClrTests
                 source.FullName,
                 shadow,
                 shareDependency ? hostAssembly : null);
-            for (var attempt = 0;attempt < 12 && observations.Any(item => !item.IsCollected);attempt++)
+            // Managed collection and release of the shadow's files can finish on different GC passes.
+            var observation = Assert.Single(observations);
+            for (var attempt = 0;attempt < 12 && (!observation.IsCollected || !observation.ShadowDeleted);attempt++)
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
                 await Task.Yield();
+                observation.TryDeleteShadow();
             }
 
-            Assert.All(observations, item => Assert.True(item.TryDeleteShadow()));
+            Assert.True(observation.UnloadRequested, observation.UnloadError);
+            Assert.True(observation.IsCollected, observation.ShadowDirectory);
+            if (!observation.TryDeleteShadow())
+            {
+                // The public API returns false on file errors. Keep that failure even if the lock has since cleared.
+                var error = Record.Exception(() => Directory.Delete(observation.ShadowDirectory!, recursive: true));
+                var detail = error is null ? "succeeded" : $"0x{error.HResult:X8} {error.Message}";
+                Assert.Fail(
+                    $"TryDeleteShadow returned false for {observation.ShadowDirectory}. Follow-up deletion: {detail}");
+            }
+
+            Assert.True(observation.ShadowDeleted, observation.ShadowDirectory);
             Directory.Delete(shadow);
         }
         finally
