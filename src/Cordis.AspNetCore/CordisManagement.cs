@@ -26,6 +26,14 @@ public sealed class CordisManagement(
     private readonly string generation = Guid.NewGuid().ToString("N");
     private PluginConfigurationOperations Operations => session.ConfigurationOperations;
 
+    /// <summary>Map an authenticated HTTP caller to a stable subject for online local-source operations.</summary>
+    /// <remarks>Leave unset to disable these operations. Return null for callers without a local-source identity.</remarks>
+    public Func<HttpContext, string?>? LocalSourceSubject
+    {
+        get;
+        init;
+    }
+
     /// <summary>Notify connected clients after the host has accepted a complete captured catalog.</summary>
     /// <remarks>The build/deployment owner must serialize capture and publication through its existing session queue.
     /// Failed builds keep the prior catalog and send no success notification.</remarks>
@@ -55,7 +63,12 @@ public sealed class CordisManagement(
                 context,
                 Operations,
                 (_, permission) => AuthorizeRemoteAsync(requests.HttpContext, permission),
-                packages);
+                packages)
+            {
+                LocalSourceSubject = LocalSourceSubject is { } resolveSubject
+                    ? _ => requests.HttpContext is { } http ? resolveSubject(http) : null
+                    : null
+            };
             registry.Register(context, PluginManagerTypert.Contribution(package));
             return Task.CompletedTask;
         });
