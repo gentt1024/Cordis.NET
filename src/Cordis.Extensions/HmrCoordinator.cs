@@ -30,7 +30,7 @@ public sealed class HmrCoordinator : IAsyncDisposable
 
     internal bool IsExecuting => _executing.Value;
     private Task _tail = Task.CompletedTask;
-    private bool _closing;
+    private volatile bool _closing;
     // Kept usable for pending readiness callbacks and repeated disposal after cancellation.
 #pragma warning disable CA2213
     private readonly CancellationTokenSource _stopReadiness = new();
@@ -103,7 +103,9 @@ public sealed class HmrCoordinator : IAsyncDisposable
     /// <summary>
     /// Runs exclusive async.
     /// </summary>
-    public Task RunExclusiveAsync(Func<Task> operation)
+    public Task RunExclusiveAsync(Func<Task> operation) => EnqueueAsync(operation, skipIfClosing: false);
+
+    private Task EnqueueAsync(Func<Task> operation, bool skipIfClosing)
     {
         if (_executing.Value)
             return Task.FromException(new InvalidOperationException("HMR transactions cannot be nested"));
@@ -120,7 +122,12 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 await Task.Yield();
                 await predecessor.ConfigureAwait(false);
                 if (_closing)
+                {
+                    if (skipIfClosing)
+                        return;
                     throw new ObjectDisposedException(nameof(HmrCoordinator));
+                }
+
                 _executing.Value = true;
                 try
                 {
@@ -713,11 +720,13 @@ public sealed class HmrCoordinator : IAsyncDisposable
                 try
                 {
                     await owner
-                        .RunExclusiveAsync(async () =>
-                        {
-                            if (await owner.ReadyAsync().ConfigureAwait(false))
-                                await refresh().ConfigureAwait(false);
-                        })
+                        .EnqueueAsync(
+                            async () =>
+                            {
+                                if (await owner.ReadyAsync().ConfigureAwait(false))
+                                    await refresh().ConfigureAwait(false);
+                            },
+                            skipIfClosing: true)
                         .ConfigureAwait(false);
                 }
                 catch (Exception error)
