@@ -472,6 +472,79 @@ public sealed class HmrWatchTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Coordinator_shutdown_only_reports_failures_from_refreshes_that_started(bool refreshStarted)
+    {
+        var directory = Directory.CreateTempSubdirectory("cordis-hmr-shutdown-");
+        var entered = Signal();
+        var release = Signal();
+
+        async Task HoldAsync()
+        {
+            entered.SetResult();
+            await release.Task;
+        }
+
+        try
+        {
+            await using var hmr = new HmrCoordinator();
+            var errors = new List<Exception>();
+            var warnings = new List<object?>();
+            hmr.Error += errors.Add;
+            hmr.Warning += warnings.Add;
+            // A callback can legitimately throw the same type and object name as the queue.
+            var failure = new ObjectDisposedException(nameof(HmrCoordinator));
+            var active = refreshStarted ? Task.CompletedTask : hmr.RunExclusiveAsync(HoldAsync);
+            try
+            {
+                if (!refreshStarted)
+                    await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                var filename = Path.Combine(directory.FullName, "config.yml");
+                await File.WriteAllTextAsync(filename, "[]");
+                var refreshes = 0;
+                _ = hmr.WatchConfig(
+                    filename,
+                    async () =>
+                    {
+                        refreshes++;
+                        if (refreshStarted)
+                            await HoldAsync();
+                        throw failure;
+                    });
+                await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                var closing = hmr.DisposeAsync().AsTask();
+                Assert.False(closing.IsCompleted);
+                release.SetResult();
+                await Task.WhenAll(active, closing).WaitAsync(TimeSpan.FromSeconds(5));
+                if (refreshStarted)
+                {
+                    Assert.Equal(1, refreshes);
+                    Assert.Same(failure, Assert.Single(errors));
+                    Assert.NotEmpty(warnings);
+                }
+                else
+                {
+                    Assert.Equal(0, refreshes);
+                    Assert.Empty(errors);
+                    Assert.Empty(warnings);
+                }
+
+                await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                    hmr.RunExclusiveAsync(() => Task.CompletedTask));
+            }
+            finally
+            {
+                release.TrySetResult();
+            }
+        }
+        finally
+        {
+            directory.Delete(true);
+        }
+    }
+
     [Fact]
     public async Task Watch_start_failure_releases_registration_and_runtime_errors_preserve_identity()
     {

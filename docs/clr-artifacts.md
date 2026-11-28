@@ -16,6 +16,8 @@ Use `ClrLocalProject.QueryAsync(root, configuration)` to obtain the package ID, 
 
 Use this path for a trusted development workspace. Open the profile with the `DotnetPluginToolchain.OpenForRunAsync` overload taking a `LocalSourcePolicy`. Pass that toolchain to the management service and use `PluginManager.LocalSourceSubject` to map its authenticated caller to a stable principal. The policy workspace anchors relative input. Absolute input must also be inside that workspace. A policy can automatically admit an exclusively controlled root or decide for each exact project. The default Host exposes no online local-source authority.
 
+For the standard ASP.NET mount, set `CordisManagement.LocalSourceSubject` before calling `MountPluginManagerAsync`. Map the authenticated HTTP principal to its stable identifier and return null when it has none. An unset mapper keeps local-source operations disabled. Operation authorization and the generation check still apply.
+
 | Host decision | Information available |
 | --- | --- |
 | Read | Principal, profile, source root and requested configuration, before source content is opened. This decision also controls disclosure of saved locations. |

@@ -16,6 +16,8 @@
 
 此入口用于受信的开发工作区。用接收 `LocalSourcePolicy` 的 `DotnetPluginToolchain.OpenForRunAsync` 打开 profile，将同一个工具链交给管理服务，并用 `PluginManager.LocalSourceSubject` 从已认证的调用上下文取得稳定主体。相对路径以策略指定的工作区为基准，绝对路径也须在该工作区内。Host 可以自动放行写入者受信的独占工作区，也可以逐项目决定。默认 Host 关闭在线本地源码能力。
 
+使用标准 ASP.NET 挂载入口时，在调用 `MountPluginManagerAsync` 前设置 `CordisManagement.LocalSourceSubject`。从已认证的 HTTP 主体取得稳定标识；无法识别时返回 null。不设置映射时，在线本地源码操作保持关闭。原有操作授权和 generation 检查仍然生效。
+
 | Host 的决定 | 可用事实 |
 | --- | --- |
 | Read | 在读取源码内容前核对主体、profile、源码根和配置。披露已保存路径也需要此权限。 |

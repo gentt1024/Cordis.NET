@@ -1,7 +1,13 @@
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Security;
+using System.Text.Json;
+using Cordis.AspNetCore;
 using Cordis.Clr;
 using Cordis.Composition;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Cordis.Platform.Tests;
@@ -50,6 +56,101 @@ public sealed partial class PackageManagementTests
             Assert.Equal(expected, context.Get<Func<string>>("installed-code")?.Invoke());
             return Task.CompletedTask;
         });
+
+    [Fact]
+    public async Task Mounted_manager_binds_local_registration_to_the_http_subject_and_current_generation()
+    {
+        var author = Path.Combine(directory, "author");
+        await PrepareLocalProjectAsync(author);
+        var policy = new LocalSourcePolicy(
+            directory,
+            (access, _) =>
+                Task.FromResult(access.SourceRoot == author && access.Subject is "alice" or "bob"));
+        await using var host = await StartAsync(localSourcePolicy: policy);
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services.AddHttpContextAccessor();
+        await using var server = builder.Build();
+        var management = new CordisManagement(host.Session, (_, _) => Task.FromResult(true), host.Toolchain)
+        {
+            LocalSourceSubject = http => http.Request.Headers.Authorization.ToString() switch
+            {
+                "Bearer test-token-1" => "alice",
+                "Bearer test-token-2" => "bob",
+                _ => null
+            }
+        };
+        await ManagementTestHost.MountAsync(server, host.Session, management);
+        await server.StartAsync();
+        using var client = new HttpClient
+        {
+            BaseAddress = new Uri(server.Urls.Single())
+        };
+        using var state = JsonDocument.Parse(await client.GetStringAsync("/cordis/state"));
+        var generation = state.RootElement.GetProperty("generation").GetString();
+
+        async Task<JsonElement> CallAsync(string method, object args)
+        {
+            using var response = await PostRemoteAsync(
+                client,
+                "/remote/pluginManager/" + method,
+                new
+                {
+                    args
+                });
+            response.EnsureSuccessStatusCode();
+            using var reply = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            return reply.RootElement.GetProperty("result").Clone();
+        }
+
+        var request = new LocalSourceRequest("author", "Debug");
+        var anonymous = await CallAsync(
+            "inspectLocalSource",
+            new
+            {
+                request
+            });
+        Assert.Equal("plugin-manager/forbidden", anonymous.GetProperty("error").GetProperty("code").GetString());
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token-1");
+        var inspection = (await CallAsync(
+            "inspectLocalSource",
+            new
+            {
+                request
+            })).GetProperty("value");
+        var inspectionId = inspection.GetProperty("inspectionId").GetString()!;
+
+        Task<JsonElement> RegisterAsync(string id) => CallAsync(
+            "registerLocalSource",
+            new
+            {
+                request,
+                options = new LocalSourceRegistration(id, inspectionId)
+                {
+                    Enabled = false
+                }
+            });
+
+        var manifest = Path.Combine(host.Profile, "package.json");
+        var before = await File.ReadAllBytesAsync(manifest);
+        client.DefaultRequestHeaders.Add("If-Cordis-Generation", "retired-host");
+        var stale = await RegisterAsync("stale");
+        Assert.Equal("plugin-manager/generation-changed", stale.GetProperty("error").GetProperty("code").GetString());
+        client.DefaultRequestHeaders.Remove("If-Cordis-Generation");
+        client.DefaultRequestHeaders.Add("If-Cordis-Generation", generation);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token-2");
+        var other = await RegisterAsync("other");
+        Assert.Equal("inspection-changed", other.GetProperty("value").GetProperty("error").GetString());
+        Assert.Equal(before, await File.ReadAllBytesAsync(manifest));
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token-1");
+        var registered = (await RegisterAsync("own")).GetProperty("value");
+        Assert.Equal("saved", registered.GetProperty("application").GetString());
+        Assert.False(registered.GetProperty("selected").GetBoolean());
+        Assert.Equal(
+            Path.Combine(author, "IndependentPlugin.csproj"),
+            PackageManifest.Read(manifest).ManagedLocalSources["IndependentPlugin"].ProjectFile);
+    }
 
     [Fact]
     public async Task Online_source_inspection_requires_a_caller_and_host_approval_before_evaluation()
